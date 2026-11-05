@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StopCube Oracle 下压比例计划</title>
+<style>
+  body { margin: 0; background: #f7f8f8; color: #1d2528; font: 16px/1.75 -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 36px 24px 72px; }
+  h1 { font-size: 1.7rem; line-height: 1.35; margin: 44px 0 14px; padding-top: 16px; border-top: 3px solid #1d2528; }
+  h2 { font-size: 1.22rem; margin: 30px 0 8px; }
+  h3 { font-size: 1.02rem; margin: 20px 0 6px; }
+  p { margin: 9px 0; } ul, ol { margin: 9px 0; padding-left: 1.4em; } li { margin: 4px 0; }
+  code { font: 0.87em ui-monospace, Menlo, monospace; overflow-wrap: anywhere; }
+  pre { background: #e9eef0; padding: 12px 14px; overflow-x: auto; font: 0.82rem/1.55 ui-monospace, Menlo, monospace; }
+  .note { background: #e9eef0; padding: 10px 14px; margin: 14px 0; }
+  .warn { background: #fff0d8; padding: 10px 14px; margin: 14px 0; }
+  .tbl { overflow-x: auto; margin: 12px 0; }
+  table { border-collapse: collapse; font-size: 0.91rem; width: 100%; background: #fff; }
+  th, td { border: 1px solid #d3dbde; padding: 6px 9px; text-align: left; vertical-align: top; }
+  th { background: #eef2f3; white-space: nowrap; }
+  figure { margin: 14px 0; } figcaption { font-size: 0.88rem; color: #4a5a60; margin-top: 4px; }
+</style>
+</head>
+<body>
+<main>
+<div style="font-size:2rem;font-weight:700;line-height:1.35">StopCube：Oracle 到位后的下压比例计划</div>
+<div class="note">
+<b>状态与授权：</b>只规划，未开工。这是独立的新版方案，不修订也不覆盖 <code>1104-stopcube-decision-point-plan.html</code>（下称「旧计划」）。用户原话：「你写一个新版的方案，不要修订原来的方案了」。本文件呈现后，用户不改而直接认可才算开工令；旧计划的第一阶段授权不延伸到这里。<br>
+<b>代码锚点：</b>写作时 HEAD 为 <code>cc2a190</code>，分支 <code>v4.1-interpretMotion</code>；工作副本 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code>；功能提交用 <code>commitV4.1.x:</code>，文档用 <code>docs:</code>。实际运行另固定含实现的干净提交。<br>
+<b>外部依赖：</b>benchmark gitlink <code>856bc3a189d4172f3f47dbee4424d585f8d78db3</code>；模型 <code>orig100-ctx32x4x4-motion-s2concat1x1024-60k</code>，检查点 59999，模型 seed 42；资产已由旧计划核对 <code>ASSETS=PASS files=38 mismatches=0</code>，起跑前只复核 manifest 指纹。<br>
+<b>时限（待用户确认）：</b>拟沿用旧计划的绝对截止，美东 <b>2026-11-05 04:52 EST</b>（<code>2026-11-05T09:52:00Z</code>）；写作时为美东 11 月 4 日 22:40 左右，还剩约 6.2 小时。不重新起算，不自动延期。<br>
+<b>与旧计划的关系：</b>写作时旧计划仍由另一个会话在推进：<code>HOLD_SMOKE=PASS</code> 已通过，正式正常 50 局已于美东 22:34:45 在 GPU 1 启动（tmux <code>sd-normal50-gpu1-1104a</code>，run <code>normal-gpu1-1104a</code>）。本计划不停止、不改动它的任何运行，产物根独立；它之后的悬停延长是否继续由用户决定。
+</div>
+
+<h1>第一部分（给人看）</h1>
+
+<h2>要做什么</h2>
+<p>让 Oracle 规划器把机械臂送到按钮上方并一直保持，模型照常看真实画面、照常推理，但它的动作不执行。这样每局都能看到模型在每个时刻「想不想按」，然后选一个区间之前的时刻把控制权交回模型，看它是否真的按下、按得准不准。</p>
+<p>用户原话：「通过 simulator 本身直接计算出它这个真正的下压位置区间，然后……用 Oracle 的 Planning 的 model 直接去到达这个位置，然后再来……进行模型的推理，就是在这个位置前后去做进行模型的推理，然后去判断这个模型真正按下去的这个可能的比例有多少。」</p>
+<p><b>和旧计划的差别：</b>旧计划只给提前按错的 E 局补一条悬停轨迹，历史来自模型自己。新版 50 局全部由 Oracle 到位，不再有 E，也不再依赖模型自己走到悬停位置。</p>
+
+<h2>为什么推理范围不能只取「区间前后」</h2>
+<p>按 50 局的真实 seed 推算（M、N 取自 <code>StopCube._initialize_episode</code> 的同一随机序列，推理边界固定为第 <code>1+16k</code> 步）：</p>
+<div class="tbl"><table>
+<tr><th>事实</th><th>数字</th><th>影响</th></tr>
+<tr><td>可停区间宽度</td><td>M=60／80／120 约 9／11／17 步（第 16 局实测 412～428）</td><td>区间普遍比 16 步的推理间隔窄</td></tr>
+<tr><td>区间内的推理次数</td><td><b>30 局为 0 次，20 局为 1 次</b>；M=80 的 22 局全为 0 次</td><td>只在区间内推理，六成的局一个样本都没有</td></tr>
+<tr><td>第 16 局实际下压（成功局）</td><td>第 385 次边界的动作块里 TCP 约在第 397 步开始下降；目标高度第 403 步过阈值；第 416 步触发</td><td>决定下压的推理（385、401）都在区间之外，一次下压还跨了两个动作块</td></tr>
+</table></div>
+<p>所以新版测的是<b>整段悬停期的全部边界</b>，共约 943 次推理（50 局 M·N 合计 14,920 步）。这样还能回答一个更重要的问题：模型是在正确的第 N 次经过才想按，还是每次方块经过都想按。一个总想按的模型，只看区间内的比例也会很高。</p>
+
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 516" role="img" aria-label="第 16 局（M=120，N=4）环境步 360～432 的时间轴：可停区间、推理边界、动作块、实测事件与 Oracle 命令" style="width:100%;background:white" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="13" fill="#1d2528">
+  <defs>
+    <marker id="afB" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#36515c"/>
+    </marker>
+  </defs>
+
+  <!-- 标题 -->
+  <text x="14" y="26" font-size="15" font-weight="bold">第 16 局（M=120，N=4）：环境步 360～432 时间轴，T=420</text>
+
+  <!-- 可停区间背景带（412～428，贯穿轨道 2～5） -->
+  <rect x="710" y="126" width="170" height="318" fill="#d9ead3" fill-opacity="0.35"/>
+
+  <!-- 刻度网格线 -->
+  <g stroke="#b8c4c9" stroke-width="1" stroke-dasharray="3 4">
+    <line x1="190" y1="58" x2="190" y2="456"/>
+    <line x1="390" y1="58" x2="390" y2="456"/>
+    <line x1="590" y1="58" x2="590" y2="456"/>
+    <line x1="790" y1="58" x2="790" y2="456"/>
+  </g>
+
+  <!-- 轨道分隔线 -->
+  <g stroke="#d5dde0" stroke-width="1">
+    <line x1="10" y1="58" x2="920" y2="58"/>
+    <line x1="10" y1="126" x2="920" y2="126"/>
+    <line x1="10" y1="204" x2="920" y2="204"/>
+    <line x1="10" y1="272" x2="920" y2="272"/>
+    <line x1="10" y1="374" x2="920" y2="374"/>
+    <line x1="10" y1="444" x2="920" y2="444"/>
+  </g>
+
+  <!-- 轨道标题（左栏） -->
+  <g font-weight="bold">
+    <text x="14" y="96">方块可停区间</text>
+    <text x="14" y="160">推理边界</text>
+    <text x="14" y="178" font-weight="normal">（每 16 步）</text>
+    <text x="14" y="242">实际执行的动作块</text>
+    <text x="14" y="327">实测事件</text>
+    <text x="14" y="413">Oracle 自身</text>
+  </g>
+
+  <!-- 轨道 1：方块可停区间 -->
+  <text x="795" y="74" text-anchor="middle" font-weight="bold">412～428（17 步）</text>
+  <rect x="710" y="80" width="170" height="20" fill="#d9ead3" stroke="#5a8f4e" stroke-width="1.2"/>
+  <line x1="790" y1="80" x2="790" y2="100" stroke="#1d2528" stroke-width="2"/>
+  <text x="790" y="116" text-anchor="middle" font-weight="bold">T=420</text>
+
+  <!-- 轨道 2：推理边界 -->
+  <g stroke="#36515c" stroke-width="1.2">
+    <path d="M280,142 L287,150 L280,158 L273,150 Z" fill="#9fb3bc"/>
+    <path d="M440,142 L447,150 L440,158 L433,150 Z" fill="#9fb3bc"/>
+    <path d="M600,142 L607,150 L600,158 L593,150 Z" fill="#9fb3bc"/>
+    <path d="M760,142 L767,150 L760,158 L753,150 Z" fill="#5a8f4e"/>
+  </g>
+  <g text-anchor="middle">
+    <text x="280" y="176">369</text>
+    <text x="440" y="176">385</text>
+    <text x="600" y="176">401</text>
+    <text x="760" y="176">417</text>
+    <text x="440" y="194">区间外</text>
+    <text x="600" y="194">区间外</text>
+    <text x="760" y="194" font-weight="bold">区间内</text>
+  </g>
+
+  <!-- 轨道 3：实际执行的动作块 -->
+  <g stroke="#36515c" stroke-width="1.2">
+    <rect x="280" y="222" width="160" height="32" fill="#e3ecf2"/>
+    <rect x="440" y="222" width="160" height="32" fill="#d3e0e8"/>
+    <rect x="600" y="222" width="160" height="32" fill="#e3ecf2"/>
+  </g>
+  <g text-anchor="middle">
+    <text x="360" y="236" font-weight="bold">第 23 次</text>
+    <text x="360" y="251">369～384</text>
+    <text x="520" y="236" font-weight="bold">第 24 次</text>
+    <text x="520" y="251">385～400</text>
+    <text x="680" y="236" font-weight="bold">第 25 次</text>
+    <text x="680" y="251">401～416</text>
+  </g>
+
+  <!-- 轨道 4：实测事件（不同高度引线，避免重叠） -->
+  <g stroke="#36515c" stroke-width="1.2">
+    <line x1="560" y1="302" x2="560" y2="350"/>
+    <line x1="620" y1="328" x2="620" y2="350"/>
+    <line x1="750" y1="302" x2="750" y2="350"/>
+  </g>
+  <g fill="#36515c">
+    <circle cx="560" cy="350" r="4"/>
+    <circle cx="620" cy="350" r="4"/>
+    <circle cx="750" cy="350" r="4"/>
+  </g>
+  <rect x="516" y="284" width="88" height="16" fill="white"/>
+  <rect x="571" y="310" width="98" height="16" fill="white"/>
+  <g text-anchor="middle">
+    <text x="560" y="296">TCP 开始下降</text>
+    <text x="620" y="322">目标高度过阈值</text>
+    <text x="750" y="296" font-weight="bold">按钮触发</text>
+    <text x="560" y="368">397</text>
+    <text x="620" y="368">403</text>
+    <text x="750" y="368">416</text>
+  </g>
+
+  <!-- 轨道 5：Oracle 自身 -->
+  <path d="M490,386 V398" fill="none" stroke="#36515c" stroke-width="1.5" marker-end="url(#afB)"/>
+  <rect x="372" y="406" width="236" height="16" fill="white"/>
+  <g text-anchor="middle">
+    <text x="490" y="418" font-weight="bold">Oracle 发下压命令（T-30，步 390）</text>
+    <text x="490" y="436" fill="#36515c">触发时刻待实测</text>
+  </g>
+
+  <!-- 横轴 -->
+  <line x1="190" y1="456" x2="910" y2="456" stroke="#36515c" stroke-width="1.5"/>
+  <g stroke="#36515c" stroke-width="1.5">
+    <line x1="190" y1="456" x2="190" y2="462"/>
+    <line x1="390" y1="456" x2="390" y2="462"/>
+    <line x1="590" y1="456" x2="590" y2="462"/>
+    <line x1="790" y1="456" x2="790" y2="462"/>
+  </g>
+  <g text-anchor="middle">
+    <text x="190" y="478">360</text>
+    <text x="390" y="478">380</text>
+    <text x="590" y="478">400</text>
+    <text x="790" y="478">420</text>
+  </g>
+  <text x="14" y="478">环境步（线性）</text>
+
+  <!-- 底部说明 -->
+  <text x="14" y="504">按真实记录，下压从 385 这次推理开始，按钮却在 416 才触发，决定下压的推理都不在区间内。</text>
+</svg>
+<figcaption>图 1　第 16 局的时间关系。事件数字均为实测；Oracle 的触发时刻尚未测量。</figcaption>
+</figure>
+
+<h2>已定口径</h2>
+<div class="tbl"><table>
+<tr><th>编号</th><th>项目</th><th>口径</th></tr>
+<tr><td>K1</td><td>模型与局</td><td>motion 模型 59999，seed 42；StopCube 官方测试集全部 50 局，不换环境 seed，不挑局</td></tr>
+<tr><td>K2</td><td>下压区间</td><td>由仿真直接算：方块到目标水平距离 ≤ <code>3×cube_half_size</code>（0.06 m）且落在第 N 程。Oracle 只悬停版本身就是不按按钮的完整轨迹，同时产出区间，不再单跑窗口探针</td></tr>
+<tr><td>K3</td><td>开环测量</td><td>动作表全程驱动环境，模型动作不执行；每个边界真实推理 1 次并额外采样 32 次（独立噪声）</td></tr>
+<tr><td>K4</td><td>闭环验证</td><td>每局 1 个放手点：不晚于 <code>T-48</code> 的最后一个边界，且机械臂已到位；放手后全由模型控制，记真实触发步和成功字段</td></tr>
+<tr><td>K5</td><td>对照（待确认）</td><td>保留正常运行 50 局作为真实表现的对照。用户说的是「都只按照」Oracle，此项是我的建议：去掉后就没有真实按键可比。旧计划正在跑的 <code>normal-gpu1-1104a</code> 合格完成时直接复用，否则按相同规格跑</td></tr>
+<tr><td>K6</td><td>范围</td><td>只回答「模型有多大比例下压」。旧计划第二问（真正下压时读取了哪些 token：梯度、逐层投影、探针）不在本计划内，看完结果再定；每个边界已有的 attention 记录照常保存</td></tr>
+<tr><td>K7</td><td>不干预模型内部</td><td>不做 token 遮挡、替换、伪造观测；只替换送入环境的动作</td></tr>
+<tr><td>K8</td><td>成绩口径</td><td>开环局的终局不是模型成绩；放手局与正常局分开统计，都不计入官方成功率；不为成功重试</td></tr>
+<tr><td>K9</td><td>资源</td><td>本机最多两张 A6000，不用集群；时限见文首</td></tr>
+</table></div>
+
+<h2>机制</h2>
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 512" role="img" aria-label="数据链路：第 1 行无模型的 Oracle 构表，第 2 行评估环境采样，第 3 行闭环验证" style="width:100%;background:white" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="13" fill="#1d2528">
+  <defs>
+    <marker id="afA" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#36515c"/>
+    </marker>
+  </defs>
+
+  <!-- 左栏行标题底色 -->
+  <rect x="8" y="20" width="128" height="136" rx="6" fill="#f3f6f7"/>
+  <rect x="8" y="200" width="128" height="162" rx="6" fill="#f3f6f7"/>
+  <rect x="8" y="400" width="128" height="66" rx="6" fill="#f3f6f7"/>
+
+  <!-- 左栏行标题 -->
+  <g text-anchor="middle">
+    <text x="72" y="66" font-weight="bold">第 1 行</text>
+    <text x="72" y="84">official-sim 环境</text>
+    <text x="72" y="102">无模型</text>
+    <text x="72" y="120" font-weight="bold">不执行模型动作</text>
+
+    <text x="72" y="259" font-weight="bold">第 2 行</text>
+    <text x="72" y="277">评估环境 · 真实观测</text>
+    <text x="72" y="295" font-weight="bold">不执行模型动作，</text>
+    <text x="72" y="313" font-weight="bold">边界处只推理采样</text>
+
+    <text x="72" y="420" font-weight="bold">第 3 行</text>
+    <text x="72" y="438">闭环验证</text>
+    <text x="72" y="456" font-weight="bold">放手后才执行动作</text>
+  </g>
+
+  <!-- 第 1 行：方框 -->
+  <g stroke="#36515c" stroke-width="1.2">
+    <rect x="175" y="63" width="150" height="50" rx="6" fill="#eef3f5"/>
+    <rect x="345" y="20" width="260" height="50" rx="6" fill="#eef3f5"/>
+    <rect x="625" y="20" width="280" height="50" rx="6" fill="#fdf3e2" stroke="#a0702a"/>
+    <rect x="345" y="90" width="260" height="66" rx="6" fill="#eef3f5"/>
+    <rect x="625" y="90" width="280" height="66" rx="6" fill="#fdf3e2" stroke="#a0702a"/>
+  </g>
+  <g text-anchor="middle">
+    <text x="250" y="84">同 seed 环境</text>
+    <text x="250" y="102">+ Oracle 规划器</text>
+
+    <text x="475" y="41" font-weight="bold">带下压版：</text>
+    <text x="475" y="59">T-30 步调用 solve_button</text>
+
+    <text x="765" y="41">验证区间与耗时</text>
+    <text x="765" y="59" font-weight="bold">ORACLE_PRESS</text>
+
+    <text x="475" y="110" font-weight="bold">只悬停版：</text>
+    <text x="475" y="128">solve_button_ready 后</text>
+    <text x="475" y="146">保持到 M·N 步</text>
+
+    <text x="765" y="110">逐步动作表</text>
+    <text x="765" y="128" font-weight="bold">oracle_table.json</text>
+    <text x="765" y="146">+ 方块几何（可停区间）</text>
+  </g>
+
+  <!-- 第 1 行：箭头（正交） -->
+  <g fill="none" stroke="#36515c" stroke-width="1.5">
+    <path d="M325,88 H335"/>
+    <path d="M335,45 V123"/>
+    <path d="M335,45 H345" marker-end="url(#afA)"/>
+    <path d="M335,123 H345" marker-end="url(#afA)"/>
+    <path d="M605,45 H625" marker-end="url(#afA)"/>
+    <path d="M605,123 H625" marker-end="url(#afA)"/>
+  </g>
+
+  <!-- 动作表 → 第 2 行、第 3 行（左侧通道） -->
+  <g fill="none" stroke="#36515c" stroke-width="1.5">
+    <path d="M765,156 V178 H152 V433 H175" marker-end="url(#afA)"/>
+    <path d="M288,178 V200" marker-end="url(#afA)"/>
+  </g>
+  <circle cx="288" cy="178" r="3" fill="#36515c"/>
+
+  <!-- 第 2 行：方框 -->
+  <g stroke="#36515c" stroke-width="1.2">
+    <rect x="175" y="200" width="226" height="66" rx="6" fill="#eef3f5"/>
+    <rect x="425" y="200" width="226" height="66" rx="6" fill="#eef3f5"/>
+    <rect x="675" y="200" width="226" height="66" rx="6" fill="#eef3f5"/>
+    <rect x="175" y="296" width="226" height="66" rx="6" fill="#fdf3e2" stroke="#a0702a"/>
+    <rect x="425" y="296" width="226" height="66" rx="6" fill="#eef3f5"/>
+    <rect x="675" y="296" width="226" height="66" rx="6" fill="#fdf3e2" stroke="#a0702a"/>
+  </g>
+  <g text-anchor="middle">
+    <text x="288" y="229">动作表驱动环境</text>
+    <text x="288" y="247" font-weight="bold">（模型动作不执行）</text>
+
+    <text x="538" y="229">真实画面 / 状态 / 记忆</text>
+    <text x="538" y="247">照常更新</text>
+
+    <text x="788" y="220">每 16 步边界：</text>
+    <text x="788" y="238">真实推理一次</text>
+    <text x="788" y="256">+ 独立噪声 32 次采样</text>
+
+    <text x="288" y="325" font-weight="bold">samples_&lt;seq&gt;.npz</text>
+    <text x="288" y="343">物理动作 (32,20,8)</text>
+
+    <text x="538" y="325">official-sim</text>
+    <text x="538" y="343">算目标 TCP 高度</text>
+
+    <text x="788" y="325" font-weight="bold">逐边界下压比例 P</text>
+    <text x="788" y="343">按第几次经过分组</text>
+  </g>
+  <g fill="none" stroke="#36515c" stroke-width="1.5">
+    <path d="M401,233 H425" marker-end="url(#afA)"/>
+    <path d="M651,233 H675" marker-end="url(#afA)"/>
+    <path d="M788,266 V281 H288 V296" marker-end="url(#afA)"/>
+    <path d="M401,329 H425" marker-end="url(#afA)"/>
+    <path d="M651,329 H675" marker-end="url(#afA)"/>
+  </g>
+
+  <!-- 第 3 行：方框 -->
+  <g stroke="#36515c" stroke-width="1.2">
+    <rect x="175" y="400" width="164" height="66" rx="6" fill="#eef3f5"/>
+    <rect x="363" y="400" width="164" height="66" rx="6" fill="#eef3f5"/>
+    <rect x="551" y="400" width="164" height="66" rx="6" fill="#eef3f5"/>
+    <rect x="739" y="400" width="164" height="66" rx="6" fill="#fdf3e2" stroke="#a0702a"/>
+  </g>
+  <g text-anchor="middle">
+    <text x="257" y="420">动作表驱动到</text>
+    <text x="257" y="438">放手边界</text>
+    <text x="257" y="456">（不晚于 T-48）</text>
+
+    <text x="445" y="429">交还模型控制</text>
+    <text x="445" y="447">（此后执行模型动作）</text>
+
+    <text x="633" y="429">真实按钮触发步</text>
+    <text x="633" y="447">与任务成功</text>
+
+    <text x="821" y="438">和正常 50 局对照</text>
+  </g>
+  <g fill="none" stroke="#36515c" stroke-width="1.5">
+    <path d="M339,433 H363" marker-end="url(#afA)"/>
+    <path d="M527,433 H551" marker-end="url(#afA)"/>
+    <path d="M715,433 H739" marker-end="url(#afA)"/>
+  </g>
+
+  <!-- 底部说明 -->
+  <text x="20" y="496">箭头为数据与控制的流向；第 1 行产出的动作表同时驱动第 2 行的采样环境与第 3 行的闭环验证环境。浅黄底框为产物或结果。</text>
+</svg>
+<figcaption>图 2　三条链路：生成动作表、开环测量（模型动作不执行）、闭环验证（放手后执行模型动作）。</figcaption>
+</figure>
+<p><b>Oracle 动作表。</b>在同 seed 环境里实例化 <code>FailAwarePandaArmMotionPlanningSolver</code>，调用任务自带的 <code>task_list[0]["solve"]</code>（即 <code>solve_button_ready</code>），之后反复 <code>planner.close_gripper()</code> 保持（与 <code>solve_hold_obj_absTimestep</code> 相同）。规划器通过 <code>env.step</code> 推进环境，所以在 step 入口记录 8 维动作即可得到逐步表。另跑一个带下压的版本，到 <code>T-30</code> 调 <code>solve_button</code>，用来验证区间和测量 Oracle 自身的耗时。</p>
+<p><b>为什么 Oracle 历史是合理输入。</b>任务定义的示范流程正是「到悬停位、保持、下压」，输入分布比模型自己走到悬停位更接近其任务定义。代价是结果只代表理想历史下的能力，不能解释真实失败（见盲区）。</p>
+<p><b>下压判据。</b>对每个样本的 20 行动作逐行换算目标 TCP 高度。阈值 <code>z_thr = z_hover - 0.02</code>，<code>z_hover</code> 取本局 Oracle 悬停段的实测高度，因为定义值 0.15 m 与第 16 局模型实际悬停高度约 0.160 m 差了 1 cm，相对 2 cm 阈值不能忽略。同时报 0.01／0.02／0.03 三档的敏感性。</p>
+<pre>onset_exec(s, b)    = 前 16 行（实际会执行）里首个 z &lt; z_thr 的行；无则为空
+onset_horizon(s, b) = 全部 20 行里的同一量（反映意图，第 16 局的 385 这次属于这种情况）
+P_exec(b)           = 32 个样本中 onset_exec 非空的比例
+pred_trigger(s, b)  = b + onset_exec + d        # d 为命令到触发的实测耗时
+在区间内            = pred_trigger ∈ [target_visit_in, target_visit_out]</pre>
+<p><b>怎么读结果。</b>主图横轴是「边界距 T 的步数」，纵轴是 <code>P_exec</code>，按 M 分面，并按第几次经过分组，再标出在区间内的比例。</p>
+<div class="tbl"><table>
+<tr><th>现象</th><th>含义</th></tr>
+<tr><td>只在第 N 次经过之前陡升</td><td>能区分次数和时机</td></tr>
+<tr><td>每次经过都升高</td><td>能感知方块位置，但没数对次数</td></tr>
+<tr><td>第 N 次也不升高，或全程平坦</td><td>这段历史下基本不想按，或与方块经过无关</td></tr>
+<tr><td>上升时刻系统性偏早或偏晚</td><td>时序偏差，配合闭环的触发步核实</td></tr>
+</table></div>
+<p><b>两层结果互相校验。</b>由开环比例按 <code>S(b)=∏(1-P_exec)</code> 累乘可估出「首次下压落在区间内」的比例，再与放手后的真实比例对比。这个估计假设各次推理独立且下压不会中途放弃，两者差异如实报告，不用来修正任何一方。</p>
+
+<h2>规模</h2>
+<div class="tbl"><table>
+<tr><th>阶段</th><th>规模</th><th>估时（<b>未实测，冒烟后更新</b>）</th><th>存储</th></tr>
+<tr><td>A 动作表与验证</td><td>只悬停 50 + 带下压 50，无模型</td><td>按 CPU／单卡仿真估约 20～40 分钟</td><td>小于 1 GB</td></tr>
+<tr><td>B 开环测量</td><td>50 局，943 次真实推理 + 943×32=30,176 个样本</td><td>单局冒烟实测约 3.4 秒／边界（含写盘），合计约 53 分钟单卡，另加未测的采样开销</td><td>attention 每次约 92 MB，共约 87 GB；样本约 0.6 GB</td></tr>
+<tr><td>C 闭环验证</td><td>50 局，每局 1 个放手点</td><td>不超过 B 的量级，约 50 分钟单卡</td><td>不超过 87 GB</td></tr>
+<tr><td>D 正常对照</td><td>50 局；可复用旧计划产物</td><td>不超过 1 小时单卡；复用则为 0</td><td>约 70 GB；复用则为 0</td></tr>
+</table></div>
+<p><code>/data</code> 剩余 5.2 TB，存储不是约束。写代码按 1～1.5 小时估，两卡运行时全程应在 6 小时内，但采样开销和卡被占用的情况都未核实，以 <code>BUDGET</code> 判定行为准。</p>
+
+<h2>验收</h2>
+<div class="tbl"><table>
+<tr><th>判定行</th><th>查什么</th><th>过了说明</th></tr>
+<tr><td><code>ORACLE_TABLE=PASS episodes=50 failed=0</code></td><td>规划成功、到位步早于 <code>T-30</code>、全程没按按钮</td><td>每局都有可用动作表和完整区间</td></tr>
+<tr><td><code>ORACLE_PRESS=PASS episodes=50 success=&lt;n&gt;</code></td><td>带下压版的按钮触发、官方停步、任务成功分别记录</td><td>算出的区间和官方判据互相印证；不成功的局列局号</td></tr>
+<tr><td><code>ORACLE_REPLAY=PASS episodes=50 maxabs_qpos=&lt;x&gt; tol=1e-3</code></td><td>评估路径重放动作表，逐步比对 qpos、TCP、方块位置</td><td>另一个环境实例能重现同一轨迹，区间可直接使用</td></tr>
+<tr><td><code>OPEN_LOOP_EXEC=PASS mismatches=0</code></td><td>实际执行动作与动作表逐位相等，全程未触发按钮</td><td>模型确实没有影响环境</td></tr>
+<tr><td><code>SAMPLER_NO_EFFECT=PASS maxabs=0</code></td><td>开关 32 次采样，同一局的真实推理输出逐位相等</td><td>额外采样没有消耗真实 RNG 或改变记忆</td></tr>
+<tr><td><code>SAMPLE_PARITY=PASS maxabs=&lt;x&gt; tol=1e-3</code></td><td>同一噪声下，批量采样与真实路径的输出一致</td><td>样本确实来自同一模型和同一输入</td></tr>
+<tr><td><code>PRESS_SAMPLES=PASS boundaries=&lt;n&gt; samples=32 missing=0</code></td><td>边界数等于实际推理数，无缺失、无 NaN</td><td>下压比例的分母完整</td></tr>
+<tr><td><code>RELEASE_RUN=PASS expected=50 completed=&lt;n&gt;</code></td><td>放手点、触发步、成功字段齐全</td><td>有真实按下的比例；分组计数如实记录</td></tr>
+<tr><td><code>NORMAL_BASELINE=PASS episodes=50 success=&lt;n&gt;</code></td><td>同模型、同 seed 的正常 50 局齐全，来源写明</td><td>可比较理想历史与真实运行</td></tr>
+<tr><td><code>REPORT_READY=PASS</code></td><td>图目视复查，逐局页面可追溯到原始记录</td><td>可交用户阅读；不代表结论已被认可</td></tr>
+</table></div>
+<p>分析结果没有预设通过值，「模型不想按」也是有效结论。任务成功与否都不影响验收。</p>
+
+<h2>步骤</h2>
+<div class="tbl"><table>
+<tr><th>步</th><th>内容</th><th>判据</th></tr>
+<tr><td>1</td><td>开工审查；写代码，逐块审查合并</td><td><code>PLAN_CONSISTENCY_REVIEW</code>；各次合并前后审查通过</td></tr>
+<tr><td>2</td><td>单局冒烟（第 16 局，再加 M=60、N=2 的一局）：动作表、重放、开环 32 采样、放手各一次，实测耗时</td><td>上表前 6 项单局通过；<code>BUDGET=PASS</code></td></tr>
+<tr><td>3</td><td>50 局动作表与验证</td><td><code>ORACLE_TABLE</code>、<code>ORACLE_PRESS</code></td></tr>
+<tr><td>4</td><td>50 局开环测量</td><td><code>ORACLE_REPLAY</code>、<code>OPEN_LOOP_EXEC</code>、<code>PRESS_SAMPLES</code></td></tr>
+<tr><td>5</td><td>50 局闭环验证；正常对照复用或补跑</td><td><code>RELEASE_RUN</code>、<code>NORMAL_BASELINE</code></td></tr>
+<tr><td>6</td><td>分析、出图、报告与留档</td><td><code>REPORT_READY</code></td></tr>
+</table></div>
+
+<h2>子代理分工与合并（简述）</h2>
+<p>代码拆成四块，各在独立 worktree 修改：Oracle 动作表、运行器的动作表模式、32 次采样、分析报告。按这个顺序逐个合回工作分支，因为后面的块消费前面的产物格式。每次合并前由独立审查代理核对改动范围和接口，合并后跑定向短测。运行型代理只按固定版本和命令启动长任务，发现问题交回主会话另派修复。逐文件细节见第二部分。</p>
+
+<h1>第二部分（技术细节，供 agent 追踪）</h1>
+
+<h2>〇 前置声明与红线</h2>
+<ol>
+<li><b>源码边界：</b><code>src/</code>、<code>examples/</code>、<code>third_party/</code>、<code>scripts/training/</code>、<code>scripts/evaluation/</code> 零改动；实施只在 <code>scripts/interpret/</code>。任务定义、终止条件、官方评估判据不覆盖。验证：<code>git diff --name-only &lt;BASE&gt;..&lt;TIP&gt;</code> 全部以 <code>scripts/interpret/</code> 或 <code>docs/</code> 开头。</li>
+<li><b>干预边界：</b>只替换 <code>TraceRunner.step</code> 送入环境的动作。禁止 token 遮挡、<code>--ablate</code>、伪造观测、修改记忆。</li>
+<li><b>不碰旧计划：</b>不停止、不修改旧计划的 tmux 会话、产物根 <code>v1-store/evaluation/stopcube-decision-1104/</code> 与其执行工作树；只读复用其产物。现有 <code>normal</code>、<code>hold_extended</code> 两种模式的行为不变。</li>
+<li><b>不为成功重试：</b>只有基础设施故障可重试，须记录原因和次数。规划失败也不换 seed。</li>
+<li><b>长任务：</b>detached tmux，前缀 <code>so-</code>；日志三件套与 <code>EXIT_CODE=</code>；每份日志一个 Monitor。截止前 10 秒发 TERM，超时按非零报告。</li>
+<li><b>存储：</b>产物只落 <code>v1-store/evaluation/stopcube-oracle-1104/</code>，不进 git。</li>
+<li><b>GPU：</b>起跑前核对占用，只用当前空闲的卡，不操作其他进程；写作时 GPU 1 被旧计划占用，GPU 0 须现场核实；不新增高频 GPU 监控。</li>
+<li><b>现有能力与待验证项分开：</b>第一节是已读源码的事实，第三节是拟新增接口，第二节里标「推算」的是未经仿真核实的数字。</li>
+</ol>
+
+<h2>一 现有能力（已读源码确认）</h2>
+<div class="tbl"><table>
+<tr><th>项目</th><th>事实</th></tr>
+<tr><td>规划器</td><td><code>planner_fail_safe.FailAwarePandaArmMotionPlanningSolver</code>；<code>mplib</code> 已装在 <code>v1-store/envs/official-sim</code>。基类 <code>base_motionplanner/motionplanner.py::follow_path</code> 通过 <code>self.env.step(action)</code> 推进。这条路径在本任务的 <code>BenchmarkEnvBuilder</code> 环境上<b>尚未实跑</b></td></tr>
+<tr><td>Oracle 流程</td><td><code>StopCube._initialize_episode</code>：<code>task_list[0]</code> 为 <code>solve_button_ready</code>（到 z=0.15 后 <code>close_gripper</code>）；中间若干 <code>solve_hold_obj_absTimestep</code>；最后 <code>solve_button(without_hold=True)</code>。下压起点 <code>final_abs_timestep = steps_press - interval</code>，<code>interval</code> 固定 30，<code>steps_press = M·N - M/2</code></td></tr>
+<tr><td>判定</td><td><code>is_obj_stopped_onto</code> 阈值 <code>cube_half_size*3</code>（<code>cube_half_size=0.02</code>）；<code>evaluate</code>：不在目标区按下立即失败，超过 <code>M·N</code> 步未按失败</td></tr>
+<tr><td>方块运动</td><td><code>statechange.py::move_straight_line</code>，与机械臂无关，除非按钮触发</td></tr>
+<tr><td>环境构建</td><td><code>read_sim_eef_pose.build_env</code> 与 <code>EnvRunner.make_env</code> 同走 <code>BenchmarkEnvBuilder</code>，<code>action_space="joint_angle"</code>。<code>env.reset</code> 后首个 <code>env_step_before=1</code>（第 16 局 trace）</td></tr>
+<tr><td>运行器</td><td><code>stopcube_runner.py::TraceRunner.step</code> 已支持按步替换动作、逐步写 <code>step_trace.jsonl</code>，恢复时校验「必须在 16 步边界」；旧计划已实测 <code>HOLD_SMOKE=PASS held_steps=26 takeover=375 release=401 task_success=1 mismatches=0</code>，说明接管与放手链路可用。<code>run_local.py</code> 校验 <code>stopcube_mode</code> 白名单并把内容指纹并入 <code>run_identity</code></td></tr>
+<tr><td>采样</td><td><code>attn_adapter.py::f_sample_attn</code> 接受 <code>noise</code>；<code>AttnRecorder.install</code> 中 <code>sample(rng, observation, **kwargs)</code> 能拿到本次推理的完整 observation；输出变换在 <code>MME_VLA_Policy.infer</code> 内</td></tr>
+<tr><td>高度换算</td><td><code>read_sim_eef_pose.py::TcpReader.set_arm</code>：设 qpos 读 TCP，不跑物理步，须在 official-sim 环境运行</td></tr>
+<tr><td>窗口</td><td><code>stopcube_windows.py::geometry_window</code> 读未按按钮的完整轨迹，输出 <code>target_visit_in/out</code> 与逐次 <code>visits</code></td></tr>
+<tr><td>实测</td><td>第 16 局：<code>command_press_step=403</code>、<code>button_trigger_step=416</code>、<code>motion_delay=13</code>（来自旧计划 <code>calibration-smoke16-a</code>，判据为目标高度过 0.13 m）；TCP 约第 397 步开始下降。两种口径差约 6 步，故 d 必须与判据配套测量，不混用</td></tr>
+</table></div>
+
+<h2>二 规模依据（按 seed 推算，未经仿真核实）</h2>
+<p>用官方清单 <code>env_seed</code> 复现 <code>torch.randint</code> 序列得到 M、N（第 16 局复现 M=120、N=4，与实测一致）。</p>
+<div class="tbl"><table>
+<tr><th>(M,N)</th><th>局数</th><th>(M,N)</th><th>局数</th><th>(M,N)</th><th>局数</th></tr>
+<tr><td>(60,2)</td><td>6</td><td>(80,2)</td><td>7</td><td>(120,2)</td><td>2</td></tr>
+<tr><td>(60,3)</td><td>2</td><td>(80,3)</td><td>6</td><td>(120,3)</td><td>7</td></tr>
+<tr><td>(60,4)</td><td>4</td><td>(80,4)</td><td>3</td><td>(120,4)</td><td>2</td></tr>
+<tr><td>(60,5)</td><td>0</td><td>(80,5)</td><td>6</td><td>(120,5)</td><td>5</td></tr>
+</table></div>
+<p>合计 14,920 步、943 个边界。M=60 共 12 局、M=80 共 22 局、M=120 共 16 局。样本里 N 与 M 的组合不均衡，部分格子局数很少，只描述不做统计推断。</p>
+
+<h2>三 逐文件改动</h2>
+<div class="tbl"><table>
+<tr><th>文件</th><th>类型</th><th>改什么</th><th>关闭态行为</th></tr>
+<tr><td><code>scripts/interpret/stopcube_oracle.py</code></td><td>新增</td><td>CLI：<code>--episode-key</code>、<code>--mode hold|press</code>、<code>--output-dir</code>、<code>--benchmark-root</code>。用 <code>build_env</code> 建环境，包一层记录 <code>env.step</code> 的动作，调任务自带 solve 函数。hold 模式写 <code>oracle_table.json</code> 和与 <code>geometry_window</code> 同格式的 <code>window_probe.jsonl</code>；press 模式写逐步记录、触发步、<code>stop_timestep</code>、任务成功</td><td>新文件，无影响</td></tr>
+<tr><td><code>scripts/interpret/stopcube_runner.py</code></td><td>修改</td><td>新增模式 <code>oracle_open</code>、<code>oracle_release</code>：<code>TraceRunner.step</code> 按 <code>env_step</code> 查表替换动作；release 模式在 <code>release_step</code> 起执行模型动作，沿用现有边界校验。回执记实际到位与放手步</td><td><code>normal</code>、<code>hold_extended</code> 逻辑不变</td></tr>
+<tr><td><code>scripts/interpret/run_local.py</code></td><td>修改</td><td>白名单加两种模式；透传 <code>press_samples</code> 到服务端；表内容指纹并入 <code>run_identity</code></td><td>不传时命令与身份不变</td></tr>
+<tr><td><code>scripts/interpret/attn_adapter.py</code></td><td>修改</td><td>新增独立 jit 函数 <code>f_sample_batch</code>，只出 <code>x_0</code>，不算 attention；不改 <code>f_sample_attn</code></td><td>不调用即不编译</td></tr>
+<tr><td><code>scripts/interpret/serve_policy_attn.py</code></td><td>修改</td><td>新增 <code>--press-samples N</code>：在 <code>AttnRecorder</code> 里保存本次 observation，<code>_orig_infer</code> 返回之后再采样、经同一输出变换，写 <code>samples_&lt;seq&gt;.npz</code></td><td>默认 0，写盘与调用形式不变</td></tr>
+<tr><td><code>scripts/interpret/analysis/oracle_press_prob.py</code></td><td>新增</td><td>official-sim 中计算样本目标高度，缓存 <code>sample_z_&lt;局&gt;.npz</code>；策略无关部分算 <code>P_exec</code>、Wilson 区间、分组表、累乘估计；出图和 <code>report.html</code></td><td>新文件，无影响</td></tr>
+<tr><td>对应 <code>scripts/interpret/test_*.py</code></td><td>新增或修改</td><td>见第七节验收命令</td><td>—</td></tr>
+</table></div>
+
+<h2>四 接口契约</h2>
+<h3>4.1 <code>oracle_table.json</code></h3>
+<pre>{"schema_version": 1, "benchmark_commit": "856bc3a…",
+ "episodes": {"StopCube:16": {
+   "env_seed": 521600, "move_interval": 120, "target_pass": 4,
+   "first_env_step": 1, "actions": [[8 个浮点] × 步数],
+   "reach_step": &lt;首次满足 button_hover 且高度稳定的步&gt;,
+   "z_hover": &lt;悬停段实测 TCP 高度中位数&gt;,
+   "target_visit_in": 412, "target_visit_out": 428, "visits": [...],
+   "release_step": &lt;见 4.3&gt;, "release_kind": "before_t48" | "late_release" | "none"}}}</pre>
+<p>actions 下标 <code>i</code> 对应 <code>env_step = first_env_step + i</code>。运行器在 <code>env_step</code> 越出表范围时抛 <code>ContractError</code>，不静默重复末行。</p>
+<h3>4.2 <code>samples_&lt;seq&gt;.npz</code></h3>
+<div class="tbl"><table>
+<tr><th>键</th><th>形状</th><th>说明</th></tr>
+<tr><td><code>actions</code></td><td><code>(32, 20, 8)</code> f32</td><td>输出变换后的物理关节动作</td></tr>
+<tr><td><code>env_step</code>、<code>infer_seq</code>、<code>episode_key</code>、<code>trajectory_kind</code></td><td>标量</td><td>身份字段；<code>env_step</code> 即边界 b</td></tr>
+<tr><td><code>noise_seed</code></td><td>标量</td><td>见 4.4，可重现</td></tr>
+</table></div>
+<h3>4.3 放手点</h3>
+<pre>B = {1 + 16k}，T = M(N - 1/2)
+候选 = {b ∈ B | reach_step ≤ b ≤ T - 48}
+候选非空: release_step = max(候选), release_kind = before_t48
+候选为空: release_step = min{b ∈ B | b ≥ reach_step}，且须 b &lt; target_visit_in，release_kind = late_release
+仍不存在: release_kind = none，该局不跑闭环，列入报告</pre>
+<p>第 16 局 T-48=372，放手点为 369，模型之后还有 369、385、401 三次边界可在区间前决定下压。M=60、N=2 的 6 局 T-48=42，很可能落入 <code>late_release</code>，报告分组呈现。</p>
+<h3>4.4 采样噪声</h3>
+<p>噪声由固定种子、局身份、轨迹类型、推理序号、样本序号派生的独立 key 生成，不从策略 RNG 取。采样放在 <code>_orig_infer</code> 返回之后，保证真实推理时序不变。batch 大小默认 32，显存不足时分批，只改分批数，不减样本数。</p>
+
+<h2>五 分析定义</h2>
+<ul>
+<li><b>高度：</b><code>TcpReader.set_arm</code> 逐行换算，<code>(32,20)</code>。手指关节沿用 reset 值。不跑物理步，只表示目标姿态的高度，不是实测 TCP。</li>
+<li><b>耗时 d：</b>对每个放手局和正常局，用同一 <code>z_thr</code> 取已执行命令首次过阈值的步到按钮触发的步，按 M 报告分布，<code>pred_trigger</code> 取中位数。Oracle 的耗时单独报告，不混入。没有足够下压局时标明，<code>pred_trigger</code> 相关结果写「不可得」。</li>
+<li><b>经过分组：</b>按 <code>visits</code> 把边界划到第 1…N 次经过，以及经过之间。每组报告 <code>P_exec</code> 均值和局级 bootstrap 区间。</li>
+<li><b>闭环分类：</b>按真实触发步分「早于区间／区间内／晚于区间／没按」，任务成功字段独立报告。</li>
+<li><b>对照：</b>同局比较放手结果与正常结果。两者历史和随机数都不同，只比较分布，不解读单局差异。</li>
+</ul>
+
+<h2>六 子代理分配表</h2>
+<div class="tbl"><table>
+<tr><th>编号</th><th>目标</th><th>可写文件</th><th>禁触</th><th>接口与依赖</th><th>合并顺序</th><th>验收（在 worktree，CPU 短测；环境取法见下）</th><th>资源</th></tr>
+<tr><td>S1：<code>opus</code>，独立 worktree</td><td>Oracle 动作表与带下压验证</td><td><code>stopcube_oracle.py</code>、<code>test_stopcube_oracle.py</code></td><td>红线 1 路径；其余 interpret 文件</td><td>输出 4.1 格式；复用 <code>geometry_window</code></td><td>1</td><td>合成放手点边界短测；真实单局由主会话合并后串行跑</td><td>CPU</td></tr>
+<tr><td>S2：<code>opus</code>，独立 worktree</td><td>运行器动作表模式</td><td><code>stopcube_runner.py</code>、<code>run_local.py</code>、<code>test_stopcube_runner.py</code></td><td>S1、S3、S4 文件</td><td>消费 4.1；旧模式零变化</td><td>2</td><td>查表、越界抛错、放手边界、旧模式回归短测</td><td>CPU</td></tr>
+<tr><td>S3：<code>opus</code>，独立 worktree</td><td>32 次采样</td><td><code>attn_adapter.py</code>、<code>serve_policy_attn.py</code>、<code>test_press_samples.py</code></td><td>S1、S2、S4 文件</td><td>输出 4.2；<code>--press-samples 0</code> 零变化</td><td>3</td><td>噪声派生、写盘格式、默认关闭短测；GPU 项留给合并后</td><td>CPU</td></tr>
+<tr><td>S4：<code>opus</code>，独立 worktree</td><td>分析与报告</td><td><code>analysis/oracle_press_prob.py</code>、<code>test_oracle_press_prob.py</code></td><td>运行与采集源码</td><td>消费 4.1、4.2 与 trace</td><td>4</td><td>合成数据上的判据、空分母、缺失局短测</td><td>CPU</td></tr>
+<tr><td>R1：<code>opus</code>，运行型，不加 worktree</td><td>冒烟与 50 局运行</td><td>只写第十节产物路径</td><td>全部源码、配置、依赖</td><td>主会话给固定 sha、完整命令、GPU、tmux 名、日志路径、起跑判据、最长等待、不自动重试</td><td>S1～S4 合并后</td><td>回执、起跑判据原文、句柄</td><td>最多 2 卡；<code>so-</code> 前缀</td></tr>
+<tr><td>审查：<code>sonnet</code>，只读</td><td>开工一致性、合并前审查</td><td>无</td><td>全部写入、测试、作业</td><td>钉死 BASE／TIP</td><td>开工及每次合并</td><td><code>PLAN_CONSISTENCY_REVIEW</code>、<code>PRE_MERGE_REVIEW</code></td><td>无</td></tr>
+<tr><td>主会话</td><td>整合、合并后审查、监听、报告</td><td>留档、<code>launch.md</code>、<code>result.md</code></td><td>旧计划产物</td><td>唯一资源与清理负责人</td><td>—</td><td><code>POST_MERGE_REVIEW</code> 与全部判定行</td><td>—</td></tr>
+</table></div>
+<p>此表按 Claude Code 角色写。如果改由 Codex 执行，按用户此前的映射把修改、运行、审查都换成 Sol，探索换成 Luna，全部显式指定 high。环境取法：worktree 内 <code>UV_PROJECT_ENVIRONMENT=&lt;主检出&gt;/.venv PYTHONPATH=&lt;worktree&gt;:&lt;worktree&gt;/src uv run --no-sync python -m pytest &lt;定向测试&gt; -q</code>，子代理先打印模块 <code>__file__</code> 核实指向 worktree。</p>
+
+<h2>七 闸门总表</h2>
+<div class="tbl"><table>
+<tr><th>闸门</th><th>怎么查</th><th>为什么成立</th><th>判定行</th></tr>
+<tr><td>动作表</td><td>规划器无异常；<code>reach_step ≤ T-30</code>；全程 <code>button_pressed</code> 为假；区间 resolved</td><td>任务定义的下压起点就是 T-30，不到位则比较无意义</td><td><code>ORACLE_TABLE=PASS episodes=50 failed=0 late_reach=&lt;n&gt;</code></td></tr>
+<tr><td>区间验证</td><td>press 模式下核触发步是否落在区间、<code>stop_timestep</code> 与任务成功</td><td>官方判据是唯一真值，区间算错会在这里暴露</td><td><code>ORACLE_PRESS=PASS episodes=50 success=&lt;n&gt; trigger_outside=&lt;n&gt;</code></td></tr>
+<tr><td>重放</td><td>trace 对比生成时的 qpos、TCP、方块位置</td><td>同代码、同 seed、同机物理确定时应极小；若不一致，区间须改从本次 trace 读取</td><td><code>ORACLE_REPLAY=PASS episodes=50 maxabs_qpos=&lt;x&gt; tol=1e-3</code></td></tr>
+<tr><td>开环执行</td><td>trace 中 <code>executed_action</code> 与表逐位比较；<code>button_pressed_after</code> 全假</td><td>动作由表决定，与模型无关</td><td><code>OPEN_LOOP_EXEC=PASS episodes=50 mismatches=0</code></td></tr>
+<tr><td>采样无影响</td><td>第 16 局开关采样各跑一次，逐推理比较 <code>actions</code></td><td>采样在真实推理之后且不用策略 RNG</td><td><code>SAMPLER_NO_EFFECT=PASS infers=&lt;n&gt; maxabs=0</code></td></tr>
+<tr><td>采样一致</td><td>同一噪声走批量路径与 <code>f_sample_attn</code>，比较归一化输出</td><td>同权重同输入；bf16 批处理允许微小差异</td><td><code>SAMPLE_PARITY=PASS maxabs=&lt;x&gt; tol=1e-3</code></td></tr>
+<tr><td>高度换算</td><td>用 <code>state</code> 算高度与同步实测 TCP 比较</td><td>确认换算链接对</td><td><code>FK_PARITY=PASS rows=&lt;n&gt; maxabs_z=&lt;x&gt; tol=1e-3</code></td></tr>
+<tr><td>样本完整</td><td><code>samples_*.npz</code> 数等于边界数；形状、有限性</td><td>分母不缺</td><td><code>PRESS_SAMPLES=PASS boundaries=&lt;n&gt; samples=32 missing=0</code></td></tr>
+<tr><td>闭环</td><td>放手前动作等于表；放手步为边界；放手后动作等于模型输出</td><td>证明控制权确实交回</td><td><code>RELEASE_RUN=PASS expected=&lt;50-none&gt; completed=&lt;n&gt; none=&lt;n&gt; late=&lt;n&gt;</code></td></tr>
+<tr><td>对照</td><td>来源 run、代码 sha、模型身份一致；代码差异只在 <code>scripts/interpret/</code> 且默认关闭</td><td>避免比较不同条件</td><td><code>NORMAL_BASELINE=PASS episodes=50 success=&lt;n&gt; source=&lt;路径&gt;</code></td></tr>
+<tr><td>时间</td><td>冒烟实测推算剩余</td><td>决定能否在截止前跑完</td><td><code>BUDGET=PASS deadline=2026-11-05T09:52:00Z remaining_s=&lt;n&gt; estimated_s=&lt;m&gt;</code></td></tr>
+<tr><td>报告</td><td>齐全、可追溯，图渲染后目视复查</td><td>第 2 条画图复查要求</td><td><code>REPORT_READY=PASS episodes=50</code></td></tr>
+</table></div>
+<p>任一阈值不过只记录证据交用户裁决，不自行放宽。<code>ORACLE_PRESS</code> 的成功数没有门槛，低于 50 时列局号；开环测量只用只悬停段，不受影响。</p>
+
+<h2>八 Runbook</h2>
+<p>下列为实施顺序，尚不存在的 CLI 不当作已验证命令；完整命令在起跑前写入 <code>launch.md</code>。解释器：策略 <code>.venv/bin/python</code>，仿真 <code>v1-store/envs/official-sim/bin/python</code>，motion 编码 <code>v1-store/envs/stage2/bin/python</code>；检查点与运行合同沿用旧计划 <code>launch.md</code> 第三节。</p>
+<ol>
+<li>提交本计划；开工令后派一个 <code>sonnet</code> 审全文，钉死计划 sha。</li>
+<li>派 S1～S4；依次合并、审查、推送。运行用独立干净工作树，避开用户未跟踪文件。</li>
+<li>冒烟：<code>StopCube:16</code> 与一个 M=60、N=2 的局，顺序为 hold → press → <code>oracle_open</code>（采样开、关各一次）→ <code>oracle_release</code>。失败保留日志，不放大。</li>
+<li>核对旧计划 <code>&lt;旧产物根&gt;/normal/gpu1/</code>：日志有 <code>EXIT_CODE=0</code> 且 50 局齐全就登记复用；仍在跑就不等待，先做后续步骤；失败或不全才排入第 7 步。</li>
+<li>全量动作表（hold、press）。</li>
+<li>开环 50 局，按已有 <code>chunk_size=5</code> 分块，两卡各写独立目录。</li>
+<li>闭环 50 局；需要时补跑正常 50 局。</li>
+<li>生产者都有 <code>EXIT_CODE=0</code> 且局数齐全后，再做高度换算与分析；不读半成品。</li>
+<li>写 <code>result.md</code>、更新评估索引；收尾列 tmux 清单。</li>
+</ol>
+
+<h2>九 风险登记</h2>
+<div class="tbl"><table>
+<tr><th>风险</th><th>影响</th><th>处置</th></tr>
+<tr><td>规划器在评估环境包装下不能直接驱动</td><td>动作表生成失败</td><td>冒烟先暴露；不改第三方代码，必要时只在 <code>stopcube_oracle.py</code> 内调整调用方式。需要更大改动时停下交用户</td></tr>
+<tr><td>Oracle 到位晚于 T-30</td><td>部分局无法到位比较</td><td>记 <code>late_reach</code>，分组呈现，不改任务时间</td></tr>
+<tr><td>重放与生成不一致</td><td>动作表与环境状态漂移</td><td>区间改从本次 trace 读取；qpos 偏差超容差交用户</td></tr>
+<tr><td>模型在悬停历史上行为退化</td><td>比例很低</td><td>这本身是有效结果；用闭环和正常对照区分</td></tr>
+<tr><td>下压判据受悬停高度影响</td><td>比例随阈值变化</td><td>保存全部高度曲线，报三档敏感性；不事后挑阈值</td></tr>
+<tr><td>旧计划占用同一批 GPU</td><td>排队或互抢</td><td>起跑前核占用，只用空闲卡；时间不够时报告，不抢占</td></tr>
+<tr><td>32 次采样开销超预期</td><td>超时</td><td>不减样本；<code>BUDGET</code> 不过时交用户裁决</td></tr>
+</table></div>
+
+<h2>十 盲区诚实清单</h2>
+<ul>
+<li>开环比例表示「预测动作满足下压判据」，不等于按钮触发或任务成功；一次下压跨两个动作块，<code>P_exec</code> 只反映起始。</li>
+<li>Oracle 历史是理想条件。如果真实失败来自模型自身轨迹的累积偏差，开环结果看不出来。</li>
+<li>放手点只有一个，结果依赖选点规则；<code>late_release</code> 的局不能与其他局直接合并。</li>
+<li>只有一个模型 seed、50 局，部分 (M,N) 格子只有 2 局，结论不能外推。</li>
+<li>累乘估计假设相邻推理独立，这在记忆模型上不成立，只作粗略对照。</li>
+<li>目标高度来自关节目标的运动学换算，真实 TCP 有滞后。</li>
+<li>本计划不回答「模型依据什么决定下压」。</li>
+</ul>
+
+<h2>十一 留档与 commit 纪律</h2>
+<ul>
+<li>产物根 <code>v1-store/evaluation/stopcube-oracle-1104/</code>：<code>oracle/</code>、<code>smoke/</code>、<code>open/gpu*/</code>、<code>release/gpu*/</code>、<code>normal/</code>（仅补跑时）、<code>analysis/</code>、<code>logs/</code>。</li>
+<li>留档 <code>docs/evaluation-doc/stopcube-oracle-1104/</code>：<code>launch.md</code>、<code>result.md</code>、<code>records/</code>（汇总 JSON、判定行、图）；大数组和视频留在产物根；建档时在评估索引加一行。</li>
+<li>评估从干净实现提交起跑并记录 sha；已有干净提交时不制造空 Beta。</li>
+<li>子代理 subject 用 <code>sub/S1: </code> 前缀；主会话 <code>git merge --no-ff &lt;TIP sha&gt;</code>，合并后审查通过再 push。只 <code>git add</code> 明确路径，绕开用户未跟踪文件。</li>
+</ul>
+
+<h2>十二 交接顺序与状态机登记</h2>
+<p>任务 id <code>stopcube-oracle-1104</code>。是否登记进 <code>docs/handoff/current.json</code> 待用户回答；未回答前不写入。</p>
+<ul>
+<li><b>交接前必须完成：</b>第七节除 <code>NORMAL_BASELINE</code> 来源可为复用外的全部判定行（保存在 <code>docs/evaluation-doc/stopcube-oracle-1104/records/verification.summary.txt</code>）、本轮 tmux 退出且退出码已核、留档已提交推送。</li>
+<li><b>长尾：</b>无。</li>
+<li><b>上游：</b>无解锁依赖。可选复用旧计划的正常 50 局，假设为 <code>RUN_LOCAL=PASS episodes=50</code>；不满足就补跑，不等待。</li>
+<li><b>下游：</b>无自动解锁。第二问（token 分析）另定计划。</li>
+</ul>
+
+</main>
+</body>
+</html>
