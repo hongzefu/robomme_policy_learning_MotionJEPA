@@ -170,14 +170,16 @@ def main(argv=None):
     if args.attention:
         from scripts.interpret.attn_adapter import AttnAdapter
         adapter = AttnAdapter(policy)
-    results = [replay_query(policy, path, adapter=adapter) for path in args.query]
+    results = []
+    for path in args.query:
+        item = replay_query(policy, path, adapter=adapter)
+        results.append(item)
+        print(f"OFFLINE_REPLAY={item['status']} points=1 same_path_maxabs={item['same_path_maxabs']:.9g} "
+              f"tol=1e-6 attn_path_maxabs={item['attn_path_maxabs']} attention={item['attention']}", flush=True)
     report = {"checkpoint": str(args.ckpt.resolve()), "results": results}
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    for item in results:
-        print(f"OFFLINE_REPLAY={item['status']} points=1 same_path_maxabs={item['same_path_maxabs']:.9g} "
-              f"tol=1e-6 attn_path_maxabs={item['attn_path_maxabs']} attention={item['attention']}", flush=True)
     return 0 if all(item["status"] == "PASS" for item in results) else 1
 
 
