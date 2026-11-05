@@ -23,12 +23,12 @@
 <main>
 <h1 class="title">StopCube 悬停期逐层探针计划（完整版）</h1>
 <div class="note">
-<b>状态：</b>只规划，未实施；须用户对本计划不改而直接认可后才开工。实现在 sled-aspen 的策略仓库 <code>robomme_policy_learning_MotionJEPA</code>（分支 <code>v4.1-interpretMotion</code>）。<br>
+<b>状态：</b>用户已开工（2026-11-05 美东，「不登记状态机 开工」），实施中。实现在 sled-aspen 的策略仓库 <code>robomme_policy_learning_MotionJEPA</code>（分支 <code>v4.1-interpretMotion</code>）。<br>
 <b>范围：</b>只做 StopCube 的第一阶段（弱可解码）。历史反事实、RouteStick、其他任务都在待办。<br>
 <b>与其他文件的关系：</b>本计划取代 <code>probe/1105-keypoint-probe-plan.html</code> 里 StopCube 的取点与探针口径（「每次经过前 30 步」改为悬停期全程）；该文件的 RouteStick 部分与第二阶段保持原样。<br>
 <b>经验来源：</b>策略仓库 <code>docs/evaluation-doc/stopcube-rollout-1105/result.md</code>（commit <code>019542c</code>，2026-11-05 美东读取）。<br>
 <b>不新增数据：</b>只用已有的官方示教与已有记录。<br>
-<b>2026-11-05 美东细化：</b>代码锚点 <code>d27c9da</code>；只读核实了示教 H5、记忆适配器和环境源码（第三方 gitlink <code>856bc3a</code>），实测数字见 B3。细化没有新增读数和对照，只把未定义的地方写实，把和实测不符的地方改掉。B9 的推荐项用户已裁决：「全部按推荐」（2026-11-05 美东）；Q5 无推荐项，未定。<br>
+<b>2026-11-05 美东细化：</b>代码锚点 <code>d27c9da</code>；只读核实了示教 H5、记忆适配器和环境源码（第三方 gitlink <code>856bc3a</code>），实测数字见 B3。细化没有新增读数和对照，只把未定义的地方写实，把和实测不符的地方改掉。B9 的推荐项用户已裁决：「全部按推荐」（2026-11-05 美东）；Q5 用户选不登记状态机。用户开工令：「不登记状态机 开工」。<br>
 <b>对抗验证：</b>独立只读审查锚定 <code>286487a</code>，<code>ADJUST_REVIEW=PASS scale=same findings=10 blocking=0</code>。主会话逐条核实后，事实和文字类已改进本版，取舍类进 B9；本版的修订没有再审一轮。
 </div>
 
@@ -278,10 +278,10 @@
 <li>分析与出图：<code>hover_probe</code> 放 tmux <code>cc-hp-probe</code>；图渲染后主会话目视复查。</li>
 <li>写 <code>result.md</code>，commit 并 push。</li>
 </ol>
-<p>状态机（第 27 条）：任务 id <code>stopcube-hover-probe</code>。交接前完成：A8 全部判定行与 <code>result.md</code> 提交。没有长尾。没有依赖的上游任务；下游（第二批动作 token、反事实）都要另给开工令。是否登记进 <code>current.json</code> 待确认 Q5。</p>
+<p>状态机（第 27 条）：不用任务 id。交接前完成：A8 全部判定行与 <code>result.md</code> 提交。没有长尾。没有依赖的上游任务；下游（第二批动作 token、反事实）都要另给开工令。用户裁决不登记进 <code>current.json</code>，按人工交接。</p>
 
 <h2>B9 用户裁决记录</h2>
-<p>用户 2026-11-05 美东：「全部按推荐」。下列 Q1–Q4、Q6–Q8 都取推荐项；Q5 没有推荐项，待定。</p>
+<p>用户 2026-11-05 美东：「全部按推荐」。下列 Q1–Q4、Q6–Q8 都取推荐项；Q5 用户选不登记：「不登记状态机 开工」。</p>
 <ol>
 <li><b>Q1 float32 做到哪一步：</b>推荐只把前缀前向改成 float32，帧记忆仍由 bf16 的 <code>policy</code> 生成，这是模型真实看到的记忆，也有 <code>diag_hidden.py</code> 现成做法。代价是混合精度：当前画面的两路图像在 float32 模型内部编码，和实际运行的 bf16 不同。另一选择是记忆的视觉编码也换 float32，全链一致，但记忆不再是模型实际看到的那份，也没有现成做法。</li>
 <li><b>Q2 <code>REPLAY_PARITY</code> 换法：</b>rollout 没存原始帧，原写法做不到；推荐 A8 的布局加分批两步。</li>
