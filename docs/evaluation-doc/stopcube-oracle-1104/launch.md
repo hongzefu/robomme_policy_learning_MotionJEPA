@@ -14,7 +14,7 @@ Aspen 本地环境 A，主检出 `/data/hongzefu/robomme_policy_learning_MotionJ
 
 benchmark 锁定 `856bc3a189d4172f3f47dbee4424d585f8d78db3`。策略环境为主检出 `.venv`，仿真为 `v1-store/envs/official-sim`，motion 编码为 `v1-store/envs/stage2`。基线规格沿用[既有资产与规格档案](../attn-ctx512-vs-motion-1103/launch.md)，本轮运行前重新核实实际指向与参数。
 
-静态核对三套解释器均为 CPython 3.11.14。主环境 editable 指向主检出 `src` 和 `packages/openpi-client/src`；仿真环境 `robomme.pth` 指向主检出锁定 benchmark。执行工作树以 `PYTHONPATH` 优先指定其自身代码。motion 配置名采用既有档案已修正的 `mme_vla_suite_b128`，不沿用旧 JSON 遗留的未注册名称。缓存须由外层显式指定到本机 `v1-store/cache`。
+静态核对三套解释器均为 CPython 3.11.14。主环境 editable 指向主检出 `src` 和 `packages/openpi-client/src`；仿真环境 `robomme.pth` 指向主检出锁定 benchmark。执行工作树以 `PYTHONPATH` 优先指定其自身代码。motion 配置名采用本计划所引用旧起跑档案第三节的 `mme_vla_suite_orig16_b128_60k`；基线采用 `mme_vla_suite_b128`。当前 `training/config.py` 已注册两者，模型历史由检查点配置快照恢复。此前依据 11-03 历史陈述误写“未注册”，已回源码纠正，未启动模型、未发生运行配置变更。缓存须由外层显式指定到本机 `v1-store/cache`。
 
 ## 口径、执行顺序与截止
 
