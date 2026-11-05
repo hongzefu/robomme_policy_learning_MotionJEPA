@@ -266,7 +266,7 @@ def check_records(attn_dir, episodes):
         found = []
         directory = attn_dir / str(episode["nonce"])
         expected = {item["infer_seq"]: item["chunk_start_env_step"] for item in episode["inferences"]}
-        names ={path.name for path in directory.glob("rollout_*.npz")}
+        names = {path.name for path in directory.glob("rollout_*.npz")}
         wanted = {f"rollout_{seq:04d}.npz" for seq in expected}
         for name in sorted(wanted - names):
             found.append(f"缺文件 {directory / name}")
