@@ -168,7 +168,7 @@
 <h2>二 任务事实（窗口计算的依据）</h2>
 <ul>
 <li>官方 <code>StopCube.py</code>：每程 <code>M∈{60,80,120}</code>，次数 <code>N∈{2..5}</code>，方块沿 0.6 m 直线往返，目标在中点；理论应按时刻 <code>T=M(N-1/2)</code>。</li>
-<li><code>is_obj_stopped_onto</code>：方块中心距目标 ≤ <code>3×0.02=0.06</code> m 才算停在目标上，理论窗口约 <code>T ± M/10</code>。</li>
+<li><code>is_obj_stopped_onto</code>：方块水平距目标 ≤ <code>3×cube_half_size</code> 才算停在目标上。<code>move_straight_line</code> 使用 smoothstep，原 <code>T ± M/10</code> 是线性近似，不用于实际窗口；本轮从同 seed 仿真的真实位置和官方阈值取区间。</li>
 <li><code>evaluate</code>：按下时不在目标区立刻失败；超过 <code>M·N</code> 步未按也失败；停止时刻必须落在第 N 程。</li>
 <li>评估用任务代码以 <code>third_party/robomme_benchmark</code> 锁定 commit <code>856bc3a189d4172f3f47dbee4424d585f8d78db3</code> 为准，不读取移动的上游版本作为运行代码。</li>
 <li><code>StopCube.step</code> 先读按钮锁存，再调用父类步进，最后移动方块；<code>is_obj_stopped_onto</code> 在物体位于目标且已停时记录 <code>stop_timestep</code>。按钮物理触发、停步与终局不能混为同一个时刻，需保留步进前后状态。</li>
@@ -356,6 +356,8 @@ lens[step, l] = ⟨-v_l[:16, :8], press_direction⟩ / ‖v_17[:16, :8]‖</pre>
 <li>开工审查指出任意环境步恢复与现有 16 帧续包合同冲突。主会话解释改为最接近合适下压时间的一次新推理时恢复，用户先说「好的，就是这样。」，随后「准备开工」「同意开工」。据此修订第 4.3 节，第一阶段授权继续有效，截止不重置。</li>
 <li>本版同时修正：缺失观测、悬停循环定义、范围与代表点混用、实际运动与关节目标混用、归一化/物理动作接口、速度场投影符号、阶段等待与轨迹身份。</li>
 </ol>
+<h2>十三 实施中调整</h2>
+<p><b>机械臂延迟来源：</b>原版优先成功示范和本次成功局，实施时增加同局失败轨迹的完整实测来源。只有安全悬停、首条已执行下压命令和按钮真实触发均可追溯时，才记录 <code>calibration_source=same_episode_measured</code>，保留 <code>task_success=false</code>、原命令步、按钮步和姿态。这只用于同局且姿态适用的运动耗时，不改变官方成功判据，不作为 <code>WINDOW_SIM</code> 的成功验证，也不保证恢复后新动作有相同延迟。涉及文件仅 <code>stopcube_windows.py</code> 的来源分类与既有记录提取，不新增运行、协议、依赖或资源。独立审查：<code>ADJUST_REVIEW=PASS scale=same findings=0</code>。</p>
 </main>
 </body>
 </html>
