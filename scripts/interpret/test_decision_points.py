@@ -4,6 +4,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from scripts.interpret import decision_points as D
 
 
@@ -20,17 +22,19 @@ def fixture(tmp_path, *, kind="normal", outcome="fail", press=24, end=56, initia
         button = press is not None and before >= press + 3
         rows.append({"event": "step", "episode_key": KEY, "trajectory_kind": kind,
                      "infer_seq": seq, "row_in_chunk": (before - initial) % 16,
+                     "action_index": before - initial,
                      "chunk_start_env_step": initial + seq * 16,
                      "env_step_before": before, "env_step_after": before + 1,
                      "command_action": [0.0] * 8, "executed_action": [0.0] * 8,
                      "state_before": [float(before)] * 8, "state_after": [float(before + 1)] * 8,
-                     "tcp_before": [0, 0, 0.1 if below else 0.15],
+                     "tcp_before": [0, 0, 0.1 if press is not None and before >= press + 2 else 0.15],
                      "tcp_after": [0, 0, 0.1 if press is not None and before >= press + 1 else 0.15],
                      "executed_target_tcp_z": 0.1 if below else 0.15,
                      "button_pressed_before": button,
                      "button_pressed_after": button or (press is not None and before == press + 2),
                      "stop_timestep": press + 3 if button else None})
     meta = {"episode_key": KEY, "episode_nonce": kind, "trajectory_kind": kind,
+            "episode_id": 0, "env_seed": 12,
             "outcome": outcome, "task_success": outcome == "success", "initial_env_step": initial,
             "D": 35, "exec_start_idx": 19, "video_fps": 20, "video_start_env_step": 0,
             "video_exec0_frame_index": 35}
@@ -38,8 +42,10 @@ def fixture(tmp_path, *, kind="normal", outcome="fail", press=24, end=56, initia
               "video_path": str(video), "errors": [],
               "infer_files": [str(tmp_path / f"infer_{seq:04d}.npz") for seq in sorted({r["infer_seq"] for r in rows})]}
     window = {"status": "resolved", "start_range": [36, 58], "move_interval": 80,
+              "episode_key": KEY, "env_seed": 12,
               "target_pass": 3, "target_visit_in": 39, "target_visit_out": 61}
     calibration = {"status": "resolved", "hover_z": 0.15, "delta_z": 0.02, "motion_delay": 3,
+                   "episode_key": KEY, "episode_id": 0, "env_seed": 12,
                    "calibration_source": "same_episode_measured", "trajectory_kind": "normal",
                    "events": {"hover_steps": [20, 23]}}
     return record, window, calibration
@@ -74,7 +80,8 @@ def test_window_all_overlapping_infers_and_truncation(tmp_path):
     window["start_range"] = [70, 100]
     result = D.analyze(record, window, cal, "normal")
     assert result["window_infers"] == [] and result["window_rep"] is None
-    assert any("终局提前截断" in reason for reason in result["reasons"])
+    assert any("终局提前截断" in reason for reason in result["observability_reasons"])
+    assert not result["reasons"]
 
 
 def test_command_actual_button_and_terminal_are_distinct(tmp_path):
@@ -181,12 +188,142 @@ def test_npz_coverage_is_explicit_and_video_prefix_is_counted(tmp_path):
     result = D.analyze(record, window, cal, "normal")
     assert any("infer_*.npz" in reason for reason in result["reasons"])
     page = D.media_section(result, tmp_path)
-    # 命令环境步24，示范前缀35帧，20帧/秒，事件定位为2.95秒。
-    assert "#t=0.950,4.950" in page
+    # 命令动作索引17，示范前缀35帧，20帧/秒，事件定位为2.6秒。
+    assert "#t=0.600,4.600" in page
     assert "首条下压命令推理序号附近" not in page
     record["infer_files"] = [str(tmp_path / "infer_9999.npz")]
     result = D.analyze(record, window, cal, "normal")
     assert any("序号不一致" in reason for reason in result["reasons"])
+
+
+def hold_fixture(tmp_path):
+    normal, window, cal = fixture(tmp_path, end=30)
+    extended, _, _ = fixture(tmp_path, kind="hold_extended", outcome="success", press=44, end=60)
+    extended["meta"].update(takeover_step=23, release_step=39, actual_takeover_step=23,
+                            actual_release_step=39, hold_qpos=[23.0] * 8)
+    for row in extended["rows"]:
+        if 23 <= row["env_step_before"] < 39:
+            row["executed_action"] = [23.0] * 8
+    return normal, extended, window, cal
+
+
+def review_pair(normal, extended, window, cal):
+    return D.build_review({KEY: window}, {KEY: cal}, {KEY: [normal]}, {KEY: [extended]}, [KEY])[0]
+
+
+def test_early_terminal_window_is_completed_by_verified_extended(tmp_path):
+    normal, extended, window, cal = hold_fixture(tmp_path)
+    draft = review_pair(normal, extended, window, cal)
+    assert draft["summary"]["ready"]
+    episode = draft["episodes"][KEY]
+    assert episode["trajectories"]["normal"]["window_infers"] == []
+    assert episode["trajectories"]["normal"]["observability_reasons"]
+    assert episode["trajectories"]["hold_extended"]["window_infers"] == [1, 2, 3]
+    normal["infer_files"] = []
+    assert not review_pair(normal, extended, window, cal)["summary"]["ready"]
+
+
+@pytest.mark.parametrize("field", ["actual_takeover_step", "actual_release_step", "takeover_step",
+                                    "release_step", "hold_qpos"])
+def test_required_extended_receipt_cannot_omit_candidate_fields(tmp_path, field):
+    normal, extended, window, cal = hold_fixture(tmp_path)
+    extended["meta"].pop(field)
+    draft = review_pair(normal, extended, window, cal)
+    assert not draft["summary"]["ready"]
+    assert any(field in reason for reason in draft["episodes"][KEY]["reasons"])
+
+
+@pytest.mark.parametrize("mutation, expected", [
+    ("hold_action", "偏离固定悬停"), ("prefix_command", "接管前"),
+    ("prefix_executed", "接管前"), ("release_row", "边界新推理"),
+    ("release_command", "边界新推理"), ("missing_release", "恢复步缺失"),
+    ("hold_gap", "不连续"), ("receipt_qpos", "hold_qpos"),
+])
+def test_required_extended_checks_real_trace_actions(tmp_path, mutation, expected):
+    normal, extended, window, cal = hold_fixture(tmp_path)
+    by_step = {row["env_step_before"]: row for row in extended["rows"]}
+    if mutation == "hold_action":
+        by_step[24]["executed_action"][0] = -1
+    elif mutation == "prefix_command":
+        by_step[10]["command_action"][0] = -1
+    elif mutation == "prefix_executed":
+        by_step[10]["executed_action"][0] = -1
+    elif mutation == "release_row":
+        by_step[39]["row_in_chunk"] = 1
+    elif mutation == "release_command":
+        by_step[39]["executed_action"][0] = -1
+    elif mutation == "missing_release":
+        extended["rows"].remove(by_step[39])
+    elif mutation == "hold_gap":
+        extended["rows"].remove(by_step[30])
+    else:
+        extended["meta"]["hold_qpos"][0] = -1
+    draft = review_pair(normal, extended, window, cal)
+    assert not draft["summary"]["ready"]
+    assert any(expected in reason for reason in draft["episodes"][KEY]["reasons"])
+
+
+@pytest.mark.parametrize("kind, field, value", [("normal", "env_seed", 99),
+                                               ("hold_extended", "env_seed", None),
+                                               ("hold_extended", "episode_id", 1),
+                                               ("calibration", "episode_id", None)])
+def test_receipt_identity_must_match_calibration(tmp_path, kind, field, value):
+    normal, extended, window, cal = hold_fixture(tmp_path)
+    if kind == "calibration":
+        cal[field] = value
+    else:
+        record = normal if kind == "normal" else extended
+        record["meta"][field] = value
+    draft = review_pair(normal, extended, window, cal)
+    assert not draft["summary"]["ready"]
+    assert any(field in reason for reason in draft["episodes"][KEY]["reasons"])
+    if kind in ("normal", "calibration"):
+        assert draft["episodes"][KEY]["hold_candidate"] is None
+
+
+def test_s1_offline_events_are_used_without_rewriting_trace_fk(tmp_path):
+    normal, extended, window, cal = hold_fixture(tmp_path)
+    normal_events = D.analyze(normal, window, cal, "normal")["events"]
+    extended_events = D.analyze(extended, window, cal, "hold_extended")["events"]
+    cal["trajectories"] = {"normal": {"events": normal_events}, "hold_extended": {"events": extended_events}}
+    for record in (normal, extended):
+        for row in record["rows"]:
+            row.pop("executed_target_tcp_z")
+    draft = review_pair(normal, extended, window, cal)
+    assert draft["summary"]["ready"]
+    assert draft["episodes"][KEY]["trajectories"]["hold_extended"]["events"]["command_press_step"] == 44
+
+
+def test_start_below_threshold_is_not_an_observed_crossing(tmp_path):
+    record, window, cal = fixture(tmp_path, press=7)
+    for row in record["rows"]:
+        row["tcp_before"][2] = row["tcp_after"][2] = 0.1
+    result = D.analyze(record, window, cal, "normal")
+    assert result["events"]["actual_press_onset"] is None
+    assert result["events"]["actual_press_onset_bounds"] is None
+
+
+@pytest.mark.parametrize("after", [22, 24])
+def test_multistep_bounds_and_video_follow_outer_action_index(tmp_path, after):
+    record, window, cal = fixture(tmp_path)
+    row = record["rows"][0]
+    row.update(env_step_before=20, env_step_after=after, tcp_before=[0, 0, 0.15], tcp_after=[0, 0, 0.1],
+               button_pressed_before=False, button_pressed_after=True)
+    # 后续调用即使经过额外物理步，其动作索引仍是1而非4。
+    record["rows"][1].update(env_step_before=after, env_step_after=after + 1)
+    record["rows"] = record["rows"][:2]
+    cal["trajectories"] = {"normal": {"events": {"command_press_step": after, "press_infer": 0,
+        "actual_press_onset": after, "actual_press_onset_bounds": [21, after],
+        "button_trigger_step": after, "button_trigger_bounds": [21, after]}}}
+    result = D.analyze(record, window, cal, "normal")
+    assert result["events"]["actual_press_onset_bounds"] == [21, after]
+    assert result["event_video_frames"]["actual_press_onset"] == 36
+    assert result["event_video_frames"]["command_press_step"] == 36
+    draft, _ = D.build_review({KEY: window}, {KEY: cal}, {KEY: [record]}, {}, [KEY])
+    page = D.render_html(draft, tmp_path)
+    assert f"[21, {after}]（区间，非精确步）" in page
+    assert f"环境步区间 [21, {after}]" in page
+    assert "#t=0.000,3.800" in page
 
 
 def test_cli_writes_only_drafts_and_reports_missing(tmp_path, capsys):

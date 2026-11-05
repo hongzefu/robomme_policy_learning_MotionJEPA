@@ -120,7 +120,7 @@ def analyze(record, window, calibration, kind):
     """命令按发出前的环境步分类，实测运动按完成后的环境步另记。"""
     if record is None:
         return {"trajectory_kind": kind, "present": False, "reasons": ["尚无该轨迹记录"],
-                "events": {}, "window_infers": [], "window_rep": None}
+                "observability_reasons": [], "events": {}, "window_infers": [], "window_rep": None}
     rows, meta = record["rows"], record["meta"]
     reasons = list(record["errors"])
     cal = trajectory_calibration(calibration, kind)
@@ -129,7 +129,9 @@ def analyze(record, window, calibration, kind):
     threshold = hover_z - delta_z if number(hover_z) and number(delta_z) else None
     command = next((r for r in rows if threshold is not None and command_height(r) is not None
                     and command_height(r) < threshold), None)
-    if command is not None:
+    if "command_press_step" in events:
+        pass  # S1 的离线 FK 事件保留为来源，不要求它改写原始逐步记录。
+    elif command is not None:
         events.update(command_press_step=command["env_step_before"], press_infer=command.get("infer_seq"))
     elif not number(events.get("command_press_step")):
         if rows and all(command_height(r) is not None for r in rows) and threshold is not None:
@@ -138,12 +140,16 @@ def analyze(record, window, calibration, kind):
             reasons.append("缺少实际执行动作的目标 TCP 高度或独立命令校准，无法确认命令下压时刻")
     if threshold is None:
         reasons.append("缺少独立悬停高度或下压阈值校准")
-    actual = next((r for r in rows if threshold is not None and vector(r.get("tcp_after"), 3)
+    actual = next((r for r in rows if threshold is not None and vector(r.get("tcp_before"), 3)
+                   and vector(r.get("tcp_after"), 3) and r["tcp_before"][2] >= threshold
                    and r["tcp_after"][2] < threshold), None)
-    events["actual_press_onset"] = actual["env_step_after"] if actual else None
-    button = next((r for r in rows if r.get("button_pressed_after")
-                   and not r.get("button_pressed_before")), None)
-    events["button_trigger_step"] = button["env_step_after"] if button else None
+    button = next((r for r in rows if r.get("button_pressed_before") is False
+                   and r.get("button_pressed_after") is True), None)
+    for name, bounds_name, row in (("actual_press_onset", "actual_press_onset_bounds", actual),
+                                   ("button_trigger_step", "button_trigger_bounds", button)):
+        if bounds_name not in events:
+            events[bounds_name] = [row["env_step_before"] + 1, row["env_step_after"]] if row else None
+            events[name] = row["env_step_after"] if row else None
     events["stop_timestep"] = next((r["stop_timestep"] for r in rows
                                         if r.get("stop_timestep") is not None), events.get("stop_timestep"))
     events["terminal_step"] = rows[-1].get("env_step_after") if rows else None
@@ -156,7 +162,7 @@ def analyze(record, window, calibration, kind):
         interval[0], interval[1] = min(interval[0], before), max(interval[1], after)
     start_range = window.get("start_range", calibration.get("start_range"))
     valid_range = vector(start_range, 2) and start_range[0] <= start_range[1]
-    overlaps, representative, classification = [], None, "未校准"
+    overlaps, representative, classification, observability = [], None, "未校准", []
     if valid_range:
         center = sum(start_range) / 2
         overlaps = [seq for seq, (lo, hi) in sorted(infer_intervals.items())
@@ -165,7 +171,7 @@ def analyze(record, window, calibration, kind):
             representative = min(overlaps, key=lambda seq: (abs(infer_intervals[seq][0] - center),
                                                             infer_intervals[seq][0]))
         else:
-            reasons.append("合适下压范围没有已执行推理覆盖，可能终局提前截断")
+            observability.append("合适下压范围没有已执行推理覆盖，可能终局提前截断")
         press = events.get("command_press_step")
         classification = ("提前" if press < start_range[0] else "过晚" if press > start_range[1]
                           else "范围内") if number(press) else "未观察到下压命令"
@@ -190,12 +196,25 @@ def analyze(record, window, calibration, kind):
         reasons.append("第一遍推理文件与实际执行推理序号不一致")
     if not record.get("video_path") or not Path(record["video_path"]).is_file():
         reasons.append("缺少可播放原始视频")
-    # 视频步制必须来自回执，不将仿真频率猜作编码帧率。
+    # 录像每次外层动作写一帧；复合物理步不能直接当成视频帧数。
     fps, video_start = meta.get("video_fps"), meta.get("video_start_env_step")
     video_offset = meta.get("video_exec0_frame_index")
-    video_timing = number(fps) and fps > 0 and number(video_start) and number(video_offset)
+    video_timing = (number(fps) and fps > 0 and number(video_start) and number(video_offset)
+                    and bool(rows) and all(number(row.get("action_index")) for row in rows))
     if not video_timing:
-        reasons.append("缺少视频帧率、执行首帧索引或首帧环境步，视频只能人工定位")
+        reasons.append("缺少视频帧率、执行首帧索引、动作索引或首帧环境步，视频只能人工定位")
+    event_video_frames = {}
+    if video_timing:
+        for name in ("command_press_step", "actual_press_onset", "button_trigger_step",
+                     "stop_timestep", "terminal_step", "actual_takeover_step", "actual_release_step"):
+            step = events.get(name, meta.get(name))
+            if not number(step):
+                continue
+            before_event = name in ("command_press_step", "actual_takeover_step", "actual_release_step")
+            row = next((row for row in rows if (row["env_step_before"] == step if before_event
+                        else row["env_step_before"] < step <= row["env_step_after"])), None)
+            if row is not None:
+                event_video_frames[name] = video_offset + row["action_index"] + (0 if before_event else 1)
     action_samples = []
     selected_steps = {events.get("command_press_step"), meta.get("actual_takeover_step"),
                       meta.get("actual_release_step")}
@@ -213,12 +232,14 @@ def analyze(record, window, calibration, kind):
             "infer_files": infer_files,
             "video_path": record["video_path"], "video_fps": fps, "video_start_env_step": video_start,
             "video_exec0_frame_index": video_offset, "action_samples": action_samples,
+            "event_video_frames": event_video_frames,
             "video_timing_verified": video_timing,
             "takeover_step": meta.get("takeover_step"), "release_step": meta.get("release_step"),
             "actual_takeover_step": meta.get("actual_takeover_step"),
             "actual_release_step": meta.get("actual_release_step"),
             "hold_qpos": meta.get("hold_qpos"),
             "D": meta.get("D"), "exec_start_idx": meta.get("exec_start_idx"),
+            "observability_reasons": observability,
             "reasons": list(dict.fromkeys(reasons))}
 
 
@@ -238,6 +259,9 @@ def hold_candidate(record, analysis, window, calibration):
     if calibration.get("status") != "resolved" or window.get("status") != "resolved":
         reasons.append("窗口或耗时校准尚未解决")
     rows, meta = record["rows"], record["meta"]
+    if any(meta.get(field) is None or calibration.get(field) is None or meta[field] != calibration[field]
+           for field in ("episode_key", "episode_id", "env_seed")):
+        reasons.append("正常轨迹与校准的局身份或 env_seed 缺失或不一致，不能生成接管候选")
     press = analysis["events"]["command_press_step"]
     confirmed = set(trajectory_calibration(calibration, "normal").get("events", {}).get("hover_steps", []))
     threshold = (calibration["hover_z"] - calibration["delta_z"]
@@ -291,6 +315,19 @@ def build_review(windows, calibrations, normal, extended, expected_keys=EPISODES
             if len(matches) > 1:
                 reasons.append(f"{kind} 有 {len(matches)} 份重复轨迹，未自动挑选")
         analyses = {kind: analyze(record, window, calibration, kind) for kind, record in records.items()}
+        expected_id = int(key.rpartition(":")[2])
+        for kind, record in records.items():
+            if record is None:
+                continue
+            meta = record["meta"]
+            if meta.get("episode_key") != key or meta.get("episode_id") != expected_id:
+                reasons.append(f"{kind} 回执缺少或不匹配本局 episode_key/episode_id")
+            if calibration.get("episode_key") != key or not number(calibration.get("env_seed")):
+                reasons.append(f"{kind} 缺少可核对的校准局身份或 env_seed")
+            elif meta.get("env_seed") != calibration["env_seed"]:
+                reasons.append(f"{kind} 回执 env_seed 缺失或与本局校准不一致")
+            if calibration.get("episode_id") != expected_id:
+                reasons.append("校准 episode_id 缺失或与局键不一致")
         candidate, rejected = hold_candidate(records["normal"], analyses["normal"], window, calibration)
         if candidate:
             candidates[key] = candidate
@@ -306,7 +343,44 @@ def build_review(windows, calibrations, normal, extended, expected_keys=EPISODES
             analyses["hold_extended"]["ideal_release_step"] = candidate["ideal_release_step"]
             analyses["hold_extended"]["planned_release_step"] = candidate["release_step"]
             analyses["hold_extended"]["release_offset"] = actual - candidate["ideal_release_step"] if number(actual) else None
+        if required_extended and candidate and records["hold_extended"] is not None:
+            record = records["hold_extended"]
+            meta, rows = record["meta"], record["rows"]
+            takeover, release, qpos = candidate["takeover_step"], candidate["release_step"], candidate["hold_qpos"]
+            for field, expected in (("takeover_step", takeover), ("release_step", release),
+                                    ("actual_takeover_step", takeover), ("actual_release_step", release),
+                                    ("hold_qpos", qpos)):
+                if meta.get(field) != expected:
+                    reasons.append(f"悬停延长回执 {field} 缺失或与本次候选不一致")
+            prefix_fields = ("env_step_before", "env_step_after", "command_action", "executed_action")
+            normal_prefix = [tuple(row.get(field) for field in prefix_fields)
+                             for row in records["normal"]["rows"] if row.get("env_step_before", takeover) < takeover]
+            extended_prefix = [tuple(row.get(field) for field in prefix_fields)
+                               for row in rows if row.get("env_step_before", takeover) < takeover]
+            if not normal_prefix or normal_prefix != extended_prefix or any(
+                    not number(row[0]) or not number(row[1]) or not vector(row[2], 8)
+                    or not vector(row[3], 8) or row[1] > takeover
+                    for row in normal_prefix):
+                reasons.append("正常与延长接管前的环境步、模型命令或实际执行动作不一致或缺失")
+            held = [row for row in rows if takeover <= row.get("env_step_before", -1) < release]
+            if (not held or held[0].get("env_step_before") != takeover or held[-1].get("env_step_after") != release
+                    or any(row.get("executed_action") != qpos for row in held)
+                    or any(left.get("env_step_after") != right.get("env_step_before")
+                           for left, right in zip(held, held[1:]))):
+                reasons.append("实际接管段缺失、不连续或执行动作偏离固定悬停位置")
+            resumed = [row for row in rows if row.get("env_step_before") == release]
+            if (len(resumed) != 1 or resumed[0].get("row_in_chunk") != 0
+                    or resumed[0].get("chunk_start_env_step") != release
+                    or not vector(resumed[0].get("command_action"), 8)
+                    or resumed[0].get("command_action") != resumed[0].get("executed_action")):
+                reasons.append("实际恢复步缺失或未执行该边界新推理的模型命令")
+            if any(row.get("command_action") != row.get("executed_action")
+                   for row in rows if row.get("env_step_before", -1) >= release):
+                reasons.append("恢复后的实际动作与模型命令不一致")
         needed = [analyses["normal"]] + ([analyses["hold_extended"]] if required_extended else [])
+        observed = analyses["hold_extended"] if required_extended else analyses["normal"]
+        if not observed["window_infers"]:
+            reasons.append("所需轨迹未观察到合适下压范围内的真实推理")
         complete = (not reasons and calibration.get("status") == "resolved" and window.get("status") == "resolved"
                     and all(item.get("present") and not item["reasons"] for item in needed))
         ready = ready and complete
@@ -353,11 +427,16 @@ def media_section(item, out):
             for name, step in media_events.items():
                 if not number(step):
                     continue
-                seconds = (item["video_exec0_frame_index"] + step - item["video_start_env_step"]) / item["video_fps"]
+                frame = item.get("event_video_frames", {}).get(name)
+                if not number(frame):
+                    continue
+                seconds = frame / item["video_fps"]
                 if seconds < 0:
                     continue
                 lo, hi = max(0, seconds - 2), seconds + 2
-                parts.append(f'<a href="{escaped(url)}#t={lo:.3f},{hi:.3f}">{escaped(EVENT_NAMES.get(name, name))}附近 {lo:.2f}～{hi:.2f} 秒</a> ')
+                bounds = item["events"].get(EVENT_BOUNDS.get(name))
+                interval = f'（环境步区间 {escaped(bounds)}）' if vector(bounds, 2) and bounds[0] != bounds[1] else ""
+                parts.append(f'<a href="{escaped(url)}#t={lo:.3f},{hi:.3f}">{escaped(EVENT_NAMES.get(name, name))}{interval}附近 {lo:.2f}～{hi:.2f} 秒</a> ')
     trace = file_url(item.get("trace_path"), out)
     if trace:
         parts.append(f'<p><a href="{escaped(trace)}">逐步原始记录</a></p>')
@@ -368,6 +447,7 @@ EVENT_NAMES = {"command_press_step": "下压命令实际发出步", "press_infer
                "actual_press_onset": "实际 TCP 首跨阈值步", "button_trigger_step": "按钮首次触发步",
                "stop_timestep": "官方停步", "terminal_step": "逐步记录结束步", "hover_steps": "已确认悬停步",
                "actual_takeover_step": "实际接管步", "actual_release_step": "实际恢复步"}
+EVENT_BOUNDS = {"actual_press_onset": "actual_press_onset_bounds", "button_trigger_step": "button_trigger_bounds"}
 
 
 def render_html(draft, out):
@@ -376,11 +456,11 @@ def render_html(draft, out):
                '<title>StopCube 第一阶段人工确认</title><style>body{font-family:system-ui,sans-serif;max-width:1400px;margin:24px auto;padding:0 16px;color:#182230;background:#f5f7fa}table{border-collapse:collapse;width:100%;background:white}td,th{border:1px solid #cad2dc;padding:8px;text-align:left;vertical-align:top}code{overflow-wrap:anywhere}section{margin:22px 0;padding:18px;background:white;border:1px solid #cad2dc}video{max-width:100%;width:520px}.missing{color:#a12323}.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px}a{color:#124eb0}li{margin:6px 0}</style>',
                '<h1>StopCube 第一阶段人工确认</h1><p>状态：待用户审核。本页不会批准决策点，也不会启动第二阶段。正常与悬停延长分别计分，延长成功不计入官方成功率。</p>',
                f'<p>正常轨迹 {summary["normal"]}/{summary["expected"]}；正常成功 {summary["normal_success"]}；延长轨迹 {summary["extended"]}；延长成功 {summary["extended_success"]}；提前按错需延长 {summary["hold_required"]}。</p>',
-               '<p>所有时刻均为环境步；下压命令按 env_step_before 计，实际运动与按钮按 env_step_after 计。视频片段采用原视频时间定位，不改写原视频。没有视频步制时保留缺失说明。</p>',
+               '<p>所有时刻均为环境步；下压命令按 env_step_before 计，实际运动与按钮保留校准区间。视频按 action_index 定位外层动作帧，不声称看到复合调用省略的中间物理步；不改写原视频。没有视频步制时保留缺失说明。</p>',
                '<table><thead><tr><th>局</th><th>合适下压范围</th><th>正常结果／命令分类</th><th>延长结果</th><th>审核状态与缺失</th></tr></thead><tbody>']
     for index, (key, episode) in enumerate(draft["episodes"].items()):
         normal, ext = episode["trajectories"]["normal"], episode["trajectories"]["hold_extended"]
-        reasons = episode["reasons"] + normal["reasons"] + (ext["reasons"] if episode["hold_required"] else [])
+        reasons = episode["reasons"] + normal["reasons"] + normal["observability_reasons"] + (ext["reasons"] if episode["hold_required"] else [])
         content.append(f'<tr><td><a href="#episode-{index}">{escaped(key)}</a></td><td>{escaped(episode["window"].get("start_range"))}</td><td>{escaped(normal.get("outcome"))}／{escaped(normal.get("classification"))}</td><td>{escaped(ext.get("outcome"))}</td><td>{"待人工确认" if episode["ready"] else "证据未齐"}<br>{escaped(reasons)}</td></tr>')
     content.append('</tbody></table>')
     if summary["unexpected_episodes"]:
@@ -397,11 +477,15 @@ def render_html(draft, out):
             content.append(f'<div><h3>{label}</h3><p>终局：{escaped(item.get("outcome"))}；独立成功字段：{escaped(item.get("task_success"))}；轨迹标识：{escaped(item.get("episode_nonce"))}</p>')
             content.append('<ul>')
             for name in EVENT_NAMES:
-                content.append(f'<li>{escaped(EVENT_NAMES[name])}：{escaped(item["events"].get(name, item.get(name)))}</li>')
+                bounds = item["events"].get(EVENT_BOUNDS.get(name))
+                value = bounds if vector(bounds, 2) and bounds[0] != bounds[1] else item["events"].get(name, item.get(name))
+                suffix = "（区间，非精确步）" if vector(bounds, 2) and bounds[0] != bounds[1] else ""
+                content.append(f'<li>{escaped(EVENT_NAMES[name])}：{escaped(value)}{suffix}</li>')
             content.append(f'<li>窗口重叠推理：{escaped(item["window_infers"])}；代表推理：{escaped(item["window_rep"])}</li>')
             content.append(f'<li>接管计划／实际：{escaped(item.get("takeover_step"))}／{escaped(item.get("actual_takeover_step"))}</li><li>恢复理想／计划／实际：{escaped(item.get("ideal_release_step"))}／{escaped(item.get("planned_release_step", item.get("release_step")))}／{escaped(item.get("actual_release_step"))}；实际偏差：{escaped(item.get("release_offset"))}</li></ul>')
             content.append(f'<p>关键步模型命令与实际执行动作：<code>{escaped(item.get("action_samples"))}</code></p>')
             content.append(f'<p>第一遍推理文件：{len(item.get("infer_files", []))}；已执行推理序号：{escaped(item.get("observed_infers"))}</p>')
+            content.append(f'<p>窗口可观测性：{escaped(item["observability_reasons"])}</p>')
             content.append(f'<p class="missing">{escaped(item["reasons"])}</p>{media_section(item, out)}</div>')
         content.append('</div></section>')
     content.append('</html>')
