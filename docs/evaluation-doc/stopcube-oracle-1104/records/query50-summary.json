@@ -1,0 +1,242 @@
+{
+  "source": {
+    "path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/analysis/all/summary.json",
+    "sha256": "e9b19623b97b98445ef711cf5fa434827492313aec80dcd36abf0715e1641d34"
+  },
+  "fk": {
+    "rows": 7460,
+    "maxabs_z": 0.0,
+    "tolerance": 0.001,
+    "status": "pass"
+  },
+  "coverage": {
+    "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999": {
+      "episodes": 50,
+      "points": 3730,
+      "missing": 0
+    },
+    "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999": {
+      "episodes": 50,
+      "points": 3730,
+      "missing": 0
+    }
+  },
+  "comparisons": [
+    {
+      "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+      "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+      "direction": "left_minus_right",
+      "metrics": {
+        "decision": {
+          "n_episodes": 50,
+          "mean": 0.06683449883449884,
+          "ci95": [
+            -0.001511854811854805,
+            0.13550670163170156
+          ],
+          "episodes": [
+            "StopCube:0",
+            "StopCube:1",
+            "StopCube:10",
+            "StopCube:11",
+            "StopCube:12",
+            "StopCube:13",
+            "StopCube:14",
+            "StopCube:15",
+            "StopCube:16",
+            "StopCube:17",
+            "StopCube:18",
+            "StopCube:19",
+            "StopCube:2",
+            "StopCube:20",
+            "StopCube:21",
+            "StopCube:22",
+            "StopCube:23",
+            "StopCube:24",
+            "StopCube:25",
+            "StopCube:26",
+            "StopCube:27",
+            "StopCube:28",
+            "StopCube:29",
+            "StopCube:3",
+            "StopCube:30",
+            "StopCube:31",
+            "StopCube:32",
+            "StopCube:33",
+            "StopCube:34",
+            "StopCube:35",
+            "StopCube:36",
+            "StopCube:37",
+            "StopCube:38",
+            "StopCube:39",
+            "StopCube:4",
+            "StopCube:40",
+            "StopCube:41",
+            "StopCube:42",
+            "StopCube:43",
+            "StopCube:44",
+            "StopCube:45",
+            "StopCube:46",
+            "StopCube:47",
+            "StopCube:48",
+            "StopCube:49",
+            "StopCube:5",
+            "StopCube:6",
+            "StopCube:7",
+            "StopCube:8",
+            "StopCube:9"
+          ]
+        },
+        "early": {
+          "n_episodes": 37,
+          "mean": -0.016891891891891893,
+          "ci95": [
+            -0.03682432432432432,
+            -0.0006756756756756757
+          ],
+          "episodes": [
+            "StopCube:0",
+            "StopCube:1",
+            "StopCube:10",
+            "StopCube:11",
+            "StopCube:14",
+            "StopCube:15",
+            "StopCube:16",
+            "StopCube:18",
+            "StopCube:19",
+            "StopCube:20",
+            "StopCube:21",
+            "StopCube:22",
+            "StopCube:23",
+            "StopCube:24",
+            "StopCube:25",
+            "StopCube:26",
+            "StopCube:28",
+            "StopCube:29",
+            "StopCube:30",
+            "StopCube:31",
+            "StopCube:33",
+            "StopCube:34",
+            "StopCube:35",
+            "StopCube:36",
+            "StopCube:37",
+            "StopCube:38",
+            "StopCube:39",
+            "StopCube:41",
+            "StopCube:42",
+            "StopCube:45",
+            "StopCube:46",
+            "StopCube:47",
+            "StopCube:48",
+            "StopCube:6",
+            "StopCube:7",
+            "StopCube:8",
+            "StopCube:9"
+          ]
+        },
+        "separation": {
+          "n_episodes": 37,
+          "mean": 0.1359147609147609,
+          "ci95": [
+            0.06385571354321355,
+            0.20904152435402434
+          ],
+          "episodes": [
+            "StopCube:0",
+            "StopCube:1",
+            "StopCube:10",
+            "StopCube:11",
+            "StopCube:14",
+            "StopCube:15",
+            "StopCube:16",
+            "StopCube:18",
+            "StopCube:19",
+            "StopCube:20",
+            "StopCube:21",
+            "StopCube:22",
+            "StopCube:23",
+            "StopCube:24",
+            "StopCube:25",
+            "StopCube:26",
+            "StopCube:28",
+            "StopCube:29",
+            "StopCube:30",
+            "StopCube:31",
+            "StopCube:33",
+            "StopCube:34",
+            "StopCube:35",
+            "StopCube:36",
+            "StopCube:37",
+            "StopCube:38",
+            "StopCube:39",
+            "StopCube:41",
+            "StopCube:42",
+            "StopCube:45",
+            "StopCube:46",
+            "StopCube:47",
+            "StopCube:48",
+            "StopCube:6",
+            "StopCube:7",
+            "StopCube:8",
+            "StopCube:9"
+          ]
+        }
+      }
+    }
+  ],
+  "absolute": {
+    "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999": {
+      "decision": {
+        "n_episodes": 50,
+        "mean": 0.43130769230769234,
+        "ci95": [
+          0.37110474525474524,
+          0.48526266233766235
+        ]
+      },
+      "early": {
+        "n_episodes": 37,
+        "mean": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ]
+      },
+      "separation": {
+        "n_episodes": 37,
+        "mean": 0.4973269973269973,
+        "ci95": [
+          0.46217292842292845,
+          0.5317545292545292
+        ]
+      }
+    },
+    "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999": {
+      "decision": {
+        "n_episodes": 50,
+        "mean": 0.3644731934731935,
+        "ci95": [
+          0.2960391067266067,
+          0.4296747044622045
+        ]
+      },
+      "early": {
+        "n_episodes": 37,
+        "mean": 0.016891891891891893,
+        "ci95": [
+          0.0006756756756756757,
+          0.037508445945945906
+        ]
+      },
+      "separation": {
+        "n_episodes": 37,
+        "mean": 0.3614122364122364,
+        "ci95": [
+          0.2826357848232848,
+          0.4454551529551529
+        ]
+      }
+    }
+  },
+  "visual_review": "主会话已逐图目视完整50局概率曲线与M/N经过分面图，未见遮挡、重叠、缺字或错位"
+}

@@ -1,0 +1,19 @@
+{
+  "models": 2,
+  "episodes_per_model": 50,
+  "query_points": 7460,
+  "predictions": 74600,
+  "maxabs": {
+    "action": 0.0,
+    "arm": 0.0,
+    "tcp": 0.0,
+    "cube": 0.0
+  },
+  "paired_state_maxabs": 0.0,
+  "trajectory_tolerance": 0.001,
+  "noise_pairing": "逐位一致",
+  "query_grid": "完整",
+  "control_source": "全部Oracle",
+  "terminal_trace_note": "官方终局自动重复同动作一次；外层轨迹末行跨两物理步，同步前后端点分别对齐Oracle逐物理步表",
+  "status": "PASS"
+}

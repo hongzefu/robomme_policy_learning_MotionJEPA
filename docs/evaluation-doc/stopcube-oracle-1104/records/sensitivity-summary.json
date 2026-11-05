@@ -1,0 +1,2454 @@
+{
+  "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/analysis/all/summary.json",
+  "note": "原计划的1/2/3厘米与16/20行附指标；主判据不变，各局等权、局级配对bootstrap2000、种子42；不增加采样、不据结果改阈值",
+  "variants": {
+    "h16_cm1": {
+      "all": [
+        {
+          "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+          "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+          "direction": "left_minus_right",
+          "metrics": {
+            "decision": {
+              "n_episodes": 50,
+              "mean": 0.07905094905094905,
+              "ci95": [
+                0.00801263736263736,
+                0.15036898101898097
+              ],
+              "episodes": [
+                "StopCube:0",
+                "StopCube:1",
+                "StopCube:10",
+                "StopCube:11",
+                "StopCube:12",
+                "StopCube:13",
+                "StopCube:14",
+                "StopCube:15",
+                "StopCube:16",
+                "StopCube:17",
+                "StopCube:18",
+                "StopCube:19",
+                "StopCube:2",
+                "StopCube:20",
+                "StopCube:21",
+                "StopCube:22",
+                "StopCube:23",
+                "StopCube:24",
+                "StopCube:25",
+                "StopCube:26",
+                "StopCube:27",
+                "StopCube:28",
+                "StopCube:29",
+                "StopCube:3",
+                "StopCube:30",
+                "StopCube:31",
+                "StopCube:32",
+                "StopCube:33",
+                "StopCube:34",
+                "StopCube:35",
+                "StopCube:36",
+                "StopCube:37",
+                "StopCube:38",
+                "StopCube:39",
+                "StopCube:4",
+                "StopCube:40",
+                "StopCube:41",
+                "StopCube:42",
+                "StopCube:43",
+                "StopCube:44",
+                "StopCube:45",
+                "StopCube:46",
+                "StopCube:47",
+                "StopCube:48",
+                "StopCube:49",
+                "StopCube:5",
+                "StopCube:6",
+                "StopCube:7",
+                "StopCube:8",
+                "StopCube:9"
+              ]
+            },
+            "early": {
+              "n_episodes": 37,
+              "mean": -0.018243243243243244,
+              "ci95": [
+                -0.040202702702702695,
+                -0.0006756756756756757
+              ],
+              "episodes": [
+                "StopCube:0",
+                "StopCube:1",
+                "StopCube:10",
+                "StopCube:11",
+                "StopCube:14",
+                "StopCube:15",
+                "StopCube:16",
+                "StopCube:18",
+                "StopCube:19",
+                "StopCube:20",
+                "StopCube:21",
+                "StopCube:22",
+                "StopCube:23",
+                "StopCube:24",
+                "StopCube:25",
+                "StopCube:26",
+                "StopCube:28",
+                "StopCube:29",
+                "StopCube:30",
+                "StopCube:31",
+                "StopCube:33",
+                "StopCube:34",
+                "StopCube:35",
+                "StopCube:36",
+                "StopCube:37",
+                "StopCube:38",
+                "StopCube:39",
+                "StopCube:41",
+                "StopCube:42",
+                "StopCube:45",
+                "StopCube:46",
+                "StopCube:47",
+                "StopCube:48",
+                "StopCube:6",
+                "StopCube:7",
+                "StopCube:8",
+                "StopCube:9"
+              ]
+            },
+            "separation": {
+              "n_episodes": 37,
+              "mean": 0.15908078408078413,
+              "ci95": [
+                0.08737061924561927,
+                0.23521634615384615
+              ],
+              "episodes": [
+                "StopCube:0",
+                "StopCube:1",
+                "StopCube:10",
+                "StopCube:11",
+                "StopCube:14",
+                "StopCube:15",
+                "StopCube:16",
+                "StopCube:18",
+                "StopCube:19",
+                "StopCube:20",
+                "StopCube:21",
+                "StopCube:22",
+                "StopCube:23",
+                "StopCube:24",
+                "StopCube:25",
+                "StopCube:26",
+                "StopCube:28",
+                "StopCube:29",
+                "StopCube:30",
+                "StopCube:31",
+                "StopCube:33",
+                "StopCube:34",
+                "StopCube:35",
+                "StopCube:36",
+                "StopCube:37",
+                "StopCube:38",
+                "StopCube:39",
+                "StopCube:41",
+                "StopCube:42",
+                "StopCube:45",
+                "StopCube:46",
+                "StopCube:47",
+                "StopCube:48",
+                "StopCube:6",
+                "StopCube:7",
+                "StopCube:8",
+                "StopCube:9"
+              ]
+            }
+          }
+        }
+      ],
+      "by_M": {
+        "60": [
+          {
+            "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+            "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+            "direction": "left_minus_right",
+            "metrics": {
+              "decision": {
+                "n_episodes": 12,
+                "mean": 0.12342657342657343,
+                "ci95": [
+                  0.00243006993006992,
+                  0.23991987179487181
+                ],
+                "episodes": [
+                  "StopCube:1",
+                  "StopCube:11",
+                  "StopCube:25",
+                  "StopCube:27",
+                  "StopCube:3",
+                  "StopCube:4",
+                  "StopCube:43",
+                  "StopCube:44",
+                  "StopCube:47",
+                  "StopCube:5",
+                  "StopCube:7",
+                  "StopCube:8"
+                ]
+              },
+              "early": {
+                "n_episodes": 6,
+                "mean": 0.0,
+                "ci95": [
+                  0.0,
+                  0.0
+                ],
+                "episodes": [
+                  "StopCube:1",
+                  "StopCube:11",
+                  "StopCube:25",
+                  "StopCube:47",
+                  "StopCube:7",
+                  "StopCube:8"
+                ]
+              },
+              "separation": {
+                "n_episodes": 6,
+                "mean": 0.308974358974359,
+                "ci95": [
+                  0.25,
+                  0.35384615384615387
+                ],
+                "episodes": [
+                  "StopCube:1",
+                  "StopCube:11",
+                  "StopCube:25",
+                  "StopCube:47",
+                  "StopCube:7",
+                  "StopCube:8"
+                ]
+              }
+            }
+          }
+        ],
+        "80": [
+          {
+            "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+            "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+            "direction": "left_minus_right",
+            "metrics": {
+              "decision": {
+                "n_episodes": 22,
+                "mean": 0.15941558441558443,
+                "ci95": [
+                  0.04284902597402598,
+                  0.27468344155844154
+                ],
+                "episodes": [
+                  "StopCube:0",
+                  "StopCube:12",
+                  "StopCube:13",
+                  "StopCube:15",
+                  "StopCube:17",
+                  "StopCube:19",
+                  "StopCube:2",
+                  "StopCube:20",
+                  "StopCube:21",
+                  "StopCube:24",
+                  "StopCube:26",
+                  "StopCube:29",
+                  "StopCube:30",
+                  "StopCube:31",
+                  "StopCube:32",
+                  "StopCube:35",
+                  "StopCube:36",
+                  "StopCube:40",
+                  "StopCube:41",
+                  "StopCube:42",
+                  "StopCube:45",
+                  "StopCube:49"
+                ]
+              },
+              "early": {
+                "n_episodes": 15,
+                "mean": 0.0,
+                "ci95": [
+                  0.0,
+                  0.0
+                ],
+                "episodes": [
+                  "StopCube:0",
+                  "StopCube:15",
+                  "StopCube:19",
+                  "StopCube:20",
+                  "StopCube:21",
+                  "StopCube:24",
+                  "StopCube:26",
+                  "StopCube:29",
+                  "StopCube:30",
+                  "StopCube:31",
+                  "StopCube:35",
+                  "StopCube:36",
+                  "StopCube:41",
+                  "StopCube:42",
+                  "StopCube:45"
+                ]
+              },
+              "separation": {
+                "n_episodes": 15,
+                "mean": 0.29285714285714287,
+                "ci95": [
+                  0.19425,
+                  0.38761904761904764
+                ],
+                "episodes": [
+                  "StopCube:0",
+                  "StopCube:15",
+                  "StopCube:19",
+                  "StopCube:20",
+                  "StopCube:21",
+                  "StopCube:24",
+                  "StopCube:26",
+                  "StopCube:29",
+                  "StopCube:30",
+                  "StopCube:31",
+                  "StopCube:35",
+                  "StopCube:36",
+                  "StopCube:41",
+                  "StopCube:42",
+                  "StopCube:45"
+                ]
+              }
+            }
+          }
+        ],
+        "120": [
+          {
+            "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+            "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+            "direction": "left_minus_right",
+            "metrics": {
+              "decision": {
+                "n_episodes": 16,
+                "mean": -0.06473214285714282,
+                "ci95": [
+                  -0.15537946428571422,
+                  0.028125000000000015
+                ],
+                "episodes": [
+                  "StopCube:10",
+                  "StopCube:14",
+                  "StopCube:16",
+                  "StopCube:18",
+                  "StopCube:22",
+                  "StopCube:23",
+                  "StopCube:28",
+                  "StopCube:33",
+                  "StopCube:34",
+                  "StopCube:37",
+                  "StopCube:38",
+                  "StopCube:39",
+                  "StopCube:46",
+                  "StopCube:48",
+                  "StopCube:6",
+                  "StopCube:9"
+                ]
+              },
+              "early": {
+                "n_episodes": 16,
+                "mean": -0.0421875,
+                "ci95": [
+                  -0.09140625,
+                  -0.0023437500000000003
+                ],
+                "episodes": [
+                  "StopCube:10",
+                  "StopCube:14",
+                  "StopCube:16",
+                  "StopCube:18",
+                  "StopCube:22",
+                  "StopCube:23",
+                  "StopCube:28",
+                  "StopCube:33",
+                  "StopCube:34",
+                  "StopCube:37",
+                  "StopCube:38",
+                  "StopCube:39",
+                  "StopCube:46",
+                  "StopCube:48",
+                  "StopCube:6",
+                  "StopCube:9"
+                ]
+              },
+              "separation": {
+                "n_episodes": 16,
+                "mean": -0.02254464285714284,
+                "ci95": [
+                  -0.10022600446428566,
+                  0.056922433035714315
+                ],
+                "episodes": [
+                  "StopCube:10",
+                  "StopCube:14",
+                  "StopCube:16",
+                  "StopCube:18",
+                  "StopCube:22",
+                  "StopCube:23",
+                  "StopCube:28",
+                  "StopCube:33",
+                  "StopCube:34",
+                  "StopCube:37",
+                  "StopCube:38",
+                  "StopCube:39",
+                  "StopCube:46",
+                  "StopCube:48",
+                  "StopCube:6",
+                  "StopCube:9"
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    "h16_cm2": {
+      "all": [
+        {
+          "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+          "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+          "direction": "left_minus_right",
+          "metrics": {
+            "decision": {
+              "n_episodes": 50,
+              "mean": 0.06683449883449884,
+              "ci95": [
+                -0.001511854811854805,
+                0.13550670163170156
+              ],
+              "episodes": [
+                "StopCube:0",
+                "StopCube:1",
+                "StopCube:10",
+                "StopCube:11",
+                "StopCube:12",
+                "StopCube:13",
+                "StopCube:14",
+                "StopCube:15",
+                "StopCube:16",
+                "StopCube:17",
+                "StopCube:18",
+                "StopCube:19",
+                "StopCube:2",
+                "StopCube:20",
+                "StopCube:21",
+                "StopCube:22",
+                "StopCube:23",
+                "StopCube:24",
+                "StopCube:25",
+                "StopCube:26",
+                "StopCube:27",
+                "StopCube:28",
+                "StopCube:29",
+                "StopCube:3",
+                "StopCube:30",
+                "StopCube:31",
+                "StopCube:32",
+                "StopCube:33",
+                "StopCube:34",
+                "StopCube:35",
+                "StopCube:36",
+                "StopCube:37",
+                "StopCube:38",
+                "StopCube:39",
+                "StopCube:4",
+                "StopCube:40",
+                "StopCube:41",
+                "StopCube:42",
+                "StopCube:43",
+                "StopCube:44",
+                "StopCube:45",
+                "StopCube:46",
+                "StopCube:47",
+                "StopCube:48",
+                "StopCube:49",
+                "StopCube:5",
+                "StopCube:6",
+                "StopCube:7",
+                "StopCube:8",
+                "StopCube:9"
+              ]
+            },
+            "early": {
+              "n_episodes": 37,
+              "mean": -0.016891891891891893,
+              "ci95": [
+                -0.03682432432432432,
+                -0.0006756756756756757
+              ],
+              "episodes": [
+                "StopCube:0",
+                "StopCube:1",
+                "StopCube:10",
+                "StopCube:11",
+                "StopCube:14",
+                "StopCube:15",
+                "StopCube:16",
+                "StopCube:18",
+                "StopCube:19",
+                "StopCube:20",
+                "StopCube:21",
+                "StopCube:22",
+                "StopCube:23",
+                "StopCube:24",
+                "StopCube:25",
+                "StopCube:26",
+                "StopCube:28",
+                "StopCube:29",
+                "StopCube:30",
+                "StopCube:31",
+                "StopCube:33",
+                "StopCube:34",
+                "StopCube:35",
+                "StopCube:36",
+                "StopCube:37",
+                "StopCube:38",
+                "StopCube:39",
+                "StopCube:41",
+                "StopCube:42",
+                "StopCube:45",
+                "StopCube:46",
+                "StopCube:47",
+                "StopCube:48",
+                "StopCube:6",
+                "StopCube:7",
+                "StopCube:8",
+                "StopCube:9"
+              ]
+            },
+            "separation": {
+              "n_episodes": 37,
+              "mean": 0.1359147609147609,
+              "ci95": [
+                0.06385571354321355,
+                0.20904152435402434
+              ],
+              "episodes": [
+                "StopCube:0",
+                "StopCube:1",
+                "StopCube:10",
+                "StopCube:11",
+                "StopCube:14",
+                "StopCube:15",
+                "StopCube:16",
+                "StopCube:18",
+                "StopCube:19",
+                "StopCube:20",
+                "StopCube:21",
+                "StopCube:22",
+                "StopCube:23",
+                "StopCube:24",
+                "StopCube:25",
+                "StopCube:26",
+                "StopCube:28",
+                "StopCube:29",
+                "StopCube:30",
+                "StopCube:31",
+                "StopCube:33",
+                "StopCube:34",
+                "StopCube:35",
+                "StopCube:36",
+                "StopCube:37",
+                "StopCube:38",
+                "StopCube:39",
+                "StopCube:41",
+                "StopCube:42",
+                "StopCube:45",
+                "StopCube:46",
+                "StopCube:47",
+                "StopCube:48",
+                "StopCube:6",
+                "StopCube:7",
+                "StopCube:8",
+                "StopCube:9"
+              ]
+            }
+          }
+        }
+      ],
+      "by_M": {
+        "60": [
+          {
+            "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+            "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+            "direction": "left_minus_right",
+            "metrics": {
+              "decision": {
+                "n_episodes": 12,
+                "mean": 0.1243104118104118,
+                "ci95": [
+                  0.011299290986790993,
+                  0.23228438228438222
+                ],
+                "episodes": [
+                  "StopCube:1",
+                  "StopCube:11",
+                  "StopCube:25",
+                  "StopCube:27",
+                  "StopCube:3",
+                  "StopCube:4",
+                  "StopCube:43",
+                  "StopCube:44",
+                  "StopCube:47",
+                  "StopCube:5",
+                  "StopCube:7",
+                  "StopCube:8"
+                ]
+              },
+              "early": {
+                "n_episodes": 6,
+                "mean": 0.0,
+                "ci95": [
+                  0.0,
+                  0.0
+                ],
+                "episodes": [
+                  "StopCube:1",
+                  "StopCube:11",
+                  "StopCube:25",
+                  "StopCube:47",
+                  "StopCube:7",
+                  "StopCube:8"
+                ]
+              },
+              "separation": {
+                "n_episodes": 6,
+                "mean": 0.2923076923076923,
+                "ci95": [
+                  0.2435897435897436,
+                  0.33717948717948715
+                ],
+                "episodes": [
+                  "StopCube:1",
+                  "StopCube:11",
+                  "StopCube:25",
+                  "StopCube:47",
+                  "StopCube:7",
+                  "StopCube:8"
+                ]
+              }
+            }
+          }
+        ],
+        "80": [
+          {
+            "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+            "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+            "direction": "left_minus_right",
+            "metrics": {
+              "decision": {
+                "n_episodes": 22,
+                "mean": 0.14577922077922081,
+                "ci95": [
+                  0.03928571428571428,
+                  0.25196428571428564
+                ],
+                "episodes": [
+                  "StopCube:0",
+                  "StopCube:12",
+                  "StopCube:13",
+                  "StopCube:15",
+                  "StopCube:17",
+                  "StopCube:19",
+                  "StopCube:2",
+                  "StopCube:20",
+                  "StopCube:21",
+                  "StopCube:24",
+                  "StopCube:26",
+                  "StopCube:29",
+                  "StopCube:30",
+                  "StopCube:31",
+                  "StopCube:32",
+                  "StopCube:35",
+                  "StopCube:36",
+                  "StopCube:40",
+                  "StopCube:41",
+                  "StopCube:42",
+                  "StopCube:45",
+                  "StopCube:49"
+                ]
+              },
+              "early": {
+                "n_episodes": 15,
+                "mean": 0.0,
+                "ci95": [
+                  0.0,
+                  0.0
+                ],
+                "episodes": [
+                  "StopCube:0",
+                  "StopCube:15",
+                  "StopCube:19",
+                  "StopCube:20",
+                  "StopCube:21",
+                  "StopCube:24",
+                  "StopCube:26",
+                  "StopCube:29",
+                  "StopCube:30",
+                  "StopCube:31",
+                  "StopCube:35",
+                  "StopCube:36",
+                  "StopCube:41",
+                  "StopCube:42",
+                  "StopCube:45"
+                ]
+              },
+              "separation": {
+                "n_episodes": 15,
+                "mean": 0.2671428571428572,
+                "ci95": [
+                  0.17333333333333334,
+                  0.3581190476190476
+                ],
+                "episodes": [
+                  "StopCube:0",
+                  "StopCube:15",
+                  "StopCube:19",
+                  "StopCube:20",
+                  "StopCube:21",
+                  "StopCube:24",
+                  "StopCube:26",
+                  "StopCube:29",
+                  "StopCube:30",
+                  "StopCube:31",
+                  "StopCube:35",
+                  "StopCube:36",
+                  "StopCube:41",
+                  "StopCube:42",
+                  "StopCube:45"
+                ]
+              }
+            }
+          }
+        ],
+        "120": [
+          {
+            "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+            "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+            "direction": "left_minus_right",
+            "metrics": {
+              "decision": {
+                "n_episodes": 16,
+                "mean": -0.08482142857142858,
+                "ci95": [
+                  -0.1732142857142857,
+                  0.0053683035714285334
+                ],
+                "episodes": [
+                  "StopCube:10",
+                  "StopCube:14",
+                  "StopCube:16",
+                  "StopCube:18",
+                  "StopCube:22",
+                  "StopCube:23",
+                  "StopCube:28",
+                  "StopCube:33",
+                  "StopCube:34",
+                  "StopCube:37",
+                  "StopCube:38",
+                  "StopCube:39",
+                  "StopCube:46",
+                  "StopCube:48",
+                  "StopCube:6",
+                  "StopCube:9"
+                ]
+              },
+              "early": {
+                "n_episodes": 16,
+                "mean": -0.0390625,
+                "ci95": [
+                  -0.084375,
+                  -0.0023437500000000003
+                ],
+                "episodes": [
+                  "StopCube:10",
+                  "StopCube:14",
+                  "StopCube:16",
+                  "StopCube:18",
+                  "StopCube:22",
+                  "StopCube:23",
+                  "StopCube:28",
+                  "StopCube:33",
+                  "StopCube:34",
+                  "StopCube:37",
+                  "StopCube:38",
+                  "StopCube:39",
+                  "StopCube:46",
+                  "StopCube:48",
+                  "StopCube:6",
+                  "StopCube:9"
+                ]
+              },
+              "separation": {
+                "n_episodes": 16,
+                "mean": -0.04575892857142857,
+                "ci95": [
+                  -0.11752790178571433,
+                  0.031808035714285705
+                ],
+                "episodes": [
+                  "StopCube:10",
+                  "StopCube:14",
+                  "StopCube:16",
+                  "StopCube:18",
+                  "StopCube:22",
+                  "StopCube:23",
+                  "StopCube:28",
+                  "StopCube:33",
+                  "StopCube:34",
+                  "StopCube:37",
+                  "StopCube:38",
+                  "StopCube:39",
+                  "StopCube:46",
+                  "StopCube:48",
+                  "StopCube:6",
+                  "StopCube:9"
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    "h16_cm3": {
+      "all": [
+        {
+          "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+          "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+          "direction": "left_minus_right",
+          "metrics": {
+            "decision": {
+              "n_episodes": 50,
+              "mean": 0.06284965034965036,
+              "ci95": [
+                -0.002811913086913088,
+                0.1287739302364302
+              ],
+              "episodes": [
+                "StopCube:0",
+                "StopCube:1",
+                "StopCube:10",
+                "StopCube:11",
+                "StopCube:12",
+                "StopCube:13",
+                "StopCube:14",
+                "StopCube:15",
+                "StopCube:16",
+                "StopCube:17",
+                "StopCube:18",
+                "StopCube:19",
+                "StopCube:2",
+                "StopCube:20",
+                "StopCube:21",
+                "StopCube:22",
+                "StopCube:23",
+                "StopCube:24",
+                "StopCube:25",
+                "StopCube:26",
+                "StopCube:27",
+                "StopCube:28",
+                "StopCube:29",
+                "StopCube:3",
+                "StopCube:30",
+                "StopCube:31",
+                "StopCube:32",
+                "StopCube:33",
+                "StopCube:34",
+                "StopCube:35",
+                "StopCube:36",
+                "StopCube:37",
+                "StopCube:38",
+                "StopCube:39",
+                "StopCube:4",
+                "StopCube:40",
+                "StopCube:41",
+                "StopCube:42",
+                "StopCube:43",
+                "StopCube:44",
+                "StopCube:45",
+                "StopCube:46",
+                "StopCube:47",
+                "StopCube:48",
+                "StopCube:49",
+                "StopCube:5",
+                "StopCube:6",
+                "StopCube:7",
+                "StopCube:8",
+                "StopCube:9"
+              ]
+            },
+            "early": {
+              "n_episodes": 37,
+              "mean": -0.015202702702702704,
+              "ci95": [
+                -0.03310810810810811,
+                -0.00033783783783783786
+              ],
+              "episodes": [
+                "StopCube:0",
+                "StopCube:1",
+                "StopCube:10",
+                "StopCube:11",
+                "StopCube:14",
+                "StopCube:15",
+                "StopCube:16",
+                "StopCube:18",
+                "StopCube:19",
+                "StopCube:20",
+                "StopCube:21",
+                "StopCube:22",
+                "StopCube:23",
+                "StopCube:24",
+                "StopCube:25",
+                "StopCube:26",
+                "StopCube:28",
+                "StopCube:29",
+                "StopCube:30",
+                "StopCube:31",
+                "StopCube:33",
+                "StopCube:34",
+                "StopCube:35",
+                "StopCube:36",
+                "StopCube:37",
+                "StopCube:38",
+                "StopCube:39",
+                "StopCube:41",
+                "StopCube:42",
+                "StopCube:45",
+                "StopCube:46",
+                "StopCube:47",
+                "StopCube:48",
+                "StopCube:6",
+                "StopCube:7",
+                "StopCube:8",
+                "StopCube:9"
+              ]
+            },
+            "separation": {
+              "n_episodes": 37,
+              "mean": 0.12438001188001188,
+              "ci95": [
+                0.05318866943866944,
+                0.1949997215622216
+              ],
+              "episodes": [
+                "StopCube:0",
+                "StopCube:1",
+                "StopCube:10",
+                "StopCube:11",
+                "StopCube:14",
+                "StopCube:15",
+                "StopCube:16",
+                "StopCube:18",
+                "StopCube:19",
+                "StopCube:20",
+                "StopCube:21",
+                "StopCube:22",
+                "StopCube:23",
+                "StopCube:24",
+                "StopCube:25",
+                "StopCube:26",
+                "StopCube:28",
+                "StopCube:29",
+                "StopCube:30",
+                "StopCube:31",
+                "StopCube:33",
+                "StopCube:34",
+                "StopCube:35",
+                "StopCube:36",
+                "StopCube:37",
+                "StopCube:38",
+                "StopCube:39",
+                "StopCube:41",
+                "StopCube:42",
+                "StopCube:45",
+                "StopCube:46",
+                "StopCube:47",
+                "StopCube:48",
+                "StopCube:6",
+                "StopCube:7",
+                "StopCube:8",
+                "StopCube:9"
+              ]
+            }
+          }
+        }
+      ],
+      "by_M": {
+        "60": [
+          {
+            "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+            "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+            "direction": "left_minus_right",
+            "metrics": {
+              "decision": {
+                "n_episodes": 12,
+                "mean": 0.12020687645687646,
+                "ci95": [
+                  0.013975573038073032,
+                  0.22315668706293695
+                ],
+                "episodes": [
+                  "StopCube:1",
+                  "StopCube:11",
+                  "StopCube:25",
+                  "StopCube:27",
+                  "StopCube:3",
+                  "StopCube:4",
+                  "StopCube:43",
+                  "StopCube:44",
+                  "StopCube:47",
+                  "StopCube:5",
+                  "StopCube:7",
+                  "StopCube:8"
+                ]
+              },
+              "early": {
+                "n_episodes": 6,
+                "mean": 0.0,
+                "ci95": [
+                  0.0,
+                  0.0
+                ],
+                "episodes": [
+                  "StopCube:1",
+                  "StopCube:11",
+                  "StopCube:25",
+                  "StopCube:47",
+                  "StopCube:7",
+                  "StopCube:8"
+                ]
+              },
+              "separation": {
+                "n_episodes": 6,
+                "mean": 0.27564102564102566,
+                "ci95": [
+                  0.22307692307692306,
+                  0.3333333333333333
+                ],
+                "episodes": [
+                  "StopCube:1",
+                  "StopCube:11",
+                  "StopCube:25",
+                  "StopCube:47",
+                  "StopCube:7",
+                  "StopCube:8"
+                ]
+              }
+            }
+          }
+        ],
+        "80": [
+          {
+            "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+            "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+            "direction": "left_minus_right",
+            "metrics": {
+              "decision": {
+                "n_episodes": 22,
+                "mean": 0.14253246753246754,
+                "ci95": [
+                  0.040900974025974035,
+                  0.24318181818181817
+                ],
+                "episodes": [
+                  "StopCube:0",
+                  "StopCube:12",
+                  "StopCube:13",
+                  "StopCube:15",
+                  "StopCube:17",
+                  "StopCube:19",
+                  "StopCube:2",
+                  "StopCube:20",
+                  "StopCube:21",
+                  "StopCube:24",
+                  "StopCube:26",
+                  "StopCube:29",
+                  "StopCube:30",
+                  "StopCube:31",
+                  "StopCube:32",
+                  "StopCube:35",
+                  "StopCube:36",
+                  "StopCube:40",
+                  "StopCube:41",
+                  "StopCube:42",
+                  "StopCube:45",
+                  "StopCube:49"
+                ]
+              },
+              "early": {
+                "n_episodes": 15,
+                "mean": 0.0,
+                "ci95": [
+                  0.0,
+                  0.0
+                ],
+                "episodes": [
+                  "StopCube:0",
+                  "StopCube:15",
+                  "StopCube:19",
+                  "StopCube:20",
+                  "StopCube:21",
+                  "StopCube:24",
+                  "StopCube:26",
+                  "StopCube:29",
+                  "StopCube:30",
+                  "StopCube:31",
+                  "StopCube:35",
+                  "StopCube:36",
+                  "StopCube:41",
+                  "StopCube:42",
+                  "StopCube:45"
+                ]
+              },
+              "separation": {
+                "n_episodes": 15,
+                "mean": 0.25476190476190474,
+                "ci95": [
+                  0.1642738095238095,
+                  0.3433333333333334
+                ],
+                "episodes": [
+                  "StopCube:0",
+                  "StopCube:15",
+                  "StopCube:19",
+                  "StopCube:20",
+                  "StopCube:21",
+                  "StopCube:24",
+                  "StopCube:26",
+                  "StopCube:29",
+                  "StopCube:30",
+                  "StopCube:31",
+                  "StopCube:35",
+                  "StopCube:36",
+                  "StopCube:41",
+                  "StopCube:42",
+                  "StopCube:45"
+                ]
+              }
+            }
+          }
+        ],
+        "120": [
+          {
+            "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+            "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+            "direction": "left_minus_right",
+            "metrics": {
+              "decision": {
+                "n_episodes": 16,
+                "mean": -0.08973214285714286,
+                "ci95": [
+                  -0.17679687500000005,
+                  -0.00222098214285721
+                ],
+                "episodes": [
+                  "StopCube:10",
+                  "StopCube:14",
+                  "StopCube:16",
+                  "StopCube:18",
+                  "StopCube:22",
+                  "StopCube:23",
+                  "StopCube:28",
+                  "StopCube:33",
+                  "StopCube:34",
+                  "StopCube:37",
+                  "StopCube:38",
+                  "StopCube:39",
+                  "StopCube:46",
+                  "StopCube:48",
+                  "StopCube:6",
+                  "StopCube:9"
+                ]
+              },
+              "early": {
+                "n_episodes": 16,
+                "mean": -0.03515625,
+                "ci95": [
+                  -0.07500000000000001,
+                  -0.00078125
+                ],
+                "episodes": [
+                  "StopCube:10",
+                  "StopCube:14",
+                  "StopCube:16",
+                  "StopCube:18",
+                  "StopCube:22",
+                  "StopCube:23",
+                  "StopCube:28",
+                  "StopCube:33",
+                  "StopCube:34",
+                  "StopCube:37",
+                  "StopCube:38",
+                  "StopCube:39",
+                  "StopCube:46",
+                  "StopCube:48",
+                  "StopCube:6",
+                  "StopCube:9"
+                ]
+              },
+              "separation": {
+                "n_episodes": 16,
+                "mean": -0.05457589285714286,
+                "ci95": [
+                  -0.12600725446428576,
+                  0.021428571428571432
+                ],
+                "episodes": [
+                  "StopCube:10",
+                  "StopCube:14",
+                  "StopCube:16",
+                  "StopCube:18",
+                  "StopCube:22",
+                  "StopCube:23",
+                  "StopCube:28",
+                  "StopCube:33",
+                  "StopCube:34",
+                  "StopCube:37",
+                  "StopCube:38",
+                  "StopCube:39",
+                  "StopCube:46",
+                  "StopCube:48",
+                  "StopCube:6",
+                  "StopCube:9"
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    "h20_cm1": {
+      "all": [
+        {
+          "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+          "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+          "direction": "left_minus_right",
+          "metrics": {
+            "decision": {
+              "n_episodes": 50,
+              "mean": 0.10365351315351315,
+              "ci95": [
+                0.026938732101232103,
+                0.18030622294372295
+              ],
+              "episodes": [
+                "StopCube:0",
+                "StopCube:1",
+                "StopCube:10",
+                "StopCube:11",
+                "StopCube:12",
+                "StopCube:13",
+                "StopCube:14",
+                "StopCube:15",
+                "StopCube:16",
+                "StopCube:17",
+                "StopCube:18",
+                "StopCube:19",
+                "StopCube:2",
+                "StopCube:20",
+                "StopCube:21",
+                "StopCube:22",
+                "StopCube:23",
+                "StopCube:24",
+                "StopCube:25",
+                "StopCube:26",
+                "StopCube:27",
+                "StopCube:28",
+                "StopCube:29",
+                "StopCube:3",
+                "StopCube:30",
+                "StopCube:31",
+                "StopCube:32",
+                "StopCube:33",
+                "StopCube:34",
+                "StopCube:35",
+                "StopCube:36",
+                "StopCube:37",
+                "StopCube:38",
+                "StopCube:39",
+                "StopCube:4",
+                "StopCube:40",
+                "StopCube:41",
+                "StopCube:42",
+                "StopCube:43",
+                "StopCube:44",
+                "StopCube:45",
+                "StopCube:46",
+                "StopCube:47",
+                "StopCube:48",
+                "StopCube:49",
+                "StopCube:5",
+                "StopCube:6",
+                "StopCube:7",
+                "StopCube:8",
+                "StopCube:9"
+              ]
+            },
+            "early": {
+              "n_episodes": 37,
+              "mean": -0.019932432432432434,
+              "ci95": [
+                -0.043918918918918914,
+                -0.0006756756756756757
+              ],
+              "episodes": [
+                "StopCube:0",
+                "StopCube:1",
+                "StopCube:10",
+                "StopCube:11",
+                "StopCube:14",
+                "StopCube:15",
+                "StopCube:16",
+                "StopCube:18",
+                "StopCube:19",
+                "StopCube:20",
+                "StopCube:21",
+                "StopCube:22",
+                "StopCube:23",
+                "StopCube:24",
+                "StopCube:25",
+                "StopCube:26",
+                "StopCube:28",
+                "StopCube:29",
+                "StopCube:30",
+                "StopCube:31",
+                "StopCube:33",
+                "StopCube:34",
+                "StopCube:35",
+                "StopCube:36",
+                "StopCube:37",
+                "StopCube:38",
+                "StopCube:39",
+                "StopCube:41",
+                "StopCube:42",
+                "StopCube:45",
+                "StopCube:46",
+                "StopCube:47",
+                "StopCube:48",
+                "StopCube:6",
+                "StopCube:7",
+                "StopCube:8",
+                "StopCube:9"
+              ]
+            },
+            "separation": {
+              "n_episodes": 37,
+              "mean": 0.19713765963765964,
+              "ci95": [
+                0.12477613602613605,
+                0.2766434325809326
+              ],
+              "episodes": [
+                "StopCube:0",
+                "StopCube:1",
+                "StopCube:10",
+                "StopCube:11",
+                "StopCube:14",
+                "StopCube:15",
+                "StopCube:16",
+                "StopCube:18",
+                "StopCube:19",
+                "StopCube:20",
+                "StopCube:21",
+                "StopCube:22",
+                "StopCube:23",
+                "StopCube:24",
+                "StopCube:25",
+                "StopCube:26",
+                "StopCube:28",
+                "StopCube:29",
+                "StopCube:30",
+                "StopCube:31",
+                "StopCube:33",
+                "StopCube:34",
+                "StopCube:35",
+                "StopCube:36",
+                "StopCube:37",
+                "StopCube:38",
+                "StopCube:39",
+                "StopCube:41",
+                "StopCube:42",
+                "StopCube:45",
+                "StopCube:46",
+                "StopCube:47",
+                "StopCube:48",
+                "StopCube:6",
+                "StopCube:7",
+                "StopCube:8",
+                "StopCube:9"
+              ]
+            }
+          }
+        }
+      ],
+      "by_M": {
+        "60": [
+          {
+            "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+            "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+            "direction": "left_minus_right",
+            "metrics": {
+              "decision": {
+                "n_episodes": 12,
+                "mean": 0.12593725718725718,
+                "ci95": [
+                  -0.010106109168609177,
+                  0.24845692501942487
+                ],
+                "episodes": [
+                  "StopCube:1",
+                  "StopCube:11",
+                  "StopCube:25",
+                  "StopCube:27",
+                  "StopCube:3",
+                  "StopCube:4",
+                  "StopCube:43",
+                  "StopCube:44",
+                  "StopCube:47",
+                  "StopCube:5",
+                  "StopCube:7",
+                  "StopCube:8"
+                ]
+              },
+              "early": {
+                "n_episodes": 6,
+                "mean": 0.0,
+                "ci95": [
+                  0.0,
+                  0.0
+                ],
+                "episodes": [
+                  "StopCube:1",
+                  "StopCube:11",
+                  "StopCube:25",
+                  "StopCube:47",
+                  "StopCube:7",
+                  "StopCube:8"
+                ]
+              },
+              "separation": {
+                "n_episodes": 6,
+                "mean": 0.3153846153846153,
+                "ci95": [
+                  0.23846153846153842,
+                  0.40128205128205124
+                ],
+                "episodes": [
+                  "StopCube:1",
+                  "StopCube:11",
+                  "StopCube:25",
+                  "StopCube:47",
+                  "StopCube:7",
+                  "StopCube:8"
+                ]
+              }
+            }
+          }
+        ],
+        "80": [
+          {
+            "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+            "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+            "direction": "left_minus_right",
+            "metrics": {
+              "decision": {
+                "n_episodes": 22,
+                "mean": 0.19188311688311688,
+                "ci95": [
+                  0.06622564935064933,
+                  0.3172483766233764
+                ],
+                "episodes": [
+                  "StopCube:0",
+                  "StopCube:12",
+                  "StopCube:13",
+                  "StopCube:15",
+                  "StopCube:17",
+                  "StopCube:19",
+                  "StopCube:2",
+                  "StopCube:20",
+                  "StopCube:21",
+                  "StopCube:24",
+                  "StopCube:26",
+                  "StopCube:29",
+                  "StopCube:30",
+                  "StopCube:31",
+                  "StopCube:32",
+                  "StopCube:35",
+                  "StopCube:36",
+                  "StopCube:40",
+                  "StopCube:41",
+                  "StopCube:42",
+                  "StopCube:45",
+                  "StopCube:49"
+                ]
+              },
+              "early": {
+                "n_episodes": 15,
+                "mean": 0.0,
+                "ci95": [
+                  0.0,
+                  0.0
+                ],
+                "episodes": [
+                  "StopCube:0",
+                  "StopCube:15",
+                  "StopCube:19",
+                  "StopCube:20",
+                  "StopCube:21",
+                  "StopCube:24",
+                  "StopCube:26",
+                  "StopCube:29",
+                  "StopCube:30",
+                  "StopCube:31",
+                  "StopCube:35",
+                  "StopCube:36",
+                  "StopCube:41",
+                  "StopCube:42",
+                  "StopCube:45"
+                ]
+              },
+              "separation": {
+                "n_episodes": 15,
+                "mean": 0.3476190476190476,
+                "ci95": [
+                  0.24571428571428572,
+                  0.44571428571428573
+                ],
+                "episodes": [
+                  "StopCube:0",
+                  "StopCube:15",
+                  "StopCube:19",
+                  "StopCube:20",
+                  "StopCube:21",
+                  "StopCube:24",
+                  "StopCube:26",
+                  "StopCube:29",
+                  "StopCube:30",
+                  "StopCube:31",
+                  "StopCube:35",
+                  "StopCube:36",
+                  "StopCube:41",
+                  "StopCube:42",
+                  "StopCube:45"
+                ]
+              }
+            }
+          }
+        ],
+        "120": [
+          {
+            "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+            "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+            "direction": "left_minus_right",
+            "metrics": {
+              "decision": {
+                "n_episodes": 16,
+                "mean": -0.034374999999999996,
+                "ci95": [
+                  -0.12010044642857147,
+                  0.05625000000000001
+                ],
+                "episodes": [
+                  "StopCube:10",
+                  "StopCube:14",
+                  "StopCube:16",
+                  "StopCube:18",
+                  "StopCube:22",
+                  "StopCube:23",
+                  "StopCube:28",
+                  "StopCube:33",
+                  "StopCube:34",
+                  "StopCube:37",
+                  "StopCube:38",
+                  "StopCube:39",
+                  "StopCube:46",
+                  "StopCube:48",
+                  "StopCube:6",
+                  "StopCube:9"
+                ]
+              },
+              "early": {
+                "n_episodes": 16,
+                "mean": -0.04609375,
+                "ci95": [
+                  -0.09923828125,
+                  -0.0023437500000000003
+                ],
+                "episodes": [
+                  "StopCube:10",
+                  "StopCube:14",
+                  "StopCube:16",
+                  "StopCube:18",
+                  "StopCube:22",
+                  "StopCube:23",
+                  "StopCube:28",
+                  "StopCube:33",
+                  "StopCube:34",
+                  "StopCube:37",
+                  "StopCube:38",
+                  "StopCube:39",
+                  "StopCube:46",
+                  "StopCube:48",
+                  "StopCube:6",
+                  "StopCube:9"
+                ]
+              },
+              "separation": {
+                "n_episodes": 16,
+                "mean": 0.01171875,
+                "ci95": [
+                  -0.06138671875000004,
+                  0.09084821428571431
+                ],
+                "episodes": [
+                  "StopCube:10",
+                  "StopCube:14",
+                  "StopCube:16",
+                  "StopCube:18",
+                  "StopCube:22",
+                  "StopCube:23",
+                  "StopCube:28",
+                  "StopCube:33",
+                  "StopCube:34",
+                  "StopCube:37",
+                  "StopCube:38",
+                  "StopCube:39",
+                  "StopCube:46",
+                  "StopCube:48",
+                  "StopCube:6",
+                  "StopCube:9"
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    "h20_cm2": {
+      "all": [
+        {
+          "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+          "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+          "direction": "left_minus_right",
+          "metrics": {
+            "decision": {
+              "n_episodes": 50,
+              "mean": 0.09421794871794872,
+              "ci95": [
+                0.02110896603396604,
+                0.16825149850149843
+              ],
+              "episodes": [
+                "StopCube:0",
+                "StopCube:1",
+                "StopCube:10",
+                "StopCube:11",
+                "StopCube:12",
+                "StopCube:13",
+                "StopCube:14",
+                "StopCube:15",
+                "StopCube:16",
+                "StopCube:17",
+                "StopCube:18",
+                "StopCube:19",
+                "StopCube:2",
+                "StopCube:20",
+                "StopCube:21",
+                "StopCube:22",
+                "StopCube:23",
+                "StopCube:24",
+                "StopCube:25",
+                "StopCube:26",
+                "StopCube:27",
+                "StopCube:28",
+                "StopCube:29",
+                "StopCube:3",
+                "StopCube:30",
+                "StopCube:31",
+                "StopCube:32",
+                "StopCube:33",
+                "StopCube:34",
+                "StopCube:35",
+                "StopCube:36",
+                "StopCube:37",
+                "StopCube:38",
+                "StopCube:39",
+                "StopCube:4",
+                "StopCube:40",
+                "StopCube:41",
+                "StopCube:42",
+                "StopCube:43",
+                "StopCube:44",
+                "StopCube:45",
+                "StopCube:46",
+                "StopCube:47",
+                "StopCube:48",
+                "StopCube:49",
+                "StopCube:5",
+                "StopCube:6",
+                "StopCube:7",
+                "StopCube:8",
+                "StopCube:9"
+              ]
+            },
+            "early": {
+              "n_episodes": 37,
+              "mean": -0.019594594594594596,
+              "ci95": [
+                -0.04358108108108107,
+                -0.0006756756756756757
+              ],
+              "episodes": [
+                "StopCube:0",
+                "StopCube:1",
+                "StopCube:10",
+                "StopCube:11",
+                "StopCube:14",
+                "StopCube:15",
+                "StopCube:16",
+                "StopCube:18",
+                "StopCube:19",
+                "StopCube:20",
+                "StopCube:21",
+                "StopCube:22",
+                "StopCube:23",
+                "StopCube:24",
+                "StopCube:25",
+                "StopCube:26",
+                "StopCube:28",
+                "StopCube:29",
+                "StopCube:30",
+                "StopCube:31",
+                "StopCube:33",
+                "StopCube:34",
+                "StopCube:35",
+                "StopCube:36",
+                "StopCube:37",
+                "StopCube:38",
+                "StopCube:39",
+                "StopCube:41",
+                "StopCube:42",
+                "StopCube:45",
+                "StopCube:46",
+                "StopCube:47",
+                "StopCube:48",
+                "StopCube:6",
+                "StopCube:7",
+                "StopCube:8",
+                "StopCube:9"
+              ]
+            },
+            "separation": {
+              "n_episodes": 37,
+              "mean": 0.1826626076626076,
+              "ci95": [
+                0.1114763699138699,
+                0.25861189486189484
+              ],
+              "episodes": [
+                "StopCube:0",
+                "StopCube:1",
+                "StopCube:10",
+                "StopCube:11",
+                "StopCube:14",
+                "StopCube:15",
+                "StopCube:16",
+                "StopCube:18",
+                "StopCube:19",
+                "StopCube:20",
+                "StopCube:21",
+                "StopCube:22",
+                "StopCube:23",
+                "StopCube:24",
+                "StopCube:25",
+                "StopCube:26",
+                "StopCube:28",
+                "StopCube:29",
+                "StopCube:30",
+                "StopCube:31",
+                "StopCube:33",
+                "StopCube:34",
+                "StopCube:35",
+                "StopCube:36",
+                "StopCube:37",
+                "StopCube:38",
+                "StopCube:39",
+                "StopCube:41",
+                "StopCube:42",
+                "StopCube:45",
+                "StopCube:46",
+                "StopCube:47",
+                "StopCube:48",
+                "StopCube:6",
+                "StopCube:7",
+                "StopCube:8",
+                "StopCube:9"
+              ]
+            }
+          }
+        }
+      ],
+      "by_M": {
+        "60": [
+          {
+            "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+            "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+            "direction": "left_minus_right",
+            "metrics": {
+              "decision": {
+                "n_episodes": 12,
+                "mean": 0.12590811965811968,
+                "ci95": [
+                  -0.0023104846542346545,
+                  0.24522508741258717
+                ],
+                "episodes": [
+                  "StopCube:1",
+                  "StopCube:11",
+                  "StopCube:25",
+                  "StopCube:27",
+                  "StopCube:3",
+                  "StopCube:4",
+                  "StopCube:43",
+                  "StopCube:44",
+                  "StopCube:47",
+                  "StopCube:5",
+                  "StopCube:7",
+                  "StopCube:8"
+                ]
+              },
+              "early": {
+                "n_episodes": 6,
+                "mean": 0.0,
+                "ci95": [
+                  0.0,
+                  0.0
+                ],
+                "episodes": [
+                  "StopCube:1",
+                  "StopCube:11",
+                  "StopCube:25",
+                  "StopCube:47",
+                  "StopCube:7",
+                  "StopCube:8"
+                ]
+              },
+              "separation": {
+                "n_episodes": 6,
+                "mean": 0.3115384615384616,
+                "ci95": [
+                  0.2448717948717949,
+                  0.3794871794871795
+                ],
+                "episodes": [
+                  "StopCube:1",
+                  "StopCube:11",
+                  "StopCube:25",
+                  "StopCube:47",
+                  "StopCube:7",
+                  "StopCube:8"
+                ]
+              }
+            }
+          }
+        ],
+        "80": [
+          {
+            "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+            "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+            "direction": "left_minus_right",
+            "metrics": {
+              "decision": {
+                "n_episodes": 22,
+                "mean": 0.17564935064935067,
+                "ci95": [
+                  0.05421266233766234,
+                  0.29548701298701274
+                ],
+                "episodes": [
+                  "StopCube:0",
+                  "StopCube:12",
+                  "StopCube:13",
+                  "StopCube:15",
+                  "StopCube:17",
+                  "StopCube:19",
+                  "StopCube:2",
+                  "StopCube:20",
+                  "StopCube:21",
+                  "StopCube:24",
+                  "StopCube:26",
+                  "StopCube:29",
+                  "StopCube:30",
+                  "StopCube:31",
+                  "StopCube:32",
+                  "StopCube:35",
+                  "StopCube:36",
+                  "StopCube:40",
+                  "StopCube:41",
+                  "StopCube:42",
+                  "StopCube:45",
+                  "StopCube:49"
+                ]
+              },
+              "early": {
+                "n_episodes": 15,
+                "mean": 0.0,
+                "ci95": [
+                  0.0,
+                  0.0
+                ],
+                "episodes": [
+                  "StopCube:0",
+                  "StopCube:15",
+                  "StopCube:19",
+                  "StopCube:20",
+                  "StopCube:21",
+                  "StopCube:24",
+                  "StopCube:26",
+                  "StopCube:29",
+                  "StopCube:30",
+                  "StopCube:31",
+                  "StopCube:35",
+                  "StopCube:36",
+                  "StopCube:41",
+                  "StopCube:42",
+                  "StopCube:45"
+                ]
+              },
+              "separation": {
+                "n_episodes": 15,
+                "mean": 0.32190476190476197,
+                "ci95": [
+                  0.22095238095238098,
+                  0.41667857142857134
+                ],
+                "episodes": [
+                  "StopCube:0",
+                  "StopCube:15",
+                  "StopCube:19",
+                  "StopCube:20",
+                  "StopCube:21",
+                  "StopCube:24",
+                  "StopCube:26",
+                  "StopCube:29",
+                  "StopCube:30",
+                  "StopCube:31",
+                  "StopCube:35",
+                  "StopCube:36",
+                  "StopCube:41",
+                  "StopCube:42",
+                  "StopCube:45"
+                ]
+              }
+            }
+          }
+        ],
+        "120": [
+          {
+            "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+            "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+            "direction": "left_minus_right",
+            "metrics": {
+              "decision": {
+                "n_episodes": 16,
+                "mean": -0.04151785714285715,
+                "ci95": [
+                  -0.13125000000000003,
+                  0.053125000000000006
+                ],
+                "episodes": [
+                  "StopCube:10",
+                  "StopCube:14",
+                  "StopCube:16",
+                  "StopCube:18",
+                  "StopCube:22",
+                  "StopCube:23",
+                  "StopCube:28",
+                  "StopCube:33",
+                  "StopCube:34",
+                  "StopCube:37",
+                  "StopCube:38",
+                  "StopCube:39",
+                  "StopCube:46",
+                  "StopCube:48",
+                  "StopCube:6",
+                  "StopCube:9"
+                ]
+              },
+              "early": {
+                "n_episodes": 16,
+                "mean": -0.0453125,
+                "ci95": [
+                  -0.09845703124999998,
+                  -0.0023437500000000003
+                ],
+                "episodes": [
+                  "StopCube:10",
+                  "StopCube:14",
+                  "StopCube:16",
+                  "StopCube:18",
+                  "StopCube:22",
+                  "StopCube:23",
+                  "StopCube:28",
+                  "StopCube:33",
+                  "StopCube:34",
+                  "StopCube:37",
+                  "StopCube:38",
+                  "StopCube:39",
+                  "StopCube:46",
+                  "StopCube:48",
+                  "StopCube:6",
+                  "StopCube:9"
+                ]
+              },
+              "separation": {
+                "n_episodes": 16,
+                "mean": 0.00379464285714284,
+                "ci95": [
+                  -0.07166015625000002,
+                  0.08382812499999996
+                ],
+                "episodes": [
+                  "StopCube:10",
+                  "StopCube:14",
+                  "StopCube:16",
+                  "StopCube:18",
+                  "StopCube:22",
+                  "StopCube:23",
+                  "StopCube:28",
+                  "StopCube:33",
+                  "StopCube:34",
+                  "StopCube:37",
+                  "StopCube:38",
+                  "StopCube:39",
+                  "StopCube:46",
+                  "StopCube:48",
+                  "StopCube:6",
+                  "StopCube:9"
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    "h20_cm3": {
+      "all": [
+        {
+          "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+          "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+          "direction": "left_minus_right",
+          "metrics": {
+            "decision": {
+              "n_episodes": 50,
+              "mean": 0.08277705627705625,
+              "ci95": [
+                0.011250158175158172,
+                0.15424115467865468
+              ],
+              "episodes": [
+                "StopCube:0",
+                "StopCube:1",
+                "StopCube:10",
+                "StopCube:11",
+                "StopCube:12",
+                "StopCube:13",
+                "StopCube:14",
+                "StopCube:15",
+                "StopCube:16",
+                "StopCube:17",
+                "StopCube:18",
+                "StopCube:19",
+                "StopCube:2",
+                "StopCube:20",
+                "StopCube:21",
+                "StopCube:22",
+                "StopCube:23",
+                "StopCube:24",
+                "StopCube:25",
+                "StopCube:26",
+                "StopCube:27",
+                "StopCube:28",
+                "StopCube:29",
+                "StopCube:3",
+                "StopCube:30",
+                "StopCube:31",
+                "StopCube:32",
+                "StopCube:33",
+                "StopCube:34",
+                "StopCube:35",
+                "StopCube:36",
+                "StopCube:37",
+                "StopCube:38",
+                "StopCube:39",
+                "StopCube:4",
+                "StopCube:40",
+                "StopCube:41",
+                "StopCube:42",
+                "StopCube:43",
+                "StopCube:44",
+                "StopCube:45",
+                "StopCube:46",
+                "StopCube:47",
+                "StopCube:48",
+                "StopCube:49",
+                "StopCube:5",
+                "StopCube:6",
+                "StopCube:7",
+                "StopCube:8",
+                "StopCube:9"
+              ]
+            },
+            "early": {
+              "n_episodes": 37,
+              "mean": -0.018243243243243244,
+              "ci95": [
+                -0.040202702702702695,
+                -0.0006756756756756757
+              ],
+              "episodes": [
+                "StopCube:0",
+                "StopCube:1",
+                "StopCube:10",
+                "StopCube:11",
+                "StopCube:14",
+                "StopCube:15",
+                "StopCube:16",
+                "StopCube:18",
+                "StopCube:19",
+                "StopCube:20",
+                "StopCube:21",
+                "StopCube:22",
+                "StopCube:23",
+                "StopCube:24",
+                "StopCube:25",
+                "StopCube:26",
+                "StopCube:28",
+                "StopCube:29",
+                "StopCube:30",
+                "StopCube:31",
+                "StopCube:33",
+                "StopCube:34",
+                "StopCube:35",
+                "StopCube:36",
+                "StopCube:37",
+                "StopCube:38",
+                "StopCube:39",
+                "StopCube:41",
+                "StopCube:42",
+                "StopCube:45",
+                "StopCube:46",
+                "StopCube:47",
+                "StopCube:48",
+                "StopCube:6",
+                "StopCube:7",
+                "StopCube:8",
+                "StopCube:9"
+              ]
+            },
+            "separation": {
+              "n_episodes": 37,
+              "mean": 0.16457528957528955,
+              "ci95": [
+                0.09198219854469854,
+                0.2406256496881497
+              ],
+              "episodes": [
+                "StopCube:0",
+                "StopCube:1",
+                "StopCube:10",
+                "StopCube:11",
+                "StopCube:14",
+                "StopCube:15",
+                "StopCube:16",
+                "StopCube:18",
+                "StopCube:19",
+                "StopCube:20",
+                "StopCube:21",
+                "StopCube:22",
+                "StopCube:23",
+                "StopCube:24",
+                "StopCube:25",
+                "StopCube:26",
+                "StopCube:28",
+                "StopCube:29",
+                "StopCube:30",
+                "StopCube:31",
+                "StopCube:33",
+                "StopCube:34",
+                "StopCube:35",
+                "StopCube:36",
+                "StopCube:37",
+                "StopCube:38",
+                "StopCube:39",
+                "StopCube:41",
+                "StopCube:42",
+                "StopCube:45",
+                "StopCube:46",
+                "StopCube:47",
+                "StopCube:48",
+                "StopCube:6",
+                "StopCube:7",
+                "StopCube:8",
+                "StopCube:9"
+              ]
+            }
+          }
+        }
+      ],
+      "by_M": {
+        "60": [
+          {
+            "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+            "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+            "direction": "left_minus_right",
+            "metrics": {
+              "decision": {
+                "n_episodes": 12,
+                "mean": 0.1264520202020202,
+                "ci95": [
+                  0.001836878399378382,
+                  0.24540209790209788
+                ],
+                "episodes": [
+                  "StopCube:1",
+                  "StopCube:11",
+                  "StopCube:25",
+                  "StopCube:27",
+                  "StopCube:3",
+                  "StopCube:4",
+                  "StopCube:43",
+                  "StopCube:44",
+                  "StopCube:47",
+                  "StopCube:5",
+                  "StopCube:7",
+                  "StopCube:8"
+                ]
+              },
+              "early": {
+                "n_episodes": 6,
+                "mean": 0.0,
+                "ci95": [
+                  0.0,
+                  0.0
+                ],
+                "episodes": [
+                  "StopCube:1",
+                  "StopCube:11",
+                  "StopCube:25",
+                  "StopCube:47",
+                  "StopCube:7",
+                  "StopCube:8"
+                ]
+              },
+              "separation": {
+                "n_episodes": 6,
+                "mean": 0.3166666666666667,
+                "ci95": [
+                  0.25256410256410255,
+                  0.3730769230769231
+                ],
+                "episodes": [
+                  "StopCube:1",
+                  "StopCube:11",
+                  "StopCube:25",
+                  "StopCube:47",
+                  "StopCube:7",
+                  "StopCube:8"
+                ]
+              }
+            }
+          }
+        ],
+        "80": [
+          {
+            "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+            "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+            "direction": "left_minus_right",
+            "metrics": {
+              "decision": {
+                "n_episodes": 22,
+                "mean": 0.16233766233766234,
+                "ci95": [
+                  0.04609577922077922,
+                  0.2766233766233766
+                ],
+                "episodes": [
+                  "StopCube:0",
+                  "StopCube:12",
+                  "StopCube:13",
+                  "StopCube:15",
+                  "StopCube:17",
+                  "StopCube:19",
+                  "StopCube:2",
+                  "StopCube:20",
+                  "StopCube:21",
+                  "StopCube:24",
+                  "StopCube:26",
+                  "StopCube:29",
+                  "StopCube:30",
+                  "StopCube:31",
+                  "StopCube:32",
+                  "StopCube:35",
+                  "StopCube:36",
+                  "StopCube:40",
+                  "StopCube:41",
+                  "StopCube:42",
+                  "StopCube:45",
+                  "StopCube:49"
+                ]
+              },
+              "early": {
+                "n_episodes": 15,
+                "mean": 0.0,
+                "ci95": [
+                  0.0,
+                  0.0
+                ],
+                "episodes": [
+                  "StopCube:0",
+                  "StopCube:15",
+                  "StopCube:19",
+                  "StopCube:20",
+                  "StopCube:21",
+                  "StopCube:24",
+                  "StopCube:26",
+                  "StopCube:29",
+                  "StopCube:30",
+                  "StopCube:31",
+                  "StopCube:35",
+                  "StopCube:36",
+                  "StopCube:41",
+                  "StopCube:42",
+                  "StopCube:45"
+                ]
+              },
+              "separation": {
+                "n_episodes": 15,
+                "mean": 0.2976190476190476,
+                "ci95": [
+                  0.19904761904761906,
+                  0.39146428571428554
+                ],
+                "episodes": [
+                  "StopCube:0",
+                  "StopCube:15",
+                  "StopCube:19",
+                  "StopCube:20",
+                  "StopCube:21",
+                  "StopCube:24",
+                  "StopCube:26",
+                  "StopCube:29",
+                  "StopCube:30",
+                  "StopCube:31",
+                  "StopCube:35",
+                  "StopCube:36",
+                  "StopCube:41",
+                  "StopCube:42",
+                  "StopCube:45"
+                ]
+              }
+            }
+          }
+        ],
+        "120": [
+          {
+            "left": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+            "right": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+            "direction": "left_minus_right",
+            "metrics": {
+              "decision": {
+                "n_episodes": 16,
+                "mean": -0.05937500000000001,
+                "ci95": [
+                  -0.15224330357142862,
+                  0.03660714285714284
+                ],
+                "episodes": [
+                  "StopCube:10",
+                  "StopCube:14",
+                  "StopCube:16",
+                  "StopCube:18",
+                  "StopCube:22",
+                  "StopCube:23",
+                  "StopCube:28",
+                  "StopCube:33",
+                  "StopCube:34",
+                  "StopCube:37",
+                  "StopCube:38",
+                  "StopCube:39",
+                  "StopCube:46",
+                  "StopCube:48",
+                  "StopCube:6",
+                  "StopCube:9"
+                ]
+              },
+              "early": {
+                "n_episodes": 16,
+                "mean": -0.0421875,
+                "ci95": [
+                  -0.09140625,
+                  -0.0023437500000000003
+                ],
+                "episodes": [
+                  "StopCube:10",
+                  "StopCube:14",
+                  "StopCube:16",
+                  "StopCube:18",
+                  "StopCube:22",
+                  "StopCube:23",
+                  "StopCube:28",
+                  "StopCube:33",
+                  "StopCube:34",
+                  "StopCube:37",
+                  "StopCube:38",
+                  "StopCube:39",
+                  "StopCube:46",
+                  "StopCube:48",
+                  "StopCube:6",
+                  "StopCube:9"
+                ]
+              },
+              "separation": {
+                "n_episodes": 16,
+                "mean": -0.01718750000000002,
+                "ci95": [
+                  -0.09632533482142865,
+                  0.06406249999999997
+                ],
+                "episodes": [
+                  "StopCube:10",
+                  "StopCube:14",
+                  "StopCube:16",
+                  "StopCube:18",
+                  "StopCube:22",
+                  "StopCube:23",
+                  "StopCube:28",
+                  "StopCube:33",
+                  "StopCube:34",
+                  "StopCube:37",
+                  "StopCube:38",
+                  "StopCube:39",
+                  "StopCube:46",
+                  "StopCube:48",
+                  "StopCube:6",
+                  "StopCube:9"
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

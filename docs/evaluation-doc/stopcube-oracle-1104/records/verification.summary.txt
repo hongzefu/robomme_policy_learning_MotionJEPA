@@ -9,3 +9,12 @@ PRE_MERGE_REVIEW=PASS task=S2 base=48be54c0414a362bfc5684d1357f383881103f92 tip=
 POST_MERGE_REVIEW=PASS task=S2 base=c058cf8318dc9b713dcf00d25eea47a1c6275368 tip=7ad43776cd71a71848f1e137f640862b93354fff findings=0 blocking=0
 PRE_MERGE_REVIEW=PASS task=S3 base=48be54c0414a362bfc5684d1357f383881103f92 tip=b158d86feec773cabfba14454a0d74deeab42df0 findings=0 blocking=0
 POST_MERGE_REVIEW=PASS task=S3 base=7ad43776cd71a71848f1e137f640862b93354fff tip=96cdb76a86bff6fee7b45ed0b9e8e59ca5022abc findings=0 blocking=0
+ORACLE_TABLE=PASS episodes=50 failed=0 late_reach=0
+ORACLE_PRESS=PASS episodes=50 success=49 trigger_outside=1 unsuccessful_episode=4
+ORACLE_REPLAY=PASS models=2 episodes_per_model=50 maxabs_qpos=0 maxabs_tcp=0 maxabs_cube=0 tol=1e-3
+OPEN_LOOP_EXEC=PASS models=2 episodes_per_model=50 mismatches=0 button_triggers=0
+QUERY_RECORD=PASS models=2 points=7460 predictions=10 total_predictions=74600 missing=0 noise_equal=1 complete_observation_fields=1
+INPUT_CADENCE=PASS models=2 points=60 maxabs=0 tol=1e-3 frame_times_equal=1 episode=16 scope=smoke_common_points
+FK_PARITY=PASS rows=7460 maxabs_z=0 tol=1e-3 predicted_target_rows=1492000
+PRESS_CALIBRATION=PASS models=2 episodes=12 planned=74 completed=74 valid=74 skipped=22
+QUERY50_VISUAL_REVIEW=PASS figures=2 overlap=0 missing_glyphs=0

@@ -50,7 +50,9 @@ FK使用生产树和official-sim解释器，4个单线程CPU进程，复用已�
 
 FK完成后用`bash <产物根>/prepare_release38.sh`从既有汇总逐局调用原`select_points`只取`fixed_release`，先核原12局固定计划完全相同，另存`analysis/release38-plan.json`与`spec-release38-<模型>-a.json`。两模型离线验证各自退出后，预留`so-release38-ctx-a`、`so-release38-mot-a`，命令为`tmux new-session -d -s so-release38-ctx-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_release38.sh ctx'`（motion参数mot）；固定原生产树、原38局manifest、原模型配置/显存/种子，输出`release/<模型>/release38-a/{attn,run}`，日志`logs/release38-<模型>-a.log`。不根据12局结果改放手规则，不为失败重试。全部命令仍使用绝对08:00截止；非零退出保留，主会话记录并继续不依赖失败项的授权工作。
 
-## 模型询问试跑规格
+## 第二阶段的预登记接续命令
+
+全量接续实际回执：集合核验`so-collection-verify-a`于美东2026-11-05 04:00:33启动，PID689309，完整7460点通过并退出0。`so-fk38-a`、`so-offline-verify-ctx-a`、`so-offline-verify-mot-a`均于04:01:55启动，窗格PID分别691006、691010、691015。FK复用24份缓存、新增76份，已退出0，完整7460点高度最大差0；两模型200点重放尚在运行。完整50局概率曲线与M/N分面图均已实际渲染、由主会话逐图目视检查，无重叠、错位、遮挡或缺字，原始图与区间JSON存于`analysis/all/report/`并归档纯结果副本。
 
 第二阶段接续也先登记、后实际执行：38局固定放手结束后，`bash <产物根>/merge_release50.sh`分别按原12局计划和新38局固定计划验证收据、轨迹与终态；输出`analysis/release38-results.json`、`release50-summary.json`及`mechanism-source-summary.json`。原12局的高/低/早校准分母、计划和汇总保持不变，50局固定放手另表报告，机制选局只追加有效成功证据。既定附指标用`bash <产物根>/summarize_sensitivity.sh`汇总1/2/3厘米、16/20行，直接复用原逐点比例与局级bootstrap2000、种子42，不新增预测、不改主判据。
 
@@ -64,6 +66,8 @@ tmux new-session -d -s so-mechanism-mot-a 'bash /data/hongzefu/robomme_policy_le
 ```
 
 每卡实质命令为同模块`analyze --selection <selection.json> --model-id <原checkpoint绝对路径> --config <原配置名> --output <产物根>/analysis/mechanism/<模型>.json`；日志`logs/mechanism-<模型>-a.log`。固定选择最多三局、24输入、240份原噪声预测，重放阈值仍1e-6。完成后同模块`report --analysis <产物根>/analysis/mechanism/mot.json <产物根>/analysis/mechanism/ctx.json --output-dir <产物根>/analysis/mechanism/report`；主会话逐图目视复查。`bash <产物根>/summarize_mechanism.sh`仅把既有层/头质量、每token质量、原噪声分组和真实帧聚合为`analysis/mechanism/compact.json`，不新增推理。motion缺少显式原始窗口时间字段时保留缺失，不由位置编码反推；所有结论按观察关联陈述。全部GPU命令仍受美东08:00绝对截止控制，无自动重试、输入替换或探针训练。
+
+## 模型询问试跑规格
 
 固定实现提交 `48a52f1e083ee11777795e6d6f8dbc86056d0544`，执行工作树与缓存路径同下。S1～S4合前与合后均独立审查通过，合后分别41、17、26、25项定向测试通过。先单局 `StopCube:16`、每模型单服务，ctx用GPU0、motion用GPU1。规格文件为本轮产物根 `spec-smoke-query16-ctx-a.json` 与 `spec-smoke-query16-mot-a.json`；基线配置 `mme_vla_suite_b128`、XLA0.40，motion配置 `mme_vla_suite_orig16_b128_60k`、XLA0.55及原运行合同，checkpoint与三套解释器保持本档案已核路径。新增值为 `stopcube_mode=oracle_query`、`query_interval=4`、`query_record=10`、`query_batch_size=2`、`save_top_frames=0`、`save_prefix=false`；动作表为两局合并的 `oracle-smoke-table.json`。`model_id` 使用checkpoint绝对路径，与实际query记录一致。
 
