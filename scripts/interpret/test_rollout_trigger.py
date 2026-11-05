@@ -45,12 +45,12 @@ def cube_at(step, shift=0.0):
     return [0.001 * step + shift, -0.3, 0.01]
 
 
-def make_rows(key, last_step, trigger=None, cross_step=None, stop=None, shift=0.0, block=16):
-    """env_step 从 1 起逐步推进；cross_step 起 TCP 低于悬停 2 cm，之前先到位再悬停。"""
+def make_rows(key, last_step, trigger=None, cross_step=None, stop=None, shift=0.0, block=16, hover_from=20):
+    """env_step 从 1 起逐步推进；hover_from 起到悬停高度（None 表示不到位），cross_step 起低于悬停 2 cm。"""
     rows = []
     for index, step in enumerate(range(1, last_step)):
         after = step + 1
-        z = Z_HOVER if after >= 20 else 0.5
+        z = Z_HOVER if hover_from is not None and after >= hover_from else 0.5
         if cross_step is not None and after >= cross_step:
             z = Z_HOVER - 0.05
         pressed = trigger is not None and after >= trigger
@@ -65,7 +65,7 @@ def make_rows(key, last_step, trigger=None, cross_step=None, stop=None, shift=0.
 class World:
     """在临时目录造窗口表、window_probe 和两个模型的 run 目录。"""
 
-    def __init__(self, tmp_path, keys=("StopCube:0",), **entry):
+    def __init__(self, tmp_path, keys=("StopCube:0",), probe_last=899, **entry):
         self.root = tmp_path / "root"
         self.table_path = tmp_path / "table.json"
         episodes = {}
@@ -73,7 +73,7 @@ class World:
             probe = tmp_path / "probe" / key.replace(":", "_") / "window_probe.jsonl"
             probe.parent.mkdir(parents=True)
             lines = [{"event": "meta"}] + [{"event": "step", "env_step_after": step, "cube_position_after": cube_at(step)}
-                                           for step in range(2, 900)]
+                                           for step in range(2, probe_last + 1)]
             probe.write_text("\n".join(json.dumps(line) for line in lines) + "\n")
             episodes[key] = {**table_entry(key, **entry), "trace_path": str(probe)}
         self.table_path.write_text(json.dumps({"schema_version": 1, "episodes": episodes}))
@@ -137,8 +137,15 @@ def test_aborted_motion_rollouts_reproduce_plan_numbers():
     assert [entry["episode_key"] for entry in item["invalid"]] == ["StopCube:28"]
     assert "无终局" in item["invalid"][0]["reason"]
     assert item["counts"] == {"窗口内": 13, "偏晚": 10, "偏早": 4, "未按": 1}
-    assert item["cube_maxabs"] == 0.0 and item["cube_uncovered_steps"] == 0
-    valid = [episode for episode in results["gpu1"].values() if episode["valid"]]
+    assert item["cube_maxabs"] == 0.0 and item["uncovered_after_window"] == 0
+    # 到位口径：29 条轨迹（含中断的第 28 局）都落在第 46～51 步。
+    reach = []
+    for path in ABORTED_ROOT.glob("gpu1/run/attempts/*/client/traces/*/step_trace.jsonl"):
+        rows = rt.read_steps(path)
+        reach.append(rt.reach_step(rows, rt.load_table(ORACLE_TABLE)[rows[0]["episode_key"]]["z_hover"]))
+    assert len(reach) == 29 and all(46 <= step <= 51 for step in reach)
+    print(rt.reach_line("gpu1", item["reach"]))
+    valid =[episode for episode in results["gpu1"].values() if episode["valid"]]
     after = [episode["steps_after_trigger"] for episode in valid if episode["trigger_step"] is not None]
     assert len(after) == 27 and set(after) == {0, 2}
     gaps = [episode["I_trigger"] - episode["I_cross"] for episode in valid if episode["trigger_step"] is not None]
@@ -153,7 +160,8 @@ def test_aborted_motion_rollouts_reproduce_plan_numbers():
     lines, passed = rt.verdicts(summary)
     assert passed
     assert lines[0] == "ROLLOUT_RUN=PASS models=1 valid_gpu1=28 invalid=1 infra_retries=0"
-    assert lines[1] == "WINDOW_TABLE_MATCH=PASS models=1 checked=28 mismatched=0 cube_maxabs=0 tol=1e-6"
+    assert lines[1] == ("WINDOW_TABLE_MATCH=PASS models=1 checked=28 mismatched=0 "
+                        "uncovered_after_window=0 cube_maxabs=0 tol=1e-6")
     assert lines[2].endswith("n_gpu1=28 paired=0 gpu1=13/10/4/1")
     _state["fixture"] = rt.format_counts(item["counts"])
 
@@ -237,7 +245,8 @@ def test_invalid_and_mismatched_denominators(tmp_path):
     assert not any(results["ctx"][keys[3]]["uses"].values())
     lines, passed = rt.verdicts(summary)
     assert passed
-    assert lines[1].startswith("WINDOW_TABLE_MATCH=PASS models=2 checked=7 mismatched=1 cube_maxabs=0.001 ")
+    assert lines[1].startswith("WINDOW_TABLE_MATCH=PASS models=2 checked=7 mismatched=1 "
+                               "uncovered_after_window=0 cube_maxabs=0.001 ")
     assert "valid_ctx=3 valid_mot=4 invalid=1" in lines[0]
     assert "n_ctx=2 n_mot=4 paired=2" in lines[2]
 
@@ -252,6 +261,82 @@ def test_cube_compare_stops_at_trigger(tmp_path):
     world.add("ctx", "StopCube:0", rows)
     results, _ = world.compute(models=("ctx",))
     assert results["ctx"]["StopCube:0"]["window_table_match"] is True
+
+
+def single_episode(tmp_path, rows, **world):
+    instance = World(tmp_path, **world)
+    instance.add("ctx", "StopCube:0", rows)
+    results, _ = instance.compute(models=("ctx",))
+    return results, rt.distribution(results)
+
+
+def test_short_probe_inside_window_is_mismatch(tmp_path):
+    """窗口 85～95，探针只到第 80 步，未触发：窗口内有未覆盖步，不能空 PASS。"""
+    results, summary = single_episode(tmp_path, make_rows("StopCube:0", 100), probe_last=80)
+    item = results["ctx"]["StopCube:0"]
+    assert item["cube_maxabs"] == 0.0 and item["cube_uncovered_in_window"] == 15
+    assert item["window_table_match"] is False and item["uses"]["q1"] is False
+    assert summary["models"]["ctx"]["mismatched"][0]["cube_uncovered_in_window"] == 15
+
+
+def test_nothing_compared_is_mismatch(tmp_path):
+    """第一步就触发，一步都没比到。"""
+    results, _ = single_episode(tmp_path, make_rows("StopCube:0", 100, trigger=2))
+    item = results["ctx"]["StopCube:0"]
+    assert item["cube_compared_steps"] == 0 and item["window_table_match"] is False
+
+
+def test_uncovered_after_window_only_counted(tmp_path):
+    results, summary = single_episode(tmp_path, make_rows("StopCube:0", 120), probe_last=95)
+    item = results["ctx"]["StopCube:0"]
+    assert item["window_table_match"] is True and item["cube_uncovered_after_window"] == 25
+    assert summary["models"]["ctx"]["uncovered_after_window"] == 25
+    assert " uncovered_after_window=25 " in rt.verdicts(summary)[0][1]
+
+
+def test_uncovered_after_trigger_not_counted(tmp_path):
+    """探针短于窗口，但触发更早：触发后不比。"""
+    results, _ = single_episode(tmp_path, make_rows("StopCube:0", 100, trigger=70), probe_last=80)
+    item = results["ctx"]["StopCube:0"]
+    assert item["window_table_match"] is True and item["cube_uncovered_in_window"] == 0
+
+
+def test_reach_tolerance_and_cross_are_independent():
+    rows = make_rows("StopCube:0", 40, hover_from=None)
+    rows[9]["tcp_after"][2] = Z_HOVER + 0.016
+    assert rt.reach_step(rows, Z_HOVER) is None
+    rows[9]["tcp_after"][2] = Z_HOVER - 0.014
+    assert rt.reach_step(rows, Z_HOVER) == rows[9]["env_step_after"]
+    # 低于悬停 1.4 cm 到位了，但还不算下压。
+    assert rt.align_points(rows, entry_for_align())["I_cross"] is None
+
+
+def test_reach_statistics_and_line(tmp_path):
+    keys = [f"StopCube:{index}" for index in range(4)]
+    world = World(tmp_path, keys)
+    world.add("ctx", keys[0], make_rows(keys[0], 100, hover_from=20, cross_step=70))
+    world.add("ctx", keys[1], make_rows(keys[1], 100, hover_from=30, cross_step=70))
+    # 到位第 84 步不早于 I_cross 那次推理的起点第 81 步。
+    world.add("ctx", keys[2], make_rows(keys[2], 100, hover_from=84, cross_step=86))
+    world.add("ctx", keys[3], make_rows(keys[3], 100, hover_from=None))
+    results, _ = world.compute(models=("ctx",))
+    assert results["ctx"][keys[3]]["reach_step"] is None
+    reach = rt.distribution(results)["models"]["ctx"]["reach"]
+    assert reach == {"min": 20.0, "median": 30.0, "max": 84.0, "not_reached": 1, "reach_after_cross": 1}
+    assert rt.reach_line("ctx", reach) == "REACH_STATS model=ctx min=20 median=30 max=84 not_reached=1 reach_after_cross=1"
+    assert rt.reach_line("ctx", rt.reach_statistics([])).endswith("min=null median=null max=null not_reached=0 reach_after_cross=0")
+
+
+@pytest.mark.parametrize("bad,expected", [(5, "PASS"), (6, "FAIL")])
+def test_record_problems_reported_and_fail_with_run_line(tmp_path, bad, expected):
+    keys = [f"StopCube:{index}" for index in range(8)]
+    world = World(tmp_path, keys)
+    for index, key in enumerate(keys):
+        world.add("ctx", key, make_rows(key, 100, trigger=90), records=index >= bad)
+    results, checks = world.compute(models=("ctx",))
+    assert rt.record_verdict(checks) == (f"ROLLOUT_RECORD={expected} models=1 valid_episodes={8 - bad} "
+                                         f"inferences={(8 - bad) * 7} missing={bad} readback=1")
+    assert rt.verdicts(rt.distribution(results))[0][0].startswith(f"ROLLOUT_RUN={expected} ")
 
 
 @pytest.mark.parametrize("bad,expected", [(5, "PASS"), (6, "FAIL")])
@@ -385,12 +470,17 @@ def test_main_writes_outputs_and_exit_code(tmp_path, capsys):
     assert code == 0
     assert "ROLLOUT_RUN=PASS models=2 valid_ctx=4 valid_mot=4 invalid=0 infra_retries=0" in captured
     assert "TRIGGER_DISTRIBUTION=PASS models=2 n_ctx=4 n_mot=4 paired=4 ctx=4/0/0/0 mot=4/0/0/0" in captured
+    assert "ROLLOUT_RECORD=PASS models=2 valid_episodes=8 inferences=56 missing=0 readback=1" in captured
+    assert "REACH_STATS model=ctx min=20 median=20 max=20 not_reached=0 reach_after_cross=0" in captured
+    assert "RECORD_CHECK" not in captured
     analysis = world.root / "analysis"
     align = json.loads((analysis / "align.json").read_text())
     assert align["models"]["ctx"]["StopCube:0"]["I_trigger"] == 5
     assert "rows" not in align["models"]["ctx"]["StopCube:0"]
     summary = json.loads((analysis / "trigger-summary.json").read_text())
     assert summary["verdicts"][0].startswith("ROLLOUT_RUN=PASS")
+    assert summary["verdicts"][3].startswith("ROLLOUT_RECORD=PASS")
+    assert summary["models"]["mot"]["reach"]["max"] == 20.0
     assert (analysis / "trigger-distribution.png").stat().st_size > 0
 
 

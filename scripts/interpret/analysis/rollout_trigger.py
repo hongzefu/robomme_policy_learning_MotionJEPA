@@ -23,8 +23,11 @@ MODELS = ("ctx", "mot")
 CATEGORIES = ("窗口内", "偏晚", "偏早", "未按")
 OUTCOMES = ("success", "fail", "timeout")
 CUBE_TOL = 1e-6
-CROSS_MARGIN = 0.02
-REACH_TOL = 0.01
+# 下面两个高度量是独立概念，不共用、不互相推导。
+# 下压：TCP 低于悬停高度超过该距离，定义 I_cross。
+CROSS_DROP_M = 0.02
+# 到位：首次 |tcp_z − z_hover| ≤ 该距离，定义 reach_step；未到位的局 reach_step 为 null。
+REACH_TOLERANCE_M = 0.015
 MAX_BAD_EPISODES = 5
 MODEL_STYLE = {"ctx": ("基线 ctx", "#2a78d6", "o"), "mot": ("motion", "#eb6834", "s")}
 
@@ -140,21 +143,29 @@ def classify(trigger, entry):
     return "偏晚" if trigger > entry["window_out"] else "窗口内"
 
 
-def window_table_match(rows, probe_steps):
-    """触发前每步的方块位置与窗口表同步号比较；触发那一步起方块被按钮影响，不比。"""
-    maximum, compared, uncovered = 0.0, 0, 0
+def window_table_match(rows, probe_steps, window_out):
+    """触发前每步的方块位置与窗口表同步号比较；触发那一步起方块被按钮影响，不比。
+
+    一步都没比到，或 window_out 及之前有未覆盖步，都不能证明窗口是真值，记为不符；
+    窗口之后的未覆盖步不影响判定，只计数报告。
+    """
+    maximum, compared, in_window, after_window = 0.0, 0, 0, 0
     for row in rows:
         if row.get("button_pressed_after") is True:
             break
         reference = probe_steps.get(row["env_step_after"])
         if reference is None:
-            uncovered += 1
+            if row["env_step_after"] <= window_out:
+                in_window += 1
+            else:
+                after_window += 1
             continue
         compared += 1
         delta = np.abs(np.asarray(row["cube_position_after"], dtype=float) - np.asarray(reference, dtype=float))
         maximum = max(maximum, float(delta.max()))
-    return {"cube_maxabs": maximum, "cube_compared_steps": compared, "cube_uncovered_steps": uncovered,
-            "window_table_match": maximum <= CUBE_TOL}
+    return {"cube_maxabs": maximum, "cube_compared_steps": compared, "cube_uncovered_in_window": in_window,
+            "cube_uncovered_after_window": after_window,
+            "window_table_match": maximum <= CUBE_TOL and compared > 0 and in_window == 0}
 
 
 def group_inferences(rows):
@@ -179,12 +190,17 @@ def near_inference(rows, center):
     return None, f"轨迹在第 {rows[-1]['env_step_after']} 步结束，动作块没有覆盖窗口中心 {center}"
 
 
+def reach_step(rows, z_hover):
+    """首次 |tcp_z − z_hover| ≤ 1.5 cm 的 env_step_after；没有则 None。"""
+    return next((row["env_step_after"] for row in rows
+                 if abs(row["tcp_after"][2] - z_hover) <= REACH_TOLERANCE_M), None)
+
+
 def align_points(rows, entry, match=True):
     """单局对齐点。不符局（match=False）不给依赖窗口的分类、相对中心和 I_near。"""
     z_hover = entry["z_hover"]
     triggered = next((row for row in rows if row.get("button_pressed_after") is True), None)
-    crossed = next((row for row in rows if row["tcp_after"][2] < z_hover - CROSS_MARGIN), None)
-    reached = next((row for row in rows if abs(row["tcp_after"][2] - z_hover) <= REACH_TOL), None)
+    crossed = next((row for row in rows if row["tcp_after"][2] < z_hover - CROSS_DROP_M), None)
     inferences = group_inferences(rows)
     present = {item["infer_seq"] for item in inferences}
     trigger = triggered["env_step_after"] if triggered else None
@@ -194,7 +210,7 @@ def align_points(rows, entry, match=True):
               "steps_after_trigger": rows[-1]["env_step_after"] - trigger if triggered else None,
               "last_env_step": rows[-1]["env_step_after"],
               "I_cross": cross, "I_trigger": triggered["infer_seq"] if triggered else None,
-              "reach_step": reached["env_step_after"] if reached else None,
+              "reach_step": reach_step(rows, z_hover),
               "category": None, "trigger_minus_center": None, "I_near": None, "I_near_reason": None,
               "inferences": inferences}
     for offset in (1, 2, 3):
@@ -223,7 +239,7 @@ def analyze_episode(item, entry, probe_steps):
                   z_hover=entry["z_hover"], uses=invalid_uses())
     if not item["valid"]:
         return public
-    check = window_table_match(item["rows"], probe_steps)
+    check = window_table_match(item["rows"], probe_steps, entry["window_out"])
     match = check["window_table_match"]
     public.update(check)
     public.update(align_points(item["rows"], entry, match))
@@ -244,14 +260,13 @@ def demote_invalid(episode, reason):
 def check_records(attn_dir, episodes):
     """结构核对：每个有效局的 rollout_<seq>.npz 数等于动作块数，step_idx 与 infer_seq 一一对应。"""
     attn_dir = Path(attn_dir)
-    problems, inferences = {}, 0
+    problems, clean_inferences = {}, 0
     valid = [episode for episode in episodes if episode["valid"]]
     for episode in valid:
         found = []
         directory = attn_dir / str(episode["nonce"])
         expected = {item["infer_seq"]: item["chunk_start_env_step"] for item in episode["inferences"]}
-        inferences += len(expected)
-        names = {path.name for path in directory.glob("rollout_*.npz")}
+        names ={path.name for path in directory.glob("rollout_*.npz")}
         wanted = {f"rollout_{seq:04d}.npz" for seq in expected}
         for name in sorted(wanted - names):
             found.append(f"缺文件 {directory / name}")
@@ -278,7 +293,23 @@ def check_records(attn_dir, episodes):
             found.append(f"step_idx 与轨迹动作块起点的差不唯一：{sorted(offsets)}")
         if found:
             problems[episode["episode_key"]] = found
-    return {"episodes": len(valid), "inferences": inferences, "problems": problems}
+        else:
+            clean_inferences += len(expected)
+    # episodes 是降级前的有效局数；inferences 只数没有问题的局。
+    return {"episodes": len(valid), "inferences": clean_inferences, "problems": problems}
+
+
+def record_verdict(record_checks):
+    """ROLLOUT_RECORD 判定行。readback=1 的依据：W1 写盘时读回不一致会直接抛错，文件存在即通过读回。
+
+    missing 是降级前的问题局数；问题局已降为无效局，单模型超过 5 局时随 ROLLOUT_RUN 一起 FAIL。
+    """
+    items = record_checks.values()
+    passed = bool(record_checks) and all(len(item["problems"]) <= MAX_BAD_EPISODES for item in items)
+    missing = sum(len(item["problems"]) for item in items)
+    return (f"ROLLOUT_RECORD={'PASS' if passed else 'FAIL'} models={len(record_checks)} "
+            f"valid_episodes={sum(item['episodes'] for item in items) - missing} "
+            f"inferences={sum(item['inferences'] for item in items)} missing={missing} readback=1")
 
 
 def load_probe(entry):
@@ -314,6 +345,27 @@ def stats(values):
             "min": float(array.min()), "max": float(array.max())}
 
 
+def reach_statistics(valid):
+    """到位分布，只作信息报告。reach_after_cross：到位不早于 I_cross 那次推理的起点步的局数。"""
+    reached = [item["reach_step"] for item in valid if item["reach_step"] is not None]
+    late = 0
+    for item in valid:
+        if item["reach_step"] is None or item["I_cross"] is None:
+            continue
+        start = next(point["chunk_start_env_step"] for point in item["inferences"]
+                     if point["infer_seq"] == item["I_cross"])
+        late += item["reach_step"] >= start
+    summary = stats(reached)
+    return {"min": summary["min"], "median": summary["median"], "max": summary["max"],
+            "not_reached": len(valid) - len(reached), "reach_after_cross": late}
+
+
+def reach_line(model, reach):
+    fields = " ".join(f"{name}={'null' if reach[name] is None else format(reach[name], 'g')}"
+                      for name in ("min", "median", "max", "not_reached", "reach_after_cross"))
+    return f"REACH_STATS model={model} {fields}"
+
+
 def distribution(results, repeats=2000, seed=42):
     """四类计数、按 M 分层、逐局配对和局级重采样；分母按 K8 分别列出。"""
     per_model = {}
@@ -334,11 +386,14 @@ def distribution(results, repeats=2000, seed=42):
             "n_valid": len(valid), "n_q1": len(eligible), "n_invalid": len(items) - len(valid),
             "invalid": [{"episode_key": item["episode_key"], "reason": item["invalid_reason"]}
                         for item in items if not item["valid"]],
-            "mismatched": [{"episode_key": item["episode_key"], "cube_maxabs": item["cube_maxabs"]}
+            "mismatched": [{"episode_key": item["episode_key"], "cube_maxabs": item["cube_maxabs"],
+                            "cube_compared_steps": item["cube_compared_steps"],
+                            "cube_uncovered_in_window": item["cube_uncovered_in_window"]}
                            for item in valid if not item["uses"]["q1"]],
             "infra_retries": sum(item["retries"] for item in items),
             "cube_maxabs": max((item["cube_maxabs"] for item in valid), default=0.0),
-            "cube_uncovered_steps": sum(item["cube_uncovered_steps"] for item in valid),
+            "uncovered_after_window": sum(item["cube_uncovered_after_window"] for item in valid),
+            "reach": reach_statistics(valid),
             "counts": counts, "by_move_interval": by_interval,
             "trigger_minus_center": stats([item["trigger_minus_center"] for item in eligible
                                            if item["trigger_minus_center"] is not None]),
@@ -390,6 +445,7 @@ def verdicts(summary):
         f"WINDOW_TABLE_MATCH={'PASS' if match_ok else 'FAIL'} models={len(models)} "
         f"checked={sum(item['n_valid'] for item in models.values())} "
         f"mismatched={sum(len(item['mismatched']) for item in models.values())} "
+        f"uncovered_after_window={sum(item['uncovered_after_window'] for item in models.values())} "
         f"cube_maxabs={max((item['cube_maxabs'] for item in models.values()), default=0.0):.9g} tol=1e-6",
         f"TRIGGER_DISTRIBUTION={'PASS' if dist_ok else 'FAIL'} models={len(models)} "
         + " ".join(f"n_{name}={item['n_q1']}" for name, item in models.items())
@@ -499,13 +555,12 @@ def main(argv=None):
     results, record_checks = compute(args.root, args.table, episodes=episodes)
     summary = distribution(results)
     lines, passed = verdicts(summary)
+    lines.append(record_verdict(record_checks))
     write_outputs(results, record_checks, summary, lines, args.table, args.root / "analysis")
-    print(f"RECORD_CHECK models={len(record_checks)} "
-          f"valid_episodes={sum(item['episodes'] for item in record_checks.values())} "
-          f"inferences={sum(item['inferences'] for item in record_checks.values())} "
-          f"problem_episodes={sum(len(item['problems']) for item in record_checks.values())}", flush=True)
     for line in lines:
         print(line, flush=True)
+    for model, item in summary["models"].items():
+        print(reach_line(model, item["reach"]), flush=True)
     return 0 if passed else 1
 
 
