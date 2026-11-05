@@ -2,7 +2,7 @@
 
 ## 目的与用户授权
 
-用户原话：「/data/hongzefu/robomme_policy_learning_MotionJEPA/1104-stopcube-oracle-press-plan.html」「开工」。批准计划提交为 `48be54c0414a362bfc5684d1357f383881103f92`，计划见[完整方案](../../../1104-stopcube-oracle-press-plan.html)。本次含官方 ctx512 79999 与 concat motion 59999；不恢复旧计划、不使用旧计划运行产物，不跑正常局，不启动第二阶段归因。
+首次用户原话：「/data/hongzefu/robomme_policy_learning_MotionJEPA/1104-stopcube-oracle-press-plan.html」「开工」。首次批准计划提交为 `48be54c0414a362bfc5684d1357f383881103f92`，计划见[完整方案](../../../1104-stopcube-oracle-press-plan.html)。本次含官方 ctx512 79999 与 concat motion 59999；不恢复旧计划、不使用旧计划运行产物，不跑正常局。后续追加的同输入离线机制分析、再次开工及八点截止，以下方「口径、执行顺序与截止」的用户原话和完整两阶段方案为准；仍不实施输入干预或因果消融。
 
 状态机登记尚未获答复，按计划不写入 `docs/handoff/current.json`，采用人工交接。
 
