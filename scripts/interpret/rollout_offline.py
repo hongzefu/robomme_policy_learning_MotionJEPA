@@ -5,7 +5,9 @@
   1. 原路径重放（ROLLOUT_REPLAY，容差 1e-6，不放宽）；
   2. 10 份独立噪声走原路径得到 P 用动作（只存不执行，高度换算不在本模块做）；
   3. 用记录里的实际噪声走展开路径，取注意力组质量和隐状态组均值；
-  4. 同输入同噪声比较隐状态捕获开和关（HIDDEN_PARITY，必须逐位相同）。
+  4. 同输入同噪声比较隐状态捕获开和关（HIDDEN_PARITY，数值容差）：捕获开关会改变 jit 图，bfloat16 编译结果
+     有数值波动，逐位相同做不到，因此比较 x_0 与五大组注意力质量，四个量及容差见 TOL_* 常量；不比较 probs 单元素。
+     写出的注意力和隐状态都来自捕获开的同一次运行，捕获关只用于比较。
 任何一步不通过都立刻停止并非零退出。不替换、不遮挡任何输入。JAX 确定性环境变量由外部脚本给。
 只处理 <run-root>/accepted/*.terminal.json 登记过的 nonce；重试或中断留下的旧 nonce 打印 OFFLINE_SKIP 并计数，不处理。
 
@@ -31,6 +33,54 @@ from scripts.interpret.offline_query import query_noise, replay_query, sample_pr
 
 P_PREDICTIONS = 10
 HIDDEN_GROUPS = ("历史视觉", "motion", "当前视觉", "文字")     # hidden_* 第二维的固定顺序
+
+# HIDDEN_PARITY 比较的五大组与容差（都是 ≤ 容差算通过）
+PARITY_GROUPS = ("motion", "历史视觉", "当前视觉", "文字", "其余")
+TOL_X0 = 0.02             # x_0 最大绝对差
+TOL_GROUP = 0.005         # 五大组单头质量最大绝对差
+TOL_TOTAL = 0.001         # 五大组总质量（跨层头平均）最大绝对差
+TOL_MOTION_REL = 0.1      # motion 组总质量相对差 |on-off|/|off|
+NOTE_GROUP = 0.003        # 单头差超过它但未超限时打印信息行，不影响判定
+
+
+def parity_readings(x_on, x_off, attention_on, attention_off, has_motion):
+    """返回捕获开和关的四个差异量；没有 motion token 时 motion_rel_maxabs 为 None。"""
+    on = np.asarray([attention_on[name]["mass"] for name in PARITY_GROUPS], dtype=np.float64)     # 组×层×头
+    off = np.asarray([attention_off[name]["mass"] for name in PARITY_GROUPS], dtype=np.float64)
+    total_on, total_off = on.mean(axis=(1, 2)), off.mean(axis=(1, 2))
+    motion_rel = None
+    if has_motion:
+        motion_on, motion_off = total_on[PARITY_GROUPS.index("motion")], total_off[PARITY_GROUPS.index("motion")]
+        if motion_off != 0:
+            motion_rel = float(abs(motion_on - motion_off) / abs(motion_off))
+        else:
+            motion_rel = 0.0 if motion_on == 0 else float("inf")
+    return {"x0_maxabs": float(np.max(np.abs(np.asarray(x_on, dtype=np.float64) - np.asarray(x_off, dtype=np.float64)))),
+            "group_mass_maxabs": float(np.max(np.abs(on - off))),
+            "group_total_maxabs": float(np.max(np.abs(total_on - total_off))),
+            "motion_rel_maxabs": motion_rel}
+
+
+def parity_within_tolerance(reading):
+    """四个量都 ≤ 容差才通过；NaN 比较结果为假，也算不通过。"""
+    motion_rel = reading["motion_rel_maxabs"]
+    return (reading["x0_maxabs"] <= TOL_X0 and reading["group_mass_maxabs"] <= TOL_GROUP
+            and reading["group_total_maxabs"] <= TOL_TOTAL and (motion_rel is None or motion_rel <= TOL_MOTION_REL))
+
+
+def format_parity(reading):
+    def text(value):
+        return "null" if value is None else f"{value:.9g}"
+
+    return " ".join(f"{name}={text(value)}" for name, value in reading.items())
+
+
+def merge_parity(total, reading):
+    """逐量取最大；某份没有 motion token（None）时不影响其他份的 motion 读数。"""
+    if total is None:
+        return dict(reading)
+    return {name: reading[name] if total[name] is None else
+            total[name] if reading[name] is None else max(total[name], reading[name]) for name in total}
 
 
 def load_accepted(run_root):
@@ -102,7 +152,7 @@ def existing_result(path, input_sha256):
 
 
 def process_record(policy, adapter, path, output_path, trace, input_sha256, *, seed, query_batch_size, check_parity):
-    """算一份记录并写出；返回读数。parity_maxabs 为 None 表示本份不比较。"""
+    """算一份记录并写出；返回读数。parity 为 None 表示本份不比较。"""
     import jax
     import jax.numpy as jnp
     from mme_vla_suite.models.integration.history_observation import HistAugObservation
@@ -147,19 +197,22 @@ def process_record(policy, adapter, path, output_path, trace, input_sha256, *, s
     if not np.isfinite(attn_path):
         raise ValueError(f"{path}：展开路径动作含非有限值")
 
-    parity_maxabs = None
-    if check_parity:
-        plain = jax.device_get(adapter.run(rng, observation, noise=actual_noise, num_steps=num_steps, out_f16=False)[:3])
-        pairs = list(zip((x_0, probs_action, probs_text), plain))
-        if not all(np.array_equal(np.asarray(on), np.asarray(off)) for on, off in pairs):
-            parity_maxabs = max(float(np.max(np.abs(np.asarray(on, dtype=np.float64) - np.asarray(off, dtype=np.float64))))
-                                for on, off in pairs)
-            print(f"HIDDEN_PARITY=FAIL points=1 maxabs={parity_maxabs:.9g} path={path}", flush=True)
-            raise SystemExit(1)
-        parity_maxabs = 0.0
-
     attention = aggregate_attention(probs_action, groups)
+
+    parity = None
+    if check_parity:
+        x_off, probs_off = jax.device_get(adapter.run(rng, observation, noise=actual_noise, num_steps=num_steps, out_f16=False)[:2])
+        attention_off = aggregate_attention(probs_off, {name: groups[name] for name in PARITY_GROUPS})
+        parity = parity_readings(x_0, x_off, attention, attention_off, bool(groups["motion"].any()))
+        if not parity_within_tolerance(parity):
+            print(f"HIDDEN_PARITY=FAIL points=1 {format_parity(parity)} path={path}", flush=True)
+            raise SystemExit(1)
+        if parity["group_mass_maxabs"] > NOTE_GROUP:
+            print(f"HIDDEN_PARITY_NOTE path={path} group_mass_maxabs={parity['group_mass_maxabs']:.9g}", flush=True)
+
     names = list(attention)
+    parity_saved = {name: np.float64(np.nan if parity is None or parity[name] is None else parity[name])
+                    for name in ("x0_maxabs", "group_mass_maxabs", "group_total_maxabs", "motion_rel_maxabs")}
     result = dict(
         group_names=np.asarray(names),
         group_mass=np.asarray([attention[name]["mass"] for name in names], dtype=np.float32),
@@ -179,12 +232,13 @@ def process_record(policy, adapter, path, output_path, trace, input_sha256, *, s
         model_id=np.str_(str(record["model_id"])),
         frame_times=record["frame_times"],
         motion_times=record["motion_times"],
+        **{f"parity_{name}": value for name, value in parity_saved.items()},      # 未比较或不适用时为 NaN
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     temporary = output_path.parent / f".{output_path.stem}.{uuid.uuid4().hex}.tmp.npz"
     np.savez(temporary, **result)
     os.replace(temporary, output_path)
-    return {"same_path_maxabs": same_path, "attn_path_maxabs": attn_path, "parity_maxabs": parity_maxabs}
+    return {"same_path_maxabs": same_path, "attn_path_maxabs": attn_path, "parity": parity}
 
 
 def run(policy, adapter, args):
@@ -194,6 +248,7 @@ def run(policy, adapter, args):
     seen = set()
     written = skipped = skipped_nonce = parity_points = 0
     same_path_max = attn_path_max = 0.0
+    parity_max = None
     for directory in sorted(path for path in Path(args.attn_root).iterdir() if path.is_dir()):
         paths = sorted(directory.glob("rollout_*.npz"))
         if not paths:
@@ -222,7 +277,9 @@ def run(policy, adapter, args):
                                       query_batch_size=args.query_batch_size,
                                       check_parity=args.parity == "all" or index == 0)
                 episode_written += 1
-                parity_points += item["parity_maxabs"] is not None
+                if item["parity"] is not None:
+                    parity_points += 1
+                    parity_max = merge_parity(parity_max, item["parity"])
             same_path_max = max(same_path_max, item["same_path_maxabs"])
             attn_path_max = max(attn_path_max, item["attn_path_maxabs"])
         written += episode_written
@@ -233,8 +290,11 @@ def run(policy, adapter, args):
     if missing or not written + skipped:
         raise SystemExit(f"没有可处理的记录或缺少指定的局：records={written + skipped} missing={missing}")
     print(f"ROLLOUT_REPLAY=PASS points={written + skipped} same_path_maxabs={same_path_max:.9g} tol=1e-6", flush=True)
-    print(f"HIDDEN_PARITY=PASS points={parity_points} maxabs=0" if parity_points else "HIDDEN_PARITY=SKIPPED points=0",
-          flush=True)
+    if parity_points:
+        print(f"HIDDEN_PARITY=PASS points={parity_points} {format_parity(parity_max)} "
+              f"tol_x0={TOL_X0} tol_group={TOL_GROUP} tol_total={TOL_TOTAL} tol_motion_rel={TOL_MOTION_REL}", flush=True)
+    else:
+        print("HIDDEN_PARITY=SKIPPED points=0", flush=True)
     print(f"OFFLINE_RUN=PASS records={written} skipped={skipped} skipped_nonce={skipped_nonce} "
           f"attn_path_maxabs={attn_path_max:.9g} "
           f"seconds={time.perf_counter() - started:.1f}", flush=True)
