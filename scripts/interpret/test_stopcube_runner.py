@@ -66,6 +66,7 @@ def setup_sim(monkeypatch):
 def make_runner():
     result = runner.TraceRunner.__new__(runner.TraceRunner)
     result.env_id, result.episode_id = "StopCube", 0
+    result.env_seed, result.difficulty = 105, "easy"
     result.env = SimpleNamespace(elapsed=7)
     result.env.unwrapped = SimpleNamespace()
     return result
@@ -102,6 +103,7 @@ def test_hold_replays_prefix_and_resumes_latest_chunk(tmp_path, monkeypatch):
     assert rows[6]["tcp_before"] == [0.1, 0.2, 13.0]
     assert rows[6]["tcp_after"] == [0.1, 0.2, 14.0]
     assert receipt["D"] == 3 and receipt["initial_env_step"] == 7
+    assert receipt["episode_id"] == 0 and receipt["env_seed"] == 105 and receipt["difficulty"] == "easy"
     assert receipt["actual_takeover_step"] == 12 and receipt["actual_release_step"] == 39
     assert receipt["video_fps"] == 30 and receipt["video_exec0_frame_index"] == 3
     assert receipt["task_success"] == 0 and receipt["extra"]["button_position"] is None

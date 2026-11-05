@@ -88,6 +88,7 @@ class TraceRunner(EnvRunner):
         self.trace_path = self.trace_dir / "step_trace.jsonl"
         self.trace_stream = self.trace_path.open("x", encoding="utf-8")
         self.receipt = {"schema_version": 1, "episode_key": self.key, "episode_nonce": nonce,
+                        "episode_id": self.episode_id, "env_seed": self.env_seed, "difficulty": self.difficulty,
                         "trajectory_kind": self.mode, "trace_path": str(self.trace_path.resolve()),
                         "terminal_path": str((Path(root) / f"{self.key}.terminal.json").resolve()),
                         "video_path": None, "outcome": None, "task_success": None,
