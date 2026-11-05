@@ -32,4 +32,15 @@ benchmark 锁定 `856bc3a189d4172f3f47dbee4424d585f8d78db3`。策略环境为主
 
 ## 本轮会话清单
 
-尚未启动运行会话。后续只使用 `so-` 前缀并逐项在此登记。
+实际启动：`so-assets-1104`，CPU 资产验证，干净工作树提交 `49db7d7bbc0d7a772f512d9804cb33966c04cafe`，日志 `<产物根>/logs/assets.log`。核验耗时 47.73 秒、退出 0，54 个 motion 文件和 17 个官方基线文件通过。
+
+预留下一份会话：`so-oracle16-hold-a`，只有收到启动回执才视为已运行。完整命令为 `tmux new-session -d -s so-oracle16-hold-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/smoke_oracle16.sh'`。实质命令如下，外层使用 `pipefail`、`tee`、无缓冲和 `EXIT_CODE=`；单次最长 290 秒，不重试：
+
+```bash
+CUDA_VISIBLE_DEVICES=1 /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/official-sim/bin/python \
+  -m scripts.interpret.stopcube_oracle --episode-key StopCube:16 --mode hold \
+  --benchmark-root /data/hongzefu/robomme_policy_learning_MotionJEPA/third_party/robomme_benchmark \
+  --output-dir /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/smoke/oracle16-hold-a
+```
+
+执行工作树 `/home/hongzefu/.codex/worktrees/stopcube-oracle-run/robomme_policy_learning_MotionJEPA`，固定 S1 合并提交 `bc0cc3dee4889d52f4fa79b294bbc600f3ac8d29`，启动前须干净；`PYTHONPATH` 先指向该工作树及其 `src`，benchmark 指向主检出已锁定源码。`UV_CACHE_DIR`、`XDG_CACHE_HOME`、`HF_HOME`、`TORCH_HOME`、`MMEVLA_V1_STORE`、`OPENPI_DATA_HOME` 均显式设置为主检出本机产物根下相应目录。策略模型尚未启动，本次只验证无模型的 Oracle 单局。
