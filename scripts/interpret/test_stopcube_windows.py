@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
-from scripts.interpret.stopcube_windows import add_fk, analyze, extract_events, geometry_window, is_task_success, main, read_trace
+from scripts.interpret.stopcube_windows import add_fk, analyze, extract_events, geometry_window, is_task_success, main, probe_hold_action, read_trace
 
 
 def definition():
@@ -56,6 +56,15 @@ def successful_trace():
 
 
 class StopCubeWindowsTests(unittest.TestCase):
+    def test_probe_preserves_measured_arm_and_uses_normalized_reset_gripper(self):
+        arm = [0.1, 0.2, 0.3, -1.4, 0.5, 1.2, 0.7]
+        qpos = arm + [0.04, 0.04]
+        reset_action = [0, 0, 0, -1.57, 0, 1.57, 0.78, 1.0]
+        action = probe_hold_action(qpos, reset_action)
+        self.assertEqual(action[:7], arm)
+        self.assertEqual(action[-1], 1.0)
+        self.assertNotEqual(action[-1], qpos[7])
+
     def test_distinct_command_tcp_button_and_stop_steps(self):
         result = extract_events(trace(), definition())
         self.assertEqual(result["events"]["command_press_step"], 6)
