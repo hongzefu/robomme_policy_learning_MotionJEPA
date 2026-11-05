@@ -36,3 +36,11 @@ ROUTING_TOPOLOGY_REVIEW=PASS scope=static_allowed_path_not_measured_information
 BEHAVIOR_DERIVATION_REVIEW=PASS runs=100 findings=0
 MECHANISM_REPORT=PASS models=2 inputs=16 predictions=160 visual_review=pass figures=32
 MECHANISM_VISUAL_REVIEW=PASS figures=32 overlap=0 missing_glyphs=0 source_commit=6f6c9882b89a0eba4622e4d630f1524b1ba6eb54
+FINAL_SCIENTIFIC_REVIEW=PASS base=5588e379eecf2f73165dc64849a2e7f8fc163982 findings=0 blocking=0
+FINAL_ARTIFACT_REVIEW=PASS base=5588e379eecf2f73165dc64849a2e7f8fc163982 findings=0 blocking=0
+ARTIFACT_LINKS=PASS mechanism_figures=32 result_links=6 forbidden_configs=0
+FROZEN_SOURCE_CHECK=PASS base=48be54c0414a362bfc5684d1357f383881103f92 scope=src,examples,third_party,scripts/training,scripts/evaluation
+OWN_RUN_HANDLES=PASS active_tmux=0 active_model_processes=0 active_tail=0
+IMPLEMENTATION_WORKTREES=PASS archived=5 retained_execution_snapshots=3
+REPORT_READY=PASS models=2 figures=35
+MANUAL_HANDOFF=PASS task=stopcube-oracle-1104 state=complete state_machine=not_registered
