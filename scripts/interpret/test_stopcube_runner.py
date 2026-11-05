@@ -115,6 +115,18 @@ def test_hold_replays_prefix_and_resumes_latest_chunk(tmp_path, monkeypatch):
     assert all(required <= row.keys() for row in rows)
 
 
+def test_hold_preserves_json_command_precision(tmp_path, monkeypatch):
+    # 前七维是物理 float32 状态的精确升格；末维保留实际正常命令的 float64 数值。
+    joints = np.asarray([0.1234567, -0.2345678, 0.3456789, -1.456789, 0.5678912, 1.6789123,
+                         -0.7891234], dtype=np.float32).astype(np.float64).tolist()
+    qpos = joints + [-1.0039340752248764]
+    hold = {"takeover_step": 12, "release_step": 39, "hold_qpos": qpos}
+    env, _, _, _, rows, receipt = run_episode(tmp_path, monkeypatch, "hold_extended", hold)
+    assert receipt["hold_qpos"] == qpos
+    assert all(action.dtype == np.float64 and action.tolist() == qpos for action in env.env.actions[5:32])
+    assert all(row["executed_action"] == qpos for row in rows[5:32])
+
+
 def test_normal_matches_official_loop(tmp_path, monkeypatch):
     env, evaluator, client, outcome, rows, receipt = run_episode(tmp_path, monkeypatch, "normal")
     baseline = runner.EnvRunner.__new__(runner.EnvRunner)

@@ -110,7 +110,7 @@ class TraceRunner(EnvRunner):
                                  "hover_z": None, "hover_source": None}
         if self.schedule is not None:
             start, release = self.schedule["takeover_step"], self.schedule["release_step"]
-            qpos = np.asarray(self.schedule["hold_qpos"], dtype=np.float32)
+            qpos = np.asarray(self.schedule["hold_qpos"], dtype=np.float64)
             origin = first["env_step"]
             if (type(start) is not int or type(release) is not int or origin is None or start < origin
                     or release <= start or (release - origin) % 16 != 0
