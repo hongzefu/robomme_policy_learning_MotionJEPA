@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StopCube 真实 rollout 计划</title>
+<style>
+  body { margin: 0; background: #f7f8f8; color: #1d2528; font: 16px/1.75 -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 36px 24px 72px; }
+  h1 { font-size: 1.7rem; line-height: 1.35; margin: 44px 0 14px; padding-top: 16px; border-top: 3px solid #1d2528; }
+  h2 { font-size: 1.22rem; margin: 30px 0 8px; }
+  h3 { font-size: 1.02rem; margin: 20px 0 6px; }
+  p { margin: 9px 0; } ul, ol { margin: 9px 0; padding-left: 1.4em; } li { margin: 4px 0; }
+  code { font: 0.87em ui-monospace, Menlo, monospace; overflow-wrap: anywhere; }
+  pre { background: #e9eef0; padding: 12px 14px; overflow-x: auto; font: 0.82rem/1.55 ui-monospace, Menlo, monospace; }
+  .note { background: #e9eef0; padding: 10px 14px; margin: 14px 0; }
+  .tbl { overflow-x: auto; margin: 12px 0; }
+  table { border-collapse: collapse; font-size: 0.91rem; width: 100%; background: #fff; }
+  th, td { border: 1px solid #d3dbde; padding: 6px 9px; text-align: left; vertical-align: top; }
+  th { background: #eef2f3; white-space: nowrap; }
+  figure { margin: 14px 0; } figure svg { width: 100%; height: auto; background: #fff; }
+  figcaption { font-size: 0.88rem; color: #4a5a60; margin-top: 4px; }
+</style>
+</head>
+<body>
+<main>
+<div style="font-size:2rem;font-weight:700;line-height:1.35">StopCube：两个模型的真实 rollout 分析计划</div>
+<div class="note">
+<b>状态与授权：</b>只规划，未实施。开工须用户对本计划不做修改、明确同意；任何增量都要先改计划再次呈现。<br>
+<b>用户口径原话：</b>「就还是这四个问题全部用真实 rollout 来做……触发时刻分布是否在窗口内，按的那一刻有没有看 motion，以及模型知不知道自己离按有几步和离正确窗口还有几步。我们都只做真实的 rollout，给我一个完整的方案」。<br>
+<b>代码锚点：</b>写作时 HEAD <code>f3d00b4c506fd6c7e1b3afcf53bae76621dbb5dc</code>，分支 <code>v4.1-interpretMotion</code>，工作副本 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code>（环境 A，sled-aspen，两张 RTX A6000）。<br>
+<b>外部依赖：</b>benchmark gitlink <code>856bc3a189d4172f3f47dbee4424d585f8d78db3</code>；两个模型的权重与环境均已在本机，不下载。<br>
+<b>commit 体例：</b>功能合并 <code>commitV4.1.&lt;n&gt;:</code>，子代理 <code>sub/&lt;编号&gt;:</code>，文档 <code>docs:</code>，交接 <code>handoff:</code>。
+</div>
+
+<h1>第一部分（给人看）</h1>
+
+<h2>一、要做什么</h2>
+<p>让基线和 motion 两个模型各自完整跑 StopCube 官方 50 局，全程由模型控制，不用 Oracle 悬停、不接管、不跳步。跑的时候只记录真实发生的轨迹和每次推理的完整输入；注意力和隐状态事后对这些输入离线计算，这样分析不会影响实际执行的动作。用这一批数据回答四个问题：</p>
+<div class="tbl"><table>
+<tr><th>编号</th><th>问题</th><th>用什么回答</th></tr>
+<tr><td>Q1</td><td>触发时刻的分布是否在窗口内</td><td>逐步轨迹的按钮字段 + 窗口表</td></tr>
+<tr><td>Q2</td><td>按的那一刻有没有看 motion</td><td>下压前后几次推理的注意力，用模型实际执行的噪声算</td></tr>
+<tr><td>Q3</td><td>模型知不知道离自己按还有几步</td><td>线性探针，标签来自它自己的真实触发时刻</td></tr>
+<tr><td>Q4</td><td>模型知不知道离正确窗口还有几步</td><td>线性探针，标签来自窗口表</td></tr>
+</table></div>
+
+<h2>二、已定口径</h2>
+<div class="tbl"><table>
+<tr><th>编号</th><th>口径</th><th>依据</th></tr>
+<tr><td>K1</td><td>只用真实 rollout。Oracle 询问、固定放手、校准数据都不进入本轮结论，也不作对照</td><td>用户原话，见文首</td></tr>
+<tr><td>K2</td><td>基线：官方 ctx512 <code>79999</code>；motion：<code>vla-o16cc-59999/59999</code>；模型 seed 42；同一份 50 局清单（封签 <code>05313f41…</code>）</td><td>沿用 1104 计划的两个模型与清单</td></tr>
+<tr><td>K3</td><td>每个模型每局跑 1 次，共 100 局。探针区间太宽时可再用其他采样 seed 加跑，但要用户另行批准</td><td>先小后大（第 4 条）</td></tr>
+<tr><td>K4</td><td>实际动作走原采样路径，不用注意力展开路径</td><td>§三.1 的实测差异</td></tr>
+<tr><td>K5</td><td>只分析这四个问题。信息流量、梯度归因、逐层投影、「已经过几次」探针都不做</td><td>用户本轮只点名四个问题</td></tr>
+<tr><td>K6</td><td>不替换、不遮挡任何输入，不做干预；所有结论只到「看了哪里」「可解码」，不写因果</td><td>沿用 1104 计划 K9、K10</td></tr>
+<tr><td>K7</td><td>正常任务失败不重试；只有基础设施故障可重试，且记录原因和次数</td><td>第 22 条</td></tr>
+</table></div>
+
+<h2>三、机制</h2>
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" width="960" height="420" font-family="Noto Sans CJK SC, Source Han Sans SC, Microsoft YaHei, sans-serif" font-size="13">
+  <defs>
+    <marker id="afF" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/>
+    </marker>
+    <marker id="afFb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="afFg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#16a34a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="960" height="420" fill="#ffffff"/>
+
+  <!-- 第一列：在线 -->
+  <text x="160" y="26" text-anchor="middle" font-size="14" font-weight="bold" fill="#2563eb">在线：真实 rollout（模型自己控制）</text>
+  <rect x="20" y="42" width="280" height="56" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="160" y="66" text-anchor="middle" fill="#1e3a8a">官方 normal 循环，原采样路径</text>
+  <text x="160" y="86" text-anchor="middle" fill="#1e3a8a">每 16 步推理一次</text>
+
+  <path d="M40,98 V258" fill="none" stroke="#2563eb" stroke-width="1.5"/>
+  <path d="M40,165 H58" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#afFb)"/>
+  <path d="M40,258 H58" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#afFb)"/>
+
+  <rect x="60" y="130" width="240" height="70" rx="6" fill="#ffffff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="180" y="152" text-anchor="middle" fill="#1e3a8a">每次推理的完整输入 rollout_*.npz：</text>
+  <text x="180" y="172" text-anchor="middle" fill="#1e3a8a">观测、记忆、motion、</text>
+  <text x="180" y="192" text-anchor="middle" fill="#1e3a8a">实际噪声、实际动作</text>
+
+  <rect x="60" y="230" width="240" height="56" rx="6" fill="#ffffff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="180" y="254" text-anchor="middle" fill="#1e3a8a">逐步轨迹 step_trace.jsonl：</text>
+  <text x="180" y="274" text-anchor="middle" fill="#1e3a8a">TCP、按钮、方块、stop_timestep</text>
+
+  <!-- rollout 输入 → 原路径重放 -->
+  <path d="M300,165 H320 V72 H338" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#afFb)"/>
+  <!-- 逐步轨迹 → Q1（底部通道，绕右侧上行） -->
+  <path d="M300,258 H320 V376 H950 V65 H922" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#afFb)"/>
+
+  <!-- 第二列：离线 -->
+  <text x="480" y="26" text-anchor="middle" font-size="14" font-weight="bold" fill="#16a34a">离线：不新跑环境</text>
+  <rect x="340" y="42" width="280" height="56" rx="6" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="480" y="66" text-anchor="middle" fill="#14532d">原路径重放：</text>
+  <text x="480" y="86" text-anchor="middle" fill="#14532d">动作误差 ≤ 1e-6 才放行</text>
+
+  <path d="M500,98 V148" fill="none" stroke="#16a34a" stroke-width="1.5" marker-end="url(#afFg)"/>
+  <path d="M360,98 V268" fill="none" stroke="#16a34a" stroke-width="1.5" marker-end="url(#afFg)"/>
+
+  <rect x="380" y="150" width="240" height="56" rx="6" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="500" y="174" text-anchor="middle" fill="#14532d">展开路径 + 实际噪声：</text>
+  <text x="500" y="194" text-anchor="middle" fill="#14532d">18×8 注意力 + 分组隐状态</text>
+
+  <rect x="340" y="270" width="280" height="56" rx="6" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="480" y="294" text-anchor="middle" fill="#14532d">原路径 + 10 份噪声：</text>
+  <text x="480" y="314" text-anchor="middle" fill="#14532d">想按比例 P</text>
+
+  <!-- 展开路径框右侧总线 → Q2、Q3、Q4 -->
+  <path d="M620,178 H650" fill="none" stroke="#16a34a" stroke-width="1.5"/>
+  <path d="M650,150 V320" fill="none" stroke="#16a34a" stroke-width="1.5"/>
+  <circle cx="650" cy="178" r="2.5" fill="#16a34a"/>
+  <path d="M650,150 H698" fill="none" stroke="#16a34a" stroke-width="1.5" marker-end="url(#afFg)"/>
+  <path d="M650,235 H698" fill="none" stroke="#16a34a" stroke-width="1.5" marker-end="url(#afFg)"/>
+  <path d="M650,320 H698" fill="none" stroke="#16a34a" stroke-width="1.5" marker-end="url(#afFg)"/>
+  <text x="675" y="144" text-anchor="middle" font-size="12" fill="#6b7280">注意力</text>
+  <text x="675" y="229" text-anchor="middle" font-size="12" fill="#6b7280">隐状态</text>
+  <text x="675" y="314" text-anchor="middle" font-size="12" fill="#6b7280">隐状态</text>
+
+  <!-- P 框 → Q2（底部绕右侧上行） -->
+  <path d="M560,326 V352 H935 V150 H922" fill="none" stroke="#16a34a" stroke-width="1.5" marker-end="url(#afFg)"/>
+
+  <!-- 第三列：四个问题 -->
+  <text x="810" y="26" text-anchor="middle" font-size="14" font-weight="bold" fill="#ea580c">回答的四个问题</text>
+  <rect x="700" y="45" width="220" height="40" rx="6" fill="#fff7ed" stroke="#ea580c" stroke-width="1.5"/>
+  <text x="810" y="70" text-anchor="middle" fill="#7c2d12">Q1 触发时刻是否在窗口内</text>
+  <rect x="700" y="130" width="220" height="40" rx="6" fill="#fff7ed" stroke="#ea580c" stroke-width="1.5"/>
+  <text x="810" y="155" text-anchor="middle" fill="#7c2d12">Q2 按的那一刻有没有看 motion</text>
+  <rect x="700" y="215" width="220" height="40" rx="6" fill="#fff7ed" stroke="#ea580c" stroke-width="1.5"/>
+  <text x="810" y="240" text-anchor="middle" fill="#7c2d12">Q3 离自己按还有几步</text>
+  <rect x="700" y="300" width="220" height="40" rx="6" fill="#fff7ed" stroke="#ea580c" stroke-width="1.5"/>
+  <text x="810" y="325" text-anchor="middle" fill="#7c2d12">Q4 离正确窗口还有几步</text>
+
+  <!-- 底部说明 -->
+  <text x="480" y="408" text-anchor="middle" font-size="12.5" fill="#6b7280">说明：逐步轨迹同时给 Q2 的对齐点和 Q3、Q4 的标签</text>
+</svg>
+<figcaption>图 1　数据链路：在线只记录真实发生的事，所有分析都在离线完成。</figcaption>
+</figure>
+
+<h3>1. 为什么不能直接用现有的 rollout 数据</h3>
+<p>中止计划留下了 motion 模型 28 局实际 rollout（<code>v1-store/evaluation/stopcube-decision-1104/normal/</code>，436 次推理，38 G）。它不能当本轮结果，原因有三个：没有基线；<code>infer_*.npz</code> 里没有图像和记忆输入，算不了隐状态；<code>AttnRecorder</code> 把 <code>policy._sample_actions</code> 换成了展开路径，实际执行的动作走的不是原路径。上一轮测到展开路径的归一化动作最大差：基线 0.0437、motion 0.0166（<code>OFFLINE_REPLAY</code> 判定行）。所以本轮新增一个只记录、不换路径的记录器。</p>
+
+<h3>2. 中止数据已经验证的事实（motion 模型，28 局完整、第 28 局中断）</h3>
+<div class="tbl"><table>
+<tr><th>事实</th><th>实测</th><th>对本计划的影响</th></tr>
+<tr><td>触发分布（按 <code>button_pressed_after</code> 首次为真）</td><td>窗口内 13、偏晚 10、偏早 4、未按 1</td><td>Q1 有足够的分散度可看，但这只是单模型、展开路径的结果，不进入结论</td></tr>
+<tr><td>触发后这局走多久</td><td>27 局触发后再走 0 或 2 步就结束</td><td>按下之后没有样本；偏早局没有窗口附近的样本，Q3、Q4 的样本因此不均衡（§三.5）</td></tr>
+<tr><td>推理间隔</td><td>407 个相邻间隔全部是 16 步</td><td>每局约 6～34 次推理，每个模型约 780 次；时间分辨率就是 16 步</td></tr>
+<tr><td>TCP 低于悬停 2 cm 与触发的关系</td><td>通常早约 13 步；触发所在推理比它晚 1 次（21 局）或相同（6 局）</td><td>Q2 必须按下压动作对齐，不能只看触发那一次</td></tr>
+<tr><td>方块轨迹与 Oracle 窗口表</td><td>29 条轨迹触发前最大差 0.0</td><td>窗口表可直接作为真值；本轮对两个模型重新核一次（<code>WINDOW_TABLE_MATCH</code>）</td></tr>
+<tr><td><code>stop_timestep</code> 字段</td><td>很多已触发的局它是空的（如第 2、12 局提前按下）</td><td>触发时刻只认 <code>button_pressed_after</code>，<code>stop_timestep</code> 单独报告，不能代替</td></tr>
+</table></div>
+
+<h3>3. Q1：触发时刻分布</h3>
+<p>定义和上一轮一致（<code>oracle_press_prob.py</code> 的分类）：<code>trigger_step</code> 是 <code>button_pressed_after</code> 首次为真的 <code>env_step_after</code>；窗口是窗口表的 <code>target_visit_in</code>～<code>target_visit_out</code>。每局分成未按、偏早、窗口内、偏晚四类，并计算 <code>trigger_step − 窗口中心</code>。</p>
+<p>产出：两个模型的四类计数表；按 M＝60/80/120 分层；相对窗口中心的分布图；逐局配对表；局级重采样的差值区间。官方 <code>task_success</code> 单独报告，因为几何窗口和官方判定不完全一致：上一轮第 9 局就是在窗口内却判失败。</p>
+
+<h3>4. Q2：按的那一刻有没有看 motion</h3>
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 316" width="960" height="316" font-family="Noto Sans CJK SC, Source Han Sans SC, Microsoft YaHei, sans-serif" font-size="12">
+  <defs>
+    <marker id="afT" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#374151"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="960" height="316" fill="#ffffff"/>
+
+  <!-- 标题 -->
+  <text x="20" y="22" font-size="14" font-weight="bold" fill="#374151">第 16 局的实际时间轴（motion 模型中止前实测，M=120，N=4）</text>
+
+  <!-- 正确窗口 412～428 -->
+  <rect x="666.67" y="108" width="186.67" height="92" fill="#ea580c" fill-opacity="0.18"/>
+  <text x="789" y="128" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#c2410c">正确窗口 412～428</text>
+
+  <!-- 推理起点（虚线） -->
+  <g stroke="#6b7280" stroke-width="1.2" stroke-dasharray="4 3" fill="none">
+    <path d="M165,108 V200"/>
+    <path d="M351.67,108 V200"/>
+    <path d="M538.33,108 V200"/>
+    <path d="M725,108 V200"/>
+  </g>
+  <g fill="#6b7280" font-size="12">
+    <text x="165" y="100" text-anchor="middle">第 23 次推理</text>
+    <text x="351.67" y="100" text-anchor="middle">第 24 次</text>
+    <text x="538.33" y="100" text-anchor="middle">第 25 次</text>
+    <text x="731" y="100" text-anchor="start">第 26 次</text>
+  </g>
+
+  <!-- 时间轴 -->
+  <path d="M60,200 H896" fill="none" stroke="#374151" stroke-width="1.5" marker-end="url(#afT)"/>
+  <text x="912" y="204" font-size="12" fill="#374151">环境步</text>
+  <g stroke="#374151" stroke-width="1.2">
+    <path d="M60,200 V206"/>
+    <path d="M246.67,200 V206"/>
+    <path d="M433.33,200 V206"/>
+    <path d="M620,200 V206"/>
+    <path d="M806.67,200 V206"/>
+    <path d="M900,200 V206"/>
+  </g>
+  <g fill="#374151" font-size="12" text-anchor="middle">
+    <text x="60" y="222">360</text>
+    <text x="246.67" y="222">376</text>
+    <text x="433.33" y="222">392</text>
+    <text x="620" y="222">408</text>
+    <text x="806.67" y="222">424</text>
+    <text x="900" y="222">432</text>
+  </g>
+
+  <!-- 事件：404 TCP 低于悬停 -->
+  <path d="M573.33,200 V58" fill="none" stroke="#2563eb" stroke-width="1.5"/>
+  <circle cx="573.33" cy="200" r="3.2" fill="#2563eb"/>
+  <text x="566" y="52" text-anchor="end" font-size="12.5" fill="#2563eb">404 TCP 低于悬停 2 cm（I_cross 所在推理：第 25 次）</text>
+
+  <!-- 事件：416 按钮触发 -->
+  <path d="M713.33,200 V82" fill="none" stroke="#16a34a" stroke-width="1.5"/>
+  <circle cx="713.33" cy="200" r="3.2" fill="#16a34a"/>
+  <text x="720" y="76" text-anchor="start" font-size="12.5" fill="#16a34a">416 按钮触发（第 25 次的动作块内）</text>
+
+  <!-- 对齐标签分组条 -->
+  <text x="60" y="256" font-size="12" fill="#6b7280">对齐标签</text>
+  <g fill="#e5e7eb" stroke="#9ca3af" stroke-width="1">
+    <rect x="165" y="240" width="186.67" height="22"/>
+    <rect x="351.67" y="240" width="186.67" height="22"/>
+    <rect x="538.33" y="240" width="186.67" height="22"/>
+  </g>
+  <g fill="#374151" font-size="12" text-anchor="middle">
+    <text x="258.33" y="256">I_cross−2</text>
+    <text x="445" y="256">I_cross−1</text>
+    <text x="631.67" y="256">I_cross</text>
+  </g>
+
+  <!-- 右下角说明 -->
+  <text x="900" y="300" text-anchor="end" font-size="12" fill="#6b7280">模型按下后这局最多再走 2 步就结束，所以窗口后没有样本</text>
+</svg>
+<figcaption>图 2　对齐方式示例（第 16 局，来自中止数据）：过阈值发生在第 25 次推理的动作块内，触发也在其中。</figcaption>
+</figure>
+<p>注意力用这次推理<b>实际执行的那份噪声</b>计算，因为它才是真正导致这次动作的那一次采样。统计沿用 <code>offline_mechanism.aggregate_attention</code>：前 16 个动作位、10 个去噪步取平均，保留 18 层×8 头。</p>
+<div class="tbl"><table>
+<tr><th>对齐点</th><th>定义</th><th>适用的局</th></tr>
+<tr><td><code>I_cross</code></td><td>动作块内首次出现实测 TCP 低于悬停 2 cm 的那次推理</td><td>有下压的局</td></tr>
+<tr><td><code>I_cross−1</code>、<code>−2</code>、<code>−3</code></td><td>下压之前的推理，作同局对照；<code>I_cross−1</code> 通常已经发出下压指令</td><td>同上，不足的如实缺失</td></tr>
+<tr><td><code>I_trigger</code></td><td>动作块内发生按钮触发的那次推理</td><td>已触发的局</td></tr>
+<tr><td><code>I_near</code></td><td>动作块覆盖窗口中心的那次推理，单独成组</td><td>未按的局</td></tr>
+</table></div>
+<p>回答「有没有看 motion」要比较三样东西，只看总占比是不够的：</p>
+<ul>
+<li><b>和自己之前比：</b>同一局 <code>I_cross</code> 对比 <code>I_cross−3</code> 的 motion 单 token 占比。因为 motion token 数会随时间增加，所以用单 token 占比，并同时列出 token 数。</li>
+<li><b>和均匀分配比：</b>motion 实际占比对比「motion token 数 ÷ 有效 token 数」。</li>
+<li><b>和其他输入比：</b>同一次推理里当前画面、历史帧、文字、动作 token 的占比。基线没有 motion，只比其余几组。</li>
+</ul>
+<p>另外三项：</p>
+<ul>
+<li><b>头：</b>144 个头全部统计。L13H6、L15H1、L16H0 在开跑前就定为候选，用来检验上一轮 8 个点上的现象能否在全部 50 局上重现；其余的头只作描述。</li>
+<li><b>看的是哪段 motion：</b>新记录 <code>motion_times</code>，把被关注的窗口分成「覆盖方块此前经过目标的时段」和其他，并与均匀分配比较。</li>
+<li><b>分组：</b>全部结果按窗口内、偏早、偏晚分组，不按成功挑局，消除上一轮的选择偏差。</li>
+</ul>
+<p>辅助量：每次推理用 10 份独立噪声走原路径算一次想按比例 P（定义同 <code>oracle_press_prob.probabilities</code>），用于看实际轨迹上的想按曲线。这些预测不执行。到位之前（TCP 尚未到悬停高度）的点不计 P。</p>
+
+<h3>5. Q3、Q4：线性探针</h3>
+<p>隐状态由离线展开路径按实际噪声取得，按组取均值后保存：前缀隐状态分帧、motion、当前画面、文字四组，共 19 个读数（第 0 层输入加 18 层输出）；动作 token 取前 16 个、10 个去噪步的平均，18 层。</p>
+<div class="tbl"><table>
+<tr><th></th><th>标签</th><th>样本范围</th></tr>
+<tr><td>Q3 离自己按</td><td><code>trigger_step − 推理起点步</code></td><td>只用已触发的局；到位后到触发前的推理</td></tr>
+<tr><td>Q4 离正确窗口</td><td><code>窗口中心 − 推理起点步</code>，可为负；窗口中心等于 <code>M×(N−0.5)</code></td><td>全部 50 局；到位后到本局结束的推理</td></tr>
+</table></div>
+<p><b>⚠ 关键陷阱：标签几乎就是时间的线性函数。</b>Q4 的标签等于 <code>M(N−0.5) − t</code>。模型的记忆里带时间码（所以可能知道 <code>t</code>），指令里写着次数（所以知道 <code>N</code>）。只要探针读出 <code>t</code> 和 <code>N</code>，就能得到很高的 R²，但这不代表模型有「预期」。真正需要模型算的是方块周期 <code>M</code>。所以判断标准不是 R² 高不高，而是能不能超过下面的对照：</p>
+<div class="tbl"><table>
+<tr><th>对照</th><th>做法</th><th>防的是什么</th></tr>
+<tr><td>时间基线（主比较）</td><td>只用 <code>t</code> 和 <code>N</code> 做同样的回归</td><td>探针只是读出了时间和指令；探针必须比它的误差更小，才算有额外信息</td></tr>
+<tr><td>第 0 层输入</td><td>同组 token 在进入第 0 层之前的表示</td><td>信息在输入里就有，并不是模型算出来的</td></tr>
+<tr><td>只用当前画面</td><td>只用当前画面组的隐状态</td><td>只靠当前画面就能猜</td></tr>
+<tr><td>按局打乱标签</td><td>整局一起打乱后重做</td><td>过拟合；样本数远小于特征维度时尤其需要</td></tr>
+</table></div>
+<p>方法：闭式岭回归（只用 numpy，不新增依赖）；两个模型用相同的 5 折按局划分，同一局不跨折；正则系数在训练折内部选择；标准化只用训练折。输出折外 MAE（单位：步）和 R²，每局等权，避免长局主导；用局级重采样给出「探针 MAE − 时间基线 MAE」的区间。主要读数预先定为第 17 层动作 token；其余层和组只作描述，画成逐层曲线。</p>
+<div class="tbl"><table>
+<tr><th>可能的结果</th><th>能说什么</th><th>不能说什么</th></tr>
+<tr><td>探针不优于时间基线</td><td>这批样本里，没看到超过时间和次数的信息</td><td>不能说模型没有预期：线性探针和约 780 个样本都有局限</td></tr>
+<tr><td>探针优于时间基线，且优于第 0 层</td><td>隐状态里有模型计算得到的进度信息，可解码</td><td>不能说模型用了这个信息</td></tr>
+<tr><td>第 0 层已经一样好</td><td>信息在输入里就有</td><td>不能归功于模型内部计算</td></tr>
+<tr><td>motion 模型优于基线</td><td>只描述差异</td><td>两个模型训练来源不同，不能全部归因于 motion</td></tr>
+</table></div>
+<p>⚠ Q3、Q4 的样本结构不同：Q3 不含未按的局；偏早的局没有窗口附近的样本，偏晚的局有。两个模型触发分布不同，样本也就不同，所以另外在「两个模型都有样本的局」上重算一遍。</p>
+
+<h2>四、验收</h2>
+<div class="tbl"><table>
+<tr><th>查什么</th><th>怎么查</th><th>过了说明什么</th><th>判定行</th></tr>
+<tr><td>rollout 跑完</td><td>两个模型各 50 局都有终局，基础设施故障如实计数</td><td>Q1 分母完整</td><td><code>ROLLOUT_RUN=PASS models=2 episodes_per_model=50 infra_retries=&lt;n&gt;</code></td></tr>
+<tr><td>窗口表可用</td><td>触发前方块位置和窗口表逐步比较</td><td>窗口表对本轮两个模型都是真值</td><td><code>WINDOW_TABLE_MATCH=PASS models=2 episodes=50 cube_maxabs=&lt;x&gt;</code></td></tr>
+<tr><td>输入记录完整</td><td>每局记录数等于轨迹里的动作块数，步号一一对应，写后读回一致</td><td>每次推理都能离线分析</td><td><code>ROLLOUT_RECORD=PASS models=2 inferences=&lt;n&gt; missing=0 readback=1</code></td></tr>
+<tr><td>原路径可复现</td><td>全部记录用保存的噪声走原路径重算，与实际动作比较，容差 1e-6</td><td>离线用的输入和噪声就是实际发生的那一份</td><td><code>ROLLOUT_REPLAY=PASS models=2 points=&lt;n&gt; same_path_maxabs=&lt;x&gt; tol=1e-6</code></td></tr>
+<tr><td>隐状态不影响采样</td><td>同一输入，开、关隐状态捕获的输出逐位比较</td><td>加捕获没有改变展开路径</td><td><code>HIDDEN_PARITY=PASS points=&lt;n&gt; maxabs=0</code></td></tr>
+<tr><td>Q1 汇总</td><td>重新读回全部轨迹，四类之和等于 50</td><td>分布表可信</td><td><code>TRIGGER_DISTRIBUTION=PASS models=2 episodes=50 ctx=&lt;四类&gt; mot=&lt;四类&gt;</code></td></tr>
+<tr><td>Q2 汇总</td><td>每个头各组占比之和等于 1；对齐点和轨迹一致；展开路径动作差如实记录</td><td>注意力统计没有分错组</td><td><code>ATTN_ALIGN=PASS models=2 points=&lt;n&gt; sum_err=&lt;x&gt; attn_path_maxabs=&lt;y&gt;</code></td></tr>
+<tr><td>Q3、Q4 汇总</td><td>折内无同局样本；打乱标签的结果接近无信息；对照齐全</td><td>探针流程没有泄漏</td><td><code>PROBE_REPORT=PASS models=2 labels=2 group_leak=0 shuffle_r2_max=&lt;x&gt;</code></td></tr>
+<tr><td>报告与图</td><td>主会话把全部图渲染成位图逐张目视</td><td>可交付</td><td><code>ROLLOUT_REPORT=PASS figures=&lt;n&gt; visual_review=pass</code></td></tr>
+</table></div>
+<p>这些判定只保证流程正确。例如 <code>PROBE_REPORT=PASS</code> 不表示探针解码成功，科学结论写在结果档案里，正常失败也不影响 PASS。</p>
+
+<h2>五、步骤</h2>
+<div class="tbl"><table>
+<tr><th>阶段</th><th>内容</th><th>判据</th></tr>
+<tr><td>S0</td><td>开工审查：独立代理通读本计划，查自相矛盾</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS</code></td></tr>
+<tr><td>S1</td><td>写代码、合并、CPU 测试</td><td>各子任务的合并前后审查</td></tr>
+<tr><td>S2</td><td>冒烟：每个模型 1 局（第 16 局）跑完 rollout，并完成该局全部离线步骤；实测每次推理的耗时和体积</td><td>该局的 <code>ROLLOUT_RECORD</code>、<code>ROLLOUT_REPLAY</code>、<code>HIDDEN_PARITY</code></td></tr>
+<tr><td>S3</td><td>正式 rollout：两张卡并行，各 50 局</td><td><code>ROLLOUT_RUN</code>、<code>WINDOW_TABLE_MATCH</code>、<code>ROLLOUT_RECORD</code></td></tr>
+<tr><td>S4</td><td>全量离线：原路径重放、P、注意力和隐状态</td><td><code>ROLLOUT_REPLAY</code>、<code>HIDDEN_PARITY</code></td></tr>
+<tr><td>S5</td><td>CPU 分析：Q1、Q2、Q3、Q4</td><td><code>TRIGGER_DISTRIBUTION</code>、<code>ATTN_ALIGN</code>、<code>PROBE_REPORT</code></td></tr>
+<tr><td>S6</td><td>目视图表，写结果档案，独立复核，提交推送</td><td><code>ROLLOUT_REPORT</code></td></tr>
+</table></div>
+<p>规模（估算，S2 实测后更新）：rollout 每个模型约 40 分钟（中止数据 28 局用了 23 分钟）；离线每个模型约 1～2 小时；磁盘每个模型约 10 GB。预算上限 12 GPU·h、总盘 40 GB；<code>/data</code> 现余 5.1 T。</p>
+
+<h2>六、子代理分工与合并（简述）</h2>
+<p>代码拆成五块，各在独立 worktree 修改：真实 rollout 的输入记录、适配器的隐状态捕获、Q1 与对齐点分析、离线计算入口、Q2 与探针分析。合并顺序是记录器 → 隐状态 → Q1 与对齐 → 离线入口 → Q2 与探针，因为后面的块要消费前面的产物。每次合并前由独立审查代理核对改动范围和接口，主会话在 worktree 里复跑验收；合并后跑定向短测，通过后 push。运行型代理只按确定版本启动 rollout 和离线任务，发现问题交回主会话，另派修复代理。逐文件细节见第二部分。</p>
+
+<h1>第二部分（技术细节，供 agent 追踪）</h1>
+
+<h2>〇、前置声明与红线</h2>
+<ol>
+<li><b>现有能力</b>：<code>stopcube_mode=normal</code>、<code>step_trace.jsonl</code>、<code>offline_query.replay_query</code>、<code>offline_mechanism.aggregate_attention</code>、<code>oracle_press_prob.convert_arrays/probabilities</code>。<b>拟新增</b>：见第一节。<b>实测</b>只有 §三.1～2 的数字；规模均为估算。</li>
+<li>不改 <code>src/</code>、<code>third_party/</code>、<code>scripts/training/</code>、<code>scripts/evaluation/</code>；不改依赖（探针只用 numpy）。</li>
+<li>rollout 期间不调用 <code>AttnAdapter</code>、不改 <code>policy._rng</code>、不改动作、不新增推理。</li>
+<li>只做输入原样重放，不替换 motion、不遮挡 token、不改 mask；<code>--ablate</code> 必须为 <code>none</code>。</li>
+<li>不写新 run 之外的产物目录；不动 <code>stopcube-oracle-1104</code>、<code>stopcube-decision-1104</code> 的任何文件。</li>
+<li>不操作其他用户或其他任务的进程；tmux 只用下表名字，清理按第 7 条逐个精确删除。</li>
+<li>科学结论不写因果；探针结论只到「可解码」。</li>
+</ol>
+
+<h2>一、逐文件改动</h2>
+<div class="tbl"><table>
+<tr><th>文件</th><th>锚点</th><th>改什么</th><th>关闭态</th></tr>
+<tr><td><code>scripts/interpret/serve_policy_attn.py</code></td><td>新类 <code>RolloutRecorder</code>；<code>_make_args_class</code>；<code>main</code></td><td>新参数 <code>--rollout-record</code>。包装 <code>policy._sample_actions</code>：原样调用原函数；另算 <code>noise=jax.random.normal(rng,(1,AH,AD))</code>，不消耗 <code>policy._rng</code>；infer 返回后写 <code>rollout_&lt;seq:04d&gt;.npz</code>。键与 <code>query_*.npz</code> 相同（<code>pack_observation</code> 全部字段、<code>noise</code>、<code>actions_normalized</code>、<code>actions</code>、<code>sample_rng</code> 用 <code>key_data</code>、<code>sample_batch_size=1</code>、<code>sample_kwargs</code>），另加 <code>step_idx</code>、<code>infer_seq</code>、<code>frame_times</code>、<code>motion_times</code>（取法同 <code>AttnRecorder</code>）。写后读回比较。与 <code>--query-record</code>、<code>--ablate</code> 非 none、<code>--save-prefix</code> 互斥</td><td>不传参数时行为不变</td></tr>
+<tr><td><code>scripts/interpret/run_local.py</code></td><td>spec 校验；命令拼接 <code>extra</code></td><td>新键 <code>rollout_record</code>（只允许与 <code>stopcube_mode=normal</code> 同用），传 <code>--rollout-record</code>；并入运行身份</td><td>缺键时不变</td></tr>
+<tr><td><code>scripts/interpret/attn_adapter.py</code></td><td><code>f_sample_attn</code>；<code>run</code></td><td>静态参数 <code>capture_hidden</code> 和动态 <code>group_masks</code>（bool[G,P]）。开启时在 jit 内按组求均值，只回传前缀 <code>(19,G,W)</code>（第 0 项是 <code>pt</code>）和动作 token <code>(18,W_a)</code>（前 16 个 token、10 步平均）。不改采样计算</td><td>默认关，调用形式和编译产物不变</td></tr>
+<tr><td><code>scripts/interpret/analysis/rollout_trigger.py</code>（新）</td><td><code>load_rollouts</code>、<code>align_points</code>、<code>distribution</code></td><td>读轨迹与窗口表，产出每局 <code>trigger_step</code>、四类分类、<code>I_cross</code>、<code>I_trigger</code>、<code>I_near</code>、到位时刻；<code>WINDOW_TABLE_MATCH</code>、<code>ROLLOUT_RECORD</code> 的结构核对、<code>TRIGGER_DISTRIBUTION</code>、分布图</td><td>新文件</td></tr>
+<tr><td><code>scripts/interpret/rollout_offline.py</code>（新）</td><td><code>main</code></td><td>沿用 <code>offline_query.main</code> 的 <code>build_policy</code>（<code>_ZeroMotion</code> 占位）。对每份记录：① <code>replay_query</code>；② <code>query_noise</code> 10 份噪声走原路径，存高度换算所需动作；③ 用保存的噪声调 <code>adapter.run(capture_hidden=True)</code>，保存 18×8 组质量、token 数、隐状态组均值、<code>attn_path_maxabs</code>。可断点续跑，已完成的按指纹跳过</td><td>新文件</td></tr>
+<tr><td><code>scripts/interpret/analysis/rollout_attention.py</code>（新）</td><td><code>summarize</code>、<code>report</code></td><td>Q2：按对齐点和分组汇总；候选头表；144 头矩阵；motion 窗口覆盖分组；P 曲线（高度换算走 sim 环境的 <code>convert_arrays</code>）；<code>ATTN_ALIGN</code>；图</td><td>新文件</td></tr>
+<tr><td><code>scripts/interpret/analysis/rollout_probe.py</code>（新）</td><td><code>ridge_cv</code>、<code>run_probes</code></td><td>Q3、Q4：闭式岭回归、按局 5 折、四种对照、局级重采样、共同局重算、逐层曲线、<code>PROBE_REPORT</code></td><td>新文件</td></tr>
+<tr><td><code>scripts/interpret/test_rollout_*.py</code>（新）</td><td>—</td><td>各子任务的定向 CPU 测试：记录器不动 RNG、读回；捕获开关一致；分类边界；分组无泄漏；打乱标签接近 0</td><td>新文件</td></tr>
+</table></div>
+
+<h2>二、子代理分配表</h2>
+<p>写入型：Claude <code>opus</code> + <code>isolation: worktree</code>；审查：<code>sonnet</code>；运行型：<code>opus</code>，不加 worktree。Worktree 环境：<code>UV_PROJECT_ENVIRONMENT=/data/hongzefu/robomme_policy_learning_MotionJEPA/.venv PYTHONPATH=&lt;worktree&gt;:&lt;worktree&gt;/src uv run --no-sync</code>，先打印模块 <code>__file__</code> 核实指向 worktree。</p>
+<div class="tbl"><table>
+<tr><th>编号</th><th>目标</th><th>可写文件</th><th>禁触</th><th>依赖与接口</th><th>合并序</th><th>验收</th><th>资源</th></tr>
+<tr><td>W1</td><td>输入记录</td><td><code>serve_policy_attn.py</code>、<code>run_local.py</code>、<code>test_rollout_record.py</code></td><td>红线 2 与其他 W 的文件</td><td>产出 <code>rollout_*.npz</code>，键须被 <code>replay_query</code> 原样消费</td><td>1</td><td>定向测试，<code>RECORD_UNIT=PASS</code></td><td>CPU</td></tr>
+<tr><td>W2</td><td>隐状态捕获</td><td><code>attn_adapter.py</code>、<code>test_rollout_hidden.py</code></td><td>同上</td><td><code>run(capture_hidden, group_masks)</code>，回传形状见第一节</td><td>2</td><td>CPU 上假模型测试，真实一致性留 S2</td><td>CPU</td></tr>
+<tr><td>W3</td><td>Q1 与对齐</td><td><code>analysis/rollout_trigger.py</code>、<code>test_rollout_trigger.py</code></td><td>同上</td><td>读中止数据的 <code>step_trace.jsonl</code> 作测试夹具，不写入</td><td>3</td><td>对 28 局中止轨迹复现 13/10/4/1</td><td>CPU</td></tr>
+<tr><td>W4</td><td>离线入口</td><td><code>rollout_offline.py</code>、<code>test_rollout_offline.py</code></td><td>同上</td><td>依赖 W1、W2</td><td>4</td><td>假数据跑通与断点续跑</td><td>CPU；真实运行留 S2</td></tr>
+<tr><td>W5</td><td>Q2 与探针</td><td><code>analysis/rollout_attention.py</code>、<code>analysis/rollout_probe.py</code>、<code>test_rollout_analysis.py</code></td><td>同上</td><td>依赖 W3、W4 的产物格式</td><td>5</td><td>合成数据：已知信号能解码，打乱后接近 0</td><td>CPU</td></tr>
+<tr><td>R1</td><td>运行：冒烟、rollout</td><td>只写产物根</td><td>代码、配置</td><td>确定 sha；命令见 runbook；重试上限每局 1 次，只限基础设施故障</td><td>—</td><td>起跑判据：首局有 <code>rollout_0000.npz</code>、轨迹开始增长</td><td>GPU0 基线、GPU1 motion</td></tr>
+<tr><td>R2</td><td>运行：全量离线</td><td>只写产物根</td><td>同上</td><td>rollout 全部通过后</td><td>—</td><td>起跑判据：首份结果写出</td><td>GPU0、GPU1</td></tr>
+<tr><td>—</td><td>主会话自做</td><td><code>docs/evaluation-doc/stopcube-rollout-1105/</code>、本计划、状态文件</td><td>—</td><td>合并、监听、预算账本、句柄清理、目视复查归主会话</td><td>—</td><td>—</td><td>—</td></tr>
+</table></div>
+<p>共享文件裁决：<code>attn_adapter.py</code> 只归 W2，<code>serve_policy_attn.py</code> 只归 W1。合并前审查输出 <code>PRE_MERGE_REVIEW</code>，合并后输出 <code>POST_MERGE_REVIEW</code>，流程按 <code>CLAUDE.md</code>「计划执行模式」。</p>
+
+<h2>三、闸门总表</h2>
+<div class="tbl"><table>
+<tr><th>闸门</th><th>未过时的处置</th></tr>
+<tr><td><code>ROLLOUT_REPLAY</code>（S2）</td><td>停止放大，查记录与噪声；不放宽 1e-6。修复走独立代理</td></tr>
+<tr><td><code>HIDDEN_PARITY</code>（S2）</td><td>停止放大，修 W2 后重审</td></tr>
+<tr><td><code>WINDOW_TABLE_MATCH</code></td><td>该局从 Q1、Q4 剔除并列出；超过 5 局不一致时停工问用户，因为窗口真值失效</td></tr>
+<tr><td><code>ROLLOUT_RECORD</code> 缺失</td><td>只查该局的基础设施原因；缺失局从 Q2～Q4 剔除并如实列出，不补造</td></tr>
+<tr><td>单模型基础设施故障超过 5 局</td><td>停止并报告用户</td></tr>
+</table></div>
+
+<h2>四、Runbook</h2>
+<p>代码全部合并后固定 sha，建干净执行树；产物根 <code>O=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-rollout-1105</code>。环境变量沿用 <code>stopcube-oracle-1104/runtime_env.sh</code> 的写法（缓存路径、<code>XLA_FLAGS</code> 确定性选项，基线 GPU0 比例 0.40，motion GPU1 比例 0.55）。下文 <code>&lt;sha&gt;</code> 在开工后写入起跑档案。</p>
+<pre>git worktree add --detach /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/worktrees/stopcube-rollout-run &lt;sha&gt;
+
+# S2 冒烟（manifest 只含第 16 局）
+tmux new-session -d -s sr-smoke-ctx-a "bash $O/run_rollout.sh ctx smoke"
+tmux new-session -d -s sr-smoke-mot-a "bash $O/run_rollout.sh mot smoke"
+tmux new-session -d -s sr-smoff-ctx-a "bash $O/run_offline.sh ctx smoke"
+tmux new-session -d -s sr-smoff-mot-a "bash $O/run_offline.sh mot smoke"
+
+# S3 正式 rollout（manifest-all.json 封签 05313f41…）
+tmux new-session -d -s sr-roll-ctx-a "bash $O/run_rollout.sh ctx all"
+tmux new-session -d -s sr-roll-mot-a "bash $O/run_rollout.sh mot all"
+
+# S4 全量离线
+tmux new-session -d -s sr-off-ctx-a "bash $O/run_offline.sh ctx all"
+tmux new-session -d -s sr-off-mot-a "bash $O/run_offline.sh mot all"
+
+# S5 CPU 分析
+uv run python -m scripts.interpret.analysis.rollout_trigger   --root $O --table &lt;oracle_table.json&gt;
+uv run python -m scripts.interpret.analysis.rollout_attention --root $O
+uv run python -m scripts.interpret.analysis.rollout_probe     --root $O</pre>
+<p>每个脚本内部按第 7 条写日志三件套，日志落 <code>$O/logs/</code>。每份日志一个 Monitor，过滤词含 <code>EXIT_CODE=|Traceback|Error|out of memory|nan|NaN|Killed|ROLLOUT_|HIDDEN_PARITY</code>。窗口表只读 <code>stopcube-oracle-1104/oracle/oracle_table.json</code>（只取窗口、M、N、悬停高度，不含 Oracle 的轨迹或预测）。</p>
+
+<h2>五、风险登记</h2>
+<div class="tbl"><table>
+<tr><th>风险</th><th>影响</th><th>处置</th></tr>
+<tr><td>原路径重放不逐位</td><td>离线分析和实际动作不再是同一次计算</td><td>闸门停；上一轮同机同配置为 0，出现即属异常</td></tr>
+<tr><td>探针样本少、维度高</td><td>区间宽，可能无法下结论</td><td>如实报告；是否按 K3 加跑由用户决定</td></tr>
+<tr><td>两个模型触发分布差很多</td><td>Q3、Q4 样本不同，比较混杂</td><td>共同局重算；只描述差异</td></tr>
+<tr><td>motion sidecar 占显存或变慢</td><td>rollout 变慢</td><td>沿用既有比例；超预算时按第 2 条判停</td></tr>
+<tr><td>其他用户占卡</td><td>显存不足</td><td>不操作他人进程，等候并报告</td></tr>
+<tr><td>到位时刻判定不稳</td><td>P 和探针样本范围受影响</td><td>定义为首次 |TCP 高度 − 悬停高度| ≤ 1 cm；W3 在 28 局中止轨迹上核对后写入档案，改定义按调整流程走</td></tr>
+</table></div>
+
+<h2>六、盲区诚实清单</h2>
+<ul>
+<li>只有一个模型 seed、一次运行、50 个固定局；统计单位是局，不是推理。</li>
+<li>两个模型训练来源和步数不同，差异不能全部归因于 motion。</li>
+<li>每 16 步一次推理，决策的准确时点可能夹在两次推理之间。</li>
+<li>注意力只看动作 token 的直接读取，不覆盖跨层间接路径。</li>
+<li>线性探针读不出非线性编码的信息；可解码也不等于模型使用了它。</li>
+<li>展开路径与原路径有微小数值差异，注意力和隐状态是在展开路径上取的，差异如实记录。</li>
+<li>没有干预，所以 Q2～Q4 都不能回答「靠什么决定」。</li>
+</ul>
+
+<h2>七、交接顺序与状态机登记</h2>
+<ul>
+<li><b>任务 id：</b><code>stopcube-rollout-1105</code>（是否登记进状态机，计划呈现后问用户）。</li>
+<li><b>交接前必须完成：</b>第一部分第四节全部判定行，出处 <code>docs/evaluation-doc/stopcube-rollout-1105/records/verification.summary.txt</code>；本轮 tmux 全部退出。</li>
+<li><b>长尾：</b>无（不上传）。</li>
+<li><b>上游依赖：</b>无进行中的上游；只读 <code>stopcube-oracle-1104/oracle/oracle_table.json</code>，sha256 <code>6a9647cd6e7442136221b2d5c7f3d3d3ed4ed60e734eb02aaa8984798c6322a3</code>，假设其内容不变。</li>
+<li><b>下游：</b>本任务 <code>done</code> 不自动解锁其他任务。</li>
+</ul>
+
+<h2>八、留档与 commit 纪律</h2>
+<ul>
+<li>运行名 <code>stopcube-rollout-1105</code>（全新）；档案 <code>docs/evaluation-doc/stopcube-rollout-1105/{launch,result}.md</code> 与 <code>records/</code>，并加入总索引。原始数组和视频留在产物根，不进 git；<code>records/</code> 只放统计 JSON、清洗后日志和图，不放 sh、yaml。</li>
+<li>从干净执行树启动，记录 HEAD；工作区已有用户未跟踪文件，一律绕开。评估不制造空提交。</li>
+<li>每次合并后 push；只逐路径 <code>git add</code>；不 force。</li>
+<li>图交付前主会话渲染成位图目视复查，结论写进 commit body。</li>
+<li>实施中若有调整，按第 2 条先派对抗验证，再在本文末尾追加「实施中调整」小节。</li>
+</ul>
+</main>
+</body>
+</html>
