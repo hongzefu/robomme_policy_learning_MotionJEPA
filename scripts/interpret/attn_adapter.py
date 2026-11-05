@@ -33,6 +33,13 @@ P / MEM / IMG / TXT 一律从当次观测经 `embed_prefix` / `embed_memory` 的
   用法：AttnAdapter(policy, ablate_heads=((3, 0),))；fn = adapter.make_sample_fn()；fn(rng, obs, mask_keys=<bool[P]>)。
   last_attn 另含 "n_masked_keys"（本次被遮 key 列数）与 "ablate_heads"。
 
+隐状态捕获（计划 1105-stopcube-real-rollout-plan.html，默认关闭；关闭时调用形式与编译产物不变）：
+  output = adapter.run(rng, obs, noise=..., capture_hidden=True, group_masks=<bool[G,P]>)
+  output[-1] = {"hidden_prefix": f32 (19, G, W),      # 第 0 项是 embed_prefix 的 pt，第 1～18 项是各层输出；按组对有效 token 取均值
+                "hidden_action": f32 (18, W_a),       # 各层后 AH 个 token 里前 16 个的均值，再对去噪步求平均
+                "group_tokens":  int32 (G,)}          # 每组实际参与均值的有效 token 数；空组对应的均值全 0
+  只读隐状态，不改采样计算；只支持 batch=1；与 mask_keys / ablate_heads 同时给时直接报错。
+
 用法：
   # CPU、不加载权重，抽象求值两种 P 下的输出形状
   JAX_PLATFORMS=cpu uv run --no-sync python scripts/interpret/attn_adapter.py --dry-shapes
@@ -63,6 +70,7 @@ from mv_model_adapter import _capture_attn, _guard_model_source, _make_patched_a
 
 N_LAYERS = 18
 DEFAULT_NUM_STEPS = 10
+HIDDEN_ACTION_TOKENS = 16        # 动作隐状态只取后 AH 个 token 里的前 16 个（计划第一部分第三节第 5 小节）
 # RoboMME 推理只喂两路图像（robomme_policy.py 去掉了 right_wrist_0_rgb），dry-shapes 的抽象观测与之一致
 ROBOMME_IMAGE_KEYS = ("base_0_rgb", "left_wrist_0_rgb")
 
@@ -212,6 +220,21 @@ def zero_head_out_weights(state, ablate_heads, n_layers: int = N_LAYERS):
     return jax.tree_util.tree_map_with_path(f, state), n[0]
 
 
+def group_token_mean(tokens, group_masks, valid):
+    """tokens (P,W)、group_masks bool[G,P]、valid bool[P] → (每组有效 token 的 f32 均值 (G,W), 每组 token 数 int32 (G,))。
+    组外 token 不参与求和（先按 mask 取值，而不是乘 0），空组均值为 0，不产生 NaN。"""
+    import jax.numpy as jnp
+    members = group_masks & valid[None, :]                                    # (G,P)
+    counts = members.sum(axis=1).astype(jnp.int32)
+    picked = jnp.where(members[:, :, None], tokens[None].astype(jnp.float32), jnp.zeros((), jnp.float32))
+    return picked.sum(axis=1) / jnp.maximum(counts, 1)[:, None].astype(jnp.float32), counts
+
+
+def action_token_mean(hs, action_horizon: int, n_tokens: int = HIDDEN_ACTION_TOKENS):
+    """hs (T,W_a) → 后 action_horizon 个 token 里前 n_tokens 个的 f32 均值 (W_a,)。"""
+    return hs[-action_horizon:][:n_tokens].astype("float32").mean(axis=0)
+
+
 class _ModelShim:
     """只带 `_model` 的替身（dry-shapes 与 f32 自检用），与 MME_VLA_Policy 暴露同一属性。"""
 
@@ -311,13 +334,20 @@ class AttnAdapter:
                 probs = cap[0]
             return out, kv_out, probs
 
-        @functools.partial(jax.jit, static_argnames=("num_steps", "txt_lo", "out_f16", "save_prefix", "ablate_heads"))
+        @functools.partial(jax.jit, static_argnames=("num_steps", "txt_lo", "out_f16", "save_prefix", "ablate_heads",
+                                                    "capture_hidden"))
         def f_sample_attn(state, rng, obs, noise, num_steps, txt_lo, out_f16=True, save_prefix=False,
-                          mask_keys=None, ablate_heads=()):
+                          mask_keys=None, ablate_heads=(), capture_hidden=False, group_masks=None):
             """逐字复刻 HistoryPi0.sample_actions（context 分支）的 18 层展开版；返回 (x_0, probs_action, probs_text, n_done)。
             probs_action (num_steps, L, b, G, AH, P+AH)；probs_text (L, b, G, TXT, P)，padding 文本行置 0。
             save_prefix=True（static）时末尾多返回 probs_prefix (L, b, G, P, P)：prefill 每层完整概率，padding query 行置 0。
-            mask_keys bool[b,P]（动态，None=关）：被遮 key 列；ablate_heads（static）((layer, head), ...)：头输出置零。"""
+            mask_keys bool[b,P]（动态，None=关）：被遮 key 列；ablate_heads（static）((layer, head), ...)：头输出置零。
+            capture_hidden=True（static）时末尾再多返回 dict：hidden_prefix f32 (L+1,G,W)、hidden_action f32 (L,W_a)、
+            group_tokens int32 (G,)，group_masks bool[G,P] 为动态参数；只读 h / hs，不参与采样计算。"""
+            if capture_hidden and (mask_keys is not None or ablate_heads):
+                raise ValueError("capture_hidden 不能与 mask_keys / ablate_heads 同时使用")
+            if capture_hidden and group_masks is None:
+                raise ValueError("capture_hidden=True 时必须给 group_masks")
             by_layer: dict = {}
             for layer, head in ablate_heads:
                 by_layer.setdefault(int(layer), []).append(int(head))
@@ -339,11 +369,19 @@ class AttnAdapter:
             pos = jnp.cumsum(pm, axis=1) - 1                             # 用原 prefix_mask，绝不用遮挡
             P = pt.shape[1]
             h = pt.astype(ed)
+            if capture_hidden:
+                if b != 1 or group_masks.ndim != 2 or group_masks.shape[1] != P:
+                    raise ValueError(f"隐状态捕获只支持 batch=1 且 group_masks 为 bool[G,{P}]，"
+                                     f"得到 batch={b}、group_masks.shape={group_masks.shape}")
+                hidden0, group_tokens = group_token_mean(pt[0], group_masks, pm[0])
+                hidden_rows = [hidden0]
             ks, vs, txt, pre = [], [], [], []
             for l in range(L):
                 (h, _), (k, v), probs = block_apply(layers, l, [h, None], None, pos, base, [None, None],
                                                     cls_of.get(l, patched))
                 ks.append(k); vs.append(v)
+                if capture_hidden:
+                    hidden_rows.append(group_token_mean(h[0], group_masks, pm[0])[0])
                 txt.append(probs[:, 0, :, txt_lo:P, :])                  # (b,G,TXT,P)
                 if save_prefix:
                     pre.append(probs[:, 0])                              # (b,G,P,P)：完整 prefix 自注意力
@@ -353,7 +391,7 @@ class AttnAdapter:
             spos_base = jnp.sum(pm, axis=-1)[:, None]
 
             def step(carry):
-                x_t, time, i, acc = carry
+                x_t, time, i, acc = carry[:4]
                 st, sm, sar, _, ad = m.embed_suffix(o, x_t, jnp.broadcast_to(time, b))
                 sattn = make_attn_mask(sm, sar)
                 prefix_attn = einops.repeat(pm, "b p -> b s p", s=st.shape[1])
@@ -362,29 +400,40 @@ class AttnAdapter:
                 full = jnp.concatenate([prefix_attn, sattn], axis=-1)
                 spos = spos_base + jnp.cumsum(sm, axis=-1) - 1
                 hs = st.astype(ed)
-                rows = []
+                rows, action_rows = [], []
                 for l in range(L):
                     (_, hs), _, probs = block_apply(layers, l, [None, hs], (K[l], V[l]), spos, full, [None, ad],
                                                     cls_of.get(l, patched))
                     rows.append(probs[:, 0])                             # (b,G,AH,P+AH)：不平均，原样保留
+                    if capture_hidden:
+                        action_rows.append(action_token_mean(hs[0], AH))
                 hs, _ = final_norm_1.apply({"params": fn1}, hs, ad)
                 v_t = m.action_out_proj(hs[:, -AH:])
-                return x_t + dt * v_t, time + dt, i + 1, acc.at[i].set(jnp.stack(rows))
+                done = (x_t + dt * v_t, time + dt, i + 1, acc.at[i].set(jnp.stack(rows)))
+                return (*done, carry[4] + jnp.stack(action_rows)) if capture_hidden else done
 
             def cond(carry):
                 return carry[1] >= -dt / 2
 
             acc0 = jnp.zeros((num_steps, L, b, cfgs[0].num_heads, AH, P + AH), jnp.float32)
-            x_0, _, n_done, acc = jax.lax.while_loop(cond, step, (noise, 1.0, jnp.int32(0), acc0))
+            carry0 = (noise, 1.0, jnp.int32(0), acc0)
+            if capture_hidden:                                           # 和 acc 一样预分配，循环内累加
+                carry0 = (*carry0, jnp.zeros((L, cfgs[1].width), jnp.float32))
+            x_0, _, n_done, acc, *action_sum = jax.lax.while_loop(cond, step, carry0)
+            tail = ()
+            if capture_hidden:
+                tail = ({"hidden_prefix": jnp.stack(hidden_rows),
+                         "hidden_action": action_sum[0] / n_done.astype(jnp.float32),
+                         "group_tokens": group_tokens},)
             if save_prefix:                                              # padding query 行（全遮蔽 → softmax 均匀）置 0，同 probs_text
                 probs_prefix = jnp.stack(pre) * pm.astype(jnp.float32)[None, :, None, :, None]
                 if out_f16:
                     return (x_0, acc.astype(jnp.float16), probs_text.astype(jnp.float16), n_done,
-                            probs_prefix.astype(jnp.float16))
-                return x_0, acc, probs_text, n_done, probs_prefix
+                            probs_prefix.astype(jnp.float16), *tail)
+                return (x_0, acc, probs_text, n_done, probs_prefix, *tail)
             if out_f16:
-                return x_0, acc.astype(jnp.float16), probs_text.astype(jnp.float16), n_done
-            return x_0, acc, probs_text, n_done
+                return (x_0, acc.astype(jnp.float16), probs_text.astype(jnp.float16), n_done, *tail)
+            return (x_0, acc, probs_text, n_done, *tail)
 
         @functools.partial(jax.jit, static_argnames=("txt_lo",))
         def f_masks(state, obs, txt_lo):
@@ -418,11 +467,16 @@ class AttnAdapter:
         return self.jnp.asarray(mk)
 
     def run(self, rng, observation, *, noise=None, num_steps: int = DEFAULT_NUM_STEPS, out_f16: bool = True, state=None,
-            save_prefix: bool | None = None, mask_keys=None, ablate_heads=None):
+            save_prefix: bool | None = None, mask_keys=None, ablate_heads=None,
+            capture_hidden: bool = False, group_masks=None):
         """调一次展开版；返回 (x_0, probs_action, probs_text, n_done, layout)，probs 仍在 device 上、保留 batch 轴。
         save_prefix（缺省取构造参数）为真时末尾多一个 probs_prefix (L, b, G, P, P)。
         mask_keys（缺省 None=关）见 pad_mask_keys；ablate_heads（缺省取构造参数）((layer, head), ...)。
-        遮挡全关时调用形式与 S7 之前逐字相同（不传 mask_keys / ablate_heads），trace 与编译产物不变。"""
+        遮挡全关时调用形式与 S7 之前逐字相同（不传 mask_keys / ablate_heads），trace 与编译产物不变。
+        capture_hidden=True 时在上述返回值之后再多一个 dict（hidden_prefix、hidden_action、group_tokens，见文件头），
+        group_masks 为 bool[G,P]；默认关闭时不向 f_sample_attn 传这两个参数，调用与编译产物不变。"""
+        if group_masks is not None and not capture_hidden:
+            raise ValueError("group_masks 只在 capture_hidden=True 时使用")
         lay = self.layout(observation)
         st = self.gstate if state is None else state
         heads = self.ablate_heads if ablate_heads is None else normalize_heads(ablate_heads, N_LAYERS, self.n_heads)
@@ -431,13 +485,16 @@ class AttnAdapter:
             extra["mask_keys"] = self.pad_mask_keys(mask_keys, lay)
         if heads:
             extra["ablate_heads"] = heads
+        if capture_hidden:
+            extra["capture_hidden"] = True
+            extra["group_masks"] = None if group_masks is None else self.jnp.asarray(np.asarray(group_masks, dtype=bool))
         if self.save_prefix if save_prefix is None else bool(save_prefix):
-            x_0, pa, ptxt, n_done, pp = self.f_sample_attn(st, rng, observation, noise, int(num_steps),
-                                                           lay["MEM"] + lay["IMG"], out_f16, save_prefix=True, **extra)
-            return x_0, pa, ptxt, n_done, lay, pp
-        x_0, pa, ptxt, n_done = self.f_sample_attn(st, rng, observation, noise, int(num_steps),
-                                                   lay["MEM"] + lay["IMG"], out_f16, **extra)
-        return x_0, pa, ptxt, n_done, lay
+            x_0, pa, ptxt, n_done, pp, *hidden = self.f_sample_attn(st, rng, observation, noise, int(num_steps),
+                                                                    lay["MEM"] + lay["IMG"], out_f16, save_prefix=True, **extra)
+            return (x_0, pa, ptxt, n_done, lay, pp, *hidden)
+        x_0, pa, ptxt, n_done, *hidden = self.f_sample_attn(st, rng, observation, noise, int(num_steps),
+                                                            lay["MEM"] + lay["IMG"], out_f16, **extra)
+        return (x_0, pa, ptxt, n_done, lay, *hidden)
 
     def make_sample_fn(self, ablate_heads=None):
         """返回可顶掉 policy._sample_actions 的可调用：fn(rng, observation, **kw) -> actions（与生产同形同 dtype）。
