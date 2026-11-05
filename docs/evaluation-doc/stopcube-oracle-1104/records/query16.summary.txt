@@ -1,0 +1,5 @@
+ORACLE_REPLAY=PASS model=ctx maxabs_qpos=0 arm_dims=7 maxabs_tcp=0 maxabs_cube=0 tol=1e-3
+OPEN_LOOP_EXEC=PASS model=ctx mismatches=0 pressed=0 outer_steps=480 terminal_env_step=482
+ORACLE_REPLAY=PASS model=mot maxabs_qpos=0 arm_dims=7 maxabs_tcp=0 maxabs_cube=0 tol=1e-3
+OPEN_LOOP_EXEC=PASS model=mot mismatches=0 pressed=0 outer_steps=480 terminal_env_step=482
+QUERY_RECORD=PASS models=2 points=240 predictions=10 missing=0 same_noise=1
