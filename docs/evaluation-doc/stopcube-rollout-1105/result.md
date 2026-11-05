@@ -98,6 +98,12 @@ P 是每次推理用 10 份独立噪声走原路径算出的预测里，前 16 �
 
 ![逐层探针曲线](records/probe-layers.png)
 
+下面两张图把同一批结果换成相对时间基线的读法，0 以上表示比只用时间和次数更好。
+
+![各层比时间基线少错几步](records/probe-vs-time-mae.png)
+
+![各层 R²](records/probe-vs-time-r2.png)
+
 ### motion 输入带有互补的进度信息
 
 下表是计划外的事后分解，只用已有隐状态和同一折划分，没有新增推理，见 `records/probe-decompose.json`、`records/probe-decompose-ci.json`。
