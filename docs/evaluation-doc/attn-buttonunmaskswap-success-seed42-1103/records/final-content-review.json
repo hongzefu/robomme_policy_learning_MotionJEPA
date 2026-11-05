@@ -1,0 +1,43 @@
+{
+  "verdict": "REPORT_CONTENT_REVIEW=PASS base=22fed762e5dd981162885069c5ede59ed2998ab7 findings=0",
+  "review_base": "22fed762e5dd981162885069c5ede59ed2998ab7",
+  "capture_commit": "e56bbceca5fe1c734c2553e83b8b6de1db71ca08",
+  "analysis_commit": "c55700b63b89de451adfc0c459bd99ecefce8443",
+  "reviewer": "/root/plan_consistency",
+  "review_mode": "固定报告底稿的独立只读内容核验",
+  "findings": 0,
+  "cases": 22,
+  "infers": 503,
+  "verified_phase_annotations": 75,
+  "phase_value_checks": 1008,
+  "phase_value_max_abs_diff": 0,
+  "cross_episode_mean_checks": 720,
+  "cross_episode_mean_max_abs_diff_approx": 4.44e-16,
+  "head_support_and_quality_checks": 48,
+  "fixed_window_peak_researched_cases": 12,
+  "motion_generated_calls": 130,
+  "motion_unique_episode_windows": 130,
+  "motion_input_snapshots": 279,
+  "motion_valid_uses": 1531,
+  "verified_claims": [
+    "L3H0与L16H0的阶段支持数、质量门槛及分母一致",
+    "原始、RB、RC、四对共同成功回合及1.003643722704边界值一致",
+    "独立遍历全部12局的全部推理和有效窗口，固定峰均为[160,193)，第4局峰为step256，其余为step240，主头均为L17H1",
+    "全部12局仅q_mem族确认族内sink，失败第26局也有固定峰，不是全局sink或成功充分条件",
+    "完整motion向量索引、stride32、33帧窗口和实际key映射一致",
+    "正文区分条件占比、全注意力质量、记忆query与动作query分母，未作因果或总体性能结论"
+  ],
+  "repository_at_review_end": "HEAD和状态与审查发起时一致，仅有排除的用户未跟踪HTML，未读取或改动",
+  "runtime_handles": {
+    "verdict": "RUN_HANDLES=PASS known=8 live=0",
+    "known": 8,
+    "live": 0
+  },
+  "worktree_archive": {
+    "capture": "应用已确认archived_worktree",
+    "analysis": "应用已确认archived_worktree",
+    "run": "保留；应用拒绝归档，原文：The task's primary checkout cannot be removed."
+  },
+  "raw_artifacts": "保留在主检出v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103，约218GiB，不进Git",
+  "handoff_registration": "用户未另行批准登记，未改docs/handoff/current.json"
+}

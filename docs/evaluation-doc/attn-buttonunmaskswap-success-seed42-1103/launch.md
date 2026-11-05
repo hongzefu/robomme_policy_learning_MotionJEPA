@@ -162,3 +162,11 @@ bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-
 精确 tmux 为 `ia-success-analysis-1104`，外层 `pipefail`／`tee`／真实 `EXIT_CODE` 规则同采集；日志 `R/logs/analysis.log`。单局输出为 `R/analysis/<model>_ep<id>/`，总结果为 `R/analysis/success_attention_summary.json`。最终结论与图的目视复核另写 `result.md`，此处不提前声称分析通过。
 
 辅助命令的实际意外也保留：一次状态回放批处理用 `uv run --no-sync` 在空运行工作树生成了未同步的空 `.venv`，没有安装依赖或改变正式解释器；后续辅助及正式命令均显式使用主检出已固定的解释器。一次导入位置预检在主检出执行而被路径断言拒绝，改到固定分析工作树后通过，未在错误导入位置运行正式分析。
+
+## 最终完成与资源收尾（美东2026-11-04）
+
+完整离线分析于美东19:43:40正常结束，耗时1966.14秒，`SUCCESS_ATTENTION=PASS episodes=22 complete=1 r3_six_families=1 diagnostic=0 workers=4 seconds=1966.14`，日志末行 `EXIT_CODE=0`。22条均完成，没有截断、异常重试或新增策略回合。完整数值、共通模式、反例及结论边界见[结果报告](result.md)。
+
+主会话目视复核96张交付PNG，包含67张分析图、4张概览和25张阶段证据。最后独立内容审查锚定报告底稿 `22fed762e5dd981162885069c5ede59ed2998ab7`，结论为 `REPORT_CONTENT_REVIEW=PASS base=22fed762e5dd981162885069c5ede59ed2998ab7 findings=0`；1008项阶段数值完全一致，720项跨局均值最大差约 `4.44e-16`，48项头级支持数和门槛分母一致，固定峰及完整token索引均独立复核通过。记录见[最终审查](records/final-content-review.json)。
+
+本轮已知8个tmux句柄均不再运行：`RUN_HANDLES=PASS known=8 live=0`。采集、分析两份工作树已由应用确认归档；运行工作树被应用认定为本任务主检出，归档工具返回 `The task's primary checkout cannot be removed.`，因此保留该工作树，没有手动强删或操作其他工作树。正式向量、原始attention、视频和日志约218GiB全部保留在R；未上传、未删除，无长尾任务。用户未另行批准状态机登记，未修改 `docs/handoff/current.json`，也未触碰用户未跟踪HTML。

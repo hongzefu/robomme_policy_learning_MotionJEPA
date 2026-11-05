@@ -193,3 +193,24 @@ UV_CACHE_DIR=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/cache/uv
 5. **离线 CPU 分片**：503 次完整推理按独立回合分给 4 个 CPU 进程；各进程直接调用固定分析版本的 `episode_analysis`，每局独立目录，父进程按原清单顺序收集后调用原 `summarize` 和 `figures_summary`。指标、公式、归约顺序、22 条组合和无重试口径均不改变；不使用 GPU，每进程 BLAS／OMP／MKL 线程各为 1。包装脚本和完整命令、源码哈希留在本轮运行根及档案，独立审查结论为 `ADJUST_REVIEW=PASS scale=same findings=0`。
 
 以上调整保持两份权重、seed、22 条模型与回合组合、全部采集维度及验收判据不变。最终运行命令、提交与资源记录于本任务独立启动档案。
+
+### 最终实测与交付（美东2026-11-04）
+
+22条历史成功入选组合全部完成：带 motion token 的 VLA 12局，本轮实际成功11局；不带 motion token 的 VLA 10局，本轮实际成功5局。两者集合不同，不把这两个比例用作总体性能比较；正常失败全部保留，没有为成功重试。采集版本为 `e56bbceca5fe1c734c2553e83b8b6de1db71ca08`，完整离线分析版本为 `c55700b63b89de451adfc0c459bd99ecefce8443`。
+
+最终判定如下，均附原始证据于[结果报告](docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/result.md)及其records目录：
+
+```text
+ATTN_COVERAGE=PASS expected=22 completed=22 infers=503 prefixes=503
+MOTION_TOKEN_COVERAGE=PASS episodes=12 generated=130 uses=1531 missing=0
+PHASE_ANNOTATIONS=PASS episodes=22 pickups=25 annotations=75
+SUCCESS_ATTENTION=PASS episodes=22 complete=1 r3_six_families=1 diagnostic=0 workers=4 seconds=1966.14
+EXIT_CODE=0
+REPORT_CONTENT_REVIEW=PASS base=22fed762e5dd981162885069c5ede59ed2998ab7 findings=0
+ATTN_REPORT=PASS episodes=22 figures=96 findings=0
+RUN_HANDLES=PASS known=8 live=0
+```
+
+完整motion记录包含130次编码调用、130个去重的局号与窗口组合、279次实际输入快照及1531次跨推理有效使用；96个槽位的完整向量、mask、时间、位置及真实key映射均保存，供未来切换实验选择。共通观察为L3H0持续回看开局、L16H0在抬起阶段更一致，以及全12局存在主要由L17H1承担的固定 `[160,193)` 窗口峰；失败局也有该峰，不作为交换追踪或成功因果证明。详见[完整数据说明](docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/motion-tokens.md)。
+
+96张PNG已由主会话目视，独立内容审查1008项阶段数值完全一致、720项跨局均值最大差约 `4.44e-16`，48项头级计数及门槛一致。全部运行结束，采集和分析工作树已在应用归档；运行工作树因应用认定为主检出而保留。原始数据约218GiB仍在本轮主检出 `v1-store`，不进Git。没有新增下游替换实验或状态机登记。

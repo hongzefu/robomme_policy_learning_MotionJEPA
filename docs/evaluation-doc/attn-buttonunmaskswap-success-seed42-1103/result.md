@@ -1,6 +1,6 @@
 # ButtonUnmaskSwap：成功回合的注意力共通模式
 
-> 美东 2026-11-04；模型 seed=42；仅一个任务 `ButtonUnmaskSwap`。采集与完整离线计算均已完成，本文及归档数值待最后一轮独立内容核验回写。
+> 美东 2026-11-04；模型 seed=42；仅一个任务 `ButtonUnmaskSwap`。采集、完整离线计算、图的目视复核与最后一轮独立内容核验均已完成。
 > 模型名称始终为**带 motion token 的 VLA**、**不带 motion token 的 VLA**；motion token 是输入编码，不代称模型。
 
 ## ① 结论与指标速览
@@ -49,6 +49,9 @@ MOTION_TOKEN_COVERAGE=PASS episodes=12 generated=130 uses=1531 missing=0
 PHASE_ANNOTATIONS=PASS episodes=22 pickups=25 annotations=75
 SUCCESS_ATTENTION=PASS episodes=22 complete=1 r3_six_families=1 diagnostic=0 workers=4 seconds=1966.14
 EXIT_CODE=0
+REPORT_CONTENT_REVIEW=PASS base=22fed762e5dd981162885069c5ede59ed2998ab7 findings=0
+ATTN_REPORT=PASS episodes=22 figures=96 findings=0
+RUN_HANDLES=PASS known=8 live=0
 ```
 
 主会话逐次读回全部503份动作／文本attention、503份prefix，核对有限性、维度、行和、padding、时间与key映射、终局身份及视频帧数。两侧第8局的20次动作均与旧同硬件采集记录逐位一致，最大差为0；该验证说明本次记录扩展未改变这两条受测轨迹，不扩大成所有版本或跨硬件逐位等价结论。
@@ -212,4 +215,4 @@ uv run --frozen --no-sync python -m scripts.interpret.analysis.success_attention
   --out '<全新输出目录>'
 ```
 
-本轮实际四进程命令、脚本指纹及路径已固定在启动档案；原始数据文件保留，临时代码工作树可按提交恢复。最终独立内容核验与会话清理结果在完成后回写，不用程序PASS替代这一步。
+本轮实际四进程命令、脚本指纹及路径已固定在启动档案；原始数据文件保留，临时代码工作树可按提交恢复。[最终独立内容核验](records/final-content-review.json)锚定报告底稿 `22fed762e5dd981162885069c5ede59ed2998ab7`：1008项阶段数值完全一致，720项跨局均值最大差约为 `4.44e-16`，48项头级支持数及质量门槛分母一致；全部12局固定峰与完整token索引也独立复核通过。8个本轮运行句柄均已结束；采集、分析工作树已在应用中归档，运行工作树因应用认定为本任务主检出而保留，不强行删除。
