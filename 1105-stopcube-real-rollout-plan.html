@@ -55,7 +55,7 @@
 <tr><td>K5</td><td>只分析这四个问题。信息流量、梯度归因、逐层投影、「已经过几次」探针都不做</td><td>用户本轮只点名四个问题</td></tr>
 <tr><td>K6</td><td>不替换、不遮挡任何输入，不做干预；所有结论只到「看了哪里」「可解码」，不写因果</td><td>沿用 1104 计划 K9、K10</td></tr>
 <tr><td>K7</td><td>正常任务失败不重试；基础设施故障（含输入记录不完整）每局最多重试 1 次，记录原因和次数，仍失败记为无效局</td><td>第 22 条；开工审查裁决</td></tr>
-<tr><td>K8</td><td>无效局不进任何问题。方块与窗口表差异超过 1e-6 的局记为不符局：不进 Q1、Q4，也不进 Q2 里依赖窗口的分组，但仍进 Q2 的其余统计和 Q3。各问题分别列分母，配对比较只用两个模型都有效的局。单模型无效局或不符局超过 5 局就停工问用户</td><td>用户裁决「都按建议改」</td></tr>
+<tr><td>K8</td><td>无效局不进任何问题。方块与窗口表差异超过 1e-6 的局记为不符局：不进 Q1、Q4，也不进 Q2 里依赖窗口的部分（窗口内、偏早、偏晚分组，<code>I_near</code>，motion 窗口与方块经过时段的覆盖分组），但仍进 Q2 的其余统计和 Q3。悬停高度来自机器人几何，不受方块差异影响，所以 <code>I_cross</code>、<code>I_trigger</code> 和到位判定不算依赖窗口。各问题分别列分母，配对比较只用两个模型都有效的局。无效局、不符局分别计数，单模型任一类超过 5 局就停工问用户</td><td>用户裁决「都按建议改」</td></tr>
 <tr><td>K9</td><td>探针主读数（第 17 层动作 token）的第 0 层对照，用前缀四组第 0 层均值拼接（基线没有 motion，拼三组）。动作 token 自身的输入不含历史信息，不作对照</td><td>用户裁决「都按建议改」</td></tr>
 </table></div>
 
@@ -342,7 +342,7 @@
 <tr><td><code>scripts/interpret/run_local.py</code></td><td>spec 校验；命令拼接 <code>extra</code></td><td>新键 <code>rollout_record</code>（只允许与 <code>stopcube_mode=normal</code> 同用），传 <code>--rollout-record</code>；并入运行身份</td><td>缺键时不变</td></tr>
 <tr><td><code>scripts/interpret/attn_adapter.py</code></td><td><code>f_sample_attn</code>；<code>run</code></td><td>静态参数 <code>capture_hidden</code> 和动态 <code>group_masks</code>（bool[G,P]）。开启时在 jit 内按组求均值，只回传前缀 <code>(19,G,W)</code>（第 0 项是 <code>pt</code>）和动作 token <code>(18,W_a)</code>（前 16 个 token、10 步平均）。不改采样计算</td><td>默认关，调用形式和编译产物不变</td></tr>
 <tr><td><code>scripts/interpret/analysis/rollout_trigger.py</code>（新）</td><td><code>load_rollouts</code>、<code>align_points</code>、<code>distribution</code></td><td>读轨迹与窗口表，产出每局 <code>trigger_step</code>、四类分类、<code>I_cross</code>、<code>I_trigger</code>、<code>I_near</code>、到位时刻；<code>WINDOW_TABLE_MATCH</code>、<code>ROLLOUT_RECORD</code> 的结构核对、<code>TRIGGER_DISTRIBUTION</code>、分布图</td><td>新文件</td></tr>
-<tr><td><code>scripts/interpret/rollout_offline.py</code>（新）</td><td><code>main</code></td><td>沿用 <code>offline_query.main</code> 的 <code>build_policy</code>（<code>_ZeroMotion</code> 占位）。对每份记录：① <code>replay_query</code>；② <code>query_noise</code> 10 份噪声走原路径，存高度换算所需动作；<code>episode_key</code>、<code>env_step</code>、物理状态按 nonce 和 <code>infer_seq</code> 从 <code>step_trace.jsonl</code> 取（<code>chunk_start_env_step</code>、<code>state_before</code>），<code>query_noise</code> 的序号用 <code>infer_seq</code>；③ 用保存的噪声调 <code>adapter.run(capture_hidden=True)</code>，保存 18×8 组质量、token 数、隐状态组均值、<code>attn_path_maxabs</code>。可断点续跑，已完成的按指纹跳过</td><td>新文件</td></tr>
+<tr><td><code>scripts/interpret/rollout_offline.py</code>（新）</td><td><code>main</code></td><td>沿用 <code>offline_query.main</code> 的 <code>build_policy</code>（<code>_ZeroMotion</code> 占位）。对每份记录：① <code>replay_query</code>；② <code>query_noise</code> 10 份噪声走原路径，存高度换算所需动作；<code>episode_key</code>、<code>env_step</code>、物理状态按 nonce 和 <code>infer_seq</code> 从 <code>step_trace.jsonl</code> 取（<code>chunk_start_env_step</code>、<code>state_before</code>），物理状态取该 <code>infer_seq</code> 中 <code>row_in_chunk==0</code> 那一行，记录按 <code>&lt;nonce&gt;/rollout_&lt;seq&gt;.npz</code> 存放，<code>query_noise</code> 的序号用 <code>infer_seq</code>；③ 用保存的噪声调 <code>adapter.run(capture_hidden=True)</code>，保存 18×8 组质量、token 数、隐状态组均值、<code>attn_path_maxabs</code>。可断点续跑，已完成的按指纹跳过</td><td>新文件</td></tr>
 <tr><td><code>scripts/interpret/analysis/rollout_attention.py</code>（新）</td><td><code>summarize</code>、<code>report</code></td><td>Q2：按对齐点和分组汇总；候选头表；144 头矩阵；motion 窗口覆盖分组；P 曲线（高度换算走 sim 环境的 <code>convert_arrays</code>）；<code>ATTN_ALIGN</code>；图</td><td>新文件</td></tr>
 <tr><td><code>scripts/interpret/analysis/rollout_probe.py</code>（新）</td><td><code>ridge_cv</code>、<code>run_probes</code></td><td>Q3、Q4：闭式岭回归、按局 5 折、四种对照（第 0 层按 K9）、局级重采样、共同局重算、逐层曲线、<code>PROBE_REPORT</code></td><td>新文件</td></tr>
 <tr><td><code>scripts/interpret/test_rollout_*.py</code>（新）</td><td>—</td><td>各子任务的定向 CPU 测试：记录器不动 RNG、读回；捕获开关一致；分类边界；分组无泄漏；打乱标签接近 0</td><td>新文件</td></tr>
@@ -417,7 +417,7 @@ uv run python -m scripts.interpret.analysis.rollout_probe     --root $O</pre>
 <li>注意力只看动作 token 的直接读取，不覆盖跨层间接路径。</li>
 <li>线性探针读不出非线性编码的信息；可解码也不等于模型使用了它。</li>
 <li>展开路径与原路径有微小数值差异，注意力和隐状态是在展开路径上取的，差异如实记录。</li>
-<li>第 0 层对照按组取平均，会丢失单 token 细节，所以这个输入对照可能偏弱。</li>
+<li>第 0 层对照按组取平均，会丢失单 token 细节，所以这个输入对照可能偏弱；它的拼接维度也和第 17 层动作 token 不同，motion 模型四组、基线三组，比较时会混入特征维度和岭回归容量的影响，跨模型只作描述。</li>
 <li>没有干预，所以 Q2～Q4 都不能回答「靠什么决定」。</li>
 </ul>
 
@@ -439,7 +439,7 @@ uv run python -m scripts.interpret.analysis.rollout_probe     --root $O</pre>
 <li>实施中若有调整，按第 2 条先派对抗验证，再在本文末尾追加「实施中调整」小节。</li>
 </ul>
 <h2>九、开工审查修订记录</h2>
-<p>美东 2026-11-05 用户对 <code>3312431</code> 说「同意开工 先别加了」，开工审查 <code>PLAN_CONSISTENCY_REVIEW=FAIL base=331243156e630923c1eebb0b3aa34308ce7fd0f5 findings=8 blocking=2</code>，随即停工。主会话逐条回原文和代码核实后，把两条阻塞项交用户裁决，用户原话「都按建议改」，写入 K8、K9 及相应判定行和闸门。其余为文字和接口统一：K1 写明窗口表例外；中止数据写清 28 局完整加 1 局中断；<code>rollout_*.npz</code> 的键、缺失字段来源和 <code>motion_times</code> 取法；互斥参数；冒烟先后顺序；S4 闸门；tmux 名字出处；只读措辞。第 F8 条经核实无冲突。重新开工前只审本次修订的部分。</p>
+<p>美东 2026-11-05 用户对 <code>3312431</code> 说「同意开工 先别加了」，开工审查 <code>PLAN_CONSISTENCY_REVIEW=FAIL base=331243156e630923c1eebb0b3aa34308ce7fd0f5 findings=8 blocking=2</code>，随即停工。主会话逐条回原文和代码核实后，把两条阻塞项交用户裁决，用户原话「都按建议改」，写入 K8、K9 及相应判定行和闸门。其余为文字和接口统一：K1 写明窗口表例外；中止数据写清 28 局完整加 1 局中断；<code>rollout_*.npz</code> 的键、缺失字段来源和 <code>motion_times</code> 取法；互斥参数；冒烟先后顺序；S4 闸门；tmux 名字出处；只读措辞。第 F8 条经核实无冲突。重新开工前只审本次修订的部分。用户随后说「开工了！！」，第二轮审查 <code>PLAN_CONSISTENCY_REVIEW=PASS base=331243156e630923c1eebb0b3aa34308ce7fd0f5 tip=2929ec3535a6984eaaad6854b75d0d4f5257b630 findings=4 blocking=0 scope=revision</code>；其 4 条均为文字统一，已直接写入，未改口径。状态机未获登记答复，按人工交接。</p>
 </main>
 </body>
 </html>
