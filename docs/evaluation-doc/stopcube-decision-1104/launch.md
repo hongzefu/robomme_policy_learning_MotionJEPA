@@ -129,6 +129,16 @@ spec 的额外值为 `cuda="1"`、`xla_mem_fraction=0.55`、`startup_timeout_sec
 
 起跑入口为 `<产物根>/fk16_entry.sh`，仍由唯一 tmux 加日志退出码包裹；不得将 FK 目标高度说成实际 TCP。输出校准与窗口之后，先核真实成功事件，再构造一局独立悬停恢复冒烟，不与正式成绩混合。
 
+同局 FK 与成功窗口已通过：`TIMING_CALIBRATION=PASS sources=2 unresolved=0`、`WINDOW_GEOMETRY=PASS episodes=1 unresolved=0`、`WINDOW_SIM=PASS successful=1 validated=1 missing_success_groups=none`、`EXIT_CODE=0`。第 16 局命令下压步 403、按钮触发/官方停步 416，运动耗时 13 步；物体目标窗口 `[412,428]`，合适命令范围 `[399,415]`。该数字只对本局实测姿态和动作有证据，不外推所有局。
+
+### 单局悬停恢复功能冒烟
+
+此冒烟仍用第 16 局正常成功记录，单独验证接管/恢复功能，不将该局伪标为正式提前按错局。固定配置 `<产物根>/hold_smoke_config.json`：实测悬停来源第 375 步，`takeover_step=375`、`release_step=401`（现场首步 1 加 25×16），理想恢复为 407，偏差 −6 步；前七维取该行真实状态，夹爪命令取同一行原执行值 `-1.0039340752248764`，原 trace 与其 sha256 写入配置。控制保持到第 401 步的新推理边界，之后执行模型新输出。
+
+正常真实命令为 float64，悬停入口不得再强转 float32 舍入；这一原样保持命令的局部修复已通过 CPU7项及独立前后审查，执行树固定 `731df5ed5c4d663a15557c224b5a8b0e520a4d86`，不改变正常动作、RPC 或物理控制层转换。
+
+预留唯一会话 `sd-smoke-hold16-1104a`，GPU1，日志 `<产物根>/logs/sd-smoke-hold16-1104a.log`；启动命令为 `tmux new-session -d -s sd-smoke-hold16-1104a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-decision-1104/hold_smoke_entry.sh'`。实际程序为第三节解释器运行 `-m scripts.interpret.run_local --spec <产物根>/spec-smoke-hold.json --episodes StopCube:16`，该 spec 复用正常冒烟全部模型/解释器/合同覆盖，仅模式改 `hold_extended`、接管表改上述文件、输出分为 `<产物根>/smoke-hold-ep16-a/{attn,run}`。缓存和固定截止沿用正常入口，正常失败或成功都记录，不为成功重试。
+
 ### 正式分块的实施细节
 
 正式 50 局拟使用已有 `chunk_size=5`，共 10 块，每五局复用一次服务，各局仍按官方循环新建环境与评估器、reset 记忆及模型 seed42。正式入口只消费明确 50 局的清单，不传 `--episodes` 造成重新拆单局；单局冒烟仍使用原始一局入口。独立静态审查 `ADJUST_REVIEW=PASS scale=same findings=0`：这是计划未固定的调度细节，不增加任务、协议、运行规模或恢复机制，真实多局行为仍待实跑。当前 GPU0 有其他用户计算，先使用 GPU1，最多两卡的资源上限不变。
