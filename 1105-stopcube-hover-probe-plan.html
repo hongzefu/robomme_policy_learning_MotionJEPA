@@ -28,7 +28,7 @@
 <b>与其他文件的关系：</b>本计划取代 <code>probe/1105-keypoint-probe-plan.html</code> 里 StopCube 的取点与探针口径（「每次经过前 30 步」改为悬停期全程）；该文件的 RouteStick 部分与第二阶段保持原样。<br>
 <b>经验来源：</b>策略仓库 <code>docs/evaluation-doc/stopcube-rollout-1105/result.md</code>（commit <code>019542c</code>，2026-11-05 美东读取）。<br>
 <b>不新增数据：</b>只用已有的官方示教与已有记录。<br>
-<b>2026-11-05 美东细化：</b>代码锚点 <code>d27c9da</code>；只读核实了示教 H5、记忆适配器和环境源码（第三方 gitlink <code>856bc3a</code>），实测数字见 B3。细化没有新增读数和对照，只把未定义的地方写实，把和实测不符的地方改掉。标「待确认 Q<i>n</i>」的条目暂按推荐写，等用户裁决（B9）。<br>
+<b>2026-11-05 美东细化：</b>代码锚点 <code>d27c9da</code>；只读核实了示教 H5、记忆适配器和环境源码（第三方 gitlink <code>856bc3a</code>），实测数字见 B3。细化没有新增读数和对照，只把未定义的地方写实，把和实测不符的地方改掉。B9 的推荐项用户已裁决：「全部按推荐」（2026-11-05 美东）；Q5 无推荐项，未定。<br>
 <b>对抗验证：</b>独立只读审查锚定 <code>286487a</code>，<code>ADJUST_REVIEW=PASS scale=same findings=10 blocking=0</code>。主会话逐条核实后，事实和文字类已改进本版，取舍类进 B9；本版的修订没有再审一轮。
 </div>
 
@@ -137,7 +137,7 @@
 <tr><td>划分</td><td>按局 5 折，同一局的点不跨折；每局等权</td></tr>
 <tr><td>正则</td><td>岭系数在训练折内部嵌套选择</td></tr>
 <tr><td>区间</td><td>局级重采样：<code>oracle_press_prob.bootstrap</code>，2000 次，种子 42；准确率先算到每局，差值也先按局相减再传入。没有点的 2 局不参与</td></tr>
-<tr><td>时间基线（待确认 Q3）</td><td>特征只有 <code>[t]</code>，以及 <code>[t, N]</code>；每个标签都报探针减时间基线的差和区间。t 用独热编码（8 的倍数各占一维，不经 PCA），N 也用独热。这样基线就是「只知道时间，每个时刻猜最可能的答案」。不用线性 t，因为这些标签对 t 不单调，线性 t 会低估时间能解释的量</td></tr>
+<tr><td>时间基线</td><td>特征只有 <code>[t]</code>，以及 <code>[t, N]</code>；每个标签都报探针减时间基线的差和区间。t 用独热编码（8 的倍数各占一维，不经 PCA），N 也用独热。这样基线就是「只知道时间，每个时刻猜最可能的答案」。不用线性 t，因为这些标签对 t 不单调，线性 t 会低估时间能解释的量</td></tr>
 <tr><td>当前画面基线</td><td>当前画面组的探针。严格配对上应在机会水平；全量点上是实测值</td></tr>
 <tr><td>打乱对照</td><td>整局换参数：把另一局的 (M, N) 配给这一局，按本局的 t 重算标签。这样时间结构保留，只打断历史与标签的对应。重复 20 次（同 <code>SHUFFLES</code>），只对主读数两个特征和时间基线做。重算后可能超出原类别（如剩余次数为负），超出的值各算一类，不裁剪、不丢点</td></tr>
 <tr><td>学习曲线</td><td>外层训练局按局编号的哈希排序，取前 25% / 50% / 100% 训练，测试折不变，看折外结果是否走平。只对主读数做</td></tr>
@@ -159,12 +159,12 @@
 <h2>A8 验收</h2>
 <div class="tbl"><table>
 <tr><th>查什么</th><th>怎么查</th><th>判定行</th></tr>
-<tr><td>回放与真实推理一致</td><td>（待确认 Q2）已有 rollout 记录没有存原始帧，不能用回放路径重算同一局。改为两步：① 布局：同一 <code>step_idx</code> 下，回放的观测和 rollout 记录比较键、形状、dtype、<code>frame_times</code>、<code>motion_times</code>、<code>mem_order</code>，应逐位相同（motion 窗口数相同的点）；② 分批：H5 第 0 局按评测节奏（首批 1 帧，之后每批 16 帧）和回放节奏（每批 8 帧）各喂一遍，在 16 的倍数步比较观测的全部数值键和 <code>hidden_prefix</code>（所有层、所有组），最大绝对差不超过 1e-3（待确认 Q6；bf16 视觉编码在不同批大小下是否逐位相同，未核实）。这两步核对的是适配器路径，不证明 H5 的帧与评测时环境输出逐位相同（评测局的种子和示教局不重叠）</td><td><code>REPLAY_PARITY=PASS|FAIL layout_mismatch=&lt;n&gt; points=&lt;n&gt; maxabs=&lt;值&gt;</code></td></tr>
+<tr><td>回放与真实推理一致</td><td>已有 rollout 记录没有存原始帧，不能用回放路径重算同一局。改为两步：① 布局：同一 <code>step_idx</code> 下，回放的观测和 rollout 记录比较键、形状、dtype、<code>frame_times</code>、<code>motion_times</code>、<code>mem_order</code>，应逐位相同（motion 窗口数相同的点）；② 分批：H5 第 0 局按评测节奏（首批 1 帧，之后每批 16 帧）和回放节奏（每批 8 帧）各喂一遍，在 16 的倍数步比较观测的全部数值键和 <code>hidden_prefix</code>（所有层、所有组），最大绝对差不超过 1e-3（bf16 视觉编码在不同批大小下是否逐位相同，未核实）。这两步核对的是适配器路径，不证明 H5 的帧与评测时环境输出逐位相同（评测局的种子和示教局不重叠）</td><td><code>REPLAY_PARITY=PASS|FAIL layout_mismatch=&lt;n&gt; points=&lt;n&gt; maxabs=&lt;值&gt;</code></td></tr>
 <tr><td>同帧配对成立</td><td>t 与 t + 2M 两帧逐像素差的最大值，前视、腕部各算；两视角都不超过 8 的配对才进严格档；保留比例不低于 80% 算 PASS（写计划时实测 655 对里前视超标 16 对、腕部超标 43 对）</td><td><code>PAIR_FRAMES=PASS|FAIL pairs=&lt;n&gt; kept=&lt;n&gt; front_maxabs=&lt;值&gt; wrist_maxabs=&lt;值&gt; tol=8</code></td></tr>
 <tr><td>标签正确</td><td>① 100 局的序数词与重算 N 全部相符；② 抽 10 局（速度各至少 3 局），把若干取点存图，主会话目视核对方块位置、已过次数与 M</td><td><code>LABELS=PASS|FAIL ordinal_mismatch=&lt;n&gt; episodes=10 mismatches=&lt;n&gt;</code></td></tr>
-<tr><td>精度够用</td><td>（待确认 Q1、Q7）冒烟局各特征组：相邻取点的距离中位数 ÷ 捕获误差，不低于 10 算 PASS（沿用上一轮的判据）。捕获误差取同一输入在 float32 下，新的只做前缀路径与现有 <code>capture_hidden</code> 全路径的 <code>hidden_prefix</code> 最大绝对差，这也同时核对新路径算的是同一件事。距离和误差用同一批点，按组跨 19 层汇总后取中位数（同 <code>diag_hidden.py</code>；motion 第 0 层每 32 步才变，不能逐层算）</td><td><code>HIDDEN_PRECISION=PASS|FAIL group=&lt;组&gt; min_dist_over_err=&lt;值&gt; path_maxabs=&lt;值&gt;</code></td></tr>
+<tr><td>精度够用</td><td>冒烟局各特征组：相邻取点的距离中位数 ÷ 捕获误差，不低于 10 算 PASS（沿用上一轮的判据）。捕获误差取同一输入在 float32 下，新的只做前缀路径与现有 <code>capture_hidden</code> 全路径的 <code>hidden_prefix</code> 最大绝对差，这也同时核对新路径算的是同一件事。距离和误差用同一批点，按组跨 19 层汇总后取中位数（同 <code>diag_hidden.py</code>；motion 第 0 层每 32 步才变，不能逐层算）</td><td><code>HIDDEN_PRECISION=PASS|FAIL group=&lt;组&gt; min_dist_over_err=&lt;值&gt; path_maxabs=&lt;值&gt;</code></td></tr>
 <tr><td>无同局泄漏</td><td>每折训练局与测试局的交集</td><td><code>GROUP_LEAK=PASS leak=0</code></td></tr>
-<tr><td>正对照</td><td>（待确认 Q4）当前画面组第 17 层读方块位置，折外 R² 不低于 0.8 算 PASS</td><td><code>POSITIVE_CONTROL=PASS|FAIL r2=&lt;值&gt; tol=0.8</code></td></tr>
+<tr><td>正对照</td><td>当前画面组第 17 层读方块位置，折外 R² 不低于 0.8 算 PASS</td><td><code>POSITIVE_CONTROL=PASS|FAIL r2=&lt;值&gt; tol=0.8</code></td></tr>
 <tr><td>输入来源</td><td>H5 的 sha256 与建库档案记录的 <code>f8be65f89eda55f41e51a148576f8ada4898d1a463abe87fd73cd0d471e1cadd</code> 相同</td><td><code>H5_SOURCE=PASS|FAIL sha256=&lt;值&gt;</code></td></tr>
 <tr><td>全量回放完成</td><td>每模型的点数等于标签表的点数，日志 <code>EXIT_CODE=0</code></td><td><code>REPLAY_RUN=PASS|FAIL model=&lt;模型&gt; points=&lt;n&gt; expected=&lt;n&gt;</code></td></tr>
 <tr><td>主读数</td><td>探针减 <code>[t]</code> 基线的差与区间。PASS 只表示流程完整（无泄漏、对照齐全、结果非空），不表示解码成功，科学结论写在 <code>result.md</code>，只到「可解码」。两个主读数都只在 motion 模型上有</td><td><code>PROBE=PASS|FAIL model=&lt;模型&gt; label=&lt;标签&gt; feature=&lt;组&gt; layer=&lt;层&gt; value=&lt;值&gt; minus_time=&lt;差&gt; ci=[&lt;下&gt;,&lt;上&gt;] shuffled=&lt;值&gt;</code></td></tr>
@@ -217,7 +217,7 @@
 <div class="tbl"><table>
 <tr><th>用途</th><th>锚点</th></tr>
 <tr><td>观测组装</td><td><code>policy.py</code> 的 <code>add_buffer</code>、<code>_prepare_history</code>、<code>infer</code>；真实 motion 编码器走 <code>create_trained_policy(..., motion_stub=False)</code>，<code>MotionEncoderClient</code> 按 <code>encoder_kind=stage2_pool4_concat</code> 走 <code>_init_stage2</code>，起侧车子进程，占 <code>motion.online_gpu</code>（配置为 1），解释器用 <code>v1-store/envs/stage2/bin/python</code>，和上一轮 <code>spec-all-mot.json</code> 的 <code>stage2_python</code> 相同。观测组装照 <code>attn_adapter._legal_obs</code>：四个键 <code>observation/image</code>、<code>observation/wrist_image</code>、<code>observation/state</code>、<code>prompt</code>；<code>_prepare_history</code> 不返回 <code>motion_times</code>，要用 <code>visible_motion_frames</code> 和 <code>pad_times</code> 另算</td></tr>
-<tr><td>float32 前向的做法（待确认 Q1）</td><td><code>docs/evaluation-doc/stopcube-rollout-1105/records/diagnostics/diag_hidden.py</code>：<code>restore_params(dtype=float32)</code>、<code>dataclasses.replace(config, dtype="float32").load(...)</code>、<code>AttnAdapter(_ModelShim(model32))</code>、<code>default_matmul_precision("highest")</code></td></tr>
+<tr><td>float32 前向的做法</td><td><code>docs/evaluation-doc/stopcube-rollout-1105/records/diagnostics/diag_hidden.py</code>：<code>restore_params(dtype=float32)</code>、<code>dataclasses.replace(config, dtype="float32").load(...)</code>、<code>AttnAdapter(_ModelShim(model32))</code>、<code>default_matmul_precision("highest")</code></td></tr>
 <tr><td>按局哈希分折、每局等权</td><td><code>scripts/interpret/analysis/rollout_probe.py</code> 的 <code>hash_fold</code>、<code>episode_weights</code></td></tr>
 <tr><td>岭回归路径与嵌套选系数</td><td>同文件 <code>fit_path</code>、<code>select_lambda</code>、<code>ridge_cv</code></td></tr>
 <tr><td>局级 MAE 与差值区间</td><td>同文件 <code>episode_mae</code>、<code>mae_difference</code></td></tr>
@@ -280,7 +280,8 @@
 </ol>
 <p>状态机（第 27 条）：任务 id <code>stopcube-hover-probe</code>。交接前完成：A8 全部判定行与 <code>result.md</code> 提交。没有长尾。没有依赖的上游任务；下游（第二批动作 token、反事实）都要另给开工令。是否登记进 <code>current.json</code> 待确认 Q5。</p>
 
-<h2>B9 待用户确认</h2>
+<h2>B9 用户裁决记录</h2>
+<p>用户 2026-11-05 美东：「全部按推荐」。下列 Q1–Q4、Q6–Q8 都取推荐项；Q5 没有推荐项，待定。</p>
 <ol>
 <li><b>Q1 float32 做到哪一步：</b>推荐只把前缀前向改成 float32，帧记忆仍由 bf16 的 <code>policy</code> 生成，这是模型真实看到的记忆，也有 <code>diag_hidden.py</code> 现成做法。代价是混合精度：当前画面的两路图像在 float32 模型内部编码，和实际运行的 bf16 不同。另一选择是记忆的视觉编码也换 float32，全链一致，但记忆不再是模型实际看到的那份，也没有现成做法。</li>
 <li><b>Q2 <code>REPLAY_PARITY</code> 换法：</b>rollout 没存原始帧，原写法做不到；推荐 A8 的布局加分批两步。</li>
@@ -291,7 +292,7 @@
 <li><b>Q7 <code>HIDDEN_PRECISION</code> 的参考路径：</b>推荐 float32 全路径。这样能核对新路径算的是同一件事，但比值大概率远超 10，起不到拦截精度问题的作用。另一选择是 bf16 全路径，保留上一轮的含义，但它量的是 bf16 的误差，不是本轮 float32 捕获的误差，而且可能像上一轮一样 FAIL（当时 8.4）。</li>
 <li><b>Q8 第一部分的结构：</b>规则第 2 条要求第一部分含已定口径和验收表，现在它们在 A 节（细化前就是这样）。推荐不动，因为您要求不加内容，也是您之前把它们移过去的；要合规就把这两节移回第一部分。</li>
 </ol>
-<p>用户对本计划不改而直接认可，视为采纳以上全部推荐；改任何一项都要改完重新呈现。</p>
+
 
 
 </main>
