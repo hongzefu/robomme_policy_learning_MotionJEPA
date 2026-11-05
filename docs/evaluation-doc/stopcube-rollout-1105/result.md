@@ -110,6 +110,12 @@ P 是每次推理用 10 份独立噪声走原路径算出的预测里，前 16 �
 
 ![第 17 层拟合直线](records/rollout-r2-fit.png)
 
+下面两张图只看 Q4（离正确窗口）。第二张把两个模型的第 17 层画在同一格里对比；两个模型走出的轨迹不同，决策点不是同一批，差值没有区间。
+
+![Q4 每一层的 R²](records/rollout-r2-layers-q4.png)
+
+![Q4 第 17 层两个模型对比](records/rollout-r2-fit-q4-compare.png)
+
 ### motion 输入带有互补的进度信息
 
 下表是计划外的事后分解，只用已有隐状态和同一折划分，没有新增推理，见 `records/probe-decompose.json`、`records/probe-decompose-ci.json`。
