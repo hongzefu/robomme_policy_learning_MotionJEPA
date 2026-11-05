@@ -36,6 +36,8 @@ benchmark 锁定 `856bc3a189d4172f3f47dbee4424d585f8d78db3`。策略环境为主
 
 以下是预登记的接续规格，不代表已起跑。原生产树固定`48a52f1e083ee11777795e6d6f8dbc86056d0544`，离线树固定`050632677bea16f86a6b317d96c7d79f6eccabe6`；两者均须保持干净，不移动在跑树的HEAD。两模型query38自然退出0且各2990点完整后，运行`bash <产物根>/verify_collection.sh`，结果为`analysis/collection-verdict.json`，核两模型50局网格、十噪声、原始状态、全部Oracle控制及同步轨迹端点。官方终局会自动重复最后动作一次，因此外层轨迹最后一行跨两物理步；按真实`env_step_after`对齐Oracle逐物理步表的终点，不将两种记录粒度错配。
 
+集合核验会完整读取全部递归观测数组，因此独立放入`so-collection-verify-a`，命令为`tmux new-session -d -s so-collection-verify-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_collection_verify.sh'`；日志`logs/collection-verify-a.log`，保留`EXIT_CODE=`。使用原离线干净树与策略解释器，导入观测字段定义时设置`JAX_PLATFORMS=cpu`，不加载模型。独立只读复核已补齐原计划要求的完整字段、固定形状和有限性检查，没有改数值阈值。
+
 随后并行启动三份独立会话，主会话仍统一负责监听与清理：
 
 ```bash
