@@ -18,3 +18,10 @@ INPUT_CADENCE=PASS models=2 points=60 maxabs=0 tol=1e-3 frame_times_equal=1 epis
 FK_PARITY=PASS rows=7460 maxabs_z=0 tol=1e-3 predicted_target_rows=1492000
 PRESS_CALIBRATION=PASS models=2 episodes=12 planned=74 completed=74 valid=74 skipped=22
 QUERY50_VISUAL_REVIEW=PASS figures=2 overlap=0 missing_glyphs=0
+OFFLINE_REPLAY=PASS models=2 points=200 same_path_maxabs=0 tol=1e-6 attn_path_maxabs=0.043701171875 attention=ok ctx_points=100 mot_points=100
+RELEASE_RUN=PASS models=2 expected=100 completed=100 valid=100 ctx_success=18 mot_success=29
+FIXED_RELEASE_VISUAL_REVIEW=PASS figures=1 overlap=0 missing_glyphs=0
+ADJUST_REVIEW=PASS scale=same findings=0 task=S5_prompt
+PRE_MERGE_REVIEW=PASS task=S5_prompt base=0c7e5f7e0ce9bbcd10eec21e63889d8fb566704d tip=a7b03f1cad1e9d3b869afb7642544c2ffcf523a6 findings=0 blocking=0
+POST_MERGE_REVIEW=PASS task=S5_prompt base=8f4995b3da3e3160426c49441777f6150f24ef5a tip=8d841cbec00a4e21af5aa96d6c7957ea8608a102 findings=0 blocking=0
+MECHANISM_SELECTION=PASS episodes=3 inputs=16 predictions=160
