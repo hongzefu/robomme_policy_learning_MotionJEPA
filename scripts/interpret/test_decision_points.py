@@ -387,3 +387,21 @@ def test_readable_page_keeps_required_missing_trajectories_explicit(tmp_path):
     assert '尚缺正常轨迹' in front
     assert '无需延长' not in front
     assert 'class="missing"' not in front
+
+
+@pytest.mark.parametrize("status, press, expected", [
+    ("unresolved", None, "延长需求待确认"),
+    ("unresolved", 44, "延长需求待确认"),
+    ("resolved", None, "延长需求待确认"),
+    ("resolved", 44, "无需延长"),
+    ("resolved", 60, "无需延长"),
+])
+def test_readable_page_does_not_rule_out_extension_with_unresolved_failure(tmp_path, status, press, expected):
+    record, window, cal = fixture(tmp_path, outcome="fail", press=press, end=70)
+    cal["status"] = status
+    draft, _ = D.build_review({KEY: window}, {KEY: cal}, {KEY: [record]}, {}, [KEY])
+    assert not draft["episodes"][KEY]["hold_required"]
+    front = D.render_html(draft, tmp_path).split('<details>', 1)[0]
+    assert front.count(expected) == 2  # 总表与详情使用同一展示条件。
+    other = "无需延长" if expected == "延长需求待确认" else "延长需求待确认"
+    assert other not in front

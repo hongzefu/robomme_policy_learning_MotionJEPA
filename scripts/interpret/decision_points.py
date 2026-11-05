@@ -465,6 +465,17 @@ def render_html(draft, out):
     def outcome(item):
         return outcomes.get(item.get("outcome"), "其他结果，详见原始证据")
 
+    def missing_extended_label(episode):
+        if episode["hold_required"]:
+            return "尚缺必需的延长轨迹"
+        normal = episode["trajectories"]["normal"]
+        if normal["present"] and (normal.get("outcome") == "success" or (
+                episode["calibration"].get("status") == "resolved"
+                and episode["window"].get("status") == "resolved"
+                and normal.get("classification") in ("范围内", "过晚"))):
+            return "无需延长"
+        return "延长需求待确认"
+
     def review_status(episode):
         if not episode["trajectories"]["normal"]["present"]:
             return "尚缺正常轨迹"
@@ -480,7 +491,7 @@ def render_html(draft, out):
                '<table><thead><tr><th>局</th><th>合适下压范围</th><th>正常结果／下压时机</th><th>延长结果</th><th>审核状态</th></tr></thead><tbody>']
     for index, (key, episode) in enumerate(draft["episodes"].items()):
         normal, ext = episode["trajectories"]["normal"], episode["trajectories"]["hold_extended"]
-        extended_label = outcome(ext) if ext["present"] else "尚缺必需延长" if episode["hold_required"] else "无需延长" if normal["present"] else "待确认"
+        extended_label = outcome(ext) if ext["present"] else missing_extended_label(episode)
         content.append(f'<tr><td><a href="#episode-{index}">{escaped(title(key))}</a></td><td>{escaped(episode["window"].get("start_range"))}</td><td>{escaped(outcome(normal))}／{escaped(normal.get("classification"))}</td><td>{escaped(extended_label)}</td><td>{escaped(review_status(episode))}</td></tr>')
     content.append('</tbody></table>')
     if summary["unexpected_episodes"]:
@@ -495,7 +506,7 @@ def render_html(draft, out):
             item = episode["trajectories"][kind]
             content.append(f'<div><h3>{label}</h3>')
             if not item["present"]:
-                message = "尚缺正常轨迹" if kind == "normal" else "尚缺必需的延长轨迹" if episode["hold_required"] else "无需延长" if episode["trajectories"]["normal"]["present"] else "延长需求待确认"
+                message = "尚缺正常轨迹" if kind == "normal" else missing_extended_label(episode)
                 content.append(f'<p class="notice">{message}</p>')
                 candidate = episode["hold_candidate"]
                 if kind == "hold_extended" and candidate:
