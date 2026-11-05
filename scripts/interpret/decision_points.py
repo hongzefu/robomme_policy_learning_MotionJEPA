@@ -244,7 +244,7 @@ def analyze(record, window, calibration, kind):
 
 
 def hold_candidate(record, analysis, window, calibration):
-    """仅为正常轨迹提前按错局选取已观测的悬停位置，不生成替代动作。"""
+    """取实测七维关节位置，并保持同一步已执行的夹爪控制目标。"""
     reasons = []
     if not record or not analysis.get("present"):
         return None, ["正常轨迹缺失"]
@@ -267,7 +267,8 @@ def hold_candidate(record, analysis, window, calibration):
     threshold = (calibration["hover_z"] - calibration["delta_z"]
                  if number(calibration.get("hover_z")) and number(calibration.get("delta_z")) else None)
     safe = [r for r in rows if r.get("env_step_after") in confirmed and r["env_step_after"] < press
-            and vector(r.get("state_after"), 8) and vector(r.get("tcp_after"), 3)
+            and vector(r.get("state_after"), 8) and vector(r.get("executed_action"), 8)
+            and vector(r.get("tcp_after"), 3)
             and threshold is not None and r["tcp_after"][2] >= threshold
             and not r.get("button_pressed_after")]
     if not safe:
@@ -288,7 +289,8 @@ def hold_candidate(record, analysis, window, calibration):
     center_k = (ideal - initial) / 16
     candidates = {max(minimum_k, math.floor(center_k)), max(minimum_k, math.ceil(center_k))}
     release = min((initial + 16 * k for k in candidates), key=lambda x: (abs(x - ideal), x))
-    return {"takeover_step": takeover, "release_step": release, "hold_qpos": chosen["state_after"],
+    hold_qpos = chosen["state_after"][:7] + [chosen["executed_action"][7]]
+    return {"takeover_step": takeover, "release_step": release, "hold_qpos": hold_qpos,
             "ideal_release_step": ideal, "release_offset": release - ideal,
             "initial_env_step": initial, "D": meta.get("D"), "exec_start_idx": meta.get("exec_start_idx"),
             "normal_trace_path": record["trace_path"], "calibration_source": calibration.get("calibration_source")}, []
@@ -367,7 +369,7 @@ def build_review(windows, calibrations, normal, extended, expected_keys=EPISODES
                     or any(row.get("executed_action") != qpos for row in held)
                     or any(left.get("env_step_after") != right.get("env_step_before")
                            for left, right in zip(held, held[1:]))):
-                reasons.append("实际接管段缺失、不连续或执行动作偏离固定悬停位置")
+                reasons.append("实际接管段缺失、不连续或执行动作偏离固定悬停命令（关节位置及夹爪控制目标）")
             resumed = [row for row in rows if row.get("env_step_before") == release]
             if (len(resumed) != 1 or resumed[0].get("row_in_chunk") != 0
                     or resumed[0].get("chunk_start_env_step") != release
@@ -471,7 +473,7 @@ def render_html(draft, out):
                         '<table><tr><th>移动间隔／目标经过次数</th><th>目标进入／离开</th><th>下压范围／运动耗时</th><th>悬停参考／阈值差</th></tr>',
                         f'<tr><td>{escaped(window.get("move_interval"))}／{escaped(window.get("target_pass"))}</td><td>{escaped(window.get("target_visit_in"))}／{escaped(window.get("target_visit_out"))}</td><td>{escaped(window.get("start_range"))}／{escaped(cal.get("motion_delay"))}</td><td>{escaped(cal.get("hover_z"))}／{escaped(cal.get("delta_z"))} 米</td></tr></table>',
                         f'<p>校准状态：{escaped(cal.get("status"))}；来源：<code>{escaped(cal.get("calibration_source"))}</code>；缺失原因：{escaped(cal.get("reasons", []))}</p>',
-                        f'<p>接管候选：<code>{escaped(episode["hold_candidate"])}</code>；不适用原因：{escaped(episode["hold_inapplicable_reasons"])}</p><div class="pair">'])
+                        f'<p>接管候选（hold_qpos 前 7 维取实测关节位置，末维保持已执行的夹爪控制目标，不把物理手指位置作为归一化命令）：<code>{escaped(episode["hold_candidate"])}</code>；不适用原因：{escaped(episode["hold_inapplicable_reasons"])}</p><div class="pair">'])
         for kind, label in (("normal", "正常轨迹"), ("hold_extended", "悬停延长轨迹（独立成绩）")):
             item = episode["trajectories"][kind]
             content.append(f'<div><h3>{label}</h3><p>终局：{escaped(item.get("outcome"))}；独立成功字段：{escaped(item.get("task_success"))}；轨迹标识：{escaped(item.get("episode_nonce"))}</p>')
