@@ -32,6 +32,12 @@ benchmark 锁定 `856bc3a189d4172f3f47dbee4424d585f8d78db3`。策略环境为主
 
 本轮产物根 `/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/`，各局各目录；子目录为 `oracle/`、`smoke/`、`query/`、`calibrate/`、`release/`、`analysis/`、`logs/`。大数组和视频不进 git。具名验证写入 `records/verification.summary.txt`，失败不改阈值、不为成功重试。
 
+## 模型询问试跑规格
+
+固定实现提交 `48a52f1e083ee11777795e6d6f8dbc86056d0544`，执行工作树与缓存路径同下。S1～S4合前与合后均独立审查通过，合后分别41、17、26、25项定向测试通过。先单局 `StopCube:16`、每模型单服务，ctx用GPU0、motion用GPU1。规格文件为本轮产物根 `spec-smoke-query16-ctx-a.json` 与 `spec-smoke-query16-mot-a.json`；基线配置 `mme_vla_suite_b128`、XLA0.40，motion配置 `mme_vla_suite_orig16_b128_60k`、XLA0.55及原运行合同，checkpoint与三套解释器保持本档案已核路径。新增值为 `stopcube_mode=oracle_query`、`query_interval=4`、`query_record=10`、`query_batch_size=2`、`save_top_frames=0`、`save_prefix=false`；动作表为两局合并的 `oracle-smoke-table.json`。`model_id` 使用checkpoint绝对路径，与实际query记录一致。
+
+完整命令分别为 `tmux new-session -d -s so-query16-ctx-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_smoke_query16.sh ctx'`，以及同脚本参数 `mot`、会话名 `so-query16-mot-a`。实质命令是策略环境 `-m scripts.interpret.run_local --spec <本轮spec绝对路径> --episodes StopCube:16`；脚本核精确提交与clean、按绝对08:00减去现场时间计算timeout，截止前10秒TERM，无自动重试。输出分别为 `<产物根>/smoke/query16-ctx-a/` 与 `query16-mot-a/`，含 `attn/` 和 `run/`；日志 `<产物根>/logs/query16-ctx-a.log`、`query16-mot-a.log`。会话均先预留，收到回执后记实际启动。
+
 ## 本轮会话清单
 
 实际启动：`so-assets-1104`，CPU 资产验证，干净工作树提交 `49db7d7bbc0d7a772f512d9804cb33966c04cafe`，日志 `<产物根>/logs/assets.log`。核验耗时 47.73 秒、退出 0，54 个 motion 文件和 17 个官方基线文件通过。
