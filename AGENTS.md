@@ -532,6 +532,7 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
 
 ## 对正本的覆盖项（按正本条号；未列出的条目按正本执行）
 
+- **临时覆盖第 26 条（本仓库 Codex 子代理推理强度，2026-11-04 美东）**：本仓库所有角色的 Codex 子代理及任意层级的递归子代理，推理强度下限临时由 `high` 改为 `medium`，默认使用 `medium`，允许更高档位，禁止低于 `medium`。每次创建子代理必须显式设置 `reasoning_effort="medium"` 或宿主支持的更高档位；需要覆盖参数时使用 `fork_turns="none"` 并提供自含委派说明，不依赖默认值或继承规避要求。本覆盖适用于本仓库各运行环境，亦覆盖第 26 条 AWS 专属规定中对子代理固定 `ultra` 的要求；主代理的推理强度要求、各角色模型选择与其他派发边界仍按原规则执行。无法设置或确认符合要求时，停止该项派发并报告。本临时覆盖持续有效，直至用户明确要求恢复或另行修改。用户原话：「暂时修改，把本仓库的子代理全部降低为 Medium，Medium 或更高。」
 - **覆盖第 2 条（计划密度标杆）**：`<PLAN_EXEMPLAR>` = benchmark 仓库 [`docs/plans/1005-eval-video-phase2-all-models-rerun-plan.md`](https://github.com/hongzefu/robomme_benchmark_MotionJEPA/blob/newtaskRelease-taskV9/docs/plans/1005-eval-video-phase2-all-models-rerun-plan.md) 的「第一部分（给人看）」（2026-10-06 用户原话「所有的密度的标杆都改成这个」，所有仓库统一；此前为本仓库 `0829-destructive-restructure-plan.md` 第一部分「两条核心保证的原理」一节）；历史名称与现名的对应见 [计划文件命名迁移表](docs/README.md#计划文件命名迁移表)。
 - **覆盖第 4 条（核心短测）**：本仓库尚未固化「任何机器都能跑」的核心短测命令清单；按第 4 条选覆盖改动的最小真实子集（`uv run python -m pytest <定向测试> -q`），纯文档改动至少 `git diff --check`。补齐清单后写回本条。
 - **覆盖第 8 条（集群提交按环境分叉）**：环境 A 向 GreatLakes 提交前遵守本仓库 `greatlakes.md`（正本副本 + 项目放行记录）；环境 B 无 `~/.ssh/config`、无 ControlMaster，禁止提交任何 Slurm 作业、禁止 ssh 集群、禁止运行 `scripts/training/gl_submit.py`，训练、建库、评估一律在本机 8×A100 上跑，集群留档只作只读存档。
