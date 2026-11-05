@@ -40,6 +40,10 @@ benchmark 锁定 `856bc3a189d4172f3f47dbee4424d585f8d78db3`。策略环境为主
 
 ## 本轮会话清单
 
+正式校准实际于美东01:16:51启动，`so-calibrate12-ctx-a`、`so-calibrate12-mot-a`，窗格PID537210、537208，均已退出0。逐项核74条收据与独立轨迹、实际交还点、Oracle前缀、首次预测及模型控制权、合法停止和持久终态，`PRESS_CALIBRATION=PASS models=2 episodes=12 planned=74 completed=74 valid=74 skipped=22`。固定放手ctx2/12、motion6/12最终任务成功；高比例48步触发10/12、12/12，低比例5/12、3/12。低比例组首次至多16个模型动作的实测TCP均未低于悬停2cm，后续重新推理可能触发，故不能用48步触发反推首次预测错误。此辅助统计不改变原2cm/16行预测判据或48步运行上限。校准结果已先在聊天汇报，不等待额外确认继续。
+
+剩余38局询问预留 `so-query38-ctx-a`、`so-query38-mot-a`，完整命令 `tmux new-session -d -s so-query38-ctx-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_queries.sh ctx query38'`（motion参数mot）。固定48a52f1与原GPU/解释器/检查点/显存/十预测batch2；清单为前述互斥38局seal68a60f21…a1caff9，每模型2990点、8客户端共用一服务。规格 `spec-query38-<模型>-a.json`，输出 `query/<模型>/query38-a/{attn,run}`，日志 `logs/query38-<模型>-a.log`，绝对08:00、不自动重试。预先准备不等于已起跑。
+
 正式query12两侧均退出0，主会话实查24局终态、1480点完整、无重复或缺失、每点十预测，两模型噪声逐位相等；动作/7臂关节/TCP/方块轨迹与各局Oracle表差0。`so-fk12-a` 实际于美东01:12:30起跑（窗格PID533057），已退出0：`FK_PARITY=PASS rows=1480 maxabs_z=0 tol=1e-3`；`PRESS_SUMMARY=PASS models=2 points=1480 threshold_cm=2 horizon=16`。固定选点文件 `analysis/query12/calibration_plan.json` 在真实校准期间保持不变。
 
 预留正式校准 `so-calibrate12-ctx-a`、`so-calibrate12-mot-a`，完整命令 `tmux new-session -d -s so-calibrate12-ctx-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_calibrate12.sh ctx'`（motion参数mot）。固定48a52f1、原模型和解释器/缓存/显存；每模型按fixed_release→high_probability→low_probability→early_press串行，各类型整段共用一服务、客户端至多5局。规格 `spec-calibrate12-<模型>-<类型>-a.json`，清单沿用12局封签，选点沿用上述不可变文件；输出 `calibrate/<模型>/<类型>-a/{attn,run}`，日志 `logs/calibrate12-<模型>-a.log`。基线选中12/12/12/2，共38次；motion选中12/12/12/0，共36次，合计74次。其余22项早按点按原规则无候选或P全0，记录跳过原因，不补局。前三类型触发或交还48步即止，固定放手官方终局；不换seed，不挑成功重试。仍按绝对08:00限时。完成后先向用户报告，再启动其余38局询问。
