@@ -25,3 +25,14 @@ ADJUST_REVIEW=PASS scale=same findings=0 task=S5_prompt
 PRE_MERGE_REVIEW=PASS task=S5_prompt base=0c7e5f7e0ce9bbcd10eec21e63889d8fb566704d tip=a7b03f1cad1e9d3b869afb7642544c2ffcf523a6 findings=0 blocking=0
 POST_MERGE_REVIEW=PASS task=S5_prompt base=8f4995b3da3e3160426c49441777f6150f24ef5a tip=8d841cbec00a4e21af5aa96d6c7957ea8608a102 findings=0 blocking=0
 MECHANISM_SELECTION=PASS episodes=3 inputs=16 predictions=160
+PRE_MERGE_REVIEW=PASS task=S5_plot base=a7b03f1cad1e9d3b869afb7642544c2ffcf523a6 tip=6f6c9882b89a0eba4622e4d630f1524b1ba6eb54 findings=0 blocking=0
+POST_MERGE_REVIEW=PASS task=S5_plot base=8c33b7d7ccde03e100eaa3599d2161dc4f64e775 tip=0c0d7c4039c3a3575899c1644a5865933cbb7e87 findings=0 blocking=0
+FIXED_RELEASE_REVIEW=PASS runs=100 duplicates=0 missing=0 findings=0
+OFFLINE_REPLAY=PASS models=2 points=16 same_path_maxabs=0 tol=1e-6 attn_path_maxabs=0.00634765625 attention=ok scope=selected_mechanism_inputs
+MECHANISM_DATA_REVIEW=PASS inputs=16 predictions=160 findings=1 resolved=early_frame_statement_limited_to_motion
+READOUT_OBSERVATION_REVIEW=PASS findings=1 resolved=saved_tensors_not_internal_cache
+NOISE_STABILITY_REVIEW=PASS findings=0
+ROUTING_TOPOLOGY_REVIEW=PASS scope=static_allowed_path_not_measured_information
+BEHAVIOR_DERIVATION_REVIEW=PASS runs=100 findings=0
+MECHANISM_REPORT=PASS models=2 inputs=16 predictions=160 visual_review=pass figures=32
+MECHANISM_VISUAL_REVIEW=PASS figures=32 overlap=0 missing_glyphs=0 source_commit=6f6c9882b89a0eba4622e4d630f1524b1ba6eb54

@@ -1,0 +1,218 @@
+{
+  "note": "只比较本轮原始保存输入和既有注意力聚合，不生成或修改模型输入，不新增推理。跨时刻噪声不同，其他输入也会变化，不能据此识别单一因果因素。",
+  "same_motion_bank": [
+    {
+      "episode_key": "StopCube:3",
+      "steps": [
+        53,
+        65
+      ],
+      "query_fingerprints": [
+        {
+          "path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/2b7a98572fb14f38a662898c00b89603/query_0013.npz",
+          "bytes": 5458881,
+          "sha256": "5ffc8534dd53b40aaab8e33b02fe726a617626e003196ad2359e809d90b8f0a7"
+        },
+        {
+          "path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/2b7a98572fb14f38a662898c00b89603/query_0016.npz",
+          "bytes": 5458881,
+          "sha256": "431953e59d4482abefef8adc43efdb982b35ac03240a67d6f5cdbf3a875f9337"
+        }
+      ],
+      "byte_equal": {
+        "motion_emb": false,
+        "motion_pos": false,
+        "motion_mask": false,
+        "mem_order": false,
+        "static_image_emb": false,
+        "static_pos_emb": false,
+        "static_mask": true,
+        "images": false,
+        "tokenized_prompt": true,
+        "state": false
+      },
+      "noise_equal": false,
+      "raw_state_equal": false
+    },
+    {
+      "episode_key": "StopCube:0",
+      "steps": [
+        233,
+        253
+      ],
+      "query_fingerprints": [
+        {
+          "path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/cbc3fce8ce674787accdd55317a4f1c2/query_0058.npz",
+          "bytes": 5458881,
+          "sha256": "07644ab32ab0ce2b8b8a5e0bb079c5ec64df3345ac0ed21f76bb85be05737e89"
+        },
+        {
+          "path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/cbc3fce8ce674787accdd55317a4f1c2/query_0063.npz",
+          "bytes": 5458881,
+          "sha256": "cd285a6881aa2591abf352a50bb50cd469d0cee7f129611b9a09e50b3440f70c"
+        }
+      ],
+      "byte_equal": {
+        "motion_emb": true,
+        "motion_pos": true,
+        "motion_mask": true,
+        "mem_order": false,
+        "static_image_emb": false,
+        "static_pos_emb": false,
+        "static_mask": true,
+        "images": false,
+        "tokenized_prompt": true,
+        "state": true
+      },
+      "noise_equal": false,
+      "raw_state_equal": true
+    },
+    {
+      "episode_key": "StopCube:6",
+      "steps": [
+        253,
+        273
+      ],
+      "query_fingerprints": [
+        {
+          "path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/c20d9b6fbcac4d068dc473654d6749e1/query_0063.npz",
+          "bytes": 5458881,
+          "sha256": "71411fd928b46976621e57a085d3d4ac97010967a12f557c7ab01553c88fc166"
+        },
+        {
+          "path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/c20d9b6fbcac4d068dc473654d6749e1/query_0068.npz",
+          "bytes": 5458881,
+          "sha256": "55490fa167b1fc96e27e7902328edc8705a1b13123ac667e30e819ecccbadeae"
+        }
+      ],
+      "byte_equal": {
+        "motion_emb": false,
+        "motion_pos": false,
+        "motion_mask": false,
+        "mem_order": false,
+        "static_image_emb": false,
+        "static_pos_emb": false,
+        "static_mask": true,
+        "images": false,
+        "tokenized_prompt": true,
+        "state": true
+      },
+      "noise_equal": false,
+      "raw_state_equal": true
+    }
+  ],
+  "concentration": [
+    {
+      "episode_key": "StopCube:3",
+      "env_step": 53,
+      "p": 0.0,
+      "shape": [
+        18,
+        8
+      ],
+      "late_layers_from_13_share": 0.5751720726684983,
+      "peak_layer": 16,
+      "peak_head": 0,
+      "peak_mass": 0.017603994607925413,
+      "peak_share_of_layer_head_sum": 0.31712414613277035
+    },
+    {
+      "episode_key": "StopCube:3",
+      "env_step": 65,
+      "p": 1.0,
+      "shape": [
+        18,
+        8
+      ],
+      "late_layers_from_13_share": 0.7757424051138291,
+      "peak_layer": 13,
+      "peak_head": 6,
+      "peak_mass": 0.33160776402801273,
+      "peak_share_of_layer_head_sum": 0.5253921192119176
+    },
+    {
+      "episode_key": "StopCube:0",
+      "env_step": 233,
+      "p": 0.0,
+      "shape": [
+        18,
+        8
+      ],
+      "late_layers_from_13_share": 0.559072358844572,
+      "peak_layer": 15,
+      "peak_head": 1,
+      "peak_mass": 0.04865056779235601,
+      "peak_share_of_layer_head_sum": 0.0782356151355059
+    },
+    {
+      "episode_key": "StopCube:0",
+      "env_step": 253,
+      "p": 1.0,
+      "shape": [
+        18,
+        8
+      ],
+      "late_layers_from_13_share": 0.6015741250923303,
+      "peak_layer": 13,
+      "peak_head": 6,
+      "peak_mass": 0.11919126629829406,
+      "peak_share_of_layer_head_sum": 0.1212942090173034
+    },
+    {
+      "episode_key": "StopCube:0",
+      "env_step": 117,
+      "p": 0.0,
+      "shape": [
+        18,
+        8
+      ],
+      "late_layers_from_13_share": 0.64086133266828,
+      "peak_layer": 15,
+      "peak_head": 1,
+      "peak_mass": 0.03599701687693596,
+      "peak_share_of_layer_head_sum": 0.12588824049907263
+    },
+    {
+      "episode_key": "StopCube:6",
+      "env_step": 253,
+      "p": 0.0,
+      "shape": [
+        18,
+        8
+      ],
+      "late_layers_from_13_share": 0.42162861445417005,
+      "peak_layer": 15,
+      "peak_head": 7,
+      "peak_mass": 0.028762845471501354,
+      "peak_share_of_layer_head_sum": 0.054747826125555135
+    },
+    {
+      "episode_key": "StopCube:6",
+      "env_step": 273,
+      "p": 1.0,
+      "shape": [
+        18,
+        8
+      ],
+      "late_layers_from_13_share": 0.5173280770016577,
+      "peak_layer": 15,
+      "peak_head": 1,
+      "peak_mass": 0.1183775804936886,
+      "peak_share_of_layer_head_sum": 0.16056794132844115
+    },
+    {
+      "episode_key": "StopCube:6",
+      "env_step": 53,
+      "p": 0.0,
+      "shape": [
+        18,
+        8
+      ],
+      "late_layers_from_13_share": 0.5063713990515332,
+      "peak_layer": 16,
+      "peak_head": 0,
+      "peak_mass": 0.0043057996034622185,
+      "peak_share_of_layer_head_sum": 0.1292794875187597
+    }
+  ]
+}

@@ -1,0 +1,5635 @@
+{
+  "tokenizer": {
+    "path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/big_vision/paligemma_tokenizer.model",
+    "sha256": "8986bb4f423f07f8c7f70d0dbe3526fb2316056c17bae71b1ea975e77a168fc6"
+  },
+  "note": "读取原有效词元位置/id做展示；不重新分词或回送模型。词元可以是子词，位置表示已经融合上下文；注意力质量不是语义或因果贡献。",
+  "models": {
+    "mot": {
+      "analysis_sha256": "ab7119344b6f8695d763810e99ba8250b2741d85b192a1b30c40e56bf22fe809",
+      "points": [
+        {
+          "episode_key": "StopCube:3",
+          "env_step": 53,
+          "p": 0.0,
+          "prompt": "press the button to stop the cube just as it reaches the target for the second time\n",
+          "text_mass": 0.41169162532547493,
+          "tokens": [
+            {
+              "position": 0,
+              "token_id": 2,
+              "piece": "<bos>",
+              "decoded": "",
+              "mass": 0.32617007510322665,
+              "share_of_text": 0.7922679380358133,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.32617007510322665
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 1,
+              "token_id": 11355,
+              "piece": "press",
+              "decoded": "press",
+              "mass": 0.007491298842812992,
+              "share_of_text": 0.018196383851360895,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.007491298842812992
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 2,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.00320966879475034,
+              "share_of_text": 0.007796293626844709,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.00320966879475034
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 3,
+              "token_id": 6086,
+              "piece": "▁button",
+              "decoded": " button",
+              "mass": 0.006526648909008751,
+              "share_of_text": 0.015853246720403693,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.006526648909008751
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 4,
+              "token_id": 577,
+              "piece": "▁to",
+              "decoded": " to",
+              "mass": 0.005352903302345011,
+              "share_of_text": 0.013002215670802427,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.005352903302345011
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 5,
+              "token_id": 4673,
+              "piece": "▁stop",
+              "decoded": " stop",
+              "mass": 0.003042441677405602,
+              "share_of_text": 0.007390098535524764,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.003042441677405602
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 6,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0020741600796787274,
+              "share_of_text": 0.0050381400837069224,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0020741600796787274
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 7,
+              "token_id": 28660,
+              "piece": "▁cube",
+              "decoded": " cube",
+              "mass": 0.001998535849723137,
+              "share_of_text": 0.0048544486377228,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.001998535849723137
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 8,
+              "token_id": 1317,
+              "piece": "▁just",
+              "decoded": " just",
+              "mass": 0.004570607546096047,
+              "share_of_text": 0.01110201729870657,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.004570607546096047
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 9,
+              "token_id": 685,
+              "piece": "▁as",
+              "decoded": " as",
+              "mass": 0.005124325861947404,
+              "share_of_text": 0.012447000489495548,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.005124325861947404
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 10,
+              "token_id": 665,
+              "piece": "▁it",
+              "decoded": " it",
+              "mass": 0.0008185078790928754,
+              "share_of_text": 0.0019881577101447715,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0008185078790928754
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 11,
+              "token_id": 26676,
+              "piece": "▁reaches",
+              "decoded": " reaches",
+              "mass": 0.0019846324229405984,
+              "share_of_text": 0.004820677178875302,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0019846324229405984
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 12,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.001319863361099528,
+              "share_of_text": 0.00320595144498281,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.001319863361099528
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 13,
+              "token_id": 4408,
+              "piece": "▁target",
+              "decoded": " target",
+              "mass": 0.001076894663274288,
+              "share_of_text": 0.0026157798629566904,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.001076894663274288
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 14,
+              "token_id": 604,
+              "piece": "▁for",
+              "decoded": " for",
+              "mass": 0.0015691335967534944,
+              "share_of_text": 0.0038114294783455206,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0015691335967534944
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 15,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0012581232316895492,
+              "share_of_text": 0.003055984514367769,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0012581232316895492
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 16,
+              "token_id": 2257,
+              "piece": "▁second",
+              "decoded": " second",
+              "mass": 0.0013501763248091772,
+              "share_of_text": 0.0032795817105625005,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0013501763248091772
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 17,
+              "token_id": 1069,
+              "piece": "▁time",
+              "decoded": " time",
+              "mass": 0.0024768322615677284,
+              "share_of_text": 0.0060162318327694805,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0024768322615677284
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 18,
+              "token_id": 108,
+              "piece": "\n",
+              "decoded": "\n",
+              "mass": 0.034276795617253004,
+              "share_of_text": 0.08325842331661344,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.034276795617253004
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            }
+          ]
+        },
+        {
+          "episode_key": "StopCube:3",
+          "env_step": 65,
+          "p": 1.0,
+          "prompt": "press the button to stop the cube just as it reaches the target for the second time\n",
+          "text_mass": 0.35855497314646423,
+          "tokens": [
+            {
+              "position": 0,
+              "token_id": 2,
+              "piece": "<bos>",
+              "decoded": "",
+              "mass": 0.3045806017305909,
+              "share_of_text": 0.8494669563714974,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.3045806017305909
+                }
+              }
+            },
+            {
+              "position": 1,
+              "token_id": 11355,
+              "piece": "press",
+              "decoded": "press",
+              "mass": 0.007546015144843194,
+              "share_of_text": 0.02104562956866523,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.007546015144843194
+                }
+              }
+            },
+            {
+              "position": 2,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.002594377240166068,
+              "share_of_text": 0.007235647068005677,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.002594377240166068
+                }
+              }
+            },
+            {
+              "position": 3,
+              "token_id": 6086,
+              "piece": "▁button",
+              "decoded": " button",
+              "mass": 0.007858269060444501,
+              "share_of_text": 0.02191649718726539,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.007858269060444501
+                }
+              }
+            },
+            {
+              "position": 4,
+              "token_id": 577,
+              "piece": "▁to",
+              "decoded": " to",
+              "mass": 0.0016894388868887392,
+              "share_of_text": 0.004711798785171582,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0016894388868887392
+                }
+              }
+            },
+            {
+              "position": 5,
+              "token_id": 4673,
+              "piece": "▁stop",
+              "decoded": " stop",
+              "mass": 0.0012106813009207446,
+              "share_of_text": 0.003376556990122125,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0012106813009207446
+                }
+              }
+            },
+            {
+              "position": 6,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0009195418961139188,
+              "share_of_text": 0.002564577163843437,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0009195418961139188
+                }
+              }
+            },
+            {
+              "position": 7,
+              "token_id": 28660,
+              "piece": "▁cube",
+              "decoded": " cube",
+              "mass": 0.0026916011446155605,
+              "share_of_text": 0.007506801874746505,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0026916011446155605
+                }
+              }
+            },
+            {
+              "position": 8,
+              "token_id": 1317,
+              "piece": "▁just",
+              "decoded": " just",
+              "mass": 0.001027884939685464,
+              "share_of_text": 0.0028667429450646292,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.001027884939685464
+                }
+              }
+            },
+            {
+              "position": 9,
+              "token_id": 685,
+              "piece": "▁as",
+              "decoded": " as",
+              "mass": 0.0010356959488449825,
+              "share_of_text": 0.0028885276356825666,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0010356959488449825
+                }
+              }
+            },
+            {
+              "position": 10,
+              "token_id": 665,
+              "piece": "▁it",
+              "decoded": " it",
+              "mass": 0.0003575702487594551,
+              "share_of_text": 0.0009972536306542682,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0003575702487594551
+                }
+              }
+            },
+            {
+              "position": 11,
+              "token_id": 26676,
+              "piece": "▁reaches",
+              "decoded": " reaches",
+              "mass": 0.0007355053934993015,
+              "share_of_text": 0.0020513043984439695,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0007355053934993015
+                }
+              }
+            },
+            {
+              "position": 12,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0007787696774014169,
+              "share_of_text": 0.0021719673013245347,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0007787696774014169
+                }
+              }
+            },
+            {
+              "position": 13,
+              "token_id": 4408,
+              "piece": "▁target",
+              "decoded": " target",
+              "mass": 0.0004543504939000639,
+              "share_of_text": 0.0012671710837335638,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0004543504939000639
+                }
+              }
+            },
+            {
+              "position": 14,
+              "token_id": 604,
+              "piece": "▁for",
+              "decoded": " for",
+              "mass": 0.0014624639096048973,
+              "share_of_text": 0.004078771789918817,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0014624639096048973
+                }
+              }
+            },
+            {
+              "position": 15,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0019002076129739482,
+              "share_of_text": 0.0052996269896882515,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0019002076129739482
+                }
+              }
+            },
+            {
+              "position": 16,
+              "token_id": 2257,
+              "piece": "▁second",
+              "decoded": " second",
+              "mass": 0.0011598582635633646,
+              "share_of_text": 0.0032348129308740065,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0011598582635633646
+                }
+              }
+            },
+            {
+              "position": 17,
+              "token_id": 1069,
+              "piece": "▁time",
+              "decoded": " time",
+              "mass": 0.0017286635203183527,
+              "share_of_text": 0.004821195213522307,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0017286635203183527
+                }
+              }
+            },
+            {
+              "position": 18,
+              "token_id": 108,
+              "piece": "\n",
+              "decoded": "\n",
+              "mass": 0.018823476733329396,
+              "share_of_text": 0.052498161071775996,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.018823476733329396
+                }
+              }
+            }
+          ]
+        },
+        {
+          "episode_key": "StopCube:0",
+          "env_step": 233,
+          "p": 0.0,
+          "prompt": "press the button to stop the cube just as it reaches the target for the fourth time\n",
+          "text_mass": 0.3954214863737838,
+          "tokens": [
+            {
+              "position": 0,
+              "token_id": 2,
+              "piece": "<bos>",
+              "decoded": "",
+              "mass": 0.34375022366901653,
+              "share_of_text": 0.8693261128053029,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.34375022366901653
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 1,
+              "token_id": 11355,
+              "piece": "press",
+              "decoded": "press",
+              "mass": 0.005323299831814236,
+              "share_of_text": 0.013462343386120979,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.005323299831814236
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 2,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.002807131305906094,
+              "share_of_text": 0.007099086424586878,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.002807131305906094
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 3,
+              "token_id": 6086,
+              "piece": "▁button",
+              "decoded": " button",
+              "mass": 0.003231200929989831,
+              "share_of_text": 0.00817153604782984,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.003231200929989831
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 4,
+              "token_id": 577,
+              "piece": "▁to",
+              "decoded": " to",
+              "mass": 0.0028038985406359036,
+              "share_of_text": 0.007090910932405519,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0028038985406359036
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 5,
+              "token_id": 4673,
+              "piece": "▁stop",
+              "decoded": " stop",
+              "mass": 0.00158298613037914,
+              "share_of_text": 0.004003288098722019,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.00158298613037914
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 6,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0014453021028182573,
+              "share_of_text": 0.0036550924839022095,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0014453021028182573
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 7,
+              "token_id": 28660,
+              "piece": "▁cube",
+              "decoded": " cube",
+              "mass": 0.001909177277185437,
+              "share_of_text": 0.004828208235959972,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.001909177277185437
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 8,
+              "token_id": 1317,
+              "piece": "▁just",
+              "decoded": " just",
+              "mass": 0.0020243504361456464,
+              "share_of_text": 0.0051194750561229475,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0020243504361456464
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 9,
+              "token_id": 685,
+              "piece": "▁as",
+              "decoded": " as",
+              "mass": 0.0013748016787899864,
+              "share_of_text": 0.0034768006447945385,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0013748016787899864
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 10,
+              "token_id": 665,
+              "piece": "▁it",
+              "decoded": " it",
+              "mass": 0.0008067995369330877,
+              "share_of_text": 0.002040353305865723,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0008067995369330877
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 11,
+              "token_id": 26676,
+              "piece": "▁reaches",
+              "decoded": " reaches",
+              "mass": 0.0019043893925845623,
+              "share_of_text": 0.0048160999293406686,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0019043893925845623
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 12,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0014992707600403165,
+              "share_of_text": 0.0037915763601755483,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0014992707600403165
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 13,
+              "token_id": 4408,
+              "piece": "▁target",
+              "decoded": " target",
+              "mass": 0.0005223221417206029,
+              "share_of_text": 0.001320925037510133,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0005223221417206029
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 14,
+              "token_id": 604,
+              "piece": "▁for",
+              "decoded": " for",
+              "mass": 0.0009652876292562319,
+              "share_of_text": 0.0024411612988166384,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0009652876292562319
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 15,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0008563498684412075,
+              "share_of_text": 0.0021656634703752986,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0008563498684412075
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 16,
+              "token_id": 12201,
+              "piece": "▁fourth",
+              "decoded": " fourth",
+              "mass": 0.0014584941947315302,
+              "share_of_text": 0.0036884545857805147,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0014584941947315302
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 17,
+              "token_id": 1069,
+              "piece": "▁time",
+              "decoded": " time",
+              "mass": 0.003148376622185525,
+              "share_of_text": 0.007962077759248088,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.003148376622185525
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 18,
+              "token_id": 108,
+              "piece": "\n",
+              "decoded": "\n",
+              "mass": 0.01800782432520969,
+              "share_of_text": 0.04554083413713959,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.01800782432520969
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            }
+          ]
+        },
+        {
+          "episode_key": "StopCube:0",
+          "env_step": 253,
+          "p": 1.0,
+          "prompt": "press the button to stop the cube just as it reaches the target for the fourth time\n",
+          "text_mass": 0.3399167830300414,
+          "tokens": [
+            {
+              "position": 0,
+              "token_id": 2,
+              "piece": "<bos>",
+              "decoded": "",
+              "mass": 0.29162246687518845,
+              "share_of_text": 0.8579231195225074,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.29162246687518845
+                }
+              }
+            },
+            {
+              "position": 1,
+              "token_id": 11355,
+              "piece": "press",
+              "decoded": "press",
+              "mass": 0.01017831620398081,
+              "share_of_text": 0.02994355298744182,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.01017831620398081
+                }
+              }
+            },
+            {
+              "position": 2,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0023258828493352567,
+              "share_of_text": 0.006842506652958345,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0023258828493352567
+                }
+              }
+            },
+            {
+              "position": 3,
+              "token_id": 6086,
+              "piece": "▁button",
+              "decoded": " button",
+              "mass": 0.004821439956884003,
+              "share_of_text": 0.014184177415146607,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.004821439956884003
+                }
+              }
+            },
+            {
+              "position": 4,
+              "token_id": 577,
+              "piece": "▁to",
+              "decoded": " to",
+              "mass": 0.0021026106134781407,
+              "share_of_text": 0.0061856628399907946,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0021026106134781407
+                }
+              }
+            },
+            {
+              "position": 5,
+              "token_id": 4673,
+              "piece": "▁stop",
+              "decoded": " stop",
+              "mass": 0.000914350875084185,
+              "share_of_text": 0.0026899256545487365,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.000914350875084185
+                }
+              }
+            },
+            {
+              "position": 6,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0004671440490831931,
+              "share_of_text": 0.0013742894508445248,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0004671440490831931
+                }
+              }
+            },
+            {
+              "position": 7,
+              "token_id": 28660,
+              "piece": "▁cube",
+              "decoded": " cube",
+              "mass": 0.0003196965328728159,
+              "share_of_text": 0.0009405141164935112,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0003196965328728159
+                }
+              }
+            },
+            {
+              "position": 8,
+              "token_id": 1317,
+              "piece": "▁just",
+              "decoded": " just",
+              "mass": 0.00028924529544181293,
+              "share_of_text": 0.0008509297271628091,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.00028924529544181293
+                }
+              }
+            },
+            {
+              "position": 9,
+              "token_id": 685,
+              "piece": "▁as",
+              "decoded": " as",
+              "mass": 0.0004134247558087938,
+              "share_of_text": 0.0012162528490752863,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0004134247558087938
+                }
+              }
+            },
+            {
+              "position": 10,
+              "token_id": 665,
+              "piece": "▁it",
+              "decoded": " it",
+              "mass": 0.00013855277483041086,
+              "share_of_text": 0.00040760792566740003,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.00013855277483041086
+                }
+              }
+            },
+            {
+              "position": 11,
+              "token_id": 26676,
+              "piece": "▁reaches",
+              "decoded": " reaches",
+              "mass": 0.0003729557253730794,
+              "share_of_text": 0.0010971971493979396,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0003729557253730794
+                }
+              }
+            },
+            {
+              "position": 12,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0003068512057264646,
+              "share_of_text": 0.0009027244933044258,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0003068512057264646
+                }
+              }
+            },
+            {
+              "position": 13,
+              "token_id": 4408,
+              "piece": "▁target",
+              "decoded": " target",
+              "mass": 0.0002786030594466461,
+              "share_of_text": 0.0008196213701575998,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0002786030594466461
+                }
+              }
+            },
+            {
+              "position": 14,
+              "token_id": 604,
+              "piece": "▁for",
+              "decoded": " for",
+              "mass": 0.0005343756255590253,
+              "share_of_text": 0.0015720777914981557,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0005343756255590253
+                }
+              }
+            },
+            {
+              "position": 15,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0005977170741082065,
+              "share_of_text": 0.0017584217783544423,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0005977170741082065
+                }
+              }
+            },
+            {
+              "position": 16,
+              "token_id": 12201,
+              "piece": "▁fourth",
+              "decoded": " fourth",
+              "mass": 0.00315495625940255,
+              "share_of_text": 0.009281554830211838,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.00315495625940255
+                }
+              }
+            },
+            {
+              "position": 17,
+              "token_id": 1069,
+              "piece": "▁time",
+              "decoded": " time",
+              "mass": 0.002363770730379555,
+              "share_of_text": 0.006953968878231728,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.002363770730379555
+                }
+              }
+            },
+            {
+              "position": 18,
+              "token_id": 108,
+              "piece": "\n",
+              "decoded": "\n",
+              "mass": 0.018714422568057974,
+              "share_of_text": 0.05505589456700647,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.018714422568057974
+                }
+              }
+            }
+          ]
+        },
+        {
+          "episode_key": "StopCube:0",
+          "env_step": 117,
+          "p": 0.0,
+          "prompt": "press the button to stop the cube just as it reaches the target for the fourth time\n",
+          "text_mass": 0.39972059328031423,
+          "tokens": [
+            {
+              "position": 0,
+              "token_id": 2,
+              "piece": "<bos>",
+              "decoded": "",
+              "mass": 0.32922785710439917,
+              "share_of_text": 0.8236449726109552,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.32922785710439917
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 1,
+              "token_id": 11355,
+              "piece": "press",
+              "decoded": "press",
+              "mass": 0.009350195239660226,
+              "share_of_text": 0.023391827683751996,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.009350195239660226
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 2,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.005149486539885402,
+              "share_of_text": 0.012882715142660147,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.005149486539885402
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 3,
+              "token_id": 6086,
+              "piece": "▁button",
+              "decoded": " button",
+              "mass": 0.008578618448227644,
+              "share_of_text": 0.0214615373649555,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.008578618448227644
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 4,
+              "token_id": 577,
+              "piece": "▁to",
+              "decoded": " to",
+              "mass": 0.005165291812477839,
+              "share_of_text": 0.012922255944055269,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.005165291812477839
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 5,
+              "token_id": 4673,
+              "piece": "▁stop",
+              "decoded": " stop",
+              "mass": 0.0013907016117850114,
+              "share_of_text": 0.003479184298142344,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0013907016117850114
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 6,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0024126352320632174,
+              "share_of_text": 0.006035804190782074,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0024126352320632174
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 7,
+              "token_id": 28660,
+              "piece": "▁cube",
+              "decoded": " cube",
+              "mass": 0.0016903219431535237,
+              "share_of_text": 0.004228758716887379,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0016903219431535237
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 8,
+              "token_id": 1317,
+              "piece": "▁just",
+              "decoded": " just",
+              "mass": 0.001197235715161595,
+              "share_of_text": 0.00299518147247921,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.001197235715161595
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 9,
+              "token_id": 685,
+              "piece": "▁as",
+              "decoded": " as",
+              "mass": 0.0012130871153850523,
+              "share_of_text": 0.0030348376735605015,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0012130871153850523
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 10,
+              "token_id": 665,
+              "piece": "▁it",
+              "decoded": " it",
+              "mass": 0.0005861382970275979,
+              "share_of_text": 0.0014663700266664857,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0005861382970275979
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 11,
+              "token_id": 26676,
+              "piece": "▁reaches",
+              "decoded": " reaches",
+              "mass": 0.000866097128794839,
+              "share_of_text": 0.0021667563376887773,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.000866097128794839
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 12,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0005727131713906096,
+              "share_of_text": 0.0014327837519969352,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0005727131713906096
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 13,
+              "token_id": 4408,
+              "piece": "▁target",
+              "decoded": " target",
+              "mass": 0.0004546143647490277,
+              "share_of_text": 0.0011373303562326543,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0004546143647490277
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 14,
+              "token_id": 604,
+              "piece": "▁for",
+              "decoded": " for",
+              "mass": 0.00097028737836,
+              "share_of_text": 0.0024274140353823634,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.00097028737836
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 15,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0009213277860544622,
+              "share_of_text": 0.002304929497110892,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0009213277860544622
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 16,
+              "token_id": 12201,
+              "piece": "▁fourth",
+              "decoded": " fourth",
+              "mass": 0.0019778095754898256,
+              "share_of_text": 0.0049479801860066695,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0019778095754898256
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 17,
+              "token_id": 1069,
+              "piece": "▁time",
+              "decoded": " time",
+              "mass": 0.0014594683048522307,
+              "share_of_text": 0.0036512212014774567,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0014594683048522307
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 18,
+              "token_id": 108,
+              "piece": "\n",
+              "decoded": "\n",
+              "mass": 0.026536706511396915,
+              "share_of_text": 0.06638813950920806,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.026536706511396915
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            }
+          ]
+        },
+        {
+          "episode_key": "StopCube:6",
+          "env_step": 253,
+          "p": 0.0,
+          "prompt": "press the button to stop the cube just as it reaches the target for the third time\n",
+          "text_mass": 0.4006809505101086,
+          "tokens": [
+            {
+              "position": 0,
+              "token_id": 2,
+              "piece": "<bos>",
+              "decoded": "",
+              "mass": 0.33953295057924054,
+              "share_of_text": 0.8473898001564081,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.33953295057924054
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 1,
+              "token_id": 11355,
+              "piece": "press",
+              "decoded": "press",
+              "mass": 0.006213793949120575,
+              "share_of_text": 0.015508084278051571,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.006213793949120575
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 2,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.002856141995483389,
+              "share_of_text": 0.0071282200759662335,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.002856141995483389
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 3,
+              "token_id": 6086,
+              "piece": "▁button",
+              "decoded": " button",
+              "mass": 0.004080765657903006,
+              "share_of_text": 0.010184576163922357,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.004080765657903006
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 4,
+              "token_id": 577,
+              "piece": "▁to",
+              "decoded": " to",
+              "mass": 0.0034208752864247393,
+              "share_of_text": 0.00853765391658777,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0034208752864247393
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 5,
+              "token_id": 4673,
+              "piece": "▁stop",
+              "decoded": " stop",
+              "mass": 0.0011839003105544382,
+              "share_of_text": 0.0029547207299154346,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0011839003105544382
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 6,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0011364411539398133,
+              "share_of_text": 0.0028362744784672326,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0011364411539398133
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 7,
+              "token_id": 28660,
+              "piece": "▁cube",
+              "decoded": " cube",
+              "mass": 0.0014557382557541132,
+              "share_of_text": 0.0036331606329195504,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0014557382557541132
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 8,
+              "token_id": 1317,
+              "piece": "▁just",
+              "decoded": " just",
+              "mass": 0.0011796723637315962,
+              "share_of_text": 0.0029441688261689263,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0011796723637315962
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 9,
+              "token_id": 685,
+              "piece": "▁as",
+              "decoded": " as",
+              "mass": 0.0013964223057135112,
+              "share_of_text": 0.003485122773956985,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0013964223057135112
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 10,
+              "token_id": 665,
+              "piece": "▁it",
+              "decoded": " it",
+              "mass": 0.0011450329787718752,
+              "share_of_text": 0.002857717536394303,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0011450329787718752
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 11,
+              "token_id": 26676,
+              "piece": "▁reaches",
+              "decoded": " reaches",
+              "mass": 0.0014937836495745513,
+              "share_of_text": 0.0037281124737095915,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0014937836495745513
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 12,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.000680284267032726,
+              "share_of_text": 0.0016978203385178488,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.000680284267032726
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 13,
+              "token_id": 4408,
+              "piece": "▁target",
+              "decoded": " target",
+              "mass": 0.0007627125187880463,
+              "share_of_text": 0.0019035407543508964,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0007627125187880463
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 14,
+              "token_id": 604,
+              "piece": "▁for",
+              "decoded": " for",
+              "mass": 0.0022096210909593435,
+              "share_of_text": 0.005514664693058818,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0022096210909593435
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 15,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0019795830537461573,
+              "share_of_text": 0.004940546964426289,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0019795830537461573
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 16,
+              "token_id": 4906,
+              "piece": "▁third",
+              "decoded": " third",
+              "mass": 0.003088767276300739,
+              "share_of_text": 0.007708794921167119,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.003088767276300739
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 17,
+              "token_id": 1069,
+              "piece": "▁time",
+              "decoded": " time",
+              "mass": 0.002584481547948801,
+              "share_of_text": 0.006450223162989123,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.002584481547948801
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 18,
+              "token_id": 108,
+              "piece": "\n",
+              "decoded": "\n",
+              "mass": 0.024279982269120717,
+              "share_of_text": 0.06059679712302212,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.024279982269120717
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            }
+          ]
+        },
+        {
+          "episode_key": "StopCube:6",
+          "env_step": 273,
+          "p": 1.0,
+          "prompt": "press the button to stop the cube just as it reaches the target for the third time\n",
+          "text_mass": 0.38722784312752384,
+          "tokens": [
+            {
+              "position": 0,
+              "token_id": 2,
+              "piece": "<bos>",
+              "decoded": "",
+              "mass": 0.30429505378654637,
+              "share_of_text": 0.7858294778827006,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.30429505378654637
+                }
+              }
+            },
+            {
+              "position": 1,
+              "token_id": 11355,
+              "piece": "press",
+              "decoded": "press",
+              "mass": 0.0131569332911426,
+              "share_of_text": 0.03397723982056138,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0131569332911426
+                }
+              }
+            },
+            {
+              "position": 2,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.006402334196544769,
+              "share_of_text": 0.01653376509507949,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.006402334196544769
+                }
+              }
+            },
+            {
+              "position": 3,
+              "token_id": 6086,
+              "piece": "▁button",
+              "decoded": " button",
+              "mass": 0.008969463795009588,
+              "share_of_text": 0.023163271841626632,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.008969463795009588
+                }
+              }
+            },
+            {
+              "position": 4,
+              "token_id": 577,
+              "piece": "▁to",
+              "decoded": " to",
+              "mass": 0.0025887892208993433,
+              "share_of_text": 0.006685441831843662,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0025887892208993433
+                }
+              }
+            },
+            {
+              "position": 5,
+              "token_id": 4673,
+              "piece": "▁stop",
+              "decoded": " stop",
+              "mass": 0.0007713193423114717,
+              "share_of_text": 0.0019919005205869377,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0007713193423114717
+                }
+              }
+            },
+            {
+              "position": 6,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0007284410049517949,
+              "share_of_text": 0.0018811689755271574,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0007284410049517949
+                }
+              }
+            },
+            {
+              "position": 7,
+              "token_id": 28660,
+              "piece": "▁cube",
+              "decoded": " cube",
+              "mass": 0.0010269547114148737,
+              "share_of_text": 0.0026520683614082775,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0010269547114148737
+                }
+              }
+            },
+            {
+              "position": 8,
+              "token_id": 1317,
+              "piece": "▁just",
+              "decoded": " just",
+              "mass": 0.002502601947118011,
+              "share_of_text": 0.006462866737332835,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.002502601947118011
+                }
+              }
+            },
+            {
+              "position": 9,
+              "token_id": 685,
+              "piece": "▁as",
+              "decoded": " as",
+              "mass": 0.001443666503764689,
+              "share_of_text": 0.003728209449260221,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.001443666503764689
+                }
+              }
+            },
+            {
+              "position": 10,
+              "token_id": 665,
+              "piece": "▁it",
+              "decoded": " it",
+              "mass": 0.0020467126729070318,
+              "share_of_text": 0.005285551411738225,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0020467126729070318
+                }
+              }
+            },
+            {
+              "position": 11,
+              "token_id": 26676,
+              "piece": "▁reaches",
+              "decoded": " reaches",
+              "mass": 0.001295478648195664,
+              "share_of_text": 0.003345520398875425,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.001295478648195664
+                }
+              }
+            },
+            {
+              "position": 12,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0010618637983376782,
+              "share_of_text": 0.0027422196445413658,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0010618637983376782
+                }
+              }
+            },
+            {
+              "position": 13,
+              "token_id": 4408,
+              "piece": "▁target",
+              "decoded": " target",
+              "mass": 0.0012891070798246396,
+              "share_of_text": 0.003329066085261086,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0012891070798246396
+                }
+              }
+            },
+            {
+              "position": 14,
+              "token_id": 604,
+              "piece": "▁for",
+              "decoded": " for",
+              "mass": 0.004510787776153949,
+              "share_of_text": 0.011648924157213646,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.004510787776153949
+                }
+              }
+            },
+            {
+              "position": 15,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0026077866854353083,
+              "share_of_text": 0.006734502003711801,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0026077866854353083
+                }
+              }
+            },
+            {
+              "position": 16,
+              "token_id": 4906,
+              "piece": "▁third",
+              "decoded": " third",
+              "mass": 0.004041260913687033,
+              "share_of_text": 0.010436390320094168,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.004041260913687033
+                }
+              }
+            },
+            {
+              "position": 17,
+              "token_id": 1069,
+              "piece": "▁time",
+              "decoded": " time",
+              "mass": 0.002620544889683111,
+              "share_of_text": 0.0067674495421552105,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.002620544889683111
+                }
+              }
+            },
+            {
+              "position": 18,
+              "token_id": 108,
+              "piece": "\n",
+              "decoded": "\n",
+              "mass": 0.025868742863595903,
+              "share_of_text": 0.0668049659204818,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.025868742863595903
+                }
+              }
+            }
+          ]
+        },
+        {
+          "episode_key": "StopCube:6",
+          "env_step": 53,
+          "p": 0.0,
+          "prompt": "press the button to stop the cube just as it reaches the target for the third time\n",
+          "text_mass": 0.42040099586567115,
+          "tokens": [
+            {
+              "position": 0,
+              "token_id": 2,
+              "piece": "<bos>",
+              "decoded": "",
+              "mass": 0.3254099764925842,
+              "share_of_text": 0.7740466356948426,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.3254099764925842
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 1,
+              "token_id": 11355,
+              "piece": "press",
+              "decoded": "press",
+              "mass": 0.006659548408351839,
+              "share_of_text": 0.01584094346550914,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.006659548408351839
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 2,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.005276101604104042,
+              "share_of_text": 0.012550164381127896,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.005276101604104042
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 3,
+              "token_id": 6086,
+              "piece": "▁button",
+              "decoded": " button",
+              "mass": 0.007350869559320724,
+              "share_of_text": 0.01748537618038734,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.007350869559320724
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 4,
+              "token_id": 577,
+              "piece": "▁to",
+              "decoded": " to",
+              "mass": 0.004908419464093943,
+              "share_of_text": 0.011675565739293129,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.004908419464093943
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 5,
+              "token_id": 4673,
+              "piece": "▁stop",
+              "decoded": " stop",
+              "mass": 0.0033686988759371963,
+              "share_of_text": 0.008013061122751436,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0033686988759371963
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 6,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.003379116394143137,
+              "share_of_text": 0.00803784107881336,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.003379116394143137
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 7,
+              "token_id": 28660,
+              "piece": "▁cube",
+              "decoded": " cube",
+              "mass": 0.00228017973066825,
+              "share_of_text": 0.005423820954498466,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.00228017973066825
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 8,
+              "token_id": 1317,
+              "piece": "▁just",
+              "decoded": " just",
+              "mass": 0.004967427145844947,
+              "share_of_text": 0.011815926210203762,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.004967427145844947
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 9,
+              "token_id": 685,
+              "piece": "▁as",
+              "decoded": " as",
+              "mass": 0.005465408638637099,
+              "share_of_text": 0.013000465489818765,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.005465408638637099
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 10,
+              "token_id": 665,
+              "piece": "▁it",
+              "decoded": " it",
+              "mass": 0.0008943961664206453,
+              "share_of_text": 0.0021274834627328706,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0008943961664206453
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 11,
+              "token_id": 26676,
+              "piece": "▁reaches",
+              "decoded": " reaches",
+              "mass": 0.0018523565291737516,
+              "share_of_text": 0.004406165892541384,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0018523565291737516
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 12,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0013925702919045256,
+              "share_of_text": 0.0033124809541352452,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0013925702919045256
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 13,
+              "token_id": 4408,
+              "piece": "▁target",
+              "decoded": " target",
+              "mass": 0.001121748946607113,
+              "share_of_text": 0.0026682832762973292,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.001121748946607113
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 14,
+              "token_id": 604,
+              "piece": "▁for",
+              "decoded": " for",
+              "mass": 0.001644542837618954,
+              "share_of_text": 0.003911843344311267,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.001644542837618954
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 15,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0012830731678857572,
+              "share_of_text": 0.003052022189537657,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0012830731678857572
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 16,
+              "token_id": 4906,
+              "piece": "▁third",
+              "decoded": " third",
+              "mass": 0.0014453785263726278,
+              "share_of_text": 0.0034380949155374103,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0014453785263726278
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 17,
+              "token_id": 1069,
+              "piece": "▁time",
+              "decoded": " time",
+              "mass": 0.004332772329346173,
+              "share_of_text": 0.01030628464717197,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.004332772329346173
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 18,
+              "token_id": 108,
+              "piece": "\n",
+              "decoded": "\n",
+              "mass": 0.03736841075665628,
+              "share_of_text": 0.08888754100048907,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.03736841075665628
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "ctx": {
+      "analysis_sha256": "7037a3239fc7dade3754f2dda19eca9671dfa0790e9f6e481d6a140a2face459",
+      "points": [
+        {
+          "episode_key": "StopCube:3",
+          "env_step": 53,
+          "p": 0.0,
+          "prompt": "press the button to stop the cube just as it reaches the target for the second time\n",
+          "text_mass": 0.38835011900324995,
+          "tokens": [
+            {
+              "position": 0,
+              "token_id": 2,
+              "piece": "<bos>",
+              "decoded": "",
+              "mass": 0.28782982926039646,
+              "share_of_text": 0.7411606567783432,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.28782982926039646
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 1,
+              "token_id": 11355,
+              "piece": "press",
+              "decoded": "press",
+              "mass": 0.01297898316083269,
+              "share_of_text": 0.033420829621849744,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.01297898316083269
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 2,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.006871568583107244,
+              "share_of_text": 0.017694261561562025,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.006871568583107244
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 3,
+              "token_id": 6086,
+              "piece": "▁button",
+              "decoded": " button",
+              "mass": 0.008830029915035184,
+              "share_of_text": 0.022737291642136177,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.008830029915035184
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 4,
+              "token_id": 577,
+              "piece": "▁to",
+              "decoded": " to",
+              "mass": 0.001482417837250978,
+              "share_of_text": 0.0038172199896727007,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.001482417837250978
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 5,
+              "token_id": 4673,
+              "piece": "▁stop",
+              "decoded": " stop",
+              "mass": 0.011754393571366867,
+              "share_of_text": 0.030267516336897272,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.011754393571366867
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 6,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0009018581536495023,
+              "share_of_text": 0.0023222811311716246,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0009018581536495023
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 7,
+              "token_id": 28660,
+              "piece": "▁cube",
+              "decoded": " cube",
+              "mass": 0.0020241108433239987,
+              "share_of_text": 0.0052120773093082525,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0020241108433239987
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 8,
+              "token_id": 1317,
+              "piece": "▁just",
+              "decoded": " just",
+              "mass": 0.0015964617836289109,
+              "share_of_text": 0.004110882694529445,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0015964617836289109
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 9,
+              "token_id": 685,
+              "piece": "▁as",
+              "decoded": " as",
+              "mass": 0.0013131902703187532,
+              "share_of_text": 0.003381459683054104,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0013131902703187532
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 10,
+              "token_id": 665,
+              "piece": "▁it",
+              "decoded": " it",
+              "mass": 0.0009381841004101767,
+              "share_of_text": 0.0024158202984928797,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0009381841004101767
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 11,
+              "token_id": 26676,
+              "piece": "▁reaches",
+              "decoded": " reaches",
+              "mass": 0.0014786102511506114,
+              "share_of_text": 0.0038074154707243373,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0014786102511506114
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 12,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0007195986023483177,
+              "share_of_text": 0.0018529635170326693,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0007195986023483177
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 13,
+              "token_id": 4408,
+              "piece": "▁target",
+              "decoded": " target",
+              "mass": 0.0016669483431097534,
+              "share_of_text": 0.004292385302695899,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0016669483431097534
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 14,
+              "token_id": 604,
+              "piece": "▁for",
+              "decoded": " for",
+              "mass": 0.002614585197944608,
+              "share_of_text": 0.006732546405947484,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.002614585197944608
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 15,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0017257194748769205,
+              "share_of_text": 0.004443720731452843,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0017257194748769205
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 16,
+              "token_id": 2257,
+              "piece": "▁second",
+              "decoded": " second",
+              "mass": 0.013252449986628362,
+              "share_of_text": 0.03412500560227061,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.013252449986628362
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 17,
+              "token_id": 1069,
+              "piece": "▁time",
+              "decoded": " time",
+              "mass": 0.0102979105972271,
+              "share_of_text": 0.026517078515793942,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0102979105972271
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 18,
+              "token_id": 108,
+              "piece": "\n",
+              "decoded": "\n",
+              "mass": 0.020073269070643517,
+              "share_of_text": 0.05168858740706484,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.020073269070643517
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            }
+          ]
+        },
+        {
+          "episode_key": "StopCube:3",
+          "env_step": 65,
+          "p": 0.9,
+          "prompt": "press the button to stop the cube just as it reaches the target for the second time\n",
+          "text_mass": 0.32645260591266884,
+          "tokens": [
+            {
+              "position": 0,
+              "token_id": 2,
+              "piece": "<bos>",
+              "decoded": "",
+              "mass": 0.27740897666740544,
+              "share_of_text": 0.8497679958530233,
+              "conditional": {
+                "False": {
+                  "n": 1,
+                  "mass": 0.2813880828519662
+                },
+                "True": {
+                  "n": 9,
+                  "mass": 0.2769668537580098
+                }
+              }
+            },
+            {
+              "position": 1,
+              "token_id": 11355,
+              "piece": "press",
+              "decoded": "press",
+              "mass": 0.002438790009150075,
+              "share_of_text": 0.0074705790824732745,
+              "conditional": {
+                "False": {
+                  "n": 1,
+                  "mass": 0.002473179390653968
+                },
+                "True": {
+                  "n": 9,
+                  "mass": 0.0024349689667607535
+                }
+              }
+            },
+            {
+              "position": 2,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0004899932335441311,
+              "share_of_text": 0.0015009628493368862,
+              "conditional": {
+                "False": {
+                  "n": 1,
+                  "mass": 0.0004965294592289461
+                },
+                "True": {
+                  "n": 9,
+                  "mass": 0.0004892669862458184
+                }
+              }
+            },
+            {
+              "position": 3,
+              "token_id": 6086,
+              "piece": "▁button",
+              "decoded": " button",
+              "mass": 0.004437613188444326,
+              "share_of_text": 0.013593437785671887,
+              "conditional": {
+                "False": {
+                  "n": 1,
+                  "mass": 0.004562951947769357
+                },
+                "True": {
+                  "n": 9,
+                  "mass": 0.004423686659630434
+                }
+              }
+            },
+            {
+              "position": 4,
+              "token_id": 577,
+              "piece": "▁to",
+              "decoded": " to",
+              "mass": 0.0007227044593956736,
+              "share_of_text": 0.002213811273998555,
+              "conditional": {
+                "False": {
+                  "n": 1,
+                  "mass": 0.0007305162725970149
+                },
+                "True": {
+                  "n": 9,
+                  "mass": 0.0007218364801510799
+                }
+              }
+            },
+            {
+              "position": 5,
+              "token_id": 4673,
+              "piece": "▁stop",
+              "decoded": " stop",
+              "mass": 0.0014092098983625573,
+              "share_of_text": 0.004316736557892703,
+              "conditional": {
+                "False": {
+                  "n": 1,
+                  "mass": 0.0014130914169881079
+                },
+                "True": {
+                  "n": 9,
+                  "mass": 0.0014087786185152736
+                }
+              }
+            },
+            {
+              "position": 6,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.00045798372658383517,
+              "share_of_text": 0.0014029103100691835,
+              "conditional": {
+                "False": {
+                  "n": 1,
+                  "mass": 0.0004684447310864926
+                },
+                "True": {
+                  "n": 9,
+                  "mass": 0.0004568213927502066
+                }
+              }
+            },
+            {
+              "position": 7,
+              "token_id": 28660,
+              "piece": "▁cube",
+              "decoded": " cube",
+              "mass": 0.0011241063824854792,
+              "share_of_text": 0.0034433984049316952,
+              "conditional": {
+                "False": {
+                  "n": 1,
+                  "mass": 0.0011328257102933195
+                },
+                "True": {
+                  "n": 9,
+                  "mass": 0.001123137568284608
+                }
+              }
+            },
+            {
+              "position": 8,
+              "token_id": 1317,
+              "piece": "▁just",
+              "decoded": " just",
+              "mass": 0.0005345367870500518,
+              "share_of_text": 0.0016374100784266638,
+              "conditional": {
+                "False": {
+                  "n": 1,
+                  "mass": 0.0005347784091201094
+                },
+                "True": {
+                  "n": 9,
+                  "mass": 0.0005345099401533787
+                }
+              }
+            },
+            {
+              "position": 9,
+              "token_id": 685,
+              "piece": "▁as",
+              "decoded": " as",
+              "mass": 0.0006463187894163032,
+              "share_of_text": 0.001979824261501541,
+              "conditional": {
+                "False": {
+                  "n": 1,
+                  "mass": 0.000643083473874463
+                },
+                "True": {
+                  "n": 9,
+                  "mass": 0.000646678268920952
+                }
+              }
+            },
+            {
+              "position": 10,
+              "token_id": 665,
+              "piece": "▁it",
+              "decoded": " it",
+              "mass": 0.00044307337168397173,
+              "share_of_text": 0.0013572364369561834,
+              "conditional": {
+                "False": {
+                  "n": 1,
+                  "mass": 0.00044821714464988977
+                },
+                "True": {
+                  "n": 9,
+                  "mass": 0.00044250184135442535
+                }
+              }
+            },
+            {
+              "position": 11,
+              "token_id": 26676,
+              "piece": "▁reaches",
+              "decoded": " reaches",
+              "mass": 0.0007212695339694618,
+              "share_of_text": 0.002209415764818286,
+              "conditional": {
+                "False": {
+                  "n": 1,
+                  "mass": 0.0007277129114502005
+                },
+                "True": {
+                  "n": 9,
+                  "mass": 0.0007205536031382687
+                }
+              }
+            },
+            {
+              "position": 12,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.00039626319737484064,
+              "share_of_text": 0.0012138460229686365,
+              "conditional": {
+                "False": {
+                  "n": 1,
+                  "mass": 0.0004088349459278915
+                },
+                "True": {
+                  "n": 9,
+                  "mass": 0.00039486633642450166
+                }
+              }
+            },
+            {
+              "position": 13,
+              "token_id": 4408,
+              "piece": "▁target",
+              "decoded": " target",
+              "mass": 0.0011561145320431226,
+              "share_of_text": 0.003541446786160443,
+              "conditional": {
+                "False": {
+                  "n": 1,
+                  "mass": 0.0011559035680774184
+                },
+                "True": {
+                  "n": 9,
+                  "mass": 0.0011561379724837565
+                }
+              }
+            },
+            {
+              "position": 14,
+              "token_id": 604,
+              "piece": "▁for",
+              "decoded": " for",
+              "mass": 0.0016825205504169894,
+              "share_of_text": 0.005153950435510047,
+              "conditional": {
+                "False": {
+                  "n": 1,
+                  "mass": 0.0016882004630234505
+                },
+                "True": {
+                  "n": 9,
+                  "mass": 0.0016818894490162716
+                }
+              }
+            },
+            {
+              "position": 15,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0006895990982755191,
+              "share_of_text": 0.002112401879432378,
+              "conditional": {
+                "False": {
+                  "n": 1,
+                  "mass": 0.0006826605958243211
+                },
+                "True": {
+                  "n": 9,
+                  "mass": 0.0006903700429923188
+                }
+              }
+            },
+            {
+              "position": 16,
+              "token_id": 2257,
+              "piece": "▁second",
+              "decoded": " second",
+              "mass": 0.005704734608686217,
+              "share_of_text": 0.01747492440054935,
+              "conditional": {
+                "False": {
+                  "n": 1,
+                  "mass": 0.005379632604308428
+                },
+                "True": {
+                  "n": 9,
+                  "mass": 0.005740857053617084
+                }
+              }
+            },
+            {
+              "position": 17,
+              "token_id": 1069,
+              "piece": "▁time",
+              "decoded": " time",
+              "mass": 0.002413020710357361,
+              "share_of_text": 0.007391641747233844,
+              "conditional": {
+                "False": {
+                  "n": 1,
+                  "mass": 0.0024244697531685235
+                },
+                "True": {
+                  "n": 9,
+                  "mass": 0.0024117485944894546
+                }
+              }
+            },
+            {
+              "position": 18,
+              "token_id": 108,
+              "piece": "\n",
+              "decoded": "\n",
+              "mass": 0.0235757771680235,
+              "share_of_text": 0.07221807006904515,
+              "conditional": {
+                "False": {
+                  "n": 1,
+                  "mass": 0.0225774737359542
+                },
+                "True": {
+                  "n": 9,
+                  "mass": 0.02368669977158676
+                }
+              }
+            }
+          ]
+        },
+        {
+          "episode_key": "StopCube:0",
+          "env_step": 233,
+          "p": 0.0,
+          "prompt": "press the button to stop the cube just as it reaches the target for the fourth time\n",
+          "text_mass": 0.3786534989971874,
+          "tokens": [
+            {
+              "position": 0,
+              "token_id": 2,
+              "piece": "<bos>",
+              "decoded": "",
+              "mass": 0.29428585529870666,
+              "share_of_text": 0.7771903761039656,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.29428585529870666
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 1,
+              "token_id": 11355,
+              "piece": "press",
+              "decoded": "press",
+              "mass": 0.004250590503474491,
+              "share_of_text": 0.011225541331934354,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.004250590503474491
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 2,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0008502381359640922,
+              "share_of_text": 0.002245425271959279,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0008502381359640922
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 3,
+              "token_id": 6086,
+              "piece": "▁button",
+              "decoded": " button",
+              "mass": 0.008312680516391993,
+              "share_of_text": 0.021953264761601313,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.008312680516391993
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 4,
+              "token_id": 577,
+              "piece": "▁to",
+              "decoded": " to",
+              "mass": 0.0011881155049842265,
+              "share_of_text": 0.0031377380854284717,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0011881155049842265
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 5,
+              "token_id": 4673,
+              "piece": "▁stop",
+              "decoded": " stop",
+              "mass": 0.002678956601820472,
+              "share_of_text": 0.007074955358699514,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.002678956601820472
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 6,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.001006008993782517,
+              "share_of_text": 0.002656806279215155,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.001006008993782517
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 7,
+              "token_id": 28660,
+              "piece": "▁cube",
+              "decoded": " cube",
+              "mass": 0.002030736345849517,
+              "share_of_text": 0.005363046561639197,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.002030736345849517
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 8,
+              "token_id": 1317,
+              "piece": "▁just",
+              "decoded": " just",
+              "mass": 0.0018777952687297431,
+              "share_of_text": 0.004959138826665619,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0018777952687297431
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 9,
+              "token_id": 685,
+              "piece": "▁as",
+              "decoded": " as",
+              "mass": 0.0022428713531957734,
+              "share_of_text": 0.00592328173154537,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0022428713531957734
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 10,
+              "token_id": 665,
+              "piece": "▁it",
+              "decoded": " it",
+              "mass": 0.0012485357886180284,
+              "share_of_text": 0.0032973042423339715,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0012485357886180284
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 11,
+              "token_id": 26676,
+              "piece": "▁reaches",
+              "decoded": " reaches",
+              "mass": 0.0026868527783598336,
+              "share_of_text": 0.007095808662736776,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0026868527783598336
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 12,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0008069990593422619,
+              "share_of_text": 0.002131233598737341,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0008069990593422619
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 13,
+              "token_id": 4408,
+              "piece": "▁target",
+              "decoded": " target",
+              "mass": 0.001528803808614612,
+              "share_of_text": 0.004037474399849578,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.001528803808614612
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 14,
+              "token_id": 604,
+              "piece": "▁for",
+              "decoded": " for",
+              "mass": 0.002107007985727654,
+              "share_of_text": 0.005564475150256844,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.002107007985727654
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 15,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0008421974536031485,
+              "share_of_text": 0.002224190337164702,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0008421974536031485
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 16,
+              "token_id": 12201,
+              "piece": "▁fourth",
+              "decoded": " fourth",
+              "mass": 0.00613312411794646,
+              "share_of_text": 0.016197193830742907,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.00613312411794646
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 17,
+              "token_id": 1069,
+              "piece": "▁time",
+              "decoded": " time",
+              "mass": 0.016646613797897267,
+              "share_of_text": 0.04396265673493992,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.016646613797897267
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 18,
+              "token_id": 108,
+              "piece": "\n",
+              "decoded": "\n",
+              "mass": 0.027929515684178716,
+              "share_of_text": 0.07376008873058419,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.027929515684178716
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            }
+          ]
+        },
+        {
+          "episode_key": "StopCube:0",
+          "env_step": 253,
+          "p": 0.0,
+          "prompt": "press the button to stop the cube just as it reaches the target for the fourth time\n",
+          "text_mass": 0.3370374224842009,
+          "tokens": [
+            {
+              "position": 0,
+              "token_id": 2,
+              "piece": "<bos>",
+              "decoded": "",
+              "mass": 0.27705132540444743,
+              "share_of_text": 0.8220194759453889,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.27705132540444743
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 1,
+              "token_id": 11355,
+              "piece": "press",
+              "decoded": "press",
+              "mass": 0.0030613622090054876,
+              "share_of_text": 0.009083152210342438,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0030613622090054876
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 2,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0004741412944470843,
+              "share_of_text": 0.001406791242801266,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0004741412944470843
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 3,
+              "token_id": 6086,
+              "piece": "▁button",
+              "decoded": " button",
+              "mass": 0.011441572019312944,
+              "share_of_text": 0.033947482552473186,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.011441572019312944
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 4,
+              "token_id": 577,
+              "piece": "▁to",
+              "decoded": " to",
+              "mass": 0.0003183052688837051,
+              "share_of_text": 0.000944421146285695,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0003183052688837051
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 5,
+              "token_id": 4673,
+              "piece": "▁stop",
+              "decoded": " stop",
+              "mass": 0.0009630331358251473,
+              "share_of_text": 0.002857347794576998,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0009630331358251473
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 6,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0003220563477629589,
+              "share_of_text": 0.0009555507082542317,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0003220563477629589
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 7,
+              "token_id": 28660,
+              "piece": "▁cube",
+              "decoded": " cube",
+              "mass": 0.000717098962308632,
+              "share_of_text": 0.0021276538285366427,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.000717098962308632
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 8,
+              "token_id": 1317,
+              "piece": "▁just",
+              "decoded": " just",
+              "mass": 0.0006159035372547805,
+              "share_of_text": 0.0018274040096649857,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0006159035372547805
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 9,
+              "token_id": 685,
+              "piece": "▁as",
+              "decoded": " as",
+              "mass": 0.0005339706991799176,
+              "share_of_text": 0.0015843068560285711,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0005339706991799176
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 10,
+              "token_id": 665,
+              "piece": "▁it",
+              "decoded": " it",
+              "mass": 0.00038483716702709595,
+              "share_of_text": 0.0011418232556805639,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.00038483716702709595
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 11,
+              "token_id": 26676,
+              "piece": "▁reaches",
+              "decoded": " reaches",
+              "mass": 0.0008467058907262982,
+              "share_of_text": 0.0025122014181258724,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0008467058907262982
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 12,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.00033897320739924904,
+              "share_of_text": 0.001005743531091533,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.00033897320739924904
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 13,
+              "token_id": 4408,
+              "piece": "▁target",
+              "decoded": " target",
+              "mass": 0.0007445196196850804,
+              "share_of_text": 0.002209011729906583,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0007445196196850804
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 14,
+              "token_id": 604,
+              "piece": "▁for",
+              "decoded": " for",
+              "mass": 0.0011094339535985555,
+              "share_of_text": 0.0032917233505444397,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0011094339535985555
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 15,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0004964252933859825,
+              "share_of_text": 0.0014729085266763015,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0004964252933859825
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 16,
+              "token_id": 12201,
+              "piece": "▁fourth",
+              "decoded": " fourth",
+              "mass": 0.007729995414200756,
+              "share_of_text": 0.022935124999548414,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.007729995414200756
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 17,
+              "token_id": 1069,
+              "piece": "▁time",
+              "decoded": " time",
+              "mass": 0.0019499841609245372,
+              "share_of_text": 0.005785660673974403,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0019499841609245372
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 18,
+              "token_id": 108,
+              "piece": "\n",
+              "decoded": "\n",
+              "mass": 0.027937778898825254,
+              "share_of_text": 0.08289221622009905,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.027937778898825254
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            }
+          ]
+        },
+        {
+          "episode_key": "StopCube:0",
+          "env_step": 117,
+          "p": 0.0,
+          "prompt": "press the button to stop the cube just as it reaches the target for the fourth time\n",
+          "text_mass": 0.3722767944990968,
+          "tokens": [
+            {
+              "position": 0,
+              "token_id": 2,
+              "piece": "<bos>",
+              "decoded": "",
+              "mass": 0.2965087335784402,
+              "share_of_text": 0.79647385482997,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.2965087335784402
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 1,
+              "token_id": 11355,
+              "piece": "press",
+              "decoded": "press",
+              "mass": 0.005083513254713681,
+              "share_of_text": 0.013655197771737595,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.005083513254713681
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 2,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.000812236619854553,
+              "share_of_text": 0.002181808352968731,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.000812236619854553
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 3,
+              "token_id": 6086,
+              "piece": "▁button",
+              "decoded": " button",
+              "mass": 0.009581570613404942,
+              "share_of_text": 0.025737759524595318,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.009581570613404942
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 4,
+              "token_id": 577,
+              "piece": "▁to",
+              "decoded": " to",
+              "mass": 0.0011138928717830115,
+              "share_of_text": 0.0029921093343509863,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0011138928717830115
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 5,
+              "token_id": 4673,
+              "piece": "▁stop",
+              "decoded": " stop",
+              "mass": 0.0015263334785898524,
+              "share_of_text": 0.004099996296152581,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0015263334785898524
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 6,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0006742436086965932,
+              "share_of_text": 0.0018111352054693513,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0006742436086965932
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 7,
+              "token_id": 28660,
+              "piece": "▁cube",
+              "decoded": " cube",
+              "mass": 0.0009637908228776522,
+              "share_of_text": 0.0025889092124972363,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0009637908228776522
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 8,
+              "token_id": 1317,
+              "piece": "▁just",
+              "decoded": " just",
+              "mass": 0.0008427052393866081,
+              "share_of_text": 0.002263652346422717,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0008427052393866081
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 9,
+              "token_id": 685,
+              "piece": "▁as",
+              "decoded": " as",
+              "mass": 0.001376268617136197,
+              "share_of_text": 0.0036968960662401317,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.001376268617136197
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 10,
+              "token_id": 665,
+              "piece": "▁it",
+              "decoded": " it",
+              "mass": 0.0010758674268921216,
+              "share_of_text": 0.0028899663980928897,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0010758674268921216
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 11,
+              "token_id": 26676,
+              "piece": "▁reaches",
+              "decoded": " reaches",
+              "mass": 0.0010539715292139187,
+              "share_of_text": 0.002831150221522808,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0010539715292139187
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 12,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.000582552885171026,
+              "share_of_text": 0.0015648380285289024,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.000582552885171026
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 13,
+              "token_id": 4408,
+              "piece": "▁target",
+              "decoded": " target",
+              "mass": 0.0012348087194065252,
+              "share_of_text": 0.003316910260463525,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0012348087194065252
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 14,
+              "token_id": 604,
+              "piece": "▁for",
+              "decoded": " for",
+              "mass": 0.0022035818182242414,
+              "share_of_text": 0.005919202729757006,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0022035818182242414
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 15,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0013136780536216167,
+              "share_of_text": 0.0035287669632730868,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0013136780536216167
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 16,
+              "token_id": 12201,
+              "piece": "▁fourth",
+              "decoded": " fourth",
+              "mass": 0.005209102879226621,
+              "share_of_text": 0.013992553272721541,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.005209102879226621
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 17,
+              "token_id": 1069,
+              "piece": "▁time",
+              "decoded": " time",
+              "mass": 0.00823021784450652,
+              "share_of_text": 0.02210779174560258,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.00823021784450652
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 18,
+              "token_id": 108,
+              "piece": "\n",
+              "decoded": "\n",
+              "mass": 0.032889724637950875,
+              "share_of_text": 0.0883475014396329,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.032889724637950875
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            }
+          ]
+        },
+        {
+          "episode_key": "StopCube:6",
+          "env_step": 253,
+          "p": 0.1,
+          "prompt": "press the button to stop the cube just as it reaches the target for the third time\n",
+          "text_mass": 0.33309264551201423,
+          "tokens": [
+            {
+              "position": 0,
+              "token_id": 2,
+              "piece": "<bos>",
+              "decoded": "",
+              "mass": 0.27617084591701213,
+              "share_of_text": 0.829111208662369,
+              "conditional": {
+                "False": {
+                  "n": 9,
+                  "mass": 0.2780228373298514
+                },
+                "True": {
+                  "n": 1,
+                  "mass": 0.2595029232014591
+                }
+              }
+            },
+            {
+              "position": 1,
+              "token_id": 11355,
+              "piece": "press",
+              "decoded": "press",
+              "mass": 0.003040610443955908,
+              "share_of_text": 0.009128422632334094,
+              "conditional": {
+                "False": {
+                  "n": 9,
+                  "mass": 0.003025140282180574
+                },
+                "True": {
+                  "n": 1,
+                  "mass": 0.0031798418999339144
+                }
+              }
+            },
+            {
+              "position": 2,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0005068033346388903,
+              "share_of_text": 0.001521508629708279,
+              "conditional": {
+                "False": {
+                  "n": 9,
+                  "mass": 0.0005061466807361553
+                },
+                "True": {
+                  "n": 1,
+                  "mass": 0.0005127132197635042
+                }
+              }
+            },
+            {
+              "position": 3,
+              "token_id": 6086,
+              "piece": "▁button",
+              "decoded": " button",
+              "mass": 0.011604218559287902,
+              "share_of_text": 0.03483781078819812,
+              "conditional": {
+                "False": {
+                  "n": 9,
+                  "mass": 0.011574044956446247
+                },
+                "True": {
+                  "n": 1,
+                  "mass": 0.011875780984862812
+                }
+              }
+            },
+            {
+              "position": 4,
+              "token_id": 577,
+              "piece": "▁to",
+              "decoded": " to",
+              "mass": 0.0006977359647862613,
+              "share_of_text": 0.002094720415437977,
+              "conditional": {
+                "False": {
+                  "n": 9,
+                  "mass": 0.0006978814245811032
+                },
+                "True": {
+                  "n": 1,
+                  "mass": 0.0006964268266326851
+                }
+              }
+            },
+            {
+              "position": 5,
+              "token_id": 4673,
+              "piece": "▁stop",
+              "decoded": " stop",
+              "mass": 0.0019265389388116699,
+              "share_of_text": 0.005783793082102685,
+              "conditional": {
+                "False": {
+                  "n": 9,
+                  "mass": 0.0019239732374747593
+                },
+                "True": {
+                  "n": 1,
+                  "mass": 0.0019496302508438628
+                }
+              }
+            },
+            {
+              "position": 6,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0003446217406437629,
+              "share_of_text": 0.001034612277656346,
+              "conditional": {
+                "False": {
+                  "n": 9,
+                  "mass": 0.00034567647021447803
+                },
+                "True": {
+                  "n": 1,
+                  "mass": 0.0003351291745073266
+                }
+              }
+            },
+            {
+              "position": 7,
+              "token_id": 28660,
+              "piece": "▁cube",
+              "decoded": " cube",
+              "mass": 0.0009853332644949358,
+              "share_of_text": 0.0029581357552350886,
+              "conditional": {
+                "False": {
+                  "n": 9,
+                  "mass": 0.0009879505609587571
+                },
+                "True": {
+                  "n": 1,
+                  "mass": 0.0009617775963205432
+                }
+              }
+            },
+            {
+              "position": 8,
+              "token_id": 1317,
+              "piece": "▁just",
+              "decoded": " just",
+              "mass": 0.00084624805720523,
+              "share_of_text": 0.002540578630622173,
+              "conditional": {
+                "False": {
+                  "n": 9,
+                  "mass": 0.0008464070563032121
+                },
+                "True": {
+                  "n": 1,
+                  "mass": 0.0008448170653233926
+                }
+              }
+            },
+            {
+              "position": 9,
+              "token_id": 685,
+              "piece": "▁as",
+              "decoded": " as",
+              "mass": 0.0005757394947835968,
+              "share_of_text": 0.0017284665468929744,
+              "conditional": {
+                "False": {
+                  "n": 9,
+                  "mass": 0.0005767065609149911
+                },
+                "True": {
+                  "n": 1,
+                  "mass": 0.0005670358996010491
+                }
+              }
+            },
+            {
+              "position": 10,
+              "token_id": 665,
+              "piece": "▁it",
+              "decoded": " it",
+              "mass": 0.00040898387630780537,
+              "share_of_text": 0.0012278382060316425,
+              "conditional": {
+                "False": {
+                  "n": 9,
+                  "mass": 0.0004105010564312523
+                },
+                "True": {
+                  "n": 1,
+                  "mass": 0.0003953292551967833
+                }
+              }
+            },
+            {
+              "position": 11,
+              "token_id": 26676,
+              "piece": "▁reaches",
+              "decoded": " reaches",
+              "mass": 0.0009245745071934328,
+              "share_of_text": 0.0027757277731912115,
+              "conditional": {
+                "False": {
+                  "n": 9,
+                  "mass": 0.0009292979046334456
+                },
+                "True": {
+                  "n": 1,
+                  "mass": 0.0008820639302333196
+                }
+              }
+            },
+            {
+              "position": 12,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.00040393989196875024,
+              "share_of_text": 0.0012126953188889326,
+              "conditional": {
+                "False": {
+                  "n": 9,
+                  "mass": 0.0004055684645096828
+                },
+                "True": {
+                  "n": 1,
+                  "mass": 0.00038928273910035684
+                }
+              }
+            },
+            {
+              "position": 13,
+              "token_id": 4408,
+              "piece": "▁target",
+              "decoded": " target",
+              "mass": 0.0008642422723480397,
+              "share_of_text": 0.0025946002831121278,
+              "conditional": {
+                "False": {
+                  "n": 9,
+                  "mass": 0.0008663659691120739
+                },
+                "True": {
+                  "n": 1,
+                  "mass": 0.0008451290014717313
+                }
+              }
+            },
+            {
+              "position": 14,
+              "token_id": 604,
+              "piece": "▁for",
+              "decoded": " for",
+              "mass": 0.0009099158789548609,
+              "share_of_text": 0.0027317201121513247,
+              "conditional": {
+                "False": {
+                  "n": 9,
+                  "mass": 0.0009101447517075288
+                },
+                "True": {
+                  "n": 1,
+                  "mass": 0.0009078560241808493
+                }
+              }
+            },
+            {
+              "position": 15,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0002654522132231957,
+              "share_of_text": 0.0007969320752043479,
+              "conditional": {
+                "False": {
+                  "n": 9,
+                  "mass": 0.000265474397873069
+                },
+                "True": {
+                  "n": 1,
+                  "mass": 0.0002652525513743361
+                }
+              }
+            },
+            {
+              "position": 16,
+              "token_id": 4906,
+              "piece": "▁third",
+              "decoded": " third",
+              "mass": 0.00994162021127219,
+              "share_of_text": 0.029846411637190016,
+              "conditional": {
+                "False": {
+                  "n": 9,
+                  "mass": 0.009927933303823258
+                },
+                "True": {
+                  "n": 1,
+                  "mass": 0.01006480237831258
+                }
+              }
+            },
+            {
+              "position": 17,
+              "token_id": 1069,
+              "piece": "▁time",
+              "decoded": " time",
+              "mass": 0.0021134123351011012,
+              "share_of_text": 0.006344818366831438,
+              "conditional": {
+                "False": {
+                  "n": 9,
+                  "mass": 0.0021162357595231793
+                },
+                "True": {
+                  "n": 1,
+                  "mass": 0.0020880015153023927
+                }
+              }
+            },
+            {
+              "position": 18,
+              "token_id": 108,
+              "piece": "\n",
+              "decoded": "\n",
+              "mass": 0.02056180861002455,
+              "share_of_text": 0.0617299988068422,
+              "conditional": {
+                "False": {
+                  "n": 9,
+                  "mass": 0.02050558082172992
+                },
+                "True": {
+                  "n": 1,
+                  "mass": 0.02106785870467623
+                }
+              }
+            }
+          ]
+        },
+        {
+          "episode_key": "StopCube:6",
+          "env_step": 273,
+          "p": 1.0,
+          "prompt": "press the button to stop the cube just as it reaches the target for the third time\n",
+          "text_mass": 0.31131814090250476,
+          "tokens": [
+            {
+              "position": 0,
+              "token_id": 2,
+              "piece": "<bos>",
+              "decoded": "",
+              "mass": 0.261900415955784,
+              "share_of_text": 0.8412629447051823,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.261900415955784
+                }
+              }
+            },
+            {
+              "position": 1,
+              "token_id": 11355,
+              "piece": "press",
+              "decoded": "press",
+              "mass": 0.003588503046840843,
+              "share_of_text": 0.011526803534281196,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.003588503046840843
+                }
+              }
+            },
+            {
+              "position": 2,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0006123322496811549,
+              "share_of_text": 0.0019669019219568013,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0006123322496811549
+                }
+              }
+            },
+            {
+              "position": 3,
+              "token_id": 6086,
+              "piece": "▁button",
+              "decoded": " button",
+              "mass": 0.008876434135405968,
+              "share_of_text": 0.02851242176146039,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.008876434135405968
+                }
+              }
+            },
+            {
+              "position": 4,
+              "token_id": 577,
+              "piece": "▁to",
+              "decoded": " to",
+              "mass": 0.0005332752159382734,
+              "share_of_text": 0.0017129590148274678,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0005332752159382734
+                }
+              }
+            },
+            {
+              "position": 5,
+              "token_id": 4673,
+              "piece": "▁stop",
+              "decoded": " stop",
+              "mass": 0.0022078569753405945,
+              "share_of_text": 0.007091963767161346,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0022078569753405945
+                }
+              }
+            },
+            {
+              "position": 6,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.00029970704189812144,
+              "share_of_text": 0.0009627034294541173,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.00029970704189812144
+                }
+              }
+            },
+            {
+              "position": 7,
+              "token_id": 28660,
+              "piece": "▁cube",
+              "decoded": " cube",
+              "mass": 0.0007593560267964172,
+              "share_of_text": 0.00243916408017554,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0007593560267964172
+                }
+              }
+            },
+            {
+              "position": 8,
+              "token_id": 1317,
+              "piece": "▁just",
+              "decoded": " just",
+              "mass": 0.0007794324481963283,
+              "share_of_text": 0.0025036525206554618,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0007794324481963283
+                }
+              }
+            },
+            {
+              "position": 9,
+              "token_id": 685,
+              "piece": "▁as",
+              "decoded": " as",
+              "mass": 0.0006470839358452293,
+              "share_of_text": 0.002078529487454045,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0006470839358452293
+                }
+              }
+            },
+            {
+              "position": 10,
+              "token_id": 665,
+              "piece": "▁it",
+              "decoded": " it",
+              "mass": 0.00040546571137383585,
+              "share_of_text": 0.001302415947231341,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.00040546571137383585
+                }
+              }
+            },
+            {
+              "position": 11,
+              "token_id": 26676,
+              "piece": "▁reaches",
+              "decoded": " reaches",
+              "mass": 0.0010266892596458395,
+              "share_of_text": 0.003297878037783114,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0010266892596458395
+                }
+              }
+            },
+            {
+              "position": 12,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.00040729463695445,
+              "share_of_text": 0.001308290727208223,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.00040729463695445
+                }
+              }
+            },
+            {
+              "position": 13,
+              "token_id": 4408,
+              "piece": "▁target",
+              "decoded": " target",
+              "mass": 0.0009843982593156398,
+              "share_of_text": 0.0031620330780014615,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.0009843982593156398
+                }
+              }
+            },
+            {
+              "position": 14,
+              "token_id": 604,
+              "piece": "▁for",
+              "decoded": " for",
+              "mass": 0.000865638428626375,
+              "share_of_text": 0.002780558903881757,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.000865638428626375
+                }
+              }
+            },
+            {
+              "position": 15,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.00026758379121828414,
+              "share_of_text": 0.0008595187882163383,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.00026758379121828414
+                }
+              }
+            },
+            {
+              "position": 16,
+              "token_id": 4906,
+              "piece": "▁third",
+              "decoded": " third",
+              "mass": 0.003720916504195581,
+              "share_of_text": 0.011952135180457913,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.003720916504195581
+                }
+              }
+            },
+            {
+              "position": 17,
+              "token_id": 1069,
+              "piece": "▁time",
+              "decoded": " time",
+              "mass": 0.004387149506041573,
+              "share_of_text": 0.014092174305433403,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.004387149506041573
+                }
+              }
+            },
+            {
+              "position": 18,
+              "token_id": 108,
+              "piece": "\n",
+              "decoded": "\n",
+              "mass": 0.019048607773406223,
+              "share_of_text": 0.06118695080917774,
+              "conditional": {
+                "False": {
+                  "n": 0,
+                  "mass": null
+                },
+                "True": {
+                  "n": 10,
+                  "mass": 0.019048607773406223
+                }
+              }
+            }
+          ]
+        },
+        {
+          "episode_key": "StopCube:6",
+          "env_step": 53,
+          "p": 0.0,
+          "prompt": "press the button to stop the cube just as it reaches the target for the third time\n",
+          "text_mass": 0.3947863014184663,
+          "tokens": [
+            {
+              "position": 0,
+              "token_id": 2,
+              "piece": "<bos>",
+              "decoded": "",
+              "mass": 0.2806464139941252,
+              "share_of_text": 0.7108818441414083,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.2806464139941252
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 1,
+              "token_id": 11355,
+              "piece": "press",
+              "decoded": "press",
+              "mass": 0.022521414561973263,
+              "share_of_text": 0.05704710239705347,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.022521414561973263
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 2,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.012022150680422783,
+              "share_of_text": 0.030452299477533088,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.012022150680422783
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 3,
+              "token_id": 6086,
+              "piece": "▁button",
+              "decoded": " button",
+              "mass": 0.010564096899858365,
+              "share_of_text": 0.02675902598925441,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.010564096899858365
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 4,
+              "token_id": 577,
+              "piece": "▁to",
+              "decoded": " to",
+              "mass": 0.0015569468228042954,
+              "share_of_text": 0.0039437711420335225,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0015569468228042954
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 5,
+              "token_id": 4673,
+              "piece": "▁stop",
+              "decoded": " stop",
+              "mass": 0.012333160347512197,
+              "share_of_text": 0.031240091926186847,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.012333160347512197
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 6,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0012408247797025575,
+              "share_of_text": 0.003143028963376583,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0012408247797025575
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 7,
+              "token_id": 28660,
+              "piece": "▁cube",
+              "decoded": " cube",
+              "mass": 0.0020880715830975936,
+              "share_of_text": 0.005289118633537073,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0020880715830975936
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 8,
+              "token_id": 1317,
+              "piece": "▁just",
+              "decoded": " just",
+              "mass": 0.001957200657731543,
+              "share_of_text": 0.004957620491641491,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.001957200657731543
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 9,
+              "token_id": 685,
+              "piece": "▁as",
+              "decoded": " as",
+              "mass": 0.0019780771607636576,
+              "share_of_text": 0.005010501006890134,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0019780771607636576
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 10,
+              "token_id": 665,
+              "piece": "▁it",
+              "decoded": " it",
+              "mass": 0.0012452657430225777,
+              "share_of_text": 0.003154277994318295,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0012452657430225777
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 11,
+              "token_id": 26676,
+              "piece": "▁reaches",
+              "decoded": " reaches",
+              "mass": 0.001468846796390911,
+              "share_of_text": 0.0037206123695613237,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.001468846796390911
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 12,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0007762861334615283,
+              "share_of_text": 0.0019663451610968615,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0007762861334615283
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 13,
+              "token_id": 4408,
+              "piece": "▁target",
+              "decoded": " target",
+              "mass": 0.00161490442050207,
+              "share_of_text": 0.004090578661670179,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.00161490442050207
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 14,
+              "token_id": 604,
+              "piece": "▁for",
+              "decoded": " for",
+              "mass": 0.0022802366225773262,
+              "share_of_text": 0.005775875744382318,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0022802366225773262
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 15,
+              "token_id": 573,
+              "piece": "▁the",
+              "decoded": " the",
+              "mass": 0.0025309597374871375,
+              "share_of_text": 0.006410961394540299,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.0025309597374871375
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 16,
+              "token_id": 4906,
+              "piece": "▁third",
+              "decoded": " third",
+              "mass": 0.005781017189535002,
+              "share_of_text": 0.014643408772705181,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.005781017189535002
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 17,
+              "token_id": 1069,
+              "piece": "▁time",
+              "decoded": " time",
+              "mass": 0.009832232050183748,
+              "share_of_text": 0.02490520064869667,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.009832232050183748
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            },
+            {
+              "position": 18,
+              "token_id": 108,
+              "piece": "\n",
+              "decoded": "\n",
+              "mass": 0.022348195237314537,
+              "share_of_text": 0.05660833508411391,
+              "conditional": {
+                "False": {
+                  "n": 10,
+                  "mass": 0.022348195237314537
+                },
+                "True": {
+                  "n": 0,
+                  "mass": null
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

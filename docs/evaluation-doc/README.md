@@ -4,7 +4,7 @@
 
 | 档案 | 范围 | 状态 |
 | --- | --- | --- |
-| [StopCube Oracle 下压比例](stopcube-oracle-1104/result.md) | motion 59999 与官方 ctx512 79999；Oracle历史询问、真实校准及同输入离线机制分析 | 12局询问与74次有效校准完成，固定放手基线2/12、motion6/12；继续38局，非官方成绩；截止美东11月5日08:00 |
+| [StopCube Oracle 下压与机制分析](stopcube-oracle-1104/result.md) | motion 59999 与官方 ctx512 79999；50局原历史询问、真实校准及同输入分析 | 7460询问点、74次校准、100次固定放手和16输入160原噪声机制分析完成；基线18/50、motion29/50；35图已逐张目视，非官方标准整局成绩 |
 | [StopCube 关键时间与动作第一阶段](stopcube-decision-1104/result.md) | motion 59999、seed42；原计划正常50局及悬停延长 | 用户已中止；28局终局、13成功15失败，accepted25局；父程序143退出，全部本轮进程已停，第一阶段未完成 |
 | [阶段一实现](official-stage2-phase1-1026/README.md) | 按1027简化方案保留弹性队列、常驻模型与逐块仿真 | 简化实现完成，实际新增worker领取不同块通过 |
 | [20k试评估](official-stage2-20k-probe-1026-a/result.md) | 固定Stage2 VLA20k、epoch105、单局及双卡十局 | 单局0/1；两卡1/10（10%）；两个worker退出0，资源已释放 |

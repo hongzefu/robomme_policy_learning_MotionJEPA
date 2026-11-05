@@ -1,0 +1,19 @@
+{
+  "source": {
+    "path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/analysis/release50-summary.json",
+    "sha256": "38fed38becb9be36ab33c4022b947aa7444ec27c74ecf40398c4a786af7b31ad"
+  },
+  "models_in_order": [
+    "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+    "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999"
+  ],
+  "paired_success_difference": {
+    "n_episodes": 50,
+    "mean": 0.22,
+    "ci95": [
+      0.08,
+      0.36
+    ]
+  },
+  "note": "固定50局各一次放手的描述性配对局级重采样；只表征该批局差异，不包括训练随机性或新分布保证。"
+}

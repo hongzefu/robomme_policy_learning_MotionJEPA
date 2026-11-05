@@ -1,0 +1,526 @@
+{
+  "sources": {
+    "actual_descent": {
+      "path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/analysis/actual-descent-summary.json",
+      "sha256": "f14169bdc283543e7f7d2aebf62317d25dac7c35a1ba5d40dcd84e9267eac28a"
+    },
+    "release": {
+      "path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/analysis/release50-summary.json",
+      "sha256": "38fed38becb9be36ab33c4022b947aa7444ec27c74ecf40398c4a786af7b31ad"
+    }
+  },
+  "cells": [
+    {
+      "move_interval": 60,
+      "target_pass": 2,
+      "models": {
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999": {
+          "runs": 6,
+          "success": 1,
+          "no_descent": 3,
+          "trigger_categories": {
+            "晚于区间": 2,
+            "区间内": 1,
+            "没按": 3
+          }
+        },
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999": {
+          "runs": 6,
+          "success": 2,
+          "no_descent": 2,
+          "trigger_categories": {
+            "晚于区间": 2,
+            "区间内": 2,
+            "没按": 2
+          }
+        }
+      }
+    },
+    {
+      "move_interval": 60,
+      "target_pass": 3,
+      "models": {
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999": {
+          "runs": 2,
+          "success": 1,
+          "no_descent": 0,
+          "trigger_categories": {
+            "区间内": 1,
+            "晚于区间": 1
+          }
+        },
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999": {
+          "runs": 2,
+          "success": 0,
+          "no_descent": 2,
+          "trigger_categories": {
+            "没按": 2
+          }
+        }
+      }
+    },
+    {
+      "move_interval": 60,
+      "target_pass": 4,
+      "models": {
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999": {
+          "runs": 4,
+          "success": 1,
+          "no_descent": 0,
+          "trigger_categories": {
+            "晚于区间": 3,
+            "区间内": 1
+          }
+        },
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999": {
+          "runs": 4,
+          "success": 0,
+          "no_descent": 4,
+          "trigger_categories": {
+            "没按": 4
+          }
+        }
+      }
+    },
+    {
+      "move_interval": 60,
+      "target_pass": 5,
+      "models": {
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999": {
+          "runs": 0,
+          "success": 0,
+          "no_descent": 0,
+          "trigger_categories": {}
+        },
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999": {
+          "runs": 0,
+          "success": 0,
+          "no_descent": 0,
+          "trigger_categories": {}
+        }
+      }
+    },
+    {
+      "move_interval": 80,
+      "target_pass": 2,
+      "models": {
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999": {
+          "runs": 7,
+          "success": 0,
+          "no_descent": 3,
+          "trigger_categories": {
+            "早于区间": 4,
+            "没按": 3
+          }
+        },
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999": {
+          "runs": 7,
+          "success": 0,
+          "no_descent": 0,
+          "trigger_categories": {
+            "早于区间": 7
+          }
+        }
+      }
+    },
+    {
+      "move_interval": 80,
+      "target_pass": 3,
+      "models": {
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999": {
+          "runs": 6,
+          "success": 3,
+          "no_descent": 0,
+          "trigger_categories": {
+            "区间内": 3,
+            "晚于区间": 3
+          }
+        },
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999": {
+          "runs": 6,
+          "success": 1,
+          "no_descent": 1,
+          "trigger_categories": {
+            "晚于区间": 4,
+            "没按": 1,
+            "区间内": 1
+          }
+        }
+      }
+    },
+    {
+      "move_interval": 80,
+      "target_pass": 4,
+      "models": {
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999": {
+          "runs": 3,
+          "success": 3,
+          "no_descent": 0,
+          "trigger_categories": {
+            "区间内": 3
+          }
+        },
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999": {
+          "runs": 3,
+          "success": 0,
+          "no_descent": 3,
+          "trigger_categories": {
+            "没按": 3
+          }
+        }
+      }
+    },
+    {
+      "move_interval": 80,
+      "target_pass": 5,
+      "models": {
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999": {
+          "runs": 6,
+          "success": 4,
+          "no_descent": 0,
+          "trigger_categories": {
+            "区间内": 4,
+            "晚于区间": 2
+          }
+        },
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999": {
+          "runs": 6,
+          "success": 4,
+          "no_descent": 0,
+          "trigger_categories": {
+            "区间内": 4,
+            "晚于区间": 2
+          }
+        }
+      }
+    },
+    {
+      "move_interval": 120,
+      "target_pass": 2,
+      "models": {
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999": {
+          "runs": 2,
+          "success": 2,
+          "no_descent": 0,
+          "trigger_categories": {
+            "区间内": 2
+          }
+        },
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999": {
+          "runs": 2,
+          "success": 1,
+          "no_descent": 0,
+          "trigger_categories": {
+            "早于区间": 1,
+            "区间内": 1
+          }
+        }
+      }
+    },
+    {
+      "move_interval": 120,
+      "target_pass": 3,
+      "models": {
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999": {
+          "runs": 7,
+          "success": 7,
+          "no_descent": 0,
+          "trigger_categories": {
+            "区间内": 7
+          }
+        },
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999": {
+          "runs": 7,
+          "success": 4,
+          "no_descent": 0,
+          "trigger_categories": {
+            "区间内": 4,
+            "早于区间": 3
+          }
+        }
+      }
+    },
+    {
+      "move_interval": 120,
+      "target_pass": 4,
+      "models": {
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999": {
+          "runs": 2,
+          "success": 2,
+          "no_descent": 0,
+          "trigger_categories": {
+            "区间内": 2
+          }
+        },
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999": {
+          "runs": 2,
+          "success": 2,
+          "no_descent": 0,
+          "trigger_categories": {
+            "区间内": 2
+          }
+        }
+      }
+    },
+    {
+      "move_interval": 120,
+      "target_pass": 5,
+      "models": {
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999": {
+          "runs": 5,
+          "success": 5,
+          "no_descent": 0,
+          "trigger_categories": {
+            "区间内": 5
+          }
+        },
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999": {
+          "runs": 5,
+          "success": 4,
+          "no_descent": 0,
+          "trigger_categories": {
+            "区间内": 5
+          }
+        }
+      }
+    }
+  ],
+  "oracle_window_span_steps": {
+    "60": {
+      "8": 12
+    },
+    "80": {
+      "10": 22
+    },
+    "120": {
+      "16": 16
+    }
+  },
+  "paired_observed_lag_difference": {
+    "models_in_order": [
+      "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+      "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999"
+    ],
+    "n_episodes": 34,
+    "mean": -0.17647058823529413,
+    "ci95": [
+      -0.5588235294117647,
+      0.17647058823529413
+    ],
+    "episodes": [
+      "StopCube:5",
+      "StopCube:3",
+      "StopCube:2",
+      "StopCube:12",
+      "StopCube:6",
+      "StopCube:9",
+      "StopCube:14",
+      "StopCube:10",
+      "StopCube:16",
+      "StopCube:15",
+      "StopCube:20",
+      "StopCube:19",
+      "StopCube:21",
+      "StopCube:18",
+      "StopCube:17",
+      "StopCube:24",
+      "StopCube:22",
+      "StopCube:23",
+      "StopCube:31",
+      "StopCube:28",
+      "StopCube:27",
+      "StopCube:29",
+      "StopCube:35",
+      "StopCube:36",
+      "StopCube:34",
+      "StopCube:33",
+      "StopCube:41",
+      "StopCube:38",
+      "StopCube:37",
+      "StopCube:39",
+      "StopCube:46",
+      "StopCube:42",
+      "StopCube:49",
+      "StopCube:48"
+    ]
+  },
+  "examples": [
+    {
+      "model_id": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+      "episode_key": "StopCube:5",
+      "move_interval": 60,
+      "target_pass": 2,
+      "task_success": 0,
+      "release_step": 53,
+      "trigger_step": 117,
+      "trigger_category": "晚于区间",
+      "first_descent_observed_step": 103,
+      "first_descent_interval": [
+        103,
+        103
+      ],
+      "first_descent_relative_T": 13.0,
+      "trigger_relative_T": 27.0,
+      "observed_trigger_minus_descent": 14,
+      "minimum_tcp_z": 0.029128029942512512,
+      "hover_z": 0.15229040384292603,
+      "model_actions": 63,
+      "trace_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/calibrate/ctx/fixed_release-a/run/attempts/oracle-service-1b172522/000-2bfd3dc9a404/client/traces/0a59a4ab188b451f96c6320b24e64913/step_trace.jsonl"
+    },
+    {
+      "model_id": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+      "episode_key": "StopCube:3",
+      "move_interval": 60,
+      "target_pass": 2,
+      "task_success": 1,
+      "release_step": 53,
+      "trigger_step": 92,
+      "trigger_category": "区间内",
+      "first_descent_observed_step": 78,
+      "first_descent_interval": [
+        78,
+        78
+      ],
+      "first_descent_relative_T": -12.0,
+      "trigger_relative_T": 2.0,
+      "observed_trigger_minus_descent": 14,
+      "minimum_tcp_z": 0.025845661759376526,
+      "hover_z": 0.15406253933906555,
+      "model_actions": 40,
+      "trace_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/calibrate/ctx/fixed_release-a/run/attempts/oracle-service-1b172522/000-2bfd3dc9a404/client/traces/860264cc617748eaa12945f40ba943bc/step_trace.jsonl"
+    },
+    {
+      "model_id": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+      "episode_key": "StopCube:2",
+      "move_interval": 80,
+      "target_pass": 2,
+      "task_success": 0,
+      "release_step": 69,
+      "trigger_step": 90,
+      "trigger_category": "早于区间",
+      "first_descent_observed_step": 76,
+      "first_descent_interval": [
+        76,
+        76
+      ],
+      "first_descent_relative_T": -44.0,
+      "trigger_relative_T": -30.0,
+      "observed_trigger_minus_descent": 14,
+      "minimum_tcp_z": 0.03021368384361267,
+      "hover_z": 0.1536490023136139,
+      "model_actions": 20,
+      "trace_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/calibrate/ctx/fixed_release-a/run/attempts/oracle-service-1b172522/001-8542a5c29c48/client/traces/472056cee64a48c88e08223023840447/step_trace.jsonl"
+    },
+    {
+      "model_id": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+      "episode_key": "StopCube:5",
+      "move_interval": 60,
+      "target_pass": 2,
+      "task_success": 0,
+      "release_step": 53,
+      "trigger_step": 107,
+      "trigger_category": "晚于区间",
+      "first_descent_observed_step": 92,
+      "first_descent_interval": [
+        92,
+        92
+      ],
+      "first_descent_relative_T": 2.0,
+      "trigger_relative_T": 17.0,
+      "observed_trigger_minus_descent": 15,
+      "minimum_tcp_z": 0.031057611107826233,
+      "hover_z": 0.15229040384292603,
+      "model_actions": 53,
+      "trace_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/calibrate/mot/fixed_release-a/run/attempts/oracle-service-7f022b0d/000-2bfd3dc9a404/client/traces/89020bfaba4e4d81ade0227c4149f4c1/step_trace.jsonl"
+    },
+    {
+      "model_id": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+      "episode_key": "StopCube:3",
+      "move_interval": 60,
+      "target_pass": 2,
+      "task_success": 1,
+      "release_step": 53,
+      "trigger_step": 94,
+      "trigger_category": "区间内",
+      "first_descent_observed_step": 81,
+      "first_descent_interval": [
+        81,
+        81
+      ],
+      "first_descent_relative_T": -9.0,
+      "trigger_relative_T": 4.0,
+      "observed_trigger_minus_descent": 13,
+      "minimum_tcp_z": 0.026689983904361725,
+      "hover_z": 0.15406253933906555,
+      "model_actions": 42,
+      "trace_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/calibrate/mot/fixed_release-a/run/attempts/oracle-service-7f022b0d/000-2bfd3dc9a404/client/traces/b401608d0a8a48bcb053f1aff664576b/step_trace.jsonl"
+    },
+    {
+      "model_id": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+      "episode_key": "StopCube:2",
+      "move_interval": 80,
+      "target_pass": 2,
+      "task_success": 0,
+      "release_step": 69,
+      "trigger_step": 98,
+      "trigger_category": "早于区间",
+      "first_descent_observed_step": 83,
+      "first_descent_interval": [
+        83,
+        83
+      ],
+      "first_descent_relative_T": -37.0,
+      "trigger_relative_T": -22.0,
+      "observed_trigger_minus_descent": 15,
+      "minimum_tcp_z": 0.02784963697195053,
+      "hover_z": 0.1536490023136139,
+      "model_actions": 28,
+      "trace_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/calibrate/mot/fixed_release-a/run/attempts/oracle-service-7f022b0d/001-8542a5c29c48/client/traces/242815ef6d494ed7b22d42e4d8e5c1e7/step_trace.jsonl"
+    },
+    {
+      "model_id": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999",
+      "episode_key": "StopCube:27",
+      "move_interval": 60,
+      "target_pass": 2,
+      "task_success": 1,
+      "release_step": 53,
+      "trigger_step": 94,
+      "trigger_category": "区间内",
+      "first_descent_observed_step": 79,
+      "first_descent_interval": [
+        79,
+        79
+      ],
+      "first_descent_relative_T": -11.0,
+      "trigger_relative_T": 4.0,
+      "observed_trigger_minus_descent": 15,
+      "minimum_tcp_z": 0.026153653860092163,
+      "hover_z": 0.15426424145698547,
+      "model_actions": 42,
+      "trace_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/release/ctx/release38-a/run/attempts/oracle-service-1a3c2dea/003-3ef2fab5d9b6/client/traces/7f3a043b4f734dcb89324a258c6ed60b/step_trace.jsonl"
+    },
+    {
+      "model_id": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999",
+      "episode_key": "StopCube:27",
+      "move_interval": 60,
+      "target_pass": 2,
+      "task_success": 0,
+      "release_step": 53,
+      "trigger_step": 98,
+      "trigger_category": "晚于区间",
+      "first_descent_observed_step": 83,
+      "first_descent_interval": [
+        83,
+        83
+      ],
+      "first_descent_relative_T": -7.0,
+      "trigger_relative_T": 8.0,
+      "observed_trigger_minus_descent": 15,
+      "minimum_tcp_z": 0.02947084605693817,
+      "hover_z": 0.15426424145698547,
+      "model_actions": 44,
+      "trace_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/release/mot/release38-a/run/attempts/oracle-service-2556195c/003-3ef2fab5d9b6/client/traces/dec9d24261f24997828662acb00fabba/step_trace.jsonl"
+    }
+  ],
+  "note": "既有100次实际轨迹的描述性分层和事件端点分析；不增加推理。两个事件端点之差不等同精确物理控制延迟，重采样不证明两模型等价，也不识别单一训练或输入因素。"
+}

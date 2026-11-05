@@ -2,6 +2,8 @@
 
 ## 目的与用户授权
 
+两阶段模型与数据分析现均完成。结果导读见`result.md`，所有原始路径和阶段版本以下方历史起跑记录为准；本文件保留当时的预登记与回执，当前结论不依赖其中的历史预计时刻。
+
 首次用户原话：「/data/hongzefu/robomme_policy_learning_MotionJEPA/1104-stopcube-oracle-press-plan.html」「开工」。首次批准计划提交为 `48be54c0414a362bfc5684d1357f383881103f92`，计划见[完整方案](../../../1104-stopcube-oracle-press-plan.html)。本次含官方 ctx512 79999 与 concat motion 59999；不恢复旧计划、不使用旧计划运行产物，不跑正常局。后续追加的同输入离线机制分析、再次开工及八点截止，以下方「口径、执行顺序与截止」的用户原话和完整两阶段方案为准；仍不实施输入干预或因果消融。
 
 状态机登记尚未获答复，按计划不写入 `docs/handoff/current.json`，采用人工交接。
@@ -54,7 +56,11 @@ FK完成后用`bash <产物根>/prepare_release38.sh`从既有汇总逐局调用
 
 实际机制起跑回执：两模型均于美东2026-11-05 04:33:43启动，`so-mechanism-ctx-a`窗格PID736260、`so-mechanism-mot-a`窗格PID736257，固定8d841cb干净树。两侧均已正常退出0、各8输入80原噪声预测；原路径误差0，所选输入的展开路径归一化误差基线0.00634765625、motion0.005859375。后续只做已有JSON的CPU统计和绘图，模型没有补跑。
 
-主会话发现初版图的自动配色、轴内图例及缺失motion负色条问题后，独立同规模审查通过，S5仅修改`report`显示函数。固定子提交`6f6c9882b89a0eba4622e4d630f1524b1ba6eb54`在原S5独立工作树CPU重绘到`analysis/mechanism/report-v2/`（32图），原数据与旧图保持不变；11项CPU测试7.84秒，主会话合并后11项7.80秒。最终图与HTML采用report-v2，原`report/`留作发现显示问题的证据；完整32图待主会话逐张目视确认。
+离线实际传入的是`offline_query.unpack_observation`恢复的原始`HistAugObservation`，包含原`motion_emb/motion_pos/motion_mask`；`sample_predictions`与`AttnAdapter.run`直接接收该观测和原噪声。构建离线policy时的`_ZeroMotion`仅作为未调用在线编码器的占位，分析不再从图像生成或替换motion；原路径零误差及询问/缓存指纹读回同时留证。
+
+模型完成后的只读CPU命令包括：`summarize_mechanism.sh`、`decode_prompt_groups.sh`、`analyze_actual_descent.sh`；输出分别为`analysis/mechanism/compact.json`、`prompt-tokens.{json,html}`、`analysis/actual-descent-summary.json`。跨原时刻张量比较、层头噪声稳定性及M/N分层进一步保存为`input-and-head-analysis.json`、`noise-and-transitions.json`与`analysis/behavior-breakdown.json`，均引用既有源指纹，未新增模型调用、改写输入或改变主判据。文字解码只用原id的`id_to_piece/decode`作展示。
+
+主会话发现初版图的自动配色、轴内图例及缺失motion负色条问题后，独立同规模审查通过，S5仅修改`report`显示函数。固定子提交`6f6c9882b89a0eba4622e4d630f1524b1ba6eb54`在原S5独立工作树CPU重绘到`analysis/mechanism/report-v2/`（32图），原数据与旧图保持不变；11项CPU测试7.84秒，主会话合并后11项7.80秒。最终图与HTML采用report-v2，原`report/`留作发现显示问题的证据；主会话已逐张目视全部32图，配色、图例、字体、缺失面板和色条均通过，文件级记录见`records/mechanism/visual-review.json`。
 
 第二阶段实际采用新的干净执行工作树`/home/hongzefu/.codex/worktrees/stopcube-mechanism-run/robomme_policy_learning_MotionJEPA`，固定提交`8d841cbec00a4e21af5aa96d6c7957ea8608a102`。合后审查`POST_MERGE_REVIEW=PASS task=S5_prompt base=8f4995b3da3e3160426c49441777f6150f24ef5a tip=8d841cbec00a4e21af5aa96d6c7957ea8608a102 findings=0 blocking=0`已通过并推送。主会话在该树执行原`select`命令，固定M60第3局53/65步、M80第0局233/253/117步、M120第6局253/273/53步，两个模型共16输入160预测；M60无更早经过候选，按规则缺失、不补点。源为`analysis/mechanism-source-summary.json`，选择文件`analysis/mechanism/selection.json`，原12局计划保持不变。
 
@@ -64,7 +70,7 @@ FK完成后用`bash <产物根>/prepare_release38.sh`从既有汇总逐局调用
 
 实施中同规模调整：文字总组补充原有效位置/id的单词元子组，复用同一次适配器输出，原五类、帧、经过和采样口径不变。<code>ADJUST_REVIEW=PASS scale=same findings=0</code>；原S5独立工作树子提交`a7b03f1cad1e9d3b869afb7642544c2ffcf523a6`的合前审查通过。主会话合并后在`JAX_PLATFORMS=cpu`运行`-m pytest -q scripts/interpret/test_offline_mechanism.py`，11项通过、7.96秒。原词元解码由主会话用既有SPM仅用于阅读；这不证明计数理解。下面050版本的预登记命令由新增的干净机制执行版本承接，实际新版本、路径与完整命令在起跑回执中补记；原200点重放仍以050为准。
 
-全量接续实际回执：集合核验`so-collection-verify-a`于美东2026-11-05 04:00:33启动，PID689309，完整7460点通过并退出0。`so-fk38-a`、`so-offline-verify-ctx-a`、`so-offline-verify-mot-a`均于04:01:55启动，窗格PID分别691006、691010、691015。FK复用24份缓存、新增76份，已退出0，完整7460点高度最大差0；两模型200点重放尚在运行。完整50局概率曲线与M/N分面图均已实际渲染、由主会话逐图目视检查，无重叠、错位、遮挡或缺字，原始图与区间JSON存于`analysis/all/report/`并归档纯结果副本。
+全量接续实际回执：集合核验`so-collection-verify-a`于美东2026-11-05 04:00:33启动，PID689309，完整7460点通过并退出0。`so-fk38-a`、`so-offline-verify-ctx-a`、`so-offline-verify-mot-a`均于04:01:55启动，窗格PID分别691006、691010、691015。FK复用24份缓存、新增76份，已退出0，完整7460点高度最大差0；该回执时200点重放仍在运行，最终已通过，结果见本节开头。完整50局概率曲线与M/N分面图均已实际渲染、由主会话逐图目视检查，无重叠、错位、遮挡或缺字，原始图与区间JSON存于`analysis/all/report/`并归档纯结果副本。
 
 第二阶段接续也先登记、后实际执行：38局固定放手结束后，`bash <产物根>/merge_release50.sh`分别按原12局计划和新38局固定计划验证收据、轨迹与终态；输出`analysis/release38-results.json`、`release50-summary.json`及`mechanism-source-summary.json`。原12局的高/低/早校准分母、计划和汇总保持不变，50局固定放手另表报告，机制选局只追加有效成功证据。既定附指标用`bash <产物根>/summarize_sensitivity.sh`汇总1/2/3厘米、16/20行，直接复用原逐点比例与局级bootstrap2000、种子42，不新增预测、不改主判据。
 
