@@ -1,0 +1,1130 @@
+{
+  "schema_version": 1,
+  "model_seed": 42,
+  "tokenizer_model": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/big_vision/paligemma_tokenizer.model",
+  "capture_commit": "e56bbceca5fe1c734c2553e83b8b6de1db71ca08",
+  "analysis_commit": "c55700b63b89de451adfc0c459bd99ecefce8443",
+  "episodes": [
+    {
+      "model": "with_motion",
+      "label": "带 motion token 的 VLA",
+      "task": "ButtonUnmaskSwap",
+      "episode_id": 4,
+      "env_seed": 570400,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/attn/44001179420e49f4a6fc32679176d1d8",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/accepted/ButtonUnmaskSwap:4.44001179.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/attempts/000-1f83580c242d-c525e0fc/client/videos/ButtonUnmaskSwap_ep4_success.mp4",
+      "phase_annotations": [
+        {
+          "phase": "靠近",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 288,
+          "end_step": 289,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep4-pick1-phases.png；推理18，观测TCP z=0.2050米，夹爪开度=0.0400；本次闭合指令帧=316；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 304,
+          "end_step": 305,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep4-pick1-phases.png；推理19，观测TCP z=0.1117米，夹爪开度=0.0400；本次闭合指令帧=316；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 320,
+          "end_step": 321,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep4-pick1-phases.png；推理20，观测TCP z=0.0632米，夹爪开度=0.0197；本次闭合指令帧=316；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        }
+      ],
+      "target_colors": [
+        "green"
+      ],
+      "phase_evidence_images": [
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep4-pick1-phases.png"
+      ]
+    },
+    {
+      "model": "with_motion",
+      "label": "带 motion token 的 VLA",
+      "task": "ButtonUnmaskSwap",
+      "episode_id": 8,
+      "env_seed": 570800,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/attn/6b75de61eded4b5694b2a0acc5c7c618",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/accepted/ButtonUnmaskSwap:8.6b75de61.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/attempts/000-f94d3288a905-e3d628bd/client/videos/ButtonUnmaskSwap_ep8_success.mp4",
+      "phase_annotations": [
+        {
+          "phase": "靠近",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 272,
+          "end_step": 273,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep8-pick1-phases.png；推理17，观测TCP z=0.1963米，夹爪开度=0.0400；本次闭合指令帧=290；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 288,
+          "end_step": 289,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep8-pick1-phases.png；推理18，观测TCP z=0.0682米，夹爪开度=0.0400；本次闭合指令帧=290；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 304,
+          "end_step": 305,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep8-pick1-phases.png；推理19，观测TCP z=0.0950米，夹爪开度=0.0190；本次闭合指令帧=290；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        }
+      ],
+      "target_colors": [
+        "green"
+      ],
+      "phase_evidence_images": [
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep8-pick1-phases.png"
+      ]
+    },
+    {
+      "model": "with_motion",
+      "label": "带 motion token 的 VLA",
+      "task": "ButtonUnmaskSwap",
+      "episode_id": 11,
+      "env_seed": 571100,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/attn/cae5e66a1c5e4a0eb0d2a4c34b5a9b65",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/accepted/ButtonUnmaskSwap:11.cae5e66a.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/attempts/001-608418466ac5-020cb4dc/client/videos/ButtonUnmaskSwap_ep11_success.mp4",
+      "phase_annotations": [
+        {
+          "phase": "靠近",
+          "pickup_index": 1,
+          "goal_color": "blue",
+          "start_step": 272,
+          "end_step": 273,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep11-pick1-phases.png；推理17，观测TCP z=0.2060米，夹爪开度=0.0400；本次闭合指令帧=303；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 1,
+          "goal_color": "blue",
+          "start_step": 288,
+          "end_step": 289,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep11-pick1-phases.png；推理18，观测TCP z=0.1625米，夹爪开度=0.0400；本次闭合指令帧=303；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 1,
+          "goal_color": "blue",
+          "start_step": 304,
+          "end_step": 305,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep11-pick1-phases.png；推理19，观测TCP z=0.0645米，夹爪开度=0.0183；本次闭合指令帧=303；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "靠近",
+          "pickup_index": 2,
+          "goal_color": "green",
+          "start_step": 432,
+          "end_step": 433,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep11-pick2-phases.png；推理27，观测TCP z=0.1822米，夹爪开度=0.0400；本次闭合指令帧=449；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 2,
+          "goal_color": "green",
+          "start_step": 448,
+          "end_step": 449,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep11-pick2-phases.png；推理28，观测TCP z=0.0555米，夹爪开度=0.0400；本次闭合指令帧=449；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 2,
+          "goal_color": "green",
+          "start_step": 464,
+          "end_step": 465,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep11-pick2-phases.png；推理29，观测TCP z=0.0911米，夹爪开度=0.0278；本次闭合指令帧=449；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        }
+      ],
+      "target_colors": [
+        "blue",
+        "green"
+      ],
+      "phase_evidence_images": [
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep11-pick1-phases.png",
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep11-pick2-phases.png"
+      ]
+    },
+    {
+      "model": "with_motion",
+      "label": "带 motion token 的 VLA",
+      "task": "ButtonUnmaskSwap",
+      "episode_id": 12,
+      "env_seed": 571200,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/attn/d7cf6deff46947eab3bdfcb47223fb70",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/accepted/ButtonUnmaskSwap:12.d7cf6def.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/attempts/002-752f9d8a17cd-6c705d58/client/videos/ButtonUnmaskSwap_ep12_success.mp4",
+      "phase_annotations": [
+        {
+          "phase": "靠近",
+          "pickup_index": 1,
+          "goal_color": "red",
+          "start_step": 272,
+          "end_step": 273,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep12-pick1-phases.png；推理17，观测TCP z=0.1964米，夹爪开度=0.0400；本次闭合指令帧=299；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 1,
+          "goal_color": "red",
+          "start_step": 288,
+          "end_step": 289,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep12-pick1-phases.png；推理18，观测TCP z=0.1297米，夹爪开度=0.0400；本次闭合指令帧=299；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 1,
+          "goal_color": "red",
+          "start_step": 304,
+          "end_step": 305,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep12-pick1-phases.png；推理19，观测TCP z=0.0650米，夹爪开度=0.0184；本次闭合指令帧=299；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        }
+      ],
+      "target_colors": [
+        "red"
+      ],
+      "phase_evidence_images": [
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep12-pick1-phases.png"
+      ]
+    },
+    {
+      "model": "with_motion",
+      "label": "带 motion token 的 VLA",
+      "task": "ButtonUnmaskSwap",
+      "episode_id": 17,
+      "env_seed": 571700,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/attn/5e28bdb0294d47e5bebae57ac76a0255",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/accepted/ButtonUnmaskSwap:17.5e28bdb0.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/attempts/003-1078b66ba8e8-0a592016/client/videos/ButtonUnmaskSwap_ep17_success.mp4",
+      "phase_annotations": [
+        {
+          "phase": "靠近",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 288,
+          "end_step": 289,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep17-pick1-phases.png；推理18，观测TCP z=0.1851米，夹爪开度=0.0400；本次闭合指令帧=309；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 304,
+          "end_step": 305,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep17-pick1-phases.png；推理19，观测TCP z=0.0628米，夹爪开度=0.0400；本次闭合指令帧=309；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 320,
+          "end_step": 321,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep17-pick1-phases.png；推理20，观测TCP z=0.0698米，夹爪开度=0.0216；本次闭合指令帧=309；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "靠近",
+          "pickup_index": 2,
+          "goal_color": "red",
+          "start_step": 448,
+          "end_step": 449,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep17-pick2-phases.png；推理28，观测TCP z=0.2124米，夹爪开度=0.0400；本次闭合指令帧=472；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 2,
+          "goal_color": "red",
+          "start_step": 464,
+          "end_step": 465,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep17-pick2-phases.png；推理29，观测TCP z=0.0841米，夹爪开度=0.0400；本次闭合指令帧=472；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 2,
+          "goal_color": "red",
+          "start_step": 480,
+          "end_step": 481,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep17-pick2-phases.png；推理30，观测TCP z=0.0650米，夹爪开度=0.0187；本次闭合指令帧=472；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        }
+      ],
+      "target_colors": [
+        "green",
+        "red"
+      ],
+      "phase_evidence_images": [
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep17-pick1-phases.png",
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep17-pick2-phases.png"
+      ]
+    },
+    {
+      "model": "with_motion",
+      "label": "带 motion token 的 VLA",
+      "task": "ButtonUnmaskSwap",
+      "episode_id": 18,
+      "env_seed": 571800,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/attn/62c1e0633020432784d58420ecc63a89",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/accepted/ButtonUnmaskSwap:18.62c1e063.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/attempts/004-64f5d0d08392-b9001e13/client/videos/ButtonUnmaskSwap_ep18_success.mp4",
+      "phase_annotations": [
+        {
+          "phase": "靠近",
+          "pickup_index": 1,
+          "goal_color": "red",
+          "start_step": 272,
+          "end_step": 273,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep18-pick1-phases.png；推理17，观测TCP z=0.2008米，夹爪开度=0.0400；本次闭合指令帧=296；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 1,
+          "goal_color": "red",
+          "start_step": 288,
+          "end_step": 289,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep18-pick1-phases.png；推理18，观测TCP z=0.0976米，夹爪开度=0.0400；本次闭合指令帧=296；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 1,
+          "goal_color": "red",
+          "start_step": 304,
+          "end_step": 305,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep18-pick1-phases.png；推理19，观测TCP z=0.0677米，夹爪开度=0.0183；本次闭合指令帧=296；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        }
+      ],
+      "target_colors": [
+        "red"
+      ],
+      "phase_evidence_images": [
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep18-pick1-phases.png"
+      ]
+    },
+    {
+      "model": "with_motion",
+      "label": "带 motion token 的 VLA",
+      "task": "ButtonUnmaskSwap",
+      "episode_id": 20,
+      "env_seed": 572000,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/attn/0e7f9d77343b48e89afabc160c77d91a",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/accepted/ButtonUnmaskSwap:20.0e7f9d77.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/attempts/005-717ab68c8e6b-49c3dac7/client/videos/ButtonUnmaskSwap_ep20_success.mp4",
+      "phase_annotations": [
+        {
+          "phase": "靠近",
+          "pickup_index": 1,
+          "goal_color": "red",
+          "start_step": 400,
+          "end_step": 401,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep20-pick1-phases.png；推理25，观测TCP z=0.1725米，夹爪开度=0.0400；本次闭合指令帧=418；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 1,
+          "goal_color": "red",
+          "start_step": 416,
+          "end_step": 417,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep20-pick1-phases.png；推理26，观测TCP z=0.0709米，夹爪开度=0.0400；本次闭合指令帧=418；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 1,
+          "goal_color": "red",
+          "start_step": 432,
+          "end_step": 433,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep20-pick1-phases.png；推理27，观测TCP z=0.0999米，夹爪开度=0.0183；本次闭合指令帧=418；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        }
+      ],
+      "target_colors": [
+        "red"
+      ],
+      "phase_evidence_images": [
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep20-pick1-phases.png"
+      ]
+    },
+    {
+      "model": "with_motion",
+      "label": "带 motion token 的 VLA",
+      "task": "ButtonUnmaskSwap",
+      "episode_id": 26,
+      "env_seed": 572600,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/attn/4544661540884d12aedc86214d8816a8",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/accepted/ButtonUnmaskSwap:26.45446615.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/attempts/006-9ae271836c44-588db1d9/client/videos/ButtonUnmaskSwap_ep26_fail.mp4",
+      "phase_annotations": [
+        {
+          "phase": "靠近",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 272,
+          "end_step": 273,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep26-pick1-phases.png；推理17，观测TCP z=0.1955米，夹爪开度=0.0400；本次闭合指令帧=292；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 288,
+          "end_step": 289,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep26-pick1-phases.png；推理18，观测TCP z=0.0806米，夹爪开度=0.0400；本次闭合指令帧=292；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 304,
+          "end_step": 305,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep26-pick1-phases.png；推理19，观测TCP z=0.0873米，夹爪开度=0.0184；本次闭合指令帧=292；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        }
+      ],
+      "target_colors": [
+        "green"
+      ],
+      "phase_evidence_images": [
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep26-pick1-phases.png"
+      ]
+    },
+    {
+      "model": "with_motion",
+      "label": "带 motion token 的 VLA",
+      "task": "ButtonUnmaskSwap",
+      "episode_id": 34,
+      "env_seed": 573400,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/attn/f7c8d350563d4e5bb482bd6e387df544",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/accepted/ButtonUnmaskSwap:34.f7c8d350.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/attempts/007-e7a3b85b2a5f-5fb24738/client/videos/ButtonUnmaskSwap_ep34_success.mp4",
+      "phase_annotations": [
+        {
+          "phase": "靠近",
+          "pickup_index": 1,
+          "goal_color": "blue",
+          "start_step": 288,
+          "end_step": 289,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep34-pick1-phases.png；推理18，观测TCP z=0.2137米，夹爪开度=0.0400；本次闭合指令帧=314；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 1,
+          "goal_color": "blue",
+          "start_step": 304,
+          "end_step": 305,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep34-pick1-phases.png；推理19，观测TCP z=0.1012米，夹爪开度=0.0400；本次闭合指令帧=314；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 1,
+          "goal_color": "blue",
+          "start_step": 320,
+          "end_step": 321,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep34-pick1-phases.png；推理20，观测TCP z=0.0633米，夹爪开度=0.0221；本次闭合指令帧=314；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        }
+      ],
+      "target_colors": [
+        "blue"
+      ],
+      "phase_evidence_images": [
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep34-pick1-phases.png"
+      ]
+    },
+    {
+      "model": "with_motion",
+      "label": "带 motion token 的 VLA",
+      "task": "ButtonUnmaskSwap",
+      "episode_id": 37,
+      "env_seed": 573700,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/attn/6051a8a356624cc5a5ba21914161f671",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/accepted/ButtonUnmaskSwap:37.6051a8a3.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/attempts/008-6c5cf01487d8-b2880481/client/videos/ButtonUnmaskSwap_ep37_success.mp4",
+      "phase_annotations": [
+        {
+          "phase": "靠近",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 336,
+          "end_step": 337,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep37-pick1-phases.png；推理21，观测TCP z=0.2064米，夹爪开度=0.0400；本次闭合指令帧=366；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 352,
+          "end_step": 353,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep37-pick1-phases.png；推理22，观测TCP z=0.1556米，夹爪开度=0.0400；本次闭合指令帧=366；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 368,
+          "end_step": 369,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep37-pick1-phases.png；推理23，观测TCP z=0.0549米，夹爪开度=0.0283；本次闭合指令帧=366；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        }
+      ],
+      "target_colors": [
+        "green"
+      ],
+      "phase_evidence_images": [
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep37-pick1-phases.png"
+      ]
+    },
+    {
+      "model": "with_motion",
+      "label": "带 motion token 的 VLA",
+      "task": "ButtonUnmaskSwap",
+      "episode_id": 38,
+      "env_seed": 573800,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/attn/219698bdb3814d3a8ca76011c7ebf2cb",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/accepted/ButtonUnmaskSwap:38.219698bd.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/attempts/009-df76616744d3-0c3f7aec/client/videos/ButtonUnmaskSwap_ep38_success.mp4",
+      "phase_annotations": [
+        {
+          "phase": "靠近",
+          "pickup_index": 1,
+          "goal_color": "blue",
+          "start_step": 272,
+          "end_step": 273,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep38-pick1-phases.png；推理17，观测TCP z=0.2046米，夹爪开度=0.0400；本次闭合指令帧=303；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 1,
+          "goal_color": "blue",
+          "start_step": 288,
+          "end_step": 289,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep38-pick1-phases.png；推理18，观测TCP z=0.1146米，夹爪开度=0.0400；本次闭合指令帧=303；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 1,
+          "goal_color": "blue",
+          "start_step": 304,
+          "end_step": 305,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep38-pick1-phases.png；推理19，观测TCP z=0.0637米，夹爪开度=0.0240；本次闭合指令帧=303；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        }
+      ],
+      "target_colors": [
+        "blue"
+      ],
+      "phase_evidence_images": [
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep38-pick1-phases.png"
+      ]
+    },
+    {
+      "model": "with_motion",
+      "label": "带 motion token 的 VLA",
+      "task": "ButtonUnmaskSwap",
+      "episode_id": 40,
+      "env_seed": 574000,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/attn/ea86a3d3985249f2b055008bfe142a0f",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/accepted/ButtonUnmaskSwap:40.ea86a3d3.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/attempts/010-6df917c75db7-3006bf8d/client/videos/ButtonUnmaskSwap_ep40_success.mp4",
+      "phase_annotations": [
+        {
+          "phase": "靠近",
+          "pickup_index": 1,
+          "goal_color": "blue",
+          "start_step": 272,
+          "end_step": 273,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep40-pick1-phases.png；推理17，观测TCP z=0.2009米，夹爪开度=0.0400；本次闭合指令帧=290；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 1,
+          "goal_color": "blue",
+          "start_step": 288,
+          "end_step": 289,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep40-pick1-phases.png；推理18，观测TCP z=0.0700米，夹爪开度=0.0400；本次闭合指令帧=290；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 1,
+          "goal_color": "blue",
+          "start_step": 304,
+          "end_step": 305,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：with_motion-ep40-pick1-phases.png；推理19，观测TCP z=0.0976米，夹爪开度=0.0184；本次闭合指令帧=290；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        }
+      ],
+      "target_colors": [
+        "blue"
+      ],
+      "phase_evidence_images": [
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep40-pick1-phases.png"
+      ]
+    },
+    {
+      "model": "without_motion",
+      "label": "不带 motion token 的 VLA",
+      "task": "ButtonUnmaskSwap",
+      "episode_id": 8,
+      "env_seed": 570800,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/attn/e011959b71ec46738108f45e32b8ad44",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/run/accepted/ButtonUnmaskSwap:8.e011959b.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/run/attempts/000-f94d3288a905-2be0293c/client/videos/ButtonUnmaskSwap_ep8_success.mp4",
+      "phase_annotations": [
+        {
+          "phase": "靠近",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 256,
+          "end_step": 257,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep8-pick1-phases.png；推理16，观测TCP z=0.1897米，夹爪开度=0.0400；本次闭合指令帧=284；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 272,
+          "end_step": 273,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep8-pick1-phases.png；推理17，观测TCP z=0.1437米，夹爪开度=0.0400；本次闭合指令帧=284；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 288,
+          "end_step": 289,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep8-pick1-phases.png；推理18，观测TCP z=0.0631米，夹爪开度=0.0198；本次闭合指令帧=284；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        }
+      ],
+      "target_colors": [
+        "green"
+      ],
+      "phase_evidence_images": [
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/without_motion-ep8-pick1-phases.png"
+      ]
+    },
+    {
+      "model": "without_motion",
+      "label": "不带 motion token 的 VLA",
+      "task": "ButtonUnmaskSwap",
+      "episode_id": 12,
+      "env_seed": 571200,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/attn/a94126f0fb9549e78872e2ab1dc325e8",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/run/accepted/ButtonUnmaskSwap:12.a94126f0.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/run/attempts/000-752f9d8a17cd-3bc5abe3/client/videos/ButtonUnmaskSwap_ep12_success.mp4",
+      "phase_annotations": [
+        {
+          "phase": "靠近",
+          "pickup_index": 1,
+          "goal_color": "red",
+          "start_step": 272,
+          "end_step": 273,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep12-pick1-phases.png；推理17，观测TCP z=0.2004米，夹爪开度=0.0400；本次闭合指令帧=302；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 1,
+          "goal_color": "red",
+          "start_step": 288,
+          "end_step": 289,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep12-pick1-phases.png；推理18，观测TCP z=0.1534米，夹爪开度=0.0400；本次闭合指令帧=302；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 1,
+          "goal_color": "red",
+          "start_step": 304,
+          "end_step": 305,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep12-pick1-phases.png；推理19，观测TCP z=0.0632米，夹爪开度=0.0189；本次闭合指令帧=302；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        }
+      ],
+      "target_colors": [
+        "red"
+      ],
+      "phase_evidence_images": [
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/without_motion-ep12-pick1-phases.png"
+      ]
+    },
+    {
+      "model": "without_motion",
+      "label": "不带 motion token 的 VLA",
+      "task": "ButtonUnmaskSwap",
+      "episode_id": 14,
+      "env_seed": 571400,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/attn/eeca96cd8ec94b6687f1f831356a33f1",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/run/accepted/ButtonUnmaskSwap:14.eeca96cd.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/run/attempts/001-a737889bb081-3064db8f/client/videos/ButtonUnmaskSwap_ep14_fail.mp4",
+      "phase_annotations": [
+        {
+          "phase": "靠近",
+          "pickup_index": 1,
+          "goal_color": "blue",
+          "start_step": 256,
+          "end_step": 257,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep14-pick1-phases.png；推理16，观测TCP z=0.1919米，夹爪开度=0.0400；本次闭合指令帧=288；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 1,
+          "goal_color": "blue",
+          "start_step": 272,
+          "end_step": 273,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep14-pick1-phases.png；推理17，观测TCP z=0.1740米，夹爪开度=0.0400；本次闭合指令帧=288；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 1,
+          "goal_color": "blue",
+          "start_step": 288,
+          "end_step": 289,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep14-pick1-phases.png；推理18，观测TCP z=0.0578米，夹爪开度=0.0280；本次闭合指令帧=288；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        }
+      ],
+      "target_colors": [
+        "blue"
+      ],
+      "phase_evidence_images": [
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/without_motion-ep14-pick1-phases.png"
+      ]
+    },
+    {
+      "model": "without_motion",
+      "label": "不带 motion token 的 VLA",
+      "task": "ButtonUnmaskSwap",
+      "episode_id": 16,
+      "env_seed": 571600,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/attn/acbcbe7106ab4d6a8b8bb5f2d1e3df91",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/run/accepted/ButtonUnmaskSwap:16.acbcbe71.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/run/attempts/002-6e83eb8408d8-beef0bb5/client/videos/ButtonUnmaskSwap_ep16_fail.mp4",
+      "phase_annotations": [
+        {
+          "phase": "靠近",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 272,
+          "end_step": 273,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep16-pick1-phases.png；推理17，观测TCP z=0.1909米，夹爪开度=0.0399；本次闭合指令帧=303；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 288,
+          "end_step": 289,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep16-pick1-phases.png；推理18，观测TCP z=0.1918米，夹爪开度=0.0400；本次闭合指令帧=303；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 304,
+          "end_step": 305,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep16-pick1-phases.png；推理19，观测TCP z=0.0753米，夹爪开度=0.0185；本次闭合指令帧=303；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        }
+      ],
+      "target_colors": [
+        "green"
+      ],
+      "phase_evidence_images": [
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/without_motion-ep16-pick1-phases.png"
+      ]
+    },
+    {
+      "model": "without_motion",
+      "label": "不带 motion token 的 VLA",
+      "task": "ButtonUnmaskSwap",
+      "episode_id": 18,
+      "env_seed": 571800,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/attn/acf118301ee845f694a2cae1e9482ecb",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/run/accepted/ButtonUnmaskSwap:18.acf11830.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/run/attempts/003-64f5d0d08392-f99ce162/client/videos/ButtonUnmaskSwap_ep18_success.mp4",
+      "phase_annotations": [
+        {
+          "phase": "靠近",
+          "pickup_index": 1,
+          "goal_color": "red",
+          "start_step": 272,
+          "end_step": 273,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep18-pick1-phases.png；推理17，观测TCP z=0.1949米，夹爪开度=0.0400；本次闭合指令帧=292；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 1,
+          "goal_color": "red",
+          "start_step": 288,
+          "end_step": 289,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep18-pick1-phases.png；推理18，观测TCP z=0.0728米，夹爪开度=0.0400；本次闭合指令帧=292；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 1,
+          "goal_color": "red",
+          "start_step": 304,
+          "end_step": 305,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep18-pick1-phases.png；推理19，观测TCP z=0.0800米，夹爪开度=0.0185；本次闭合指令帧=292；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        }
+      ],
+      "target_colors": [
+        "red"
+      ],
+      "phase_evidence_images": [
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/without_motion-ep18-pick1-phases.png"
+      ]
+    },
+    {
+      "model": "without_motion",
+      "label": "不带 motion token 的 VLA",
+      "task": "ButtonUnmaskSwap",
+      "episode_id": 20,
+      "env_seed": 572000,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/attn/7e6a9f57f890431a86b0f9bb64df1782",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/run/accepted/ButtonUnmaskSwap:20.7e6a9f57.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/run/attempts/004-717ab68c8e6b-8aeb358b/client/videos/ButtonUnmaskSwap_ep20_fail.mp4",
+      "phase_annotations": [
+        {
+          "phase": "靠近",
+          "pickup_index": 1,
+          "goal_color": "red",
+          "start_step": 352,
+          "end_step": 353,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep20-pick1-phases.png；推理22，观测TCP z=0.2061米，夹爪开度=0.0400；本次闭合指令帧=373；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 1,
+          "goal_color": "red",
+          "start_step": 368,
+          "end_step": 369,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep20-pick1-phases.png；推理23，观测TCP z=0.0781米，夹爪开度=0.0400；本次闭合指令帧=373；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 1,
+          "goal_color": "red",
+          "start_step": 384,
+          "end_step": 385,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep20-pick1-phases.png；推理24，观测TCP z=0.0762米，夹爪开度=0.0183；本次闭合指令帧=373；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        }
+      ],
+      "target_colors": [
+        "red"
+      ],
+      "phase_evidence_images": [
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/without_motion-ep20-pick1-phases.png"
+      ]
+    },
+    {
+      "model": "without_motion",
+      "label": "不带 motion token 的 VLA",
+      "task": "ButtonUnmaskSwap",
+      "episode_id": 26,
+      "env_seed": 572600,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/attn/2a7d04d1a89c49359cf3f90dcd98598f",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/run/accepted/ButtonUnmaskSwap:26.2a7d04d1.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/run/attempts/005-9ae271836c44-fe6813b3/client/videos/ButtonUnmaskSwap_ep26_fail.mp4",
+      "phase_annotations": [
+        {
+          "phase": "靠近",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 288,
+          "end_step": 289,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep26-pick1-phases.png；推理18，观测TCP z=0.1927米，夹爪开度=0.0400；本次闭合指令帧=307；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 304,
+          "end_step": 305,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep26-pick1-phases.png；推理19，观测TCP z=0.0686米，夹爪开度=0.0400；本次闭合指令帧=307；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 320,
+          "end_step": 321,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep26-pick1-phases.png；推理20，观测TCP z=0.0856米，夹爪开度=0.0184；本次闭合指令帧=307；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        }
+      ],
+      "target_colors": [
+        "green"
+      ],
+      "phase_evidence_images": [
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/without_motion-ep26-pick1-phases.png"
+      ]
+    },
+    {
+      "model": "without_motion",
+      "label": "不带 motion token 的 VLA",
+      "task": "ButtonUnmaskSwap",
+      "episode_id": 34,
+      "env_seed": 573400,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/attn/4c7028c1a82f46a2989609ead98becce",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/run/accepted/ButtonUnmaskSwap:34.4c7028c1.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/run/attempts/006-e7a3b85b2a5f-eb8b90d8/client/videos/ButtonUnmaskSwap_ep34_fail.mp4",
+      "phase_annotations": [
+        {
+          "phase": "靠近",
+          "pickup_index": 1,
+          "goal_color": "blue",
+          "start_step": 336,
+          "end_step": 337,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep34-pick1-phases.png；推理21，观测TCP z=0.2157米，夹爪开度=0.0400；本次闭合指令帧=358；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 1,
+          "goal_color": "blue",
+          "start_step": 352,
+          "end_step": 353,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep34-pick1-phases.png；推理22，观测TCP z=0.0903米，夹爪开度=0.0400；本次闭合指令帧=358；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 1,
+          "goal_color": "blue",
+          "start_step": 368,
+          "end_step": 369,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep34-pick1-phases.png；推理23，观测TCP z=0.0767米，夹爪开度=0.0183；本次闭合指令帧=358；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        }
+      ],
+      "target_colors": [
+        "blue"
+      ],
+      "phase_evidence_images": [
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/without_motion-ep34-pick1-phases.png"
+      ]
+    },
+    {
+      "model": "without_motion",
+      "label": "不带 motion token 的 VLA",
+      "task": "ButtonUnmaskSwap",
+      "episode_id": 38,
+      "env_seed": 573800,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/attn/445f2b7e78ab43eba0af1b9b021b6b8a",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/run/accepted/ButtonUnmaskSwap:38.445f2b7e.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/run/attempts/007-df76616744d3-a048e913/client/videos/ButtonUnmaskSwap_ep38_success.mp4",
+      "phase_annotations": [
+        {
+          "phase": "靠近",
+          "pickup_index": 1,
+          "goal_color": "blue",
+          "start_step": 304,
+          "end_step": 305,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep38-pick1-phases.png；推理19，观测TCP z=0.1537米，夹爪开度=0.0400；本次闭合指令帧=322；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 1,
+          "goal_color": "blue",
+          "start_step": 320,
+          "end_step": 321,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep38-pick1-phases.png；推理20，观测TCP z=0.0595米，夹爪开度=0.0400；本次闭合指令帧=322；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 1,
+          "goal_color": "blue",
+          "start_step": 336,
+          "end_step": 337,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep38-pick1-phases.png；推理21，观测TCP z=0.0879米，夹爪开度=0.0190；本次闭合指令帧=322；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        }
+      ],
+      "target_colors": [
+        "blue"
+      ],
+      "phase_evidence_images": [
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/without_motion-ep38-pick1-phases.png"
+      ]
+    },
+    {
+      "model": "without_motion",
+      "label": "不带 motion token 的 VLA",
+      "task": "ButtonUnmaskSwap",
+      "episode_id": 47,
+      "env_seed": 574700,
+      "difficulty": "hard",
+      "swap_times": 2,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/attn/42f27d61f39146d4abab931c092b53ab",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/run/accepted/ButtonUnmaskSwap:47.42f27d61.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/run/attempts/008-3821b7ba42c3-ffeda020/client/videos/ButtonUnmaskSwap_ep47_success.mp4",
+      "phase_annotations": [
+        {
+          "phase": "靠近",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 256,
+          "end_step": 257,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep47-pick1-phases.png；推理16，观测TCP z=0.1971米，夹爪开度=0.0400；本次闭合指令帧=284；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 272,
+          "end_step": 273,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep47-pick1-phases.png；推理17，观测TCP z=0.1382米，夹爪开度=0.0400；本次闭合指令帧=284；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 1,
+          "goal_color": "green",
+          "start_step": 288,
+          "end_step": 289,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep47-pick1-phases.png；推理18，观测TCP z=0.0630米，夹爪开度=0.0183；本次闭合指令帧=284；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "靠近",
+          "pickup_index": 2,
+          "goal_color": "red",
+          "start_step": 416,
+          "end_step": 417,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep47-pick2-phases.png；推理26，观测TCP z=0.2083米，夹爪开度=0.0400；本次闭合指令帧=446；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抓取",
+          "pickup_index": 2,
+          "goal_color": "red",
+          "start_step": 432,
+          "end_step": 433,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep47-pick2-phases.png；推理27，观测TCP z=0.1205米，夹爪开度=0.0400；本次闭合指令帧=446；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        },
+        {
+          "phase": "抬起",
+          "pickup_index": 2,
+          "goal_color": "red",
+          "start_step": 448,
+          "end_step": 449,
+          "verified": true,
+          "evidence": "主会话已目视实际视频拼图并结合已执行闭合指令和CPU关节状态回放核实：without_motion-ep47-pick2-phases.png；推理28，观测TCP z=0.0590米，夹爪开度=0.0279；本次闭合指令帧=446；阶段为每次取物事件对应的代表性推理，不将未选推理强行分类"
+        }
+      ],
+      "target_colors": [
+        "green",
+        "red"
+      ],
+      "phase_evidence_images": [
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/without_motion-ep47-pick1-phases.png",
+        "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/without_motion-ep47-pick2-phases.png"
+      ]
+    }
+  ]
+}

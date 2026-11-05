@@ -67,7 +67,7 @@
 
 最多使用两张 GPU，计划带 motion token 的 VLA 用物理 GPU1、不带 motion token 的 VLA 用物理 GPU0，沿用已验证的 XLA 显存比例 0.55／0.40。运行前不停止其他用户进程，首次冒烟验证同机当前资源是否足够。原始总量为 22 条组合；两次通过的单局冒烟计入各自清单，不重复运行。
 
-本轮运行 tmux 会话清单将在启动前固定并写入；当前尚未启动任何 GPU 运行会话。基础设施错误不自动更换配置；正常任务失败不重跑。启动顺序为代码整合与审查、定向验证、两种 VLA 各一局冒烟、核对全部采集字段及动作不变、再补齐其余清单。
+初始写档时尚未启动 GPU 运行会话，实际启动、完成和验收记录见下文。基础设施错误不自动更换配置；正常任务失败不重跑。启动顺序为代码整合与审查、定向验证、两种 VLA 各一局冒烟、核对全部采集字段及动作不变、再补齐其余清单。
 
 独立开工审查：`PLAN_CONSISTENCY_REVIEW=PASS base=b7ad0560e4315a8b1ecb669a86cb584e0eff68d7 findings=0 blocking=0`。执行位置和测试夹具调整均已独立审查通过，详见计划“实施追加记录”；没有改变模型、22 条组合或验收。
 
@@ -134,3 +134,31 @@ bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-
 采集版本仍固定 `e56bbceca5fe1c734c2553e83b8b6de1db71ca08`。离线分析改在现有工作树 `/home/hongzefu/.codex/worktrees/button-attn-analysis/robomme_policy_learning_MotionJEPA` 运行，固定新提交 `c55700b63b89de451adfc0c459bd99ecefce8443`，该工作树干净；不在采集期间切换采集代码。分别记录 `capture_commit` 与 `analysis_commit`，所有产物仍写入本任务 R。
 
 上述修正的 `ADJUST_REVIEW=PASS scale=same findings=0`；独立复审 `PRE_MERGE_REVIEW=PASS base=1e0ba0edfdbbc8bd480f10602176523585924707 tip=c55700b63b89de451adfc0c459bd99ecefce8443 files=1 findings=0`。这是同一任务对真实多目标输入的适配，不新增或重试策略回合。
+
+## 全量采集与内容验收
+
+剩余两条列表分别于美东 18:53:05／18:42:03 正常结束，四个采集 tmux 会话均自然退出。含冒烟，带 motion token 的 VLA 完成 12 局、真实成功 11 局，失败为第 26 局；不带 motion token 的 VLA 完成 10 局、真实成功 5 局，失败为第 14、16、20、26、34 局。没有基础设施错误或策略重试。原始 attention／prefix 各 503 份，视频 22 份，完整生成编码记录 12 份；这些数量不等于任务全部成功。
+
+全量逐数组内容验收通过：`ATTN_COVERAGE=PASS expected=22 completed=22 infers=503 prefixes=503`；`MOTION_TOKEN_COVERAGE=PASS episodes=12 generated=130 uses=1531 missing=0`。130 指编码调用，1531 指跨推理累计有效 token 使用次数；不是 96 个预算槽位全部有效。大数组、向量、时间和位置、终局身份及视频长度已逐项检查。完整结果为 [capture-validation-all.json](records/capture-validation-all.json)。
+
+正式内容验收的精确 tmux 为 `ia-success-validate-without-motion-final-1104`、`ia-success-validate-with-motion-final-1104`，分别记录到 `R/logs/validate-without_motion-final.log`、`R/logs/validate-with_motion-final.log`，从干净固定采集工作树执行同一份 `R/validate_capture.py --phase all --model <组>`。最初一次未完成的独立验收因执行目录修正而停止，仅操作本轮精确会话名、删前删后核对其他会话不变，原日志保留，不作为最终验收依据，也没有重新执行策略回合。
+
+22 局关节状态回放均完成，物理后端为 CPU，不调用策略或 `env.step`。主会话已把 25 次实际取物尝试逐个与视频拼图、实际执行的闭合指令和 TCP 状态核对，形成 75 个代表性阶段锚点，每次取物都保留 `pickup_index`。没有把其余推理强行贴阶段标签；完整 503 次推理仍全部进入整局分析。
+
+## 正式离线分析命令与资源
+
+分析提交固定 `c55700b63b89de451adfc0c459bd99ecefce8443`，干净分析工作树如上；实际导入路径、清单和包装脚本源码哈希见 [analysis-dispatch.json](records/analysis-dispatch.json)。[分析清单](records/analysis-manifest.json) 绑定这两份提交及全部阶段证据。
+
+为缩短只读离线计算，使用 4 个 CPU 进程按回合并行，每进程 BLAS／OMP／MKL 各 1 线程，不使用 GPU，预算 4 小时、无重试。标准库 `ProcessPoolExecutor.map` 按原清单顺序返回，每进程原样调用 `success_attention.py::episode_analysis`，各局目录独立；只有父进程调用原 `summarize`、`figures_summary` 写总结果。因此不改变公式、阈值或跨局归约顺序。该调度调整已通过 `ADJUST_REVIEW=PASS scale=same findings=0`。
+
+完整入口命令为：
+
+```bash
+bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/run_analysis.sh
+```
+
+该脚本进入固定分析工作树，在启动解释器前设置：`PYTHONPATH` 指向分析工作树根、`src`、`packages/openpi-client/src` 和主检出 benchmark 源码；`CUDA_VISIBLE_DEVICES=''`、`JAX_PLATFORMS=cpu`、`OPENBLAS_NUM_THREADS=1`、`OMP_NUM_THREADS=1`、`MKL_NUM_THREADS=1`、`PYTHONUNBUFFERED=1`，缓存及资产环境沿用前文的主检出本机目录。最终命令是 `timeout --signal=TERM --kill-after=30s 4h <主根>/.venv/bin/python R/run_analysis_parallel.py --manifest R/analysis-manifest.json --out R/analysis --workers 4`，没有 `--max-infers` 截断。
+
+精确 tmux 为 `ia-success-analysis-1104`，外层 `pipefail`／`tee`／真实 `EXIT_CODE` 规则同采集；日志 `R/logs/analysis.log`。单局输出为 `R/analysis/<model>_ep<id>/`，总结果为 `R/analysis/success_attention_summary.json`。最终结论与图的目视复核另写 `result.md`，此处不提前声称分析通过。
+
+辅助命令的实际意外也保留：一次状态回放批处理用 `uv run --no-sync` 在空运行工作树生成了未同步的空 `.venv`，没有安装依赖或改变正式解释器；后续辅助及正式命令均显式使用主检出已固定的解释器。一次导入位置预检在主检出执行而被路径断言拒绝，改到固定分析工作树后通过，未在错误导入位置运行正式分析。
