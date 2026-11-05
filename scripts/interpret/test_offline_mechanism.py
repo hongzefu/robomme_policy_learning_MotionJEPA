@@ -54,14 +54,37 @@ def test_selection_rejects_duplicates_and_non_checkpoint_identity():
 def test_groups_follow_original_memory_order_and_real_frames():
     obs = SimpleNamespace(static_mask=np.array([[1, 1, 1, 0]], bool),
         motion_mask=np.array([[1, 0]], bool), mem_order=np.array([[4, 0, 1, 5, 2, 3]]),
-        tokenized_prompt_mask=np.array([[1, 0]], bool))
+        tokenized_prompt_mask=np.array([[1, 0]], bool),
+        images={"base": None, "wrist": None}, image_masks={"base": np.array([True]), "wrist": np.array([False])})
     layout = dict(P=10, MEM=6, IMG=2, TXT=2)
     groups = M.token_groups(obs, layout, [3, 7], 2)
     assert np.flatnonzero(groups["motion"]).tolist() == [0]
     assert np.flatnonzero(groups["真实帧:3"]).tolist() == [1, 2]
     assert np.flatnonzero(groups["真实帧:7"]).tolist() == [4]
-    assert np.flatnonzero(groups["其余"]).tolist() == [3, 5, 9] + list(range(10, 30))
+    assert np.flatnonzero(groups["当前视觉"]).tolist() == [6]
+    assert np.flatnonzero(groups["其余"]).tolist() == list(range(10, 30))
+    partition = np.sum([groups[name] for name in ("motion", "历史视觉", "当前视觉", "文字", "其余")], axis=0)
+    assert np.flatnonzero(partition).tolist() == [0, 1, 2, 4, 6, 8] + list(range(10, 30))
+    assert partition.max() == 1
     assert np.array_equal(obs.mem_order, [[4, 0, 1, 5, 2, 3]])
+
+
+def test_missing_prefix_tokens_never_enter_other_denominator():
+    obs = SimpleNamespace(static_mask=np.array([[False, False]]), motion_mask=None, mem_order=None,
+        tokenized_prompt_mask=np.array([[False]]), images={"腕部": None, "主视角": None},
+        image_masks={"腕部": np.array([False]), "主视角": np.array([False])})
+    groups = M.token_groups(obs, dict(P=7, MEM=2, IMG=4, TXT=1), [], 2)
+    for name in ("motion", "历史视觉", "当前视觉", "文字"):
+        assert groups[name].sum() == 0
+    assert groups["其余"].sum() == 20
+    assert not groups["其余"][:7].any()
+    # 即便故意给无效key非零注意力，统计也不能把它们算成有效其余质量。
+    values = np.ones((1, 1, 1, 1, 20, 27)) / 27
+    stats = M.aggregate_attention(values, groups)
+    assert stats["其余"]["tokens"] == 20
+    np.testing.assert_allclose(stats["其余"]["mass"], 20 / 27)
+    assert not obs.static_mask.any()
+    assert not any(mask.any() for mask in obs.image_masks.values())
 
 
 def test_aggregation_preserves_layer_head_and_mass_partition():
@@ -120,3 +143,24 @@ def test_replay_failure_stops_attention_and_preserves_evidence(tmp_path, monkeyp
     result = M.analyze_input(None, None, item, {})
     assert result["replay"]["same_path_maxabs"] == .01
     assert result["predictions"] == []
+
+
+def test_zero_inputs_write_missing_reports_without_model_loading(tmp_path):
+    table_path = tmp_path / "table.json"
+    table_path.write_text(json.dumps({"episodes": {}}))
+    selection = dict(models=["/a/checkpoint", "/b/checkpoint"], cases=[],
+                     missing=[{"reason": "没有有效固定放手成功局"}], selection_rule="固定参考身份",
+                     table=M.fingerprint(table_path))
+    selection_path = tmp_path / "selection.json"
+    M.write_json(selection_path, selection)
+    reports = []
+    for index, model_id in enumerate(selection["models"]):
+        path = tmp_path / f"analysis_{index}.json"
+        # 配置名和检查点刻意不可加载；零输入必须在模型加载前返回。
+        assert M.analyze(selection_path, model_id, "不存在的配置", path) == 1
+        assert json.loads(path.read_text())["results"] == []
+        reports.append(path)
+    assert M.report(reports, tmp_path / "report") == 1
+    text = (tmp_path / "report" / "report.html").read_text()
+    assert "分析未执行" in text
+    assert "没有有效固定放手成功局" in text

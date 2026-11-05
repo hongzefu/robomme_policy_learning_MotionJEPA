@@ -128,10 +128,26 @@ def token_groups(observation, layout, frame_times, tokens_per_frame):
     groups = {name: np.zeros(p + 20, bool) for name in ("motion", "历史视觉", "当前视觉", "文字", "其余")}
     groups["motion"][:mem] = valid & (order >= len(static))
     groups["历史视觉"][:mem] = valid & (order < len(static))
-    groups["当前视觉"][mem:mem + layout["IMG"]] = True
+    # 与HistoryPi0.embed_prefix相同，按obs.images插入顺序拼接，每张图沿用原image_masks。
+    image_names = list(observation.images)
+    if not image_names or layout["IMG"] % len(image_names):
+        raise ValueError("当前图像布局不符")
+    image_tokens = layout["IMG"] // len(image_names)
+    for index, name in enumerate(image_names):
+        image_valid = np.asarray(observation.image_masks[name]).reshape(-1)
+        if image_valid.shape != (1,):
+            raise ValueError("图像mask必须保留原单样本批量")
+        start = mem + index * image_tokens
+        groups["当前视觉"][start:start + image_tokens] = bool(image_valid[0])
     text_mask = np.asarray(observation.tokenized_prompt_mask).reshape(-1).astype(bool)
     groups["文字"][mem + layout["IMG"]:p] = text_mask
-    groups["其余"] = ~np.logical_or.reduce(list(groups.values()))
+    # 前缀padding从不属于有效key；其余只包含有效但未归上述四类的动作key。
+    valid_keys = np.zeros(p + 20, bool)
+    valid_keys[:mem] = valid
+    valid_keys[mem:mem + layout["IMG"]] = groups["当前视觉"][mem:mem + layout["IMG"]]
+    valid_keys[mem + layout["IMG"]:p] = text_mask
+    valid_keys[p:] = True
+    groups["其余"] = valid_keys & ~np.logical_or.reduce(list(groups.values()))
     times = np.full(mem, -1, int)
     frame_times = np.asarray(frame_times).reshape(-1)
     for index in np.flatnonzero(groups["历史视觉"][:mem]):
@@ -226,6 +242,12 @@ def analyze(selection_path, model_id, config_name, output):
     entries = table.get("episodes", table)
     if isinstance(entries, list):
         entries = {e["episode_key"]: e for e in entries}
+    report = {"model_id": model_id, "config": config_name, "selection": fingerprint(selection_path), "results": []}
+    write_json(output, report)
+    if not any(case["points"] for case in selection["cases"]):
+        print(f"OFFLINE_REPLAY=FAIL models=1 points=0 same_path_maxabs=None tol=1e-6 "
+              f"attn_path_maxabs=None attention=not_run reason=no_selected_inputs output={output}")
+        return 1
     from scripts.interpret.attn_adapter import AttnAdapter, _ZeroMotion, _MV_DIR
     import sys
     sys.path.insert(0, str(_MV_DIR))
@@ -234,7 +256,6 @@ def analyze(selection_path, model_id, config_name, output):
     policy = build_policy(config.get_config(config_name), Path(model_id), seed=42,
                           motion_factory=lambda **kwargs: _ZeroMotion())
     adapter = AttnAdapter(policy)
-    report = {"model_id": model_id, "config": config_name, "selection": fingerprint(selection_path), "results": []}
     for case in selection["cases"]:
         for point in case["points"]:
             item = next(i for i in point["inputs"] if i["model_id"] == model_id)
@@ -269,6 +290,8 @@ def report(paths, output):
             raise ValueError("分析结果有重复或缺失固定时刻")
     parts = ["<!doctype html><meta charset='utf-8'><title>同输入机制分析</title><h1>同输入机制分析</h1>",
              "<p>这些固定成功案例只描述关联，不能证明因果或替代50局总体比较。注意力路径与原路径数值差异分别报告。图需主会话目视复核。</p>"]
+    if not any(data["results"] for data in reports):
+        parts.append("<p>没有固定选中的共同输入，分析未执行；未加载模型、未补跑寻找成功，不能判定机制分析通过。具体缺失原因如下。</p>")
     total, valid = 0, True
     for model_index, data in enumerate(reports):
         parts.append(f"<h2>模型{model_index + 1}</h2><pre>{html.escape(data['model_id'])}</pre>")
