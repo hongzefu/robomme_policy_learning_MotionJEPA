@@ -295,7 +295,7 @@
 <div class="tbl"><table>
 <tr><th>查什么</th><th>怎么查</th><th>过了说明什么</th><th>判定行</th></tr>
 <tr><td>rollout 跑完</td><td>每局要么有终局，要么重试 1 次后仍失败、记为无效局；单模型无效局不超过 5 局</td><td>Q1 分母清楚</td><td><code>ROLLOUT_RUN=PASS models=2 valid_ctx=&lt;n&gt; valid_mot=&lt;n&gt; invalid=&lt;n&gt; infra_retries=&lt;n&gt;</code></td></tr>
-<tr><td>窗口表可用</td><td>触发前方块位置和窗口表逐步比较，容差 1e-6；单模型不符局不超过 5 局</td><td>窗口表对通过的局是真值</td><td><code>WINDOW_TABLE_MATCH=PASS models=2 checked=&lt;n&gt; mismatched=&lt;n&gt; cube_maxabs=&lt;x&gt; tol=1e-6</code></td></tr>
+<tr><td>窗口表可用</td><td>触发前方块位置和窗口表逐步比较，容差 1e-6；窗口内有未覆盖步或一步没比到也算不符局；单模型不符局不超过 5 局</td><td>窗口表对通过的局是真值</td><td><code>WINDOW_TABLE_MATCH=PASS models=2 checked=&lt;n&gt; mismatched=&lt;n&gt; uncovered_after_window=&lt;n&gt; cube_maxabs=&lt;x&gt; tol=1e-6</code></td></tr>
 <tr><td>输入记录完整</td><td>每个有效局的记录数等于轨迹里的动作块数，步号一一对应，写后读回一致</td><td>有效局的每次推理都能离线分析</td><td><code>ROLLOUT_RECORD=PASS models=2 valid_episodes=&lt;n&gt; inferences=&lt;n&gt; missing=0 readback=1</code></td></tr>
 <tr><td>原路径可复现</td><td>全部记录用保存的噪声走原路径重算，与实际动作比较，容差 1e-6</td><td>离线用的输入和噪声就是实际发生的那一份</td><td><code>ROLLOUT_REPLAY=PASS models=2 points=&lt;n&gt; same_path_maxabs=&lt;x&gt; tol=1e-6</code></td></tr>
 <tr><td>隐状态不影响采样</td><td>同一输入，开、关隐状态捕获的输出逐位比较</td><td>加捕获没有改变展开路径</td><td><code>HIDDEN_PARITY=PASS points=&lt;n&gt; maxabs=0</code></td></tr>
@@ -406,7 +406,7 @@ uv run python -m scripts.interpret.analysis.rollout_probe     --root $O</pre>
 <tr><td>两个模型触发分布差很多</td><td>Q3、Q4 样本不同，比较混杂</td><td>共同局重算；只描述差异</td></tr>
 <tr><td>motion sidecar 占显存或变慢</td><td>rollout 变慢</td><td>沿用既有比例；超预算时按第 2 条判停</td></tr>
 <tr><td>其他用户占卡</td><td>显存不足</td><td>不操作他人进程，等候并报告</td></tr>
-<tr><td>到位时刻判定不稳</td><td>P 和探针样本范围受影响</td><td>定义为首次 |TCP 高度 − 悬停高度| ≤ 1 cm；W3 在 28 局中止轨迹上核对后写入档案，改定义按调整流程走</td></tr>
+<tr><td>到位时刻判定不稳</td><td>P 和探针样本范围受影响</td><td>定义为首次 |TCP 高度 − 悬停高度| ≤ 1.5 cm（实施中由 1 cm 调整，见第十节），与「低于悬停 2 cm 算下压」是两个独立概念；基线的分布看 <code>REACH_STATS</code>，定义不成立就停下走调整流程，不写回退逻辑</td></tr>
 </table></div>
 
 <h2>六、盲区诚实清单</h2>
@@ -440,6 +440,12 @@ uv run python -m scripts.interpret.analysis.rollout_probe     --root $O</pre>
 </ul>
 <h2>九、开工审查修订记录</h2>
 <p>美东 2026-11-05 用户对 <code>3312431</code> 说「同意开工 先别加了」，开工审查 <code>PLAN_CONSISTENCY_REVIEW=FAIL base=331243156e630923c1eebb0b3aa34308ce7fd0f5 findings=8 blocking=2</code>，随即停工。主会话逐条回原文和代码核实后，把两条阻塞项交用户裁决，用户原话「都按建议改」，写入 K8、K9 及相应判定行和闸门。其余为文字和接口统一：K1 写明窗口表例外；中止数据写清 28 局完整加 1 局中断；<code>rollout_*.npz</code> 的键、缺失字段来源和 <code>motion_times</code> 取法；互斥参数；冒烟先后顺序；S4 闸门；tmux 名字出处；只读措辞。第 F8 条经核实无冲突。重新开工前只审本次修订的部分。用户随后说「开工了！！」，第二轮审查 <code>PLAN_CONSISTENCY_REVIEW=PASS base=331243156e630923c1eebb0b3aa34308ce7fd0f5 tip=2929ec3535a6984eaaad6854b75d0d4f5257b630 findings=4 blocking=0 scope=revision</code>；其 4 条均为文字统一，已直接写入，未改口径。状态机未获登记答复，按人工交接。</p>
+<h2>十、实施中调整</h2>
+<div class="tbl"><table>
+<tr><th>调整</th><th>旧→新</th><th>理由</th><th>审查</th></tr>
+<tr><td>到位阈值</td><td>1 cm → 1.5 cm</td><td>模型实际悬停高于 <code>z_hover</code> 约 0.26～1.07 cm，1 cm 把第 9、10、25 局的到位误判到第 321、280、197 步；1.5 cm 下 29 条轨迹全部在第 46～51 步。改动只有一个常量和对应测试</td><td><code>ADJUST_REVIEW=PASS scale=same findings=3</code></td></tr>
+<tr><td>窗口核对空 PASS</td><td>未覆盖步跳过 → 窗口内未覆盖或一步没比到记不符局，窗口后只计数</td><td>W3 第一轮合并前审查的阻塞项；这是实现缺陷的修复，收紧了判定</td><td><code>PRE_MERGE_REVIEW=PASS task=W3 round=2</code></td></tr>
+</table></div>
 </main>
 </body>
 </html>
