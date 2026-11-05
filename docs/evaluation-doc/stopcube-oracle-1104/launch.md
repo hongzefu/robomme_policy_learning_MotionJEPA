@@ -40,6 +40,8 @@ benchmark 锁定 `856bc3a189d4172f3f47dbee4424d585f8d78db3`。策略环境为主
 
 ## 本轮会话清单
 
+两份续测实际于美东00:12:31启动，`so-followup-ctx-a`、`so-followup-mot-a`，窗格PID473785、473787。第3局两模型已退出0，后续诊断与离线仍在进行。另预留 `so-smoke-fk-a`，完整命令 `tmux new-session -d -s so-smoke-fk-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_smoke_fk.sh'`；同一固定48a52f1干净树，official-sim解释器调用 `-m scripts.interpret.analysis.oracle_press_prob convert-z`，四个 `--query-root` 指向本轮query16/query3各ctx/mot的attn目录，`--trace-root <产物根>/smoke`、`--oracle-table <产物根>/oracle-smoke-table.json`、`--output-dir <产物根>/smoke/fk-a --workers 2`。同期trace按nonce绑定，核真实raw_state换算高度；日志 `<产物根>/logs/smoke-fk-a.log`，不启动模型或物理步进，不重试。
+
 两模型询问试跑实际均于美东11-05 00:04:43启动：`so-query16-ctx-a`、`so-query16-mot-a`，窗格PID分别465684、465681。首段稳定点间隔约2.5秒，最终退出及数值验收另记，不以存活替代完成。
 
 预留续测会话 `so-followup-ctx-a`、`so-followup-mot-a`，各自在对应第16局询问退出0且输出完整之后启动；不同模型可以并行，同卡不共驻两份服务。完整命令为 `tmux new-session -d -s so-followup-ctx-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_smoke_followup.sh ctx'`（motion对应参数mot）。固定同一干净48a52f1，顺序执行：`run_local --spec <产物根>/spec-smoke-query3-<模型>-a.json --episodes StopCube:3`；`run_local --spec <产物根>/spec-smoke-cadence16-<模型>-a.json --episodes StopCube:16`；`offline_query --query <第16局首尾两点> <第3局首尾两点> --ckpt <已核检查点> --config <原配置名> --attention --output <产物根>/smoke/offline-<模型>-a.json`。前两条采用策略解释器 `-m scripts.interpret.run_local`，最后为同解释器 `-m scripts.interpret.offline_query`。原点路径从完成局的原子存盘文件确定，原噪声与batch2随记录恢复；环境XLA确定性参数与线上一致。日志 `<产物根>/logs/followup-<模型>-a.log`，任一命令失败保留退出码，不自动重试；截止仍绝对08:00。诊断16步只用于输入节奏验收，不与正式4步点混作独立样本。
