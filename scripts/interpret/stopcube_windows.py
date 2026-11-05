@@ -44,11 +44,12 @@ def _plain(value):
 def read_trace(path):
     """读取一条轨迹及旁边的回执；不把不同轨迹的时刻拼成一条。"""
     path = Path(path)
-    meta, rows = {}, []
-    for name in ("meta.json", "hold_receipt.json"):
+    meta, rows, metadata_sources = {}, [], []
+    for name in ("meta.json", "hold_receipt.json", "meta/hold_receipt.json"):
         sidecar = path.parent / name
         if sidecar.is_file():
             meta.update(json.loads(sidecar.read_text()))
+            metadata_sources.append(fingerprint(sidecar))
     for number, line in enumerate(path.read_text().splitlines(), 1):
         if not line.strip():
             continue
@@ -73,7 +74,7 @@ def read_trace(path):
     extra = meta.get("extra") or {}
     for key, value in extra.items():
         meta.setdefault(key, value)
-    return {"meta": meta, "rows": rows, "source": fingerprint(path)}
+    return {"meta": meta, "rows": rows, "source": fingerprint(path), "metadata_sources": metadata_sources}
 
 
 def task_definition(env, benchmark_root):
@@ -227,19 +228,55 @@ def extract_events(trace, definition, delta_z=0.02):
             "trajectory_kind": trace["meta"]["trajectory_kind"]}
 
 
+def validate_success_window(trace, events, geometry, definition):
+    """成功字段独立于运动耗时；用真实成功轨迹核对按钮、停步与几何窗口。"""
+    result = {"trajectory_kind": trace["meta"]["trajectory_kind"],
+              "task_success": trace["meta"].get("task_success"), "status": "not_applicable", "reasons": []}
+    if result["task_success"] is not True:
+        return result
+    reasons = result["reasons"]
+    begin, end = geometry["target_visit_in"], geometry["target_visit_out"]
+    trigger, stop = events["button_trigger_step"], events["stop_timestep"]
+    if begin is None or end is None:
+        reasons.append("成功轨迹缺少同局不按按钮的完整几何窗口")
+    bounds = events["button_trigger_bounds"]
+    if trigger is None or bounds is None or bounds[0] != bounds[1]:
+        reasons.append("成功轨迹没有精确按钮触发步")
+    if not finite(stop):
+        reasons.append("成功轨迹缺少官方 stop_timestep")
+    if begin is not None and end is not None:
+        if trigger is not None and not begin <= trigger <= end:
+            reasons.append("按钮触发步不在目标经过几何区间")
+        if finite(stop) and not begin <= stop <= end:
+            reasons.append("官方 stop_timestep 不在目标经过几何区间")
+    if finite(stop) and trigger is not None and stop < trigger:
+        reasons.append("官方停步早于首次按钮触发")
+    stopped = next((row for row in trace["rows"] if row["env_step_after"] == stop), None)
+    cube = stopped.get("cube_position_after") if stopped else None
+    target = stopped.get("target_position_after") if stopped else None
+    half = definition.get("cube_half_size")
+    if not (vector(cube, 3) and vector(target, 3) and finite(half) and half > 0):
+        reasons.append("官方停步缺少可核对的物体和目标实测位置")
+    elif math.hypot(cube[0] - target[0], cube[1] - target[1]) > 3 * half:
+        reasons.append("官方停步时物体超出 3*cube_half_size")
+    result.update(status="fail" if reasons else "pass", button_trigger_step=trigger, stop_timestep=stop,
+                  source=trace["source"])
+    return result
+
+
 def analyze(traces, definitions=None, delta_z=0.02):
     if not finite(delta_z) or delta_z <= 0:
         raise ValueError("delta_z 必须为正有限数")
     grouped = {}
     for trace in traces:
         grouped.setdefault(trace["meta"]["episode_key"], []).append(trace)
-    windows, calibrations = {}, {}
+    windows, calibrations, groups = {}, {}, {}
     for key, items in grouped.items():
         primary = next((t for t in items if t["meta"]["trajectory_kind"] == "normal"), items[0])
         definition = dict(primary["meta"])
         definition.update((definitions or {}).get(key, {}))
         for trace in items:
-            for field in ("env_seed", "move_interval", "target_pass"):
+            for field in ("episode_id", "env_seed", "difficulty", "move_interval", "target_pass"):
                 if field in trace["meta"] and field in definition and trace["meta"][field] != definition[field]:
                     raise ValueError(f"{key} 的 {field} 在轨迹与任务定义间不一致")
         geometry = geometry_window(items, definition)
@@ -256,6 +293,8 @@ def analyze(traces, definitions=None, delta_z=0.02):
         accepted = sample is not None and not reasons
         delay = sample["motion_delay"] if accepted else None
         calibration = {"episode_key": key, "env_seed": definition.get("env_seed"),
+            "episode_id": definition.get("episode_id"), "difficulty": definition.get("difficulty"),
+            "metadata_sources": primary.get("metadata_sources", []),
             "move_interval": definition.get("move_interval"), "target_pass": definition.get("target_pass"),
             "hover_z": definition.get("hover_z"), "delta_z": delta_z, "motion_delay": delay,
             "hover_source": definition.get("hover_source"), "calibration_source": "same_episode_measured" if accepted else None,
@@ -265,14 +304,28 @@ def analyze(traces, definitions=None, delta_z=0.02):
             "events": normal["events"], "samples": [sample] if sample else [], "trajectories": trajectories}
         begin, end = geometry["target_visit_in"], geometry["target_visit_out"]
         start = [begin - delay, end - delay] if delay is not None and begin is not None else [None, None]
-        shared = {field: calibration[field] for field in ("episode_key", "env_seed", "move_interval", "target_pass",
+        shared = {field: calibration[field] for field in ("episode_key", "episode_id", "env_seed", "difficulty", "move_interval", "target_pass",
                   "hover_z", "delta_z", "motion_delay", "calibration_source")}
         window = {**shared, **geometry, "start_range": start,
                   "status": "resolved" if accepted and geometry["window_status"] == "resolved" else "unresolved",
                   "reasons": reasons + geometry["window_reasons"]}
         calibration.update(target_visit_in=begin, target_visit_out=end, start_range=start)
+        validation = [validate_success_window(trace, trajectories[trace["meta"]["trajectory_kind"]]["events"],
+                                              geometry, definition) for trace in items]
+        window["success_validation"] = validation
+        group = groups.setdefault(str(definition.get("move_interval")), {"episodes": 0, "successful": 0, "validated": 0, "failed": 0})
+        group["episodes"] += 1
+        group["successful"] += sum(v["task_success"] is True for v in validation)
+        group["validated"] += sum(v["status"] == "pass" for v in validation)
+        group["failed"] += sum(v["status"] == "fail" for v in validation)
         windows[key], calibrations[key] = window, calibration
-    return ({"schema_version": SCHEMA_VERSION, "episodes": windows},
+    missing_groups = sorted(group for group, count in groups.items() if not count["validated"])
+    valid = bool(groups) and not missing_groups and not any(g["failed"] for g in groups.values())
+    verification = {"status": "pass" if valid else "fail", "groups": groups,
+                    "missing_success_groups": missing_groups,
+                    "successful": sum(g["successful"] for g in groups.values()),
+                    "validated": sum(g["validated"] for g in groups.values())}
+    return ({"schema_version": SCHEMA_VERSION, "episodes": windows, "window_sim": verification},
             {"schema_version": SCHEMA_VERSION, "episodes": calibrations})
 
 
@@ -286,10 +339,12 @@ def add_fk(trace, benchmark_root):
     episode_id = meta.get("episode_id")
     if episode_id is None:
         raise ValueError(f"{meta['episode_key']} 缺 episode_id，不能构造同局 FK 环境")
-    env, seed, _ = build_env("StopCube", int(episode_id))
+    env, seed, difficulty = build_env("StopCube", int(episode_id))
     try:
         if meta.get("env_seed") != seed:
             raise ValueError("FK 环境 seed 与记录不符")
+        if meta.get("difficulty") != difficulty:
+            raise ValueError("FK 环境 difficulty 与记录不符")
         env.reset(seed=seed)
         definition = task_definition(env, benchmark_root)
         definition["env_seed"] = seed
@@ -350,7 +405,7 @@ def probe_episode(episode_id, episode_key, output_dir, benchmark_root):
         (output_dir / "task_definitions.json").write_text(json.dumps(definitions, ensure_ascii=False, indent=2) + "\n")
         result = geometry_window([read_trace(path)], definition)
         ok = result["window_status"] == "resolved"
-        print(f"WINDOW_SIM={'PASS' if ok else 'FAIL'} episode={episode_key} source={path}")
+        print(f"WINDOW_GEOMETRY={'PASS' if ok else 'FAIL'} episode={episode_key} source={path}")
         return 0 if ok else 1
     finally:
         env.close()
@@ -393,9 +448,14 @@ def main(argv=None):
         (args.output_dir / name).write_text(json.dumps(data, ensure_ascii=False, indent=2, allow_nan=False) + "\n")
     unresolved = sum(e["status"] != "resolved" for e in calibration["episodes"].values())
     missing_windows = sum(e["status"] != "resolved" for e in windows["episodes"].values())
+    missing_geometry = sum(e["window_status"] != "resolved" for e in windows["episodes"].values())
+    verification = windows["window_sim"]
+    simulation_ok = verification["status"] == "pass" and not missing_windows
     print(f"TIMING_CALIBRATION={'PASS' if not unresolved else 'FAIL'} sources={len(traces)} unresolved={unresolved}")
-    print(f"WINDOW_SIM={'PASS' if not missing_windows else 'FAIL'} episodes={len(windows['episodes'])} unresolved={missing_windows}")
-    return 0 if not unresolved and not missing_windows else 1
+    print(f"WINDOW_GEOMETRY={'PASS' if not missing_geometry else 'FAIL'} episodes={len(windows['episodes'])} unresolved={missing_geometry}")
+    print(f"WINDOW_SIM={'PASS' if simulation_ok else 'FAIL'} successful={verification['successful']} "
+          f"validated={verification['validated']} missing_success_groups={','.join(verification['missing_success_groups']) or 'none'}")
+    return 0 if not unresolved and simulation_ok else 1
 
 
 if __name__ == "__main__":

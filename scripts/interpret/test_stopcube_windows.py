@@ -7,12 +7,13 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import MagicMock, patch
 
-from scripts.interpret.stopcube_windows import analyze, extract_events, geometry_window, main, read_trace
+from scripts.interpret.stopcube_windows import add_fk, analyze, extract_events, geometry_window, main, read_trace
 
 
 def definition():
-    return {"env_seed": 7, "move_interval": 20, "target_pass": 2, "cube_half_size": 0.02,
+    return {"episode_id": 7, "env_seed": 7, "difficulty": "easy", "move_interval": 20, "target_pass": 2, "cube_half_size": 0.02,
             "hover_z": 0.15, "hover_source": {"symbol": "solve_button_ready::ready_position[2]",
             "git_commit": "合成测试"}, "button_position": [0, 0, 0]}
 
@@ -41,6 +42,19 @@ def trace(kind="normal", final=12):
     return {"meta": meta, "rows": rows, "source": {"path": f"合成/{kind}", "sha256": "测试"}}
 
 
+def successful_trace():
+    item = trace(final=32)
+    item["meta"]["task_success"] = True
+    for row in item["rows"]:
+        before, after = row["env_step_before"], row["env_step_after"]
+        row.update(executed_target_tcp_z=0.12 if before >= 27 else 0.15,
+                   tcp_before=[0, 0, 0.12 if before >= 29 else 0.15],
+                   tcp_after=[0, 0, 0.12 if after >= 29 else 0.15],
+                   button_pressed_before=before >= 30, button_pressed_after=after >= 30,
+                   stop_timestep=31 if after >= 31 else None)
+    return item
+
+
 class StopCubeWindowsTests(unittest.TestCase):
     def test_distinct_command_tcp_button_and_stop_steps(self):
         result = extract_events(trace(), definition())
@@ -61,6 +75,38 @@ class StopCubeWindowsTests(unittest.TestCase):
         self.assertEqual(cal["calibration_source"], "same_episode_measured")
         self.assertIs(cal["calibration_evidence"]["task_success"], False)
         self.assertIn("window_probe", cal["trajectories"])
+        self.assertEqual(windows["window_sim"]["status"], "fail")
+        self.assertEqual(windows["window_sim"]["missing_success_groups"], ["20"])
+
+    def test_successful_trajectory_validates_real_button_stop_and_geometry(self):
+        windows, _ = analyze([successful_trace(), trace("window_probe", 40)])
+        self.assertEqual(windows["window_sim"]["status"], "pass")
+        self.assertEqual(windows["window_sim"]["validated"], 1)
+        self.assertEqual(windows["window_sim"]["missing_success_groups"], [])
+
+    def test_success_field_does_not_override_wrong_stop_or_geometry(self):
+        for failure in ("stop", "position", "button"):
+            with self.subTest(failure=failure):
+                item = successful_trace()
+                if failure == "stop":
+                    for row in item["rows"]:
+                        row["stop_timestep"] = 2
+                elif failure == "position":
+                    item["rows"][30]["cube_position_after"] = [1, 0, 0]
+                else:
+                    for row in item["rows"]:
+                        row.update(button_pressed_before=False, button_pressed_after=False)
+                windows, _ = analyze([item, trace("window_probe", 40)])
+                self.assertEqual(windows["window_sim"]["status"], "fail")
+                self.assertEqual(windows["window_sim"]["validated"], 0)
+
+    def test_success_coverage_lists_missing_move_interval_groups(self):
+        other = trace()
+        other["meta"].update(episode_key="StopCube/8", episode_id=8, env_seed=8, move_interval=40)
+        windows, _ = analyze([successful_trace(), trace("window_probe", 40), other])
+        self.assertEqual(windows["window_sim"]["missing_success_groups"], ["40"])
+        self.assertEqual(windows["window_sim"]["status"], "fail")
+        self.assertEqual(analyze([])[0]["window_sim"]["status"], "fail")
 
     def test_early_termination_cannot_supply_window(self):
         windows, calibration = analyze([trace()])
@@ -146,7 +192,7 @@ class StopCubeWindowsTests(unittest.TestCase):
             folder = Path(tmp)
             paths = []
             for kind, final in (("normal", 12), ("window_probe", 40)):
-                item = trace(kind, final)
+                item = successful_trace() if kind == "normal" else trace(kind, final)
                 path = folder / f"{kind}.jsonl"
                 path.write_text("\n".join(json.dumps(row) for row in [{"event": "meta", **item["meta"]}, *item["rows"]]))
                 paths.extend(["--trace", str(path)])
@@ -160,6 +206,50 @@ class StopCubeWindowsTests(unittest.TestCase):
             broken.write_text("\n".join(json.dumps(row) for row in [{"event": "meta", **item["meta"]}, *item["rows"]]))
             with self.assertRaises(ValueError):
                 read_trace(broken)
+
+    def test_real_s2_nested_receipt_identity_reaches_fk_without_inference(self):
+        root = os.environ.get("STOPCUBE_TEST_ROOT")
+        with tempfile.TemporaryDirectory(dir=root) as tmp:
+            folder = Path(tmp) / "client" / "traces" / "nonce"
+            (folder / "meta").mkdir(parents=True)
+            item = trace()
+            # S2逐步记录不携带 seed 与官方局索引，它们来自真正的回执目录。
+            path = folder / "step_trace.jsonl"
+            path.write_text("\n".join(json.dumps(row) for row in item["rows"]))
+            receipt = {"episode_key": "StopCube/7", "episode_id": 7, "env_seed": 7,
+                       "difficulty": "easy", "trajectory_kind": "normal", "task_success": False,
+                       "extra": definition()}
+            (folder / "meta" / "hold_receipt.json").write_text(json.dumps(receipt))
+            parsed = read_trace(path)
+            self.assertEqual(parsed["meta"]["episode_id"], 7)
+            self.assertEqual(parsed["meta"]["env_seed"], 7)
+            self.assertEqual(parsed["meta"]["difficulty"], "easy")
+            env, reader = MagicMock(), MagicMock()
+            reader.set_arm.return_value.tolist.return_value = [0, 0, 0.15]
+            with patch("scripts.interpret.read_sim_eef_pose.build_env", return_value=(env, 7, "easy")) as build, \
+                    patch("scripts.interpret.read_sim_eef_pose.TcpReader", return_value=reader), \
+                    patch("scripts.interpret.stopcube_windows.task_definition", return_value=definition()):
+                add_fk(parsed, folder)
+            build.assert_called_once_with("StopCube", 7)
+            env.reset.assert_called_once_with(seed=7)
+            env.close.assert_called_once()
+            self.assertEqual(parsed["rows"][0]["executed_target_tcp"], [0, 0, 0.15])
+
+    def test_failed_only_cli_keeps_values_but_returns_failure(self):
+        root = os.environ.get("STOPCUBE_TEST_ROOT")
+        with tempfile.TemporaryDirectory(dir=root) as tmp:
+            folder = Path(tmp)
+            args = []
+            for kind, final in (("normal", 12), ("window_probe", 40)):
+                item = trace(kind, final)
+                path = folder / f"{kind}.jsonl"
+                path.write_text("\n".join(json.dumps(row) for row in [{"event": "meta", **item["meta"]}, *item["rows"]]))
+                args.extend(["--trace", str(path)])
+            output = folder / "output"
+            self.assertEqual(main([*args, "--output-dir", str(output)]), 1)
+            windows = json.loads((output / "windows.json").read_text())
+            self.assertEqual(windows["episodes"]["StopCube/7"]["start_range"], [21, 33])
+            self.assertEqual(windows["window_sim"]["status"], "fail")
 
 
 if __name__ == "__main__":
