@@ -16,6 +16,8 @@ StopCube 可选键：stopcube_mode（normal、hold_extended、oracle_query、ora
 Oracle 另用 query_interval=4（节奏诊断可16）、query_record=10；校准另需 calibration_plan、calibration_kind，
 多模型选点文件由 model_id（默认 model_kind）选择。校准选点文件内容也并入身份。
 query_batch_size 可显式指定1、2、5、10，缺省实际批量10；该批量进入身份，不做自动回退。
+rollout_record（bool，只允许与 stopcube_mode=normal 同用）：开启时服务端加 --rollout-record，走原采样路径，
+每次推理写 rollout_<seq>.npz；开启时并入身份，逐局 npz 计数改数 rollout_*.npz；缺键时身份与命令不变。
 S8 motion 内容替换的可选键：
   record_motion   目录；服务端加 --record-motion，每局写 <目录>/<nonce>.npz，本脚本收尾按 terminal 局身份改名为
                   <目录>/<task>_ep<id>.npz（与 motion_swap 供体文件同名规则）；局的 episode.json 记 motion_record。
@@ -112,6 +114,11 @@ def load_spec(path):
             spec["calibration_plan"] = str(Path(spec["calibration_plan"]).resolve())
     elif spec.get("stopcube_config") is not None:
         raise SystemExit("spec: stopcube_config 需要 stopcube_mode")
+    if "rollout_record" in spec:
+        if type(spec["rollout_record"]) is not bool:
+            raise SystemExit("spec: rollout_record 必须为 bool")
+        if spec["rollout_record"] and spec.get("stopcube_mode") != "normal":
+            raise SystemExit("spec: rollout_record 只允许与 stopcube_mode=normal 同用")
     return spec
 
 
@@ -162,6 +169,8 @@ def run_identity(spec, manifest):
         if spec["stopcube_mode"] == "oracle_calibrate":
             ident.update(calibration_plan_sha256=hashlib.sha256(Path(spec["calibration_plan"]).read_bytes()).hexdigest(),
                          calibration_kind=spec["calibration_kind"], model_id=spec.get("model_id", spec["model_kind"]))
+    if spec.get("rollout_record"):
+        ident["rollout_record"] = True
     return M.digest(ident)
 
 
@@ -232,6 +241,8 @@ def build_server_command(spec, nonce, port, episodes=None):
         extra += ["--query-record", str(spec.get("query_record", 10)), "--oracle-mode", spec["stopcube_mode"]]
         if spec.get("query_batch_size") is not None:
             extra += ["--query-batch-size", str(spec["query_batch_size"])]
+    if spec.get("rollout_record"):
+        extra += ["--rollout-record"]
     if spec.get("save_top_frames") is not None:
         extra += ["--save-top-frames", str(int(spec["save_top_frames"]))]
     if spec.get("save_prefix"):
@@ -413,7 +424,8 @@ def collect(spec, attempt, output, episodes):
         found = records.get(key, {})
         terminal, started = found.get("terminal"), found.get("started")
         nonce = (terminal or started or {}).get("episode_nonce")
-        npz = len(list((attn_out / nonce).glob("infer_*.npz"))) if nonce else 0
+        # rollout 记录模式不写 infer_*.npz；RUN_LOCAL 判定与逐局结果改数 rollout_*.npz
+        npz = len(list((attn_out / nonce).glob("rollout_*.npz" if spec.get("rollout_record") else "infer_*.npz"))) if nonce else 0
         mode = spec.get("stopcube_mode")
         oracle_mode = mode in ("oracle_query", "oracle_calibrate")
         query_npz = len(list((attn_out / nonce).glob("query_*.npz"))) if nonce else 0

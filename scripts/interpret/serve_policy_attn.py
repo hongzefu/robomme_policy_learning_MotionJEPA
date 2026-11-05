@@ -47,6 +47,8 @@ motion 内容替换（S8；只换 motion 编码内容，motion token 个数、�
 
 Oracle 询问：加 --query-record 10 --oracle-mode oracle_query；不构造注意力适配器。
 校准交还：--oracle-mode oracle_calibrate，恢复原 infer，不写询问或注意力数组。
+真实 rollout 输入记录：加 --rollout-record；不构造注意力适配器，仍走原采样路径，每次 infer 返回后写
+<attn-out>/<episode_nonce>/rollout_<seq:04d>.npz（键可被 offline_query.replay_query 原样消费，见 RolloutRecorder）。
 """
 from __future__ import annotations
 
@@ -443,6 +445,121 @@ class QueryRecorder:
         return output
 
 
+class RolloutRecorder:
+    """只记录不换路径：原样调用原采样器，infer 返回后把完整输入和实际噪声写盘，不写注意力、不碰 policy._rng。
+
+    噪声公式与 history_pi0.HistoryPi0.sample_actions 在 noise=None 时相同：
+    jax.random.normal(rng, (batch=1, action_horizon, action_dim))，只由传入的 sample_rng 决定。"""
+
+    def __init__(self, policy, output_dir, *, model_id=""):
+        self.policy, self.output_dir, self.model_id = policy, Path(output_dir), str(model_id)
+        self.motion_enabled = bool(policy.motion_enabled)
+        self.original_reset, self.original_infer = policy.reset, policy.infer
+        self.original_sample = policy._sample_actions
+        self.ep_dir, self.infer_seq, self.captured = None, 0, {}
+        self.episode = {}
+
+    def install(self):
+        self.policy.reset = self.reset
+        self.policy.infer = self.infer
+        self.policy._sample_actions = self.sample
+        self._hook_mem_buffer()
+
+    def _hook_mem_buffer(self):
+        # mem_buffer 每次 reset 重建，须重新挂；只捕获返回值，不重复调用（取法同 AttnRecorder._hook_mem_buffer）
+        mem_buffer = self.policy.mem_buffer
+        if not self.motion_enabled or mem_buffer is None:
+            return
+        original = mem_buffer._prepare_motion
+
+        def prepare_motion(step_idx):
+            result = original(step_idx)
+            self.captured["motion"] = result
+            return result
+
+        mem_buffer._prepare_motion = prepare_motion
+
+    def reset(self):
+        self.original_reset()
+        self._hook_mem_buffer()
+        rpc = _RPC.get("rpc") or {}
+        nonce = rpc.get("episode_nonce") or f"local-{uuid.uuid4().hex}"
+        self.ep_dir = self.output_dir / nonce
+        self.ep_dir.mkdir(parents=True, exist_ok=False)
+        self.infer_seq = 0
+        self.episode = {"episode_nonce": nonce, "reset_rpc": rpc, "model_id": self.model_id, "infers": 0}
+        _write_json(self.ep_dir / "episode.json", self.episode)
+
+    def sample(self, rng, observation, **kwargs):
+        # 只存引用，不在计时段内搬回主机；噪声与写盘都在 infer 返回之后
+        values = self.original_sample(rng, observation, **kwargs)
+        self.captured.update(rng=rng, observation=observation, kwargs=kwargs, normalized=values)
+        return values
+
+    def infer(self, obs):
+        if self.ep_dir is None:
+            raise RuntimeError("infer 之前必须先 reset（无 episode 目录）")
+        self.captured = {}
+        outputs = self.original_infer(obs)
+        record = self.build_record(outputs)
+        name = f"rollout_{self.infer_seq:04d}"
+        path = self.ep_dir / f"{name}.npz"
+        tmp = self.ep_dir / f".{name}.{uuid.uuid4().hex}.tmp.npz"
+        np.savez(tmp, **record)
+        os.replace(tmp, path)
+        self._check_readback(path, record)
+        print(f"ROLLOUT_INFER nonce={self.episode['episode_nonce']} infer_seq={self.infer_seq} "
+              f"step_idx={int(record['step_idx'])} npz={path.name}", flush=True)
+        self.infer_seq += 1
+        self.episode["infers"] = self.infer_seq
+        _write_json(self.ep_dir / "episode.json", self.episode)
+        return outputs
+
+    def build_record(self, outputs):
+        import jax
+        from scripts.interpret.offline_query import pack_observation
+
+        rng, observation = self.captured["rng"], self.captured["observation"]
+        model = self.policy._model
+        noise = jax.random.normal(rng, (1, int(model.action_horizon), int(model.action_dim)))
+        config = self.policy.config
+        frame_times = self.policy.mem_buffer.get_frame_sampling_indices(
+            int(self.policy.step_idx), int(config.budget), int(config.token_per_image))
+        if self.motion_enabled:
+            _, _, _, motion_times = self.captured["motion"]
+            # 换算同 AttnRecorder.build_record：只展开时刻，无效位记 -1
+            if getattr(config.motion, "readout", None) == "stage2_pool4_split_v1":
+                motion_times = np.repeat(motion_times, 4)
+            motion_mask = np.asarray(observation.motion_mask).reshape(-1).astype(bool)
+            motion_times = np.where(motion_mask, np.asarray(motion_times).reshape(-1), -1).astype(np.int32)
+        else:
+            motion_times = np.zeros(0, np.int32)
+        record = pack_observation(observation)
+        record.update(noise=np.asarray(noise),
+                      actions_normalized=np.asarray(self.captured["normalized"], dtype=np.float32),
+                      actions=np.asarray(outputs["actions"], dtype=np.float32)[None],
+                      sample_rng=np.asarray(jax.random.key_data(rng)), sample_batch_size=np.int64(1),
+                      sample_kwargs=np.str_(json.dumps({k: v for k, v in self.captured["kwargs"].items() if k != "noise"})),
+                      step_idx=np.int64(self.policy.step_idx), infer_seq=np.int64(self.infer_seq),
+                      frame_times=np.asarray(frame_times, dtype=np.int64), motion_times=motion_times,
+                      model_id=np.str_(self.model_id))
+        return record
+
+    @staticmethod
+    def _check_readback(path, record):
+        from scripts.interpret.offline_query import pack_observation, unpack_observation
+
+        with np.load(path, allow_pickle=False) as archive:
+            recovered = {key: archive[key] for key in archive.files if not key.startswith("obs/")}
+            # bfloat16 的 npy 描述符是 V2，观测叶子要经结构表恢复后才能比较
+            recovered.update(pack_observation(unpack_observation(archive)))
+        if set(recovered) != set(record):
+            raise RuntimeError("rollout 记录读回键不符")
+        for key, value in recovered.items():
+            if not np.array_equal(value, record[key]):
+                raise RuntimeError(f"rollout 记录读回不符: {key}")
+
+
 class AttnRecorder:
     """在 policy 实例属性上遮蔽 reset / add_buffer / infer / _sample_actions，每次推理落一份 npz。"""
 
@@ -821,6 +938,8 @@ def _make_args_class():
         query_batch_size: int | None = None
         # 询问服务的专用模式；空字符串依请求的 oracle_context 判定
         oracle_mode: str = ""
+        # 真实 rollout：走原采样路径，每次推理写 rollout_<seq>.npz（完整输入与实际噪声）；默认关
+        rollout_record: bool = False
 
     return Args
 
@@ -844,6 +963,10 @@ def main(args) -> None:
         raise SystemExit(f"错误: {exc}") from exc
     if query_count and (ablate["name"] != "none" or args.save_prefix or args.record_motion or args.swap_donor):
         raise SystemExit("询问模式不允许遮挡、注意力或 motion 内容替换")
+    rollout_record = bool(getattr(args, "rollout_record", False))
+    if rollout_record and (query_count or ablate["name"] != "none" or args.save_prefix or args.record_motion
+                           or args.swap_donor):
+        raise SystemExit("--rollout-record 与 --query-record、--ablate、--save-prefix、--record-motion、--swap-donor 互斥")
     attn_out = Path(args.attn_out).resolve()
     attn_out.mkdir(parents=True, exist_ok=True)
     original_create = serve_policy.create_policy
@@ -856,6 +979,11 @@ def main(args) -> None:
                 batch_size=getattr(args, "query_batch_size", None), oracle_mode=oracle_mode)
             recorder.install()
             print(f"QUERY_SERVE predictions={query_count} batch={recorder.batch_size} out={attn_out}", flush=True)
+            return policy
+        if rollout_record:
+            RolloutRecorder(policy, attn_out,
+                            model_id=str(getattr(policy_args.policy, "dir", policy.metadata.get("model_kind", "")))).install()
+            print(f"ROLLOUT_SERVE out={attn_out}", flush=True)
             return policy
         save_prefix = bool(getattr(args, "save_prefix", False))
         kw ={"save_prefix": True} if save_prefix else {}
