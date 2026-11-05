@@ -101,11 +101,25 @@ def test_hold_uses_measured_state_and_nonzero_boundary_tie_earlier(tmp_path):
     candidate, reasons = D.hold_candidate(record, result, window, cal)
     assert not reasons
     assert candidate["takeover_step"] == 23
-    assert candidate["hold_qpos"] == [23.0] * 8
+    assert candidate["hold_qpos"] == [23.0] * 7 + [0.0]
     assert candidate["release_step"] == 39
     assert candidate["release_offset"] == -8
     assert candidate["D"] == 35  # D与环境步不混用。
     assert (candidate["release_step"] - 7) % 16 == 0
+
+
+def test_hold_preserves_gripper_command_instead_of_physical_finger_position(tmp_path):
+    record, window, cal = fixture(tmp_path)
+    chosen = next(row for row in record["rows"] if row["env_step_after"] == 23)
+    chosen["state_after"][7] = 0.04  # 实测手指关节位置，单位为米。
+    chosen["executed_action"][7] = 1.0  # 同一步已执行的归一化开爪目标。
+    source_state = chosen["state_after"].copy()
+    result = D.analyze(record, window, cal, "normal")
+    candidate, reasons = D.hold_candidate(record, result, window, cal)
+    assert not reasons
+    assert candidate["hold_qpos"] == chosen["state_after"][:7] + [1.0]
+    assert candidate["hold_qpos"][7] != 0.04
+    assert chosen["state_after"] == source_state
 
 
 def test_hold_boundary_strictly_after_takeover_and_missing_anchor(tmp_path):
@@ -200,10 +214,10 @@ def hold_fixture(tmp_path):
     normal, window, cal = fixture(tmp_path, end=30)
     extended, _, _ = fixture(tmp_path, kind="hold_extended", outcome="success", press=44, end=60)
     extended["meta"].update(takeover_step=23, release_step=39, actual_takeover_step=23,
-                            actual_release_step=39, hold_qpos=[23.0] * 8)
+                            actual_release_step=39, hold_qpos=[23.0] * 7 + [0.0])
     for row in extended["rows"]:
         if 23 <= row["env_step_before"] < 39:
-            row["executed_action"] = [23.0] * 8
+            row["executed_action"] = [23.0] * 7 + [0.0]
     return normal, extended, window, cal
 
 
