@@ -26,56 +26,52 @@
 <div style="font-size:2rem;font-weight:700;line-height:1.35">StopCube：Oracle 到位后的下压比例计划</div>
 <div class="note">
 <b>状态与授权：</b>只规划，未开工。这是独立的新版方案，不修订也不覆盖 <code>1104-stopcube-decision-point-plan.html</code>（下称「旧计划」）。本文件呈现后，用户不改而直接认可才算开工令；旧计划的第一阶段授权不延伸到这里。<br>
-<b>代码锚点：</b>写作时 HEAD 为 <code>64a524d</code>，分支 <code>v4.1-interpretMotion</code>；工作副本 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code>；功能提交用 <code>commitV4.1.x:</code>，文档用 <code>docs:</code>。实际运行另固定含实现的干净提交。<br>
-<b>外部依赖：</b>benchmark gitlink <code>856bc3a189d4172f3f47dbee4424d585f8d78db3</code>；模型 <code>orig100-ctx32x4x4-motion-s2concat1x1024-60k</code>，检查点 59999，模型 seed 42；资产已由旧计划核对 <code>ASSETS=PASS files=38 mismatches=0</code>，起跑前只复核 manifest 指纹。<br>
-<b>时限：</b>绝对截止为美东 <b>2026-11-05 04:52 EST</b>（<code>2026-11-05T09:52:00Z</code>），用户确认：「保持 04:52」。修订时为美东 11 月 4 日 23:00 左右，还剩约 5.9 小时。不重新起算，不自动延期。<br>
-<b>与旧计划的关系：</b>用户说明旧计划已停止。其正常局 run <code>normal-gpu1-1104a</code> 于美东 22:57:56 中止（<code>USER_ABORT=1</code>、<code>EXIT_CODE=143</code>）；两张卡当时空闲。本计划不恢复旧任务，不使用其产物，产物根独立。
+<b>代码锚点：</b>写作时 HEAD 为 <code>038fe71</code>，分支 <code>v4.1-interpretMotion</code>；工作副本 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code>；功能提交用 <code>commitV4.1.x:</code>，文档用 <code>docs:</code>。实际运行另固定含实现的干净提交。<br>
+<b>外部依赖：</b>benchmark gitlink <code>856bc3a189d4172f3f47dbee4424d585f8d78db3</code>。motion 模型 <code>orig100-ctx32x4x4-motion-s2concat1x1024-60k</code>（59999）；基线模型官方 ctx512（79999，待用户确认，见 K2）；模型 seed 均为 42。<br>
+<b>时限：</b>绝对截止为美东 <b>2026-11-05 04:52 EST</b>（<code>2026-11-05T09:52:00Z</code>），用户确认：「保持 04:52」。修订时为美东 11 月 4 日 23:40 左右。不重新起算，不自动延期。<br>
+<b>与旧计划的关系：</b>用户说明旧计划已停止（美东 22:57:56 中止，<code>EXIT_CODE=143</code>）。本计划不恢复旧任务，不使用其运行产物，产物根独立。<br>
+<b>本次修订依据：</b>外部静态审查锚定 <code>6e88d78</code>，结论 <code>PLAN_STATIC_REVIEW=FAIL</code>；其八项问题已回到源码核实，并写入本版。
 </div>
 
 <h1>第一部分（给人看）</h1>
 
 <h2>要做什么</h2>
-<p>让 Oracle 把机械臂送到按钮上方并保持。模型照常接收真实画面，每过 4 步被问一次「要不要往下按」，每次给 10 个预测，只记录不执行。每个询问点的完整输入和输出都存盘，之后不用再跑环境，就能离线继续问模型。最后再挑一部分预测真正执行，验证「想按」的判断是否可靠。</p>
+<p>让 Oracle 把机械臂送到按钮上方并保持。两个模型（带 motion 和不带 motion）看同一段 Oracle 历史，每过 4 步被问一次「要不要往下按」，每次 10 个预测，只记录不执行，并保存完整输入和输出，之后可以离线继续问。再校准这个判断：判定「想按」的时刻，交给模型真实推理时是否真的按下去。最后比较两个模型，看 motion 有没有帮助。</p>
 <p>用户原话：</p>
 <ul>
 <li>「通过 simulator 本身直接计算出它这个真正的下压位置区间，然后……用 Oracle 的 Planning 的 model 直接去到达这个位置，然后再来……进行模型的推理……然后去判断这个模型真正按下去的这个可能的比例有多少。」</li>
 <li>「你写一个新版的方案，不要修订原来的方案了」</li>
-<li>「问这个模型的采样间隔还是再密一点……你可以降低到四步。你先降低一些比例，先用十个预测，然后你再验证一下，就是真按下去是不是能够按到。」</li>
 <li>「不是每四步推理一次，是每过四步问一次要不要往下按。这是我们的 Oracle 可以每过四步多问一次。」</li>
 <li>「第一遍就不要再记录了……把这个所有的完整的输入什么的都记录下来，输入输出都记录下来，这样我们可以之后就可以直接的离线的问就可以。」</li>
+<li>「正常五十局先不跑，我们暂时不考虑这个问题。」</li>
+<li>「两个都测，我需要看出它有没有帮助」</li>
+<li>「你需要校准一下，它是不是真的能够按下去。就是你认为它的正确能够按下去的这个位置，是不是模型真实推理的时候也能按下去？」「但是尽可能不要搞太久了。」</li>
 </ul>
 
 <h2>每一步做什么（用第 16 局举例）</h2>
-<p>第 16 局：M=120、N=4，按钮要在第 412～428 步之间按下才算对，正中间是第 420 步（<code>T</code>），这一局最多跑 480 步。</p>
+<p>第 16 局：M=120、N=4，按钮要在第 412～428 步之间按下才算对，正中间是第 420 步（<code>T</code>）。</p>
 <h3>第 0 步：写代码并试跑（约 1.5 小时）</h3>
-<p>新写四块：生成 Oracle 动作；让环境按 Oracle 动作走并每过 4 步询问；保存输入输出并能离线重算；分析和报告。写完先拿第 16 局和一个最短的局（M=60、N=2）试跑，测出真实耗时，再放大到 50 局。</p>
-<h3>第 1 步：算出该什么时候按，并生成 Oracle 动作（不用模型）</h3>
-<ul>
-<li><b>第一遍，只悬停：</b>Oracle 把机械臂移到按钮上方，一直停到第 480 步。每一步发给机械臂的动作存成动作表；同时记录方块位置，算出 412～428 这个区间。</li>
-<li><b>第二遍，真下压：</b>前面相同，到第 390 步（<code>T-30</code>）开始下压，记录按钮按下的时刻和任务是否成功。用来确认区间和官方判定一致，并测出 Oracle 的下压耗时。</li>
-</ul>
-<h3>第 2 步：每过 4 步问一次模型，存下输入输出</h3>
-<ol>
-<li>重新开一局同 seed 的环境，严格按动作表走。机械臂只听 Oracle，不会按按钮。</li>
-<li>模型照常收到真实画面和机械臂状态，并更新记忆。</li>
-<li>在第 1、5、9、13……步各问一次。每次用 10 份不同的噪声得到 10 个预测，每个预测是未来 20 步的动作。</li>
-<li>预测只保存，不执行。第 16 局约问 120 次，50 局共约 3,730 次。</li>
-</ol>
-<p>每次保存输入（当前画面、机械臂状态、文字指令、记忆内容、motion token）和输出（10 份噪声、10 个预测动作），不存注意力，总量估计约 28 GB。这一步要验证两件事：同一时刻每 4 步问和每 16 步问，模型收到的输入相同；只用存下的数据，能离线重算出相同动作，也能跑出注意力。</p>
-<h3>第 3 步：判断每个预测是不是「想按」</h3>
-<p>把每个预测换算成机械臂的目标高度。接下来 16 步内目标高度比悬停高度低 2 cm 以上，就算想按。10 个预测里想按的比例，就是这个时刻的 <code>P(t)</code>。所有时刻连成曲线，看它在哪里升高：只在该按的那次经过之前升高，说明模型知道时机；每次经过都升高，说明看到了方块但没数对次数；一直很低，说明基本不想按。</p>
-<h3>第 4 步：真按验证</h3>
-<p>第 3 步只是根据预测判断，这一步检查它和真实动作对不对得上。每局最多跑 4 次，每次重新开局，先按动作表走到选定时刻，之后都由模型继续控制，记录按钮是否按下、第几步按下、任务是否成功。</p>
+<p>新写四块：生成 Oracle 动作；让环境按 Oracle 动作走并每过 4 步询问；保存输入输出并能离线重算；校准与分析报告。写完拿第 16 局和一个最短的局（M=60、N=2），两个模型各试跑一次，测出真实耗时。</p>
+<h3>第 1 步：算区间并生成 Oracle 动作（不用模型）</h3>
+<p>每局多进程跑两遍，两个模型共用结果。<b>只悬停版</b>：Oracle 到按钮上方后一直保持到任务官方结束，存逐步动作表，并算出 412～428 这个区间。<b>真下压版</b>：到约第 390 步（<code>T-30</code>）开始下压，确认区间和官方判定一致，并测 Oracle 的实际下压时刻和耗时。</p>
+<h3>第 2 步：先对 12 局询问并存盘</h3>
+<p>按 M 分层，每种 M 取局号最小的 4 局，共 12 局。环境严格按动作表走，模型照常接收真实画面并更新记忆。第 1、5、9……步各问一次，每次 10 个预测，只保存不执行。两个模型使用同样的噪声，方便逐点比较。机械臂到位之前的询问点单独标记，不计入想按比例。</p>
+<h3>第 3 步：校准「想按」和真实推理对不对得上（约 25 分钟，估算）</h3>
+<p>先算想按比例：把每个预测换算成目标高度，接下来 16 步内比悬停高度低 2 cm 以上就算想按，10 个预测里想按的比例就是 <code>P(t)</code>。然后每个模型在 12 局上各跑下面四种运行，每次重新开局，按动作表走到选定时刻，<b>之后交给模型真实推理并执行</b>：</p>
 <div class="tbl"><table>
-<tr><th>类型</th><th>走到选定时刻后怎么做</th><th>回答什么</th></tr>
-<tr><td>放手</td><td>直接交给模型（第 16 局从第 369 步）</td><td>模型自己能不能按对</td></tr>
-<tr><td>想按</td><td>执行该局最后一次经过中想按比例最高的时刻上的一个想按预测</td><td>判为想按的，是否真能按到</td></tr>
-<tr><td>不想按</td><td>执行同一时刻的一个不想按预测</td><td>判为不想按的，是否真的没按</td></tr>
-<tr><td>早按</td><td>执行更早经过中想按比例最高的时刻上的一个想按预测</td><td>模型在错误时刻想按，是否真会按错</td></tr>
+<tr><th>运行</th><th>从哪个时刻交给模型</th><th>回答什么</th></tr>
+<tr><td>高比例点</td><td>决策段（<code>T-48</code> 到区间结束）里 <code>P(t)</code> 最高的时刻</td><td>判为想按的时刻，真实推理是否真按下去</td></tr>
+<tr><td>低比例点</td><td>同一决策段里 <code>P(t)</code> 最低的时刻</td><td>判为不想按的时刻，真实推理是否真的不按</td></tr>
+<tr><td>早按点</td><td>更早经过中 <code>P(t)</code> 最高的时刻</td><td>错误时刻想按，真实推理是否真会按错</td></tr>
+<tr><td>固定放手</td><td>不晚于 <code>T-48</code> 的最后一个询问点（第 16 局为第 369 步）</td><td>不看比例，模型自己能不能按对</td></tr>
 </table></div>
-<p>想按和真按对不上时，说明 2 cm 这个定义可能不合适，是否调整由用户决定。总共最多 200 次运行，时间不够时按上表从下往上舍弃。</p>
-<h3>第 5 步：出报告</h3>
-<p>交给用户想按比例曲线、真按验证结果和每局的详细记录。注意力、信息流量、梯度归因、逐层投影和线性探针都放到第二阶段，直接用第 2 步存下的数据离线计算。</p>
+<p>前三种运行到按钮按下或交还后 48 步就结束；固定放手运行到官方终局。校准只回答「比例高的地方，真实推理是否也更常按下」。<b>结果先报告给用户</b>，全部高度曲线已保存，改阈值不用重跑。除非用户叫停，流程继续。</p>
+<h3>第 4 步：询问其余 38 局</h3>
+<p>和第 2 步相同。两张卡各跑一个模型，总计约 3,730 个询问点、每个模型 37,300 个预测。</p>
+<h3>第 5 步：补跑固定放手（时间够才做）</h3>
+<p>其余 38 局各跑一次固定放手，得到两个模型 50 局的真实按下比例。时间不够就不做，并在报告中写明只有 12 局。</p>
+<h3>第 6 步：比较两个模型并出报告</h3>
+<p>同一张图上画两个模型的想按比例曲线，比较三件事：该按时想按的比例、提前想按的比例、按方块第几次经过分组后能否分清次数。再加上校准和放手的真实结果。注意力、信息流量、梯度归因、逐层投影和线性探针放到第二阶段，用第 2、4 步存下的数据离线计算。</p>
 
 <h2>为什么要问整段悬停期</h2>
 <p>按 50 局的真实 seed 推算（M、N 取自 <code>StopCube._initialize_episode</code> 的同一随机序列）：</p>
@@ -222,22 +218,23 @@
 <h2>已定口径</h2>
 <div class="tbl"><table>
 <tr><th>编号</th><th>项目</th><th>口径</th></tr>
-<tr><td>K1</td><td>模型与局</td><td>motion 模型 59999，seed 42；StopCube 官方测试集全部 50 局，不换环境 seed，不挑局</td></tr>
-<tr><td>K2</td><td>下压区间</td><td>由仿真直接算：方块到目标水平距离 ≤ <code>3×cube_half_size</code>（0.06 m）且落在第 N 程。只悬停版本身就是不按按钮的完整轨迹，同时产出区间</td></tr>
-<tr><td>K3</td><td>询问方式</td><td>Oracle 全程控制环境；每过 4 步询问一次，每次 10 个预测（独立噪声），只记录不执行。询问不改变模型记忆，也不影响环境</td></tr>
-<tr><td>K4</td><td>第一遍记录</td><td>用户定：<b>不记注意力</b>，记完整输入和输出。输入是模型 <code>HistAugObservation</code> 的全部字段，输出是 10 份噪声、归一化动作和物理动作</td></tr>
-<tr><td>K5</td><td>想按的定义</td><td>接下来 16 行的目标 TCP 高度低于悬停高度 2 cm 以上。另报全部 20 行的同一量和 1 cm、3 cm 两档。真按验证用来检查这个定义；是否换阈值交用户定</td></tr>
-<tr><td>K6</td><td>真按验证</td><td>每局最多 4 次运行：放手、按区间内比例最高点的想按预测、同点的不想按预测、更早经过中比例最高点的想按预测。按此顺序跑，时间不够时后面的如实缺失</td></tr>
-<tr><td>K7</td><td>正常局</td><td>不跑，也不做与真实运行的对照。用户原话：「正常五十局先不跑，我们暂时不考虑这个问题。」</td></tr>
-<tr><td>K8</td><td>第二阶段范围</td><td>注意力、信息流量、梯度归因、逐层投影、线性探针都不在本计划内运行，后续基于存盘输入离线做。本计划只验证离线重算可行</td></tr>
-<tr><td>K9</td><td>不干预模型内部</td><td>不做 token 遮挡、替换、伪造观测；只替换送入环境的动作</td></tr>
-<tr><td>K10</td><td>成绩口径</td><td>询问局的终局不是模型成绩；验证运行单独统计，不计入官方成功率；不为成功重试</td></tr>
-<tr><td>K11</td><td>资源</td><td>本机最多两张 A6000，不用集群；时限见文首</td></tr>
+<tr><td>K1</td><td>局</td><td>StopCube 官方测试集全部 50 局，不换环境 seed，不挑局</td></tr>
+<tr><td>K2</td><td>两个模型</td><td>带 motion：59999。基线（<b>待用户确认</b>）：官方 ctx512 79999，它是本机现有的不带 motion 的权重，已在 11-03 的对比中使用过。它的训练步数和训练来源都与 motion 模型不同，差异不能全部归因于 motion</td></tr>
+<tr><td>K3</td><td>下压区间</td><td>由仿真直接算：方块到目标水平距离 ≤ <code>3×cube_half_size</code>（0.06 m）且落在第 N 程</td></tr>
+<tr><td>K4</td><td>询问方式</td><td>Oracle 全程控制环境；每过 4 步询问一次，每次 10 个预测，只记录不执行；两模型噪声相同。询问不改变模型记忆，也不影响环境</td></tr>
+<tr><td>K5</td><td>第一遍记录</td><td>不记注意力，记完整输入和输出（含原始状态）</td></tr>
+<tr><td>K6</td><td>想按的定义</td><td>接下来 16 行的目标 TCP 高度低于悬停高度 2 cm 以上。另报全部 20 行的同一量和 1 cm、3 cm 两档。到位前的询问点不计入。是否换阈值由用户定</td></tr>
+<tr><td>K7</td><td>校准</td><td>12 局、每模型 4 种运行，从选定时刻交给模型真实推理，不再注入保存的预测。决策段统一为 <code>[T-48, target_visit_out]</code>。校准结果先报告用户，不自动改判据，也不自动停工</td></tr>
+<tr><td>K8</td><td>正常局</td><td>不跑，也不做与真实运行的对照</td></tr>
+<tr><td>K9</td><td>第二阶段范围</td><td>注意力等工具不在本计划内运行，只验证存盘数据能离线重算</td></tr>
+<tr><td>K10</td><td>不干预模型内部</td><td>不做 token 遮挡、替换、伪造观测；只替换送入环境的动作</td></tr>
+<tr><td>K11</td><td>成绩口径</td><td>询问局的终局不是模型成绩；校准和放手运行单独统计，不计入官方成功率；不为成功重试</td></tr>
+<tr><td>K12</td><td>并行方式</td><td>两张 A6000 各一份模型服务，各跑一个模型；不同局顺序进入服务，10 个预测批量计算；Oracle 和高度换算用多进程。不用集群，不在同一张卡起两份服务</td></tr>
 </table></div>
 
 <h2>机制</h2>
 <figure>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 512" role="img" aria-label="数据链路：第 1 行无模型的 Oracle 构表，第 2 行询问并存盘，第 3 行真按验证" style="width:100%;background:white" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="13" fill="#1d2528">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 512" role="img" aria-label="数据链路：第 1 行无模型的 Oracle 构表，第 2 行两模型询问并存盘，第 3 行真实推理校准" style="width:100%;background:white" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="13" fill="#1d2528">
   <defs>
     <marker id="afA" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
       <path d="M0,0 L8,4 L0,8 Z" fill="#36515c"/>
@@ -257,13 +254,13 @@
     <text x="72" y="120" font-weight="bold">不执行模型动作</text>
 
     <text x="72" y="259" font-weight="bold">第 2 行</text>
-    <text x="72" y="277">评估环境 · 真实观测</text>
+    <text x="72" y="277">两个模型 · 真实观测</text>
     <text x="72" y="295" font-weight="bold">不执行模型动作，</text>
     <text x="72" y="313" font-weight="bold">只询问并存盘</text>
 
     <text x="72" y="420" font-weight="bold">第 3 行</text>
-    <text x="72" y="438">真按验证</text>
-    <text x="72" y="456" font-weight="bold">询问点后才执行</text>
+    <text x="72" y="438">真实推理校准</text>
+    <text x="72" y="456" font-weight="bold">交还后才执行</text>
   </g>
 
   <!-- 第 1 行：方框 -->
@@ -327,7 +324,7 @@
     <text x="538" y="247">照常更新</text>
 
     <text x="788" y="220">每过 4 步询问一次：</text>
-    <text x="788" y="238">10 个预测（独立噪声）</text>
+    <text x="788" y="238">10 个预测（两模型同噪声）</text>
     <text x="788" y="256">只记录，不执行</text>
 
     <text x="288" y="325" font-weight="bold">query_&lt;seq&gt;.npz</text>
@@ -356,16 +353,16 @@
   </g>
   <g text-anchor="middle">
     <text x="257" y="420">动作表驱动到</text>
-    <text x="257" y="438">询问点 t</text>
-    <text x="257" y="456">（按固定规则选点）</text>
+    <text x="257" y="438">选定询问点 t</text>
+    <text x="257" y="456">（按固定规则）</text>
 
-    <text x="445" y="429">执行选中预测或交还</text>
-    <text x="445" y="447">（此后由模型控制）</text>
+    <text x="445" y="429">交给模型</text>
+    <text x="445" y="447">真实推理并执行</text>
 
-    <text x="633" y="429">真实按钮触发步</text>
-    <text x="633" y="447">与任务成功</text>
+    <text x="633" y="429">是否真按下</text>
+    <text x="633" y="447">第几步按下</text>
 
-    <text x="821" y="438">想按判定对照表</text>
+    <text x="821" y="438">与 P(t) 校准对照</text>
   </g>
   <g fill="none" stroke="#36515c" stroke-width="1.5">
     <path d="M339,433 H363" marker-end="url(#afA)"/>
@@ -374,100 +371,110 @@
   </g>
 
   <!-- 底部说明 -->
-  <text x="20" y="496">箭头为数据与控制的流向；第 1 行产出的动作表同时驱动第 2 行的询问环境与第 3 行的真按验证环境。浅黄底框为产物或结果。</text>
+  <text x="20" y="496">箭头为数据与控制的流向；第 1 行产出的动作表同时驱动第 2 行的询问环境与第 3 行的校准环境。浅黄底框为产物或结果。</text>
 </svg>
-<figcaption>图 2　三条链路：生成动作表、询问并存盘（模型动作不执行）、真按验证（从询问点起执行模型动作）。</figcaption>
+<figcaption>图 2　三条链路：生成动作表、询问并存盘（模型动作不执行）、真实推理校准（从选定时刻起执行模型动作）。</figcaption>
 </figure>
-<p><b>询问为什么不影响模型。</b>代码里每帧的记忆在 <code>add_buffer</code> 时写入，帧采样和 motion 窗口只由当前帧号决定，询问只读不写，所以多问几次不改变记忆内容。模型默认每次必须收 16 帧，这是评估客户端和 <code>runtime_contract.py</code> 两处的校验，模型本身没有这个限制；本计划只在 <code>scripts/interpret/</code> 的询问模式里按 4 帧发送。这一点还没实跑，由 <code>INPUT_CADENCE</code> 判定行验证。</p>
-<p><b>为什么存输入就够离线。</b>采样函数 <code>f_sample_attn</code> 的全部输入是模型权重、<code>observation</code> 和噪声。这些都保存后，换任何分析工具重算都得到同一批动作，不需要再跑环境。<code>OFFLINE_REPLAY</code> 判定行验证这一点。</p>
-<p><b>想按的判定。</b>对每个预测的 20 行动作逐行换算目标 TCP 高度。<code>z_hover</code> 取本局 Oracle 悬停段的实测高度，因为定义值 0.15 m 与第 16 局模型实际悬停高度约 0.160 m 差了 1 cm，相对 2 cm 阈值不能忽略。</p>
-<pre>想按(s, t)        = s 的前 16 行里存在 z &lt; z_hover - 0.02
-起始行 r(s, t)    = 其中首个满足的行
-P(t)              = 10 个预测中想按的比例
-预计触发(s, t)    = t + r + d          # d 为命令到触发的实测耗时
-落在区间内        = 预计触发 ∈ [target_visit_in, target_visit_out]</pre>
-<p><b>真按验证。</b>走到询问点 t 后分两种：执行选中预测的 16 行，或不注入预测直接交还模型；此后每 16 步由模型真实推理并执行，直到按下或该局结束。这样测的是从这个时刻起真能否按到，而不是单个动作块。</p>
-<p><b>怎么读结果。</b>主图横轴是「询问点距 T 的步数」，纵轴是 <code>P(t)</code>，按 M 分面，并按方块第几次经过分组。</p>
+<p><b>询问为什么不影响模型。</b>每帧的记忆在 <code>add_buffer</code> 时写入，帧采样和 motion 窗口只由当前帧号决定，询问只读不写。现有评估的客户端和服务端都限制「每次 16 帧、一包一推理」，且动作队列空了才会询问，所以询问模式要用专用循环和专用校验，不能只改帧数。普通评估路径不变。这一点由 <code>INPUT_CADENCE</code> 判定行实跑验证。</p>
+<p><b>10 个预测怎么算。</b>每个询问点只构建一次输入，复制成批量后配 10 份噪声，调用原采样函数，再逐个预测做原输出变换。现有 <code>infer</code> 只保留第一份，输出变换也只接受二维数组，所以不能直接把 10 份噪声传进去。</p>
+<p><b>离线重算的范围。</b>保存的是权重之外的全部输入和噪声。走原采样路径重算，应得到相同动作；走注意力路径时，已有自检记录过 bf16 差异，差异只如实报告，不算失败。</p>
+<p><b>想按的判定。</b><code>z_hover</code> 取本局 Oracle 悬停段的实测高度，因为定义值 0.15 m 与第 16 局模型实际悬停高度约 0.160 m 差了 1 cm，相对 2 cm 阈值不能忽略。</p>
+<pre>想按(s, t)      = s 的前 16 行里存在 z &lt; z_hover - 0.02
+P(t)            = 10 个预测中想按的比例（t ≥ reach_step）
+决策段          = [T-48, target_visit_out]
+真实按下(t)     = 从 t 交给模型后，48 步内按钮被触发</pre>
+<p><b>校准怎么读。</b>对每个模型，把校准运行按 P(t) 分组，看高比例点的真实按下率是否高于低比例点。12 局样本很少，只能看方向和明显差异，不能给精确比例。</p>
+<p><b>怎么判断 motion 有没有帮助。</b>主图横轴是「询问点距 T 的步数」，纵轴是 <code>P(t)</code>，两个模型画在一起，按 M 分面、按第几次经过分组。</p>
 <div class="tbl"><table>
 <tr><th>现象</th><th>含义</th></tr>
 <tr><td>只在第 N 次经过之前升高</td><td>能区分次数和时机</td></tr>
 <tr><td>每次经过都升高</td><td>能感知方块位置，但没数对次数</td></tr>
 <tr><td>第 N 次也不升高，或全程平坦</td><td>这段历史下基本不想按，或与方块经过无关</td></tr>
-<tr><td>上升时刻系统性偏早或偏晚</td><td>时序偏差，配合真按验证的触发步核实</td></tr>
+<tr><td>motion 模型分得比基线更清楚</td><td>支持 motion 有帮助，但要带上 K2 的权重差异限制</td></tr>
 </table></div>
 
-<h2>规模</h2>
+<h2>规模与时间（均为估算，试跑后更新）</h2>
 <div class="tbl"><table>
-<tr><th>阶段</th><th>规模</th><th>估时（<b>未实测，冒烟后更新</b>）</th><th>存储（估算）</th></tr>
-<tr><td>动作表</td><td>只悬停 50 + 带下压 50，无模型</td><td>约 20～40 分钟单卡；第 16 局探针 480 步约 10 秒</td><td>小于 1 GB</td></tr>
-<tr><td>询问存盘</td><td>50 局，约 3,730 个询问点，37,300 个预测</td><td>按每点 1.5～2.5 秒估，约 1.5～2.6 小时单卡</td><td>每点约 7.5 MB，共约 28 GB</td></tr>
-<tr><td>真按验证</td><td>最多 200 次运行</td><td>按每次 40～60 秒估，最多约 3.3 小时单卡</td><td>不存注意力，约几 GB</td></tr>
+<tr><th>阶段</th><th>规模</th><th>估时</th><th>存储</th></tr>
+<tr><td>写代码与试跑</td><td>四块代码，两局两模型</td><td>约 2 小时，到美东约 01:40</td><td>小</td></tr>
+<tr><td>Oracle</td><td>100 次仿真，多进程</td><td>约 15 分钟，到约 01:55</td><td>小于 1 GB</td></tr>
+<tr><td>询问 12 局</td><td>每模型约 900 点</td><td>两卡并行约 30 分钟，到约 02:25</td><td>每模型约 7 GB</td></tr>
+<tr><td>校准</td><td>每模型 48 次运行</td><td>两卡并行约 25 分钟，到约 02:50</td><td>约几 GB</td></tr>
+<tr><td>询问其余 38 局</td><td>每模型约 2,830 点</td><td>按每点 1.5～2.5 秒，两卡并行约 70～120 分钟，到约 04:00～04:50</td><td>每模型约 21 GB</td></tr>
+<tr><td>高度换算</td><td>两模型共约 149 万行</td><td>多进程，速度未测；可与询问同时跑</td><td>小</td></tr>
+<tr><td>补跑放手</td><td>每模型 38 次</td><td>两卡并行约 20 分钟；时间不够就不做</td><td>小</td></tr>
+<tr><td>分析报告</td><td>两模型汇总</td><td>约 20 分钟</td><td>小</td></tr>
 </table></div>
-<p>写代码按 1.5 小时估。两卡时，询问约到美东 02:30 完成，验证约到 04:00 完成，分析约到 04:30 完成，距截止余量不多。真按验证按 K6 顺序排，时间不够时缺的是最后几类，不减询问点和预测数。</p>
+<p>以上按 23:40 开工推算。乐观情况下约 04:20 询问和分析都完成，补跑放手基本没有时间；慢的情况下询问结束已贴近 04:52，来不及出完整报告。优先级固定为：校准（含 12 局询问）&gt; 其余 38 局询问 &gt; 报告 &gt; 补跑放手。试跑后由 <code>BUDGET</code> 判定行给出实测估算；超时风险明确时先报告用户，不擅自减询问点或预测数。</p>
 
 <h2>验收</h2>
 <div class="tbl"><table>
 <tr><th>判定行</th><th>查什么</th><th>过了说明</th></tr>
-<tr><td><code>ORACLE_TABLE=PASS episodes=50 failed=0</code></td><td>规划成功、到位早于 <code>T-30</code>、全程没按按钮</td><td>每局都有动作表和完整区间</td></tr>
-<tr><td><code>ORACLE_PRESS=PASS episodes=50 success=&lt;n&gt;</code></td><td>带下压版的触发、官方停步、任务成功分别记录</td><td>区间和官方判据互相印证；不成功的局列局号</td></tr>
-<tr><td><code>ORACLE_REPLAY=PASS episodes=50 maxabs_qpos=&lt;x&gt; tol=1e-3</code></td><td>评估路径重放动作表，逐步比对 qpos、TCP、方块位置</td><td>另一个环境实例能重现同一轨迹</td></tr>
-<tr><td><code>OPEN_LOOP_EXEC=PASS mismatches=0</code></td><td>实际执行动作与动作表逐位相等，全程未触发按钮</td><td>模型确实没有影响环境</td></tr>
-<tr><td><code>INPUT_CADENCE=PASS points=&lt;n&gt; maxabs=&lt;x&gt; tol=1e-3</code></td><td>同一局每 4 步和每 16 步询问，相同时刻的输入对比；帧号逐位相等</td><td>多问不改变模型看到的内容</td></tr>
-<tr><td><code>QUERY_RECORD=PASS points=&lt;n&gt; predictions=10 missing=0</code></td><td>询问点数齐全，字段完整，无 NaN</td><td>分母和离线输入都完整</td></tr>
-<tr><td><code>OFFLINE_REPLAY=PASS points=&lt;n&gt; maxabs=&lt;x&gt; tol=1e-3 attention=ok</code></td><td>只用存盘输入和噪声重算动作，对比存盘输出，并能跑出注意力</td><td>第二阶段可以直接离线开始</td></tr>
-<tr><td><code>PRESS_VERIFY=PASS planned=&lt;n&gt; completed=&lt;n&gt; missing=&lt;n&gt;</code></td><td>注入动作逐位相等，运行结果和终局齐全；缺失项写明原因</td><td>有真实按下的结果；想按判定的准确度以对照表呈现</td></tr>
-<tr><td><code>FK_PARITY=PASS rows=&lt;n&gt; maxabs_z=&lt;x&gt; tol=1e-3</code></td><td>用状态算出的高度与同步实测 TCP 一致</td><td>高度换算接对了，想按判定可用</td></tr>
-<tr><td><code>REPORT_READY=PASS</code></td><td>图目视复查，逐局可追溯到原始记录</td><td>可交用户阅读；不代表结论已被认可</td></tr>
+<tr><td><code>ORACLE_TABLE=PASS episodes=50 failed=0 late_reach=&lt;n&gt;</code></td><td>规划成功、全程没按按钮、动作表覆盖到官方终局</td><td>每局都有动作表和完整区间</td></tr>
+<tr><td><code>ORACLE_PRESS=PASS episodes=50 success=&lt;n&gt; trigger_outside=&lt;n&gt;</code></td><td>实际下压起点、触发、官方停步、任务成功分别记录</td><td>区间和官方判据互相印证；不成功的局列局号</td></tr>
+<tr><td><code>ORACLE_REPLAY=PASS models=2 maxabs_qpos=&lt;x&gt; tol=1e-3</code></td><td>评估路径重放动作表，逐步比对 qpos、TCP、方块位置</td><td>另一个环境实例能重现同一轨迹</td></tr>
+<tr><td><code>OPEN_LOOP_EXEC=PASS models=2 mismatches=0</code></td><td>实际执行动作与动作表逐位相等，全程未触发按钮</td><td>模型确实没有影响环境</td></tr>
+<tr><td><code>INPUT_CADENCE=PASS models=2 points=&lt;n&gt; maxabs=&lt;x&gt; tol=1e-3</code></td><td>同一局每 4 步和每 16 步询问，相同时刻的输入对比；帧号逐位相等</td><td>多问不改变模型看到的内容</td></tr>
+<tr><td><code>QUERY_RECORD=PASS models=2 points=&lt;n&gt; predictions=10 missing=0</code></td><td>询问点数齐全，字段完整，无 NaN，两模型噪声相同</td><td>分母和离线输入都完整</td></tr>
+<tr><td><code>OFFLINE_REPLAY=PASS models=2 points=&lt;n&gt; same_path_maxabs=&lt;x&gt; tol=1e-6 attn_path_maxabs=&lt;y&gt; attention=ok</code></td><td>原路径重算与存盘一致；注意力路径能运行，差异如实记录</td><td>第二阶段可以直接离线开始</td></tr>
+<tr><td><code>FK_PARITY=PASS rows=&lt;n&gt; maxabs_z=&lt;x&gt; tol=1e-3</code></td><td>用原始状态算出的高度与同步实测 TCP 一致</td><td>高度换算接对了</td></tr>
+<tr><td><code>PRESS_CALIBRATION=PASS models=2 episodes=12 planned=&lt;n&gt; completed=&lt;n&gt;</code></td><td>四种运行结果齐全；交还前动作等于表，交还后动作等于模型输出</td><td>有真实推理的校准结果。判定行不设比例门槛，只表示数据有效</td></tr>
+<tr><td><code>RELEASE_RUN=PASS models=2 expected=&lt;n&gt; completed=&lt;n&gt;</code></td><td>固定放手的触发步和成功字段齐全；局数如实写</td><td>有真实按下的比例</td></tr>
+<tr><td><code>REPORT_READY=PASS models=2</code></td><td>图目视复查，逐局可追溯到原始记录</td><td>可交用户阅读；不代表结论已被认可</td></tr>
 </table></div>
-<p>分析结果没有预设通过值，「模型不想按」也是有效结论。</p>
+<p>分析结果没有预设通过值，「模型不想按」「motion 没有帮助」都是有效结论。</p>
 
 <h2>步骤</h2>
 <div class="tbl"><table>
 <tr><th>步</th><th>内容</th><th>判据</th></tr>
-<tr><td>第 0 步</td><td>开工审查；写代码，逐块审查合并；两局试跑（第 16 局和一个 M=60、N=2 的局），实测耗时</td><td><code>PLAN_CONSISTENCY_REVIEW</code>；各次合并前后审查通过；验收表前 7 项单局通过；<code>BUDGET=PASS</code></td></tr>
+<tr><td>第 0 步</td><td>开工审查；写代码，逐块审查合并；两局两模型试跑，实测耗时</td><td><code>PLAN_CONSISTENCY_REVIEW</code>；各次合并前后审查通过；验收表前 8 项单局通过；<code>BUDGET=PASS</code></td></tr>
 <tr><td>第 1 步</td><td>50 局动作表与真下压验证</td><td><code>ORACLE_TABLE</code>、<code>ORACLE_PRESS</code></td></tr>
-<tr><td>第 2 步</td><td>50 局询问存盘</td><td><code>ORACLE_REPLAY</code>、<code>OPEN_LOOP_EXEC</code>、<code>INPUT_CADENCE</code>、<code>QUERY_RECORD</code>、<code>OFFLINE_REPLAY</code></td></tr>
-<tr><td>第 3 步</td><td>算目标高度和 <code>P(t)</code>，按固定规则生成验证选点</td><td><code>FK_PARITY</code></td></tr>
-<tr><td>第 4 步</td><td>真按验证</td><td><code>PRESS_VERIFY</code></td></tr>
-<tr><td>第 5 步</td><td>分析、出图、报告与留档，交用户</td><td><code>REPORT_READY</code></td></tr>
+<tr><td>第 2 步</td><td>两模型询问校准用的 12 局</td><td><code>ORACLE_REPLAY</code>、<code>OPEN_LOOP_EXEC</code>、<code>QUERY_RECORD</code></td></tr>
+<tr><td>第 3 步</td><td>算 <code>P(t)</code>、选点、校准运行；结果先报告用户</td><td><code>FK_PARITY</code>、<code>PRESS_CALIBRATION</code></td></tr>
+<tr><td>第 4 步</td><td>两模型询问其余 38 局</td><td><code>QUERY_RECORD</code>、<code>OFFLINE_REPLAY</code></td></tr>
+<tr><td>第 5 步</td><td>时间够时补跑固定放手</td><td><code>RELEASE_RUN</code></td></tr>
+<tr><td>第 6 步</td><td>两模型比较、出图、报告与留档，交用户</td><td><code>REPORT_READY</code></td></tr>
 </table></div>
 
 <h2>子代理分工与合并（简述）</h2>
-<p>代码拆成四块，各在独立 worktree 修改：Oracle 动作表、运行器的询问与验证模式、服务端询问存盘与离线工具、分析报告。按这个顺序逐个合回工作分支，因为后面的块消费前面的产物格式。每次合并前由独立审查代理核对改动范围和接口，合并后跑定向短测。运行型代理只按固定版本和命令启动长任务，发现问题交回主会话另派修复。逐文件细节见第二部分。</p>
+<p>代码拆成四块，各在独立 worktree 修改：Oracle 动作表、运行器的询问与校准模式、服务端询问存盘与离线工具、校准选点与分析报告。按这个顺序逐个合回工作分支，因为后面的块消费前面的产物格式。每次合并前由独立审查代理核对改动范围和接口，合并后跑定向短测。运行型代理只按固定版本和命令启动长任务，发现问题交回主会话另派修复。逐文件细节见第二部分。</p>
 
 <h1>第二部分（技术细节，供 agent 追踪）</h1>
 
 <h2>〇 前置声明与红线</h2>
 <ol>
 <li><b>源码边界：</b><code>src/</code>、<code>examples/</code>、<code>third_party/</code>、<code>scripts/training/</code>、<code>scripts/evaluation/</code> 零改动；实施只在 <code>scripts/interpret/</code>。任务定义、终止条件、官方评估判据不覆盖。验证：<code>git diff --name-only &lt;BASE&gt;..&lt;TIP&gt;</code> 全部以 <code>scripts/interpret/</code> 或 <code>docs/</code> 开头。</li>
-<li><b>干预边界：</b>只替换 <code>TraceRunner.step</code> 送入环境的动作。禁止 token 遮挡、<code>--ablate</code>、伪造观测、修改记忆。16 帧校验只在询问与验证模式的 interpret 侧放开，官方入口与 <code>normal</code>、<code>hold_extended</code> 模式保持原校验。</li>
-<li><b>不碰旧计划：</b>不恢复、不修改旧计划的产物根 <code>v1-store/evaluation/stopcube-decision-1104/</code> 与其执行工作树，也不使用其产物。</li>
+<li><b>干预边界：</b>只替换 <code>TraceRunner.step</code> 送入环境的动作。禁止 token 遮挡、<code>--ablate</code>、伪造观测、修改记忆。RPC 放宽只在询问与校准模式的 interpret 侧生效，官方入口与 <code>normal</code>、<code>hold_extended</code> 模式保持原校验。</li>
+<li><b>不碰旧计划：</b>不恢复、不修改旧计划的产物根 <code>v1-store/evaluation/stopcube-decision-1104/</code> 与其执行工作树，也不使用其运行产物。</li>
 <li><b>不为成功重试：</b>只有基础设施故障可重试，须记录原因和次数。规划失败也不换 seed。</li>
 <li><b>长任务：</b>detached tmux，前缀 <code>so-</code>；日志三件套与 <code>EXIT_CODE=</code>；每份日志一个 Monitor。截止前 10 秒发 TERM，超时按非零报告。</li>
 <li><b>存储：</b>产物只落 <code>v1-store/evaluation/stopcube-oracle-1104/</code>，不进 git。</li>
-<li><b>GPU：</b>起跑前核对占用，只用当前空闲的卡，不操作其他进程；不新增高频 GPU 监控。</li>
+<li><b>GPU：</b>起跑前核对占用，只用当前空闲的卡，不操作其他进程；不新增高频 GPU 监控。同卡双服务不使用：按现有配置 <code>2×0.55×46068≈50675 MiB</code> 已超单卡。</li>
 <li><b>现有能力与待验证项分开：</b>第一节是已读源码的事实，第三节是拟新增接口；标「估算」「推算」的数字未经本方案实跑。</li>
 </ol>
 
 <h2>一 现有能力（已读源码确认）</h2>
 <div class="tbl"><table>
 <tr><th>项目</th><th>事实</th></tr>
-<tr><td>规划器</td><td><code>planner_fail_safe.FailAwarePandaArmMotionPlanningSolver</code>；<code>mplib</code> 已装在 <code>v1-store/envs/official-sim</code>。基类 <code>base_motionplanner/motionplanner.py::follow_path</code> 通过 <code>self.env.step(action)</code> 推进。这条路径在本任务的 <code>BenchmarkEnvBuilder</code> 环境上<b>尚未实跑</b></td></tr>
-<tr><td>Oracle 流程</td><td><code>StopCube._initialize_episode</code>：<code>task_list[0]</code> 为 <code>solve_button_ready</code>（到 z=0.15 后 <code>close_gripper</code>）；中间若干 <code>solve_hold_obj_absTimestep</code>；最后 <code>solve_button(without_hold=True)</code>。下压起点 <code>final_abs_timestep = steps_press - interval</code>，<code>interval</code> 固定 30，<code>steps_press = M·N - M/2</code></td></tr>
-<tr><td>判定</td><td><code>is_obj_stopped_onto</code> 阈值 <code>cube_half_size*3</code>（<code>cube_half_size=0.02</code>）；<code>evaluate</code>：不在目标区按下立即失败，超过 <code>M·N</code> 步未按失败</td></tr>
-<tr><td>环境构建</td><td><code>read_sim_eef_pose.build_env</code> 与 <code>EnvRunner.make_env</code> 同走 <code>BenchmarkEnvBuilder</code>，<code>action_space="joint_angle"</code>。<code>env.reset</code> 后首个 <code>env_step_before=1</code>（第 16 局 trace）</td></tr>
-<tr><td>评估循环</td><td><code>examples/robomme/eval.py::EpisodeEvaluator.get_action_chunk</code>：续包必须恰好 16 帧；<code>add_buffer</code> 后发 infer；<code>eval_each_episode</code> 写死 <code>exec_horizon=16</code></td></tr>
-<tr><td>服务端校验</td><td><code>scripts/evaluation/runtime_contract.py</code> 同样校验续包 16 帧；<code>serve_policy_attn.py::_install_rpc_tracking</code> 包在校验外层</td></tr>
-<tr><td>记忆</td><td><code>MME_VLA_Policy.add_buffer</code> 接受任意帧数；<code>_prepare_history</code> 按 <code>step_idx</code> 调 <code>prepare_frame_sampling</code>、<code>_prepare_motion</code>，均只读。motion <code>stride=32</code>、<code>window_frames=33</code>；帧预算 512 tokens（32 帧×16）</td></tr>
-<tr><td>采样入口</td><td><code>MME_VLA_Policy.infer</code> 建好 <code>observation</code> 后调 <code>self._sample_actions(sample_rng, observation, **kwargs)</code>，再经 <code>_output_transform</code>。<code>AttnRecorder.install</code> 已在此处替换。<code>f_sample_attn</code> 接受 <code>noise</code></td></tr>
-<tr><td>运行器</td><td><code>stopcube_runner.py::TraceRunner.step</code> 已支持按步替换动作和逐步记录；旧计划实测 <code>HOLD_SMOKE=PASS held_steps=26 takeover=375 release=401 task_success=1 mismatches=0</code></td></tr>
-<tr><td>高度换算</td><td><code>read_sim_eef_pose.py::TcpReader.set_arm</code>：设 qpos 读 TCP，不跑物理步，须在 official-sim 环境运行</td></tr>
-<tr><td>窗口</td><td><code>stopcube_windows.py::geometry_window</code> 读未按按钮的完整轨迹，输出 <code>target_visit_in/out</code> 与逐次 <code>visits</code></td></tr>
-<tr><td>实测</td><td>第 16 局：<code>command_press_step=403</code>、<code>button_trigger_step=416</code>、<code>motion_delay=13</code>（旧计划 <code>calibration-smoke16-a</code>，判据为目标高度过 0.13 m）；TCP 约第 397 步开始下降。d 必须与判据配套测量，不混用。第 16 局 <code>infer_ms</code> 约 700～1500（含注意力）；单次注意力记录 92 MB，其中 <code>probs_action</code> 69 MB</td></tr>
+<tr><td>规划器</td><td><code>planner_fail_safe.FailAwarePandaArmMotionPlanningSolver</code>；<code>mplib</code> 已装在 <code>v1-store/envs/official-sim</code>。基类 <code>follow_path</code> 通过 <code>self.env.step(action)</code> 推进。这条路径在本任务环境上<b>尚未实跑</b></td></tr>
+<tr><td>Oracle 流程</td><td><code>task_list[0]</code> 为 <code>solve_button_ready</code>；中间若干 <code>solve_hold_obj_absTimestep</code>，它按完整 <code>close_gripper()</code> 调用等待，不保证恰好停在 <code>T-30</code>；最后 <code>solve_button(without_hold=True)</code>。<code>final_abs_timestep = steps_press - 30</code>，<code>steps_press = M·N - M/2</code></td></tr>
+<tr><td>判定</td><td><code>is_obj_stopped_onto</code> 阈值 <code>cube_half_size*3</code>（0.02×3）；<code>evaluate</code>：不在目标区按下立即失败；<code>current_step &gt; M·N</code> 且未完成才失败，所以恰好第 <code>M·N</code> 步不会因超时结束</td></tr>
+<tr><td>环境构建</td><td><code>read_sim_eef_pose.build_env</code> 与 <code>EnvRunner.make_env</code> 同走 <code>BenchmarkEnvBuilder</code>，<code>action_space="joint_angle"</code>。首个 <code>env_step_before=1</code>（第 16 局 trace）</td></tr>
+<tr><td>评估循环</td><td><code>examples/robomme/eval.py</code>：<code>eval_each_episode</code> 只有动作队列空时才调用 <code>get_action_chunk</code>，并写死取 16 行；续包必须恰好 16 帧</td></tr>
+<tr><td>服务端校验</td><td><code>scripts/evaluation/runtime_contract.py</code>：续包 16 帧；上一包必须已推理才能收下一包；<code>infer</code> 不能对同一末帧重复</td></tr>
+<tr><td>记忆</td><td><code>MME_VLA_Policy.add_buffer</code> 接受任意帧数；<code>_prepare_history</code> 按 <code>step_idx</code> 只读。motion <code>stride=32</code>、<code>window_frames=33</code>；帧预算 512 tokens（32 帧×16）</td></tr>
+<tr><td>采样与变换</td><td><code>infer</code> 建 observation 后调 <code>_sample_actions</code>，再 <code>x[0,...]</code> 只留第一份；<code>RoboMMEOutputs</code> 用 <code>actions[:, :8]</code>，只适合二维数组；<code>observation.state</code> 已归一化；模型按 observation 批量大小建缓存和掩码，噪声批量必须匹配</td></tr>
+<tr><td>运行收集</td><td><code>run_local.collect</code> 只统计 <code>infer_*.npz</code>，并按「一包一推理」核对次数</td></tr>
+<tr><td>运行器</td><td><code>TraceRunner.step</code> 已支持按步替换动作和逐步记录；旧计划实测 <code>HOLD_SMOKE=PASS held_steps=26 takeover=375 release=401 task_success=1 mismatches=0</code></td></tr>
+<tr><td>基线</td><td><code>v1-store/models/official-mme-vla/perceptual-framesamp-context/79999</code>，11-03 判定 <code>OFFICIAL_CTX_ASSET=PASS</code>；当时规格 <code>policy_config=mme_vla_suite_b128</code>、<code>model_kind=history</code>、XLA 0.40、<code>P=1088</code>、<code>MEM=512</code>。这些规格在本分支须试跑确认</td></tr>
+<tr><td>高度换算</td><td><code>TcpReader.set_arm</code>：设 qpos 读 TCP，不跑物理步，须在 official-sim 环境运行</td></tr>
+<tr><td>显存</td><td>两张 A6000 各 46,068 MiB；motion 规格 XLA 0.55</td></tr>
+<tr><td>既有成绩</td><td>10-31 官方评估：concat motion 模型 StopCube 三 seed 为 43.33 ± 2.31（模型 seed 42 为 42.0）</td></tr>
+<tr><td>实测</td><td>第 16 局：<code>command_press_step=403</code>、<code>button_trigger_step=416</code>；TCP 约第 397 步开始下降</td></tr>
 </table></div>
 
 <h2>二 规模依据（按 seed 推算，未经仿真核实）</h2>
-<p>用官方清单 <code>env_seed</code> 复现 <code>torch.randint</code> 序列得到 M、N（第 16 局复现 M=120、N=4，与实测一致）。合计 14,920 步。询问点 <code>t = 1+4k ≤ M·N</code>，约 3,730 个。M=60 共 12 局、M=80 共 22 局、M=120 共 16 局。</p>
+<p>用官方清单 <code>env_seed</code> 复现 <code>torch.randint</code> 序列得到 M、N（第 16 局与实测一致）。合计 14,920 步；询问点 <code>t = 1+4k ≤ M·N</code> 约 3,730 个。M=60 共 12 局、M=80 共 22 局、M=120 共 16 局。部分 (M,N) 格子局数很少，只描述不做统计推断。</p>
 <div class="tbl"><table>
 <tr><th>(M,N)</th><th>局数</th><th>(M,N)</th><th>局数</th><th>(M,N)</th><th>局数</th></tr>
 <tr><td>(60,2)</td><td>6</td><td>(80,2)</td><td>7</td><td>(120,2)</td><td>2</td></tr>
@@ -475,17 +482,17 @@ P(t)              = 10 个预测中想按的比例
 <tr><td>(60,4)</td><td>4</td><td>(80,4)</td><td>3</td><td>(120,4)</td><td>2</td></tr>
 <tr><td>(60,5)</td><td>0</td><td>(80,5)</td><td>6</td><td>(120,5)</td><td>5</td></tr>
 </table></div>
-<p>部分格子局数很少，只描述不做统计推断。单点输入估算：<code>static_image_emb</code> 512×2048 f32 约 4.2 MB，<code>static_pos_emb</code> 512×768 约 1.6 MB，motion 约 0.5 MB，两张 224×224 图约 1.2 MB，合计约 7.5 MB；实际以冒烟为准。</p>
+<p>单点输入估算约 7.5 MB（<code>static_image_emb</code> 4.2 MB、<code>static_pos_emb</code> 1.6 MB、motion 0.5 MB、两张图 1.2 MB），实际以试跑为准。高度换算总量 3,730×10×20×2 约 149 万行。</p>
 
 <h2>三 逐文件改动</h2>
 <div class="tbl"><table>
 <tr><th>文件</th><th>类型</th><th>改什么</th><th>关闭态行为</th></tr>
-<tr><td><code>scripts/interpret/stopcube_oracle.py</code></td><td>新增</td><td>CLI：<code>--episode-key</code>、<code>--mode hold|press</code>、<code>--output-dir</code>、<code>--benchmark-root</code>。用 <code>build_env</code> 建环境，包一层记录 <code>env.step</code> 的动作，调任务自带 solve 函数。hold 模式写动作表和与 <code>geometry_window</code> 同格式的 <code>window_probe.jsonl</code>；press 模式写逐步记录、触发步、<code>stop_timestep</code>、任务成功</td><td>新文件，无影响</td></tr>
-<tr><td><code>scripts/interpret/stopcube_runner.py</code></td><td>修改</td><td>新增模式 <code>oracle_query</code>、<code>oracle_verify</code>：<code>TraceRunner.step</code> 按 <code>env_step</code> 查表；<code>TraceEvaluator</code> 覆盖 <code>get_action_chunk</code>，询问模式每 4 帧发送，验证模式到询问点前不询问，之后注入预测或交还模型</td><td><code>normal</code>、<code>hold_extended</code> 逻辑不变</td></tr>
-<tr><td><code>scripts/interpret/run_local.py</code></td><td>修改</td><td>白名单加两种模式；透传 <code>query_predictions</code>；表内容指纹并入 <code>run_identity</code></td><td>不传时命令与身份不变</td></tr>
-<tr><td><code>scripts/interpret/serve_policy_attn.py</code></td><td>修改</td><td>新增 <code>QueryRecorder</code> 与 <code>--query-record N</code>：不用注意力路径，用原 <code>_sample_actions</code> 批量采样，存 <code>query_&lt;seq&gt;.npz</code>；询问与验证模式放开 16 帧校验并校验帧号连续</td><td>默认关闭，<code>AttnRecorder</code> 不变</td></tr>
-<tr><td><code>scripts/interpret/offline_query.py</code></td><td>新增</td><td>读 <code>query_*.npz</code> 和检查点，重算动作并比较；可调 <code>AttnAdapter.run</code> 输出注意力。第二阶段的统一入口</td><td>新文件，无影响</td></tr>
-<tr><td><code>scripts/interpret/analysis/oracle_press_prob.py</code></td><td>新增</td><td>official-sim 中算预测的目标高度，缓存 <code>query_z_&lt;局&gt;.npz</code>；算 <code>P(t)</code>、Wilson 区间、分组表、验证选点与对照表；出图和 <code>report.html</code></td><td>新文件，无影响</td></tr>
+<tr><td><code>scripts/interpret/stopcube_oracle.py</code></td><td>新增</td><td>CLI：<code>--episode-key</code>、<code>--mode hold|press</code>、<code>--output-dir</code>、<code>--benchmark-root</code>。每进程一个单局环境，包一层记录 <code>env.step</code> 的动作，调任务 solve 函数。hold 模式写动作表和 <code>window_probe.jsonl</code>；press 模式写实际下压起点、触发步、<code>stop_timestep</code>、任务成功</td><td>新文件，无影响</td></tr>
+<tr><td><code>scripts/interpret/stopcube_runner.py</code></td><td>修改</td><td>新增 <code>oracle_query</code>、<code>oracle_calibrate</code>：专用循环。询问模式每执行 4 个表内动作，提交 4 帧并询问，预测丢弃执行权。校准模式交还点前连续提交历史不询问，交还后由模型每 16 步推理执行；<code>stop_after_release</code> 控制 48 步截止，终局记 <code>calibration_stop</code></td><td><code>normal</code>、<code>hold_extended</code> 不变</td></tr>
+<tr><td><code>scripts/interpret/run_local.py</code></td><td>修改</td><td>白名单加两种模式；透传询问参数；表内容指纹并入 <code>run_identity</code>；<code>collect</code> 按模式分别统计历史包、询问点和执行推理次数</td><td>不传时命令、身份和统计不变</td></tr>
+<tr><td><code>scripts/interpret/serve_policy_attn.py</code></td><td>修改</td><td>新增 <code>QueryRecorder</code> 与 <code>--query-record N</code>：构建一次 observation，复制到实际批量，调原 <code>_sample_actions</code>，逐预测做原输出变换，写 <code>query_&lt;seq&gt;.npz</code>。专用 RPC 校验放开帧数和连续 <code>add_buffer</code>，保留身份、帧号连续与首包合同</td><td>默认关闭，<code>AttnRecorder</code> 与原校验不变</td></tr>
+<tr><td><code>scripts/interpret/offline_query.py</code></td><td>新增</td><td>读 <code>query_*.npz</code> 和检查点，走原采样路径重算并比较；可调 <code>AttnAdapter.run</code> 输出注意力并报告差异。第二阶段的统一入口</td><td>新文件，无影响</td></tr>
+<tr><td><code>scripts/interpret/analysis/oracle_press_prob.py</code></td><td>新增</td><td>多进程算目标高度，缓存 <code>query_z_&lt;模型&gt;_&lt;局&gt;.npz</code>；算 <code>P(t)</code>、Wilson 区间、分组表、校准选点和结果表；两模型对比图和 <code>report.html</code></td><td>新文件，无影响</td></tr>
 <tr><td>对应 <code>scripts/interpret/test_*.py</code></td><td>新增或修改</td><td>见第六节验收</td><td>—</td></tr>
 </table></div>
 
@@ -495,47 +502,50 @@ P(t)              = 10 个预测中想按的比例
  "episodes": {"StopCube:16": {
    "env_seed": 521600, "move_interval": 120, "target_pass": 4,
    "first_env_step": 1, "actions": [[8 个浮点] × 步数],
+   "last_env_step": &lt;最后一个动作的步前值&gt;, "terminal_env_step": &lt;官方结束时的步&gt;,
    "reach_step": &lt;首次满足 button_hover 且高度稳定的步&gt;,
    "z_hover": &lt;悬停段实测 TCP 高度中位数&gt;,
    "target_visit_in": 412, "target_visit_out": 428, "visits": [...]}}}</pre>
-<p>actions 下标 <code>i</code> 对应 <code>env_step = first_env_step + i</code>。运行器在 <code>env_step</code> 越出表范围时抛 <code>ContractError</code>，不静默重复末行。</p>
+<p>actions 下标 <code>i</code> 对应 <code>env_step = first_env_step + i</code>。生成时持续保持到环境官方结束，包含包装器在终止时多执行的步，所以表覆盖 <code>M·N</code> 之后的动作。<b>询问点只取 <code>t ≤ M·N</code>；环境动作走到官方结束</b>，二者分开。运行器在表范围之外抛 <code>ContractError</code>，不重复末行。</p>
 <h3>4.2 询问记录 <code>query_&lt;seq&gt;.npz</code></h3>
 <div class="tbl"><table>
 <tr><th>键</th><th>形状</th><th>说明</th></tr>
-<tr><td><code>obs/&lt;字段&gt;</code></td><td>原形状，batch=1</td><td><code>HistAugObservation</code> 全部字段：images、image_masks、state、tokenized_prompt、tokenized_prompt_mask、static_image_emb、static_mask、static_pos_emb、static_state_emb、motion_emb、motion_pos、motion_mask、mem_order 等。按 dataclass 字段遍历，不手列漏项</td></tr>
+<tr><td><code>obs/&lt;路径&gt;</code></td><td>原形状和 dtype，batch=1</td><td>递归保存 observation 全部叶子，包括图像字典、掩码、文字、记忆、motion；可选空字段记录为空。写后读回比较结构</td></tr>
+<tr><td><code>raw_state</code></td><td><code>(8,)</code> f32</td><td>物理状态，供运动学核验；<code>obs</code> 里的 state 已归一化</td></tr>
 <tr><td><code>noise</code></td><td><code>(10, 20, 32)</code> f32</td><td>实际使用的噪声</td></tr>
-<tr><td><code>actions_normalized</code></td><td><code>(10, 20, 32)</code> f32</td><td>输出变换前</td></tr>
-<tr><td><code>actions</code></td><td><code>(10, 20, 8)</code> f32</td><td>物理关节动作</td></tr>
-<tr><td><code>env_step</code>、<code>step_idx</code>、<code>query_seq</code>、<code>episode_key</code>、<code>frame_times</code></td><td>标量或一维</td><td>身份与时间</td></tr>
+<tr><td><code>actions_normalized</code>、<code>actions</code></td><td><code>(10, 20, 32)</code>、<code>(10, 20, 8)</code> f32</td><td>输出变换前后</td></tr>
+<tr><td><code>model_id</code>、<code>env_step</code>、<code>step_idx</code>、<code>query_seq</code>、<code>episode_key</code>、<code>frame_times</code>、<code>pre_reach</code></td><td>标量或一维</td><td>身份、时间和到位标记</td></tr>
 </table></div>
-<p>噪声由固定种子、局身份、询问序号、预测序号派生，不从策略 RNG 取。显存不足时分批，不减预测数。</p>
-<h3>4.3 验证选点 <code>verify_plan.json</code></h3>
-<pre>放手点 = 最大的 t ∈ {1+4k}，满足 reach_step ≤ t ≤ T-48
-         无解时取最小的 t ≥ reach_step，须 t &lt; target_visit_in，记 late_release；仍无解记 none
-第 N 次经过段 = [T-48, target_visit_out]
-A = 该段内 P 最高的询问点（同值取较早）里序号最小的想按预测
-B = A 同一询问点里序号最小的不想按预测
-C = 前 N-1 次经过段内 P 最高点里序号最小的想按预测
-P 为 0 或无候选的类别跳过并记原因。顺序：放手 → A → B → C</pre>
-<p>规则只读询问结果和固定阈值 2 cm，生成后固定，不按验证结果调整。注入动作从 <code>query_&lt;seq&gt;.npz</code> 读取。验证从询问点起，模型每 16 步真实推理并执行，使用原采样路径，不存注意力。第 16 局放手点为 369。</p>
+<p>噪声由固定种子、局身份、询问序号、预测序号派生，不含模型身份，所以两模型相同；不从策略 RNG 取。显存不足时分小批，不减预测数。</p>
+<h3>4.3 校准选点 <code>calibration_plan.json</code></h3>
+<pre>校准局 = 每种 M 中局号最小的 4 局，共 12 局
+固定放手 = 最大的 t ∈ {1+4k}，满足 reach_step ≤ t ≤ T-48
+           无解时取最小的 t ≥ reach_step，须 t &lt; target_visit_in，记 late_release；仍无解记 none
+决策段 = [T-48, target_visit_out] ∩ {t ≥ reach_step}
+高比例点 = 决策段内 P 最高的询问点，同值取较早
+低比例点 = 决策段内 P 最低的询问点，同值取较早
+早按点 = 前 N-1 次经过的 visits 段内 P 最高的询问点；P 为 0 或 N 段无候选时跳过并记原因
+顺序：固定放手 → 高比例点 → 低比例点 → 早按点</pre>
+<p>每个模型按自己的 P 选点。规则只读询问结果和固定阈值 2 cm，生成后固定，不按校准结果调整。第 16 局固定放手点为 369。</p>
 
 <h2>五 分析定义</h2>
 <ul>
 <li><b>高度：</b><code>TcpReader.set_arm</code> 逐行换算，<code>(10,20)</code>；只表示目标姿态的高度，不是实测 TCP。</li>
-<li><b>耗时 d：</b>对验证运行，用同一 <code>z_hover - 0.02</code> 取已执行命令首次过阈值的步到按钮触发的步，按 M 报告分布，取中位数。Oracle 耗时单独报告，不混入。没有足够下压局时，预计触发相关结果写「不可得」。</li>
-<li><b>经过分组：</b>按 <code>visits</code> 把询问点划到第 1…N 次经过及其之间。报告 <code>P(t)</code> 均值和局级 bootstrap 区间。</li>
-<li><b>想按判定对照表：</b>A、B、C 三类分别报告「注入后 32 步内按钮是否触发」和最终结果；同时给 1、2、3 cm 下各预测的判定变化。换阈值由用户决定。</li>
+<li><b>经过分组：</b>按 <code>visits</code> 把询问点划到第 1…N 次经过及其之间。局内相邻询问点不独立，<code>P(t)</code> 用局级 bootstrap 给区间。</li>
+<li><b>校准结果：</b>分别记录交还后 48 步内是否触发、第几步触发、交还后第一次推理的预测和实际动作；固定放手另记最终任务成功。结果表分模型、分运行类型。12 局只看方向，不给精确准确率。</li>
+<li><b>两模型比较：</b>主要看三个量，都用局级配对差值和 bootstrap 区间：决策段内 P 均值；前 N-1 次经过段内 P 均值；两者之差（能否分清次数）。两模型噪声相同，用于减小差异波动。</li>
 <li><b>放手结果：</b>按真实触发步分「早于区间／区间内／晚于区间／没按」，任务成功字段独立报告。</li>
+<li><b>16 步子集：</b>同时报告 <code>t=1+16k</code> 子集的曲线，因为只有这些时刻模型真实运行时才会被询问。</li>
 </ul>
 
 <h2>六 子代理分配表</h2>
 <div class="tbl"><table>
 <tr><th>编号</th><th>目标</th><th>可写文件</th><th>禁触</th><th>接口与依赖</th><th>合并顺序</th><th>验收（worktree 内 CPU 短测）</th><th>资源</th></tr>
-<tr><td>S1：<code>opus</code>，独立 worktree</td><td>Oracle 动作表与带下压验证</td><td><code>stopcube_oracle.py</code>、<code>test_stopcube_oracle.py</code></td><td>红线 1 路径；其余 interpret 文件</td><td>输出 4.1；复用 <code>geometry_window</code></td><td>1</td><td>动作记录与表结构短测；真实单局由主会话合并后跑</td><td>CPU</td></tr>
-<tr><td>S2：<code>opus</code>，独立 worktree</td><td>运行器询问与验证模式</td><td><code>stopcube_runner.py</code>、<code>run_local.py</code>、<code>test_stopcube_runner.py</code></td><td>S1、S3、S4 文件</td><td>消费 4.1、4.3；旧模式零变化</td><td>2</td><td>查表、越界抛错、4 帧节奏、注入、旧模式回归短测</td><td>CPU</td></tr>
-<tr><td>S3：<code>opus</code>，独立 worktree</td><td>询问存盘与离线工具</td><td><code>serve_policy_attn.py</code>、<code>offline_query.py</code>、<code>test_query_record.py</code></td><td>S1、S2、S4 文件；<code>attn_adapter.py</code> 只读调用</td><td>输出 4.2；默认关闭零变化</td><td>3</td><td>字段遍历完整、噪声派生、写盘格式、默认关闭短测；GPU 项留给合并后</td><td>CPU</td></tr>
-<tr><td>S4：<code>opus</code>，独立 worktree</td><td>分析、选点与报告</td><td><code>analysis/oracle_press_prob.py</code>、<code>test_oracle_press_prob.py</code></td><td>运行与采集源码</td><td>消费 4.1、4.2 与 trace；输出 4.3</td><td>4</td><td>合成数据上的判据、选点、空分母、缺失局短测</td><td>CPU</td></tr>
-<tr><td>R1：<code>opus</code>，运行型，不加 worktree</td><td>冒烟与 50 局运行</td><td>只写第十一节产物路径</td><td>全部源码、配置、依赖</td><td>主会话给固定 sha、完整命令、GPU、tmux 名、日志路径、起跑判据、最长等待、不自动重试</td><td>S1～S4 合并后</td><td>回执、起跑判据原文、句柄</td><td>最多 2 卡；<code>so-</code> 前缀</td></tr>
+<tr><td>S1：<code>opus</code>，独立 worktree</td><td>Oracle 动作表与真下压验证</td><td><code>stopcube_oracle.py</code>、<code>test_stopcube_oracle.py</code></td><td>红线 1 路径；其余 interpret 文件</td><td>输出 4.1；复用 <code>geometry_window</code></td><td>1</td><td>动作记录、终局闭合、表结构短测；真实单局由主会话合并后跑</td><td>CPU</td></tr>
+<tr><td>S2：<code>opus</code>，独立 worktree</td><td>运行器询问与校准模式</td><td><code>stopcube_runner.py</code>、<code>run_local.py</code>、<code>test_stopcube_runner.py</code></td><td>S1、S3、S4 文件</td><td>消费 4.1、4.3；旧模式零变化</td><td>2</td><td>查表、越界抛错、4 帧循环、连续提交、48 步截止、统计、旧模式回归短测</td><td>CPU</td></tr>
+<tr><td>S3：<code>opus</code>，独立 worktree</td><td>询问存盘与离线工具</td><td><code>serve_policy_attn.py</code>、<code>offline_query.py</code>、<code>test_query_record.py</code></td><td>S1、S2、S4 文件；<code>attn_adapter.py</code> 只读调用</td><td>输出 4.2；默认关闭零变化</td><td>3</td><td>递归存取、批量复制、逐预测变换、噪声派生、RPC 放宽范围短测；GPU 项留给合并后</td><td>CPU</td></tr>
+<tr><td>S4：<code>opus</code>，独立 worktree</td><td>校准选点、分析与报告</td><td><code>analysis/oracle_press_prob.py</code>、<code>test_oracle_press_prob.py</code></td><td>运行与采集源码</td><td>消费 4.1、4.2 与 trace；输出 4.3</td><td>4</td><td>合成数据上的判据、选点、到位前排除、配对比较、缺失局短测</td><td>CPU</td></tr>
+<tr><td>R1：<code>opus</code>，运行型，不加 worktree</td><td>试跑与正式运行</td><td>只写第十一节产物路径</td><td>全部源码、配置、依赖</td><td>主会话给固定 sha、完整命令、GPU、tmux 名、日志路径、起跑判据、最长等待、不自动重试</td><td>S1～S4 合并后</td><td>回执、起跑判据原文、句柄</td><td>每卡一个模型；<code>so-</code> 前缀</td></tr>
 <tr><td>审查：<code>sonnet</code>，只读</td><td>开工一致性、合并前审查</td><td>无</td><td>全部写入、测试、作业</td><td>钉死 BASE／TIP</td><td>开工及每次合并</td><td><code>PLAN_CONSISTENCY_REVIEW</code>、<code>PRE_MERGE_REVIEW</code></td><td>无</td></tr>
 <tr><td>主会话</td><td>整合、合并后审查、监听、报告</td><td>留档、<code>launch.md</code>、<code>result.md</code></td><td>旧计划产物</td><td>唯一资源与清理负责人</td><td>—</td><td><code>POST_MERGE_REVIEW</code> 与全部判定行</td><td>—</td></tr>
 </table></div>
@@ -544,52 +554,56 @@ P 为 0 或无候选的类别跳过并记原因。顺序：放手 → A → B �
 <h2>七 闸门总表</h2>
 <div class="tbl"><table>
 <tr><th>闸门</th><th>怎么查</th><th>为什么成立</th><th>判定行</th></tr>
-<tr><td>动作表</td><td>规划器无异常；<code>reach_step ≤ T-30</code>；全程 <code>button_pressed</code> 为假；区间 resolved</td><td>任务定义的下压起点就是 T-30，不到位则比较无意义</td><td><code>ORACLE_TABLE=PASS episodes=50 failed=0 late_reach=&lt;n&gt;</code></td></tr>
-<tr><td>区间验证</td><td>press 模式下核触发步是否落在区间、<code>stop_timestep</code> 与任务成功</td><td>官方判据是唯一真值</td><td><code>ORACLE_PRESS=PASS episodes=50 success=&lt;n&gt; trigger_outside=&lt;n&gt;</code></td></tr>
-<tr><td>重放</td><td>trace 对比生成时的 qpos、TCP、方块位置</td><td>同代码、同 seed、同机物理确定时应极小；不一致时区间改从本次 trace 读取</td><td><code>ORACLE_REPLAY=PASS episodes=50 maxabs_qpos=&lt;x&gt; tol=1e-3</code></td></tr>
-<tr><td>开环执行</td><td>trace 中 <code>executed_action</code> 与表逐位比较；<code>button_pressed_after</code> 全假</td><td>动作由表决定，与模型无关</td><td><code>OPEN_LOOP_EXEC=PASS episodes=50 mismatches=0</code></td></tr>
-<tr><td>询问节奏</td><td>第 16 局分别按 4 步和 16 步询问，比较相同时刻的 <code>frame_times</code>（逐位）和其余输入（容差）</td><td>记忆只由帧号决定；视觉编码分批大小可能带来微小数值差</td><td><code>INPUT_CADENCE=PASS points=&lt;n&gt; maxabs=&lt;x&gt; tol=1e-3</code></td></tr>
-<tr><td>询问记录</td><td><code>query_*.npz</code> 数等于询问点数；形状、有限性；字段集合等于 dataclass 字段</td><td>分母和离线输入都不缺</td><td><code>QUERY_RECORD=PASS points=&lt;n&gt; predictions=10 missing=0</code></td></tr>
-<tr><td>离线重算</td><td>每局抽 2 个点，用 <code>offline_query.py</code> 重算动作与存盘比较，并跑一次 <code>AttnAdapter.run</code></td><td>采样只依赖权重、输入和噪声；批量与单条路径允许微小数值差</td><td><code>OFFLINE_REPLAY=PASS points=&lt;n&gt; maxabs=&lt;x&gt; tol=1e-3 attention=ok</code></td></tr>
-<tr><td>高度换算</td><td>用 <code>state</code> 算高度与同步实测 TCP 比较</td><td>确认换算链接对</td><td><code>FK_PARITY=PASS rows=&lt;n&gt; maxabs_z=&lt;x&gt; tol=1e-3</code></td></tr>
-<tr><td>真按验证</td><td>询问点前动作等于表；注入行等于存盘预测；之后等于模型输出；结果齐全</td><td>证明控制权确实交回</td><td><code>PRESS_VERIFY=PASS planned=&lt;n&gt; completed=&lt;n&gt; missing=&lt;n&gt; late=&lt;n&gt;</code></td></tr>
-<tr><td>时间</td><td>冒烟实测推算剩余</td><td>决定能否在截止前跑完</td><td><code>BUDGET=PASS deadline=2026-11-05T09:52:00Z remaining_s=&lt;n&gt; estimated_s=&lt;m&gt;</code></td></tr>
-<tr><td>报告</td><td>齐全、可追溯，图渲染后目视复查</td><td>第 2 条画图复查要求</td><td><code>REPORT_READY=PASS episodes=50</code></td></tr>
+<tr><td>动作表</td><td>规划无异常；全程 <code>button_pressed</code> 为假；区间 resolved；<code>actions</code> 覆盖到 <code>terminal_env_step</code>；<code>reach_step</code> 晚于 <code>T-30</code> 的记 <code>late_reach</code></td><td>到不了位的局不能算悬停比较</td><td>见验收表 <code>ORACLE_TABLE</code></td></tr>
+<tr><td>区间验证</td><td>press 模式核实际下压起点、触发是否落在区间、<code>stop_timestep</code> 与任务成功</td><td>官方判据是唯一真值</td><td>见验收表 <code>ORACLE_PRESS</code></td></tr>
+<tr><td>重放</td><td>trace 对比生成时的 qpos、TCP、方块位置</td><td>同代码、同 seed、同机物理确定时应极小；不一致时区间改从本次 trace 读取</td><td>见验收表 <code>ORACLE_REPLAY</code></td></tr>
+<tr><td>开环执行</td><td>trace 中 <code>executed_action</code> 与表逐位比较；<code>button_pressed_after</code> 全假</td><td>动作由表决定，与模型无关</td><td>见验收表 <code>OPEN_LOOP_EXEC</code></td></tr>
+<tr><td>询问节奏</td><td>每个模型在第 16 局分别按 4 步和 16 步询问，比较相同时刻的 <code>frame_times</code>（逐位）和其余输入（容差）</td><td>记忆只由帧号决定；视觉编码分批可能带来微小数值差</td><td>见验收表 <code>INPUT_CADENCE</code></td></tr>
+<tr><td>询问记录</td><td><code>query_*.npz</code> 数等于询问点数；递归结构读回一致；有限性；两模型噪声逐位相等</td><td>分母和离线输入都不缺</td><td>见验收表 <code>QUERY_RECORD</code></td></tr>
+<tr><td>离线重算</td><td>每局抽 2 个点；同批量走原路径重算，与存盘比较；再跑一次 <code>AttnAdapter.run</code>，记录差异</td><td>采样只依赖权重、输入和噪声；注意力路径的 bf16 差异已有记录，只观察不判失败</td><td>见验收表 <code>OFFLINE_REPLAY</code></td></tr>
+<tr><td>高度换算</td><td>用 <code>raw_state</code> 算高度与同步实测 TCP 比较</td><td>确认换算链接对</td><td>见验收表 <code>FK_PARITY</code></td></tr>
+<tr><td>校准</td><td>交还前动作等于表；交还步是询问点；之后动作等于模型输出；四类结果齐全或写明跳过原因</td><td>证明控制权确实交回</td><td>见验收表 <code>PRESS_CALIBRATION</code></td></tr>
+<tr><td>放手</td><td>同校准，运行到官方终局</td><td>得到真实结果</td><td>见验收表 <code>RELEASE_RUN</code></td></tr>
+<tr><td>时间</td><td>试跑实测，含服务启动、首次编译、离线回放和高度换算</td><td>决定能否在截止前跑完</td><td><code>BUDGET=PASS deadline=2026-11-05T09:52:00Z remaining_s=&lt;n&gt; estimated_s=&lt;m&gt;</code></td></tr>
+<tr><td>报告</td><td>齐全、可追溯，图渲染后目视复查</td><td>第 2 条画图复查要求</td><td>见验收表 <code>REPORT_READY</code></td></tr>
 </table></div>
 <p>任一阈值不过只记录证据交用户裁决，不自行放宽。<code>ORACLE_PRESS</code> 的成功数没有门槛，低于 50 时列局号；询问只用只悬停段，不受影响。</p>
 
 <h2>八 Runbook</h2>
-<p>下列为实施顺序，尚不存在的 CLI 不当作已验证命令；完整命令在起跑前写入 <code>launch.md</code>。解释器：策略 <code>.venv/bin/python</code>，仿真 <code>v1-store/envs/official-sim/bin/python</code>，motion 编码 <code>v1-store/envs/stage2/bin/python</code>；检查点与运行合同沿用旧计划 <code>launch.md</code> 第三节。</p>
+<p>下列为实施顺序，尚不存在的 CLI 不当作已验证命令；完整命令在起跑前写入 <code>launch.md</code>。解释器：策略 <code>.venv/bin/python</code>，仿真 <code>v1-store/envs/official-sim/bin/python</code>，motion 编码 <code>v1-store/envs/stage2/bin/python</code>；motion 模型检查点与运行合同沿用旧计划 <code>launch.md</code> 第三节，基线规格沿用 <code>docs/evaluation-doc/attn-ctx512-vs-motion-1103/launch.md</code>。</p>
 <ol>
 <li>提交本计划；开工令后派一个 <code>sonnet</code> 审全文，钉死计划 sha。</li>
 <li>派 S1～S4；依次合并、审查、推送。运行用独立干净工作树，避开用户未跟踪文件。</li>
-<li>冒烟：<code>StopCube:16</code> 与一个 M=60、N=2 的局，顺序为 hold → press → <code>oracle_query</code>（4 步、16 步各一次）→ 离线重算 → <code>oracle_verify</code>。失败保留日志，不放大。</li>
-<li>全量动作表（hold、press）。</li>
-<li>询问 50 局，按已有 <code>chunk_size=5</code> 分块，两卡各写独立目录。</li>
-<li>询问日志有终态退出码且局数齐全后，算目标高度和 <code>P(t)</code>，生成 <code>verify_plan.json</code> 并固定；真按验证按「放手 → A → B → C」分块运行。</li>
-<li>验证运行结束后再做汇总分析和出图；不读半成品。截止前未完成的运行如实列出。</li>
-<li>写 <code>result.md</code>、更新评估索引；收尾列 tmux 清单。</li>
+<li>试跑（第 16 局与一个 M=60、N=2 的局）：hold → press → 两模型 <code>oracle_query</code>（第 16 局 4 步、16 步各一次）→ 离线重算 → <code>oracle_calibrate</code>。失败保留日志，不放大。</li>
+<li>全量动作表，多进程，每局独立目录。</li>
+<li>每模型生成两份互斥清单：校准 12 局一块、其余 38 局一块，整块复用一次服务，减少重复加载。</li>
+<li>两卡同时询问 12 局；生产者有终态退出码且局数齐全后，算高度和 <code>P(t)</code>，生成 <code>calibration_plan.json</code> 并固定。</li>
+<li>跑校准；结果汇总后先在当轮报告用户。除非用户叫停，继续下一步。</li>
+<li>两卡同时询问其余 38 局；CPU 上同步做已完成局的高度换算。</li>
+<li>剩余时间足够时补跑其余 38 局的固定放手。</li>
+<li>汇总、出图；写 <code>result.md</code>、更新评估索引；收尾列 tmux 清单。截止前未完成的运行如实列出。</li>
 </ol>
 
 <h2>九 风险登记</h2>
 <div class="tbl"><table>
 <tr><th>风险</th><th>影响</th><th>处置</th></tr>
-<tr><td>规划器在评估环境包装下不能直接驱动</td><td>动作表生成失败</td><td>冒烟先暴露；不改第三方代码，必要时只在 <code>stopcube_oracle.py</code> 内调整调用方式。需要更大改动时停下交用户</td></tr>
+<tr><td>规划器在评估环境包装下不能直接驱动</td><td>动作表生成失败</td><td>试跑先暴露；不改第三方代码，必要时只在 <code>stopcube_oracle.py</code> 内调整调用方式。需要更大改动时停下交用户</td></tr>
 <tr><td>Oracle 到位晚于 T-30</td><td>部分局无法到位比较</td><td>记 <code>late_reach</code>，分组呈现，不改任务时间</td></tr>
 <tr><td>重放与生成不一致</td><td>动作表与环境状态漂移</td><td>区间改从本次 trace 读取；qpos 偏差超容差交用户</td></tr>
 <tr><td>每 4 步询问的输入与 16 步不同</td><td>询问点不代表真实推理</td><td><code>INPUT_CADENCE</code> 不过就停，证据交用户</td></tr>
-<tr><td>非 <code>1+16k</code> 时刻的输入模型在真实运行时不会遇到</td><td>这些点的比例含义不同</td><td>报告同时给 <code>1+16k</code> 子集的曲线；两者差异如实写</td></tr>
-<tr><td>下压判据受悬停高度影响</td><td>比例随阈值变化</td><td>保存全部高度曲线，报三档；不事后挑阈值</td></tr>
-<tr><td>时间不够</td><td>真按验证不全</td><td>按固定顺序缺失并列出；不减询问点和预测数；是否延期由用户定</td></tr>
-<tr><td>其他任务占用 GPU</td><td>排队或互抢</td><td>起跑前核占用，只用空闲卡，不抢占</td></tr>
+<tr><td>基线规格在本分支跑不起来</td><td>两模型比较受阻</td><td>试跑先暴露；不改 <code>src/</code>，需要换权重或改配置时停下交用户</td></tr>
+<tr><td>校准显示 P(t) 与真实按下无关</td><td>想按比例含义存疑</td><td>先报告用户；数据已全部保存，可换判据离线重算</td></tr>
+<tr><td>时间不够</td><td>补跑放手或部分询问缺失</td><td>按固定优先级缺失并列出；不减询问点和预测数；是否延期由用户定</td></tr>
+<tr><td>其他任务占用 GPU</td><td>两模型无法同时跑</td><td>起跑前核占用，只用空闲卡，不抢占；单卡时依次跑并更新 <code>BUDGET</code></td></tr>
 </table></div>
 
 <h2>十 盲区诚实清单</h2>
 <ul>
-<li>P(t) 表示「预测动作满足下压判据」，不等于按钮触发或任务成功。每点 10 个预测，单点比例分辨率只有 0.1，需靠多局和相邻点汇总。</li>
+<li><code>P(t)</code> 表示「预测动作满足下压判据」，不等于按钮触发或任务成功。每点 10 个预测，单点比例分辨率只有 0.1，相邻询问点也不独立。</li>
 <li>Oracle 历史是理想条件。本计划不跑正常局，也不与真实运行对照，所以如果真实失败来自模型自身轨迹的累积偏差，这里看不出来。</li>
-<li>真按验证每局只有少数几个点，选点依赖规则；<code>late_release</code> 的局不能与其他局直接合并。</li>
-<li>只有一个模型 seed、50 局，部分 (M,N) 格子只有 2 局，结论不能外推。</li>
+<li>基线与 motion 模型的训练步数和来源不同，比较结果不能完全归因于 motion；只有一个模型 seed。</li>
+<li>校准只有 12 局，只能看方向。交还点可能不在 16 步网格上，与真实运行的推理节奏不完全相同。</li>
+<li>50 局，部分 (M,N) 格子只有 2 局，结论不能外推。</li>
 <li>目标高度来自关节目标的运动学换算，真实 TCP 有滞后。</li>
 <li>离线重算只能回答同一输入下的问题；要改变历史就必须重跑环境。</li>
 <li>本计划不回答「模型依据什么决定下压」，只保证第二阶段有可用的输入数据。</li>
@@ -597,7 +611,7 @@ P 为 0 或无候选的类别跳过并记原因。顺序：放手 → A → B �
 
 <h2>十一 留档与 commit 纪律</h2>
 <ul>
-<li>产物根 <code>v1-store/evaluation/stopcube-oracle-1104/</code>：<code>oracle/</code>、<code>smoke/</code>、<code>query/gpu*/</code>、<code>verify/gpu*/</code>、<code>analysis/</code>、<code>logs/</code>。</li>
+<li>产物根 <code>v1-store/evaluation/stopcube-oracle-1104/</code>：<code>oracle/</code>、<code>smoke/</code>、<code>query/&lt;模型&gt;/</code>、<code>calibrate/&lt;模型&gt;/</code>、<code>release/&lt;模型&gt;/</code>、<code>analysis/</code>、<code>logs/</code>。</li>
 <li>留档 <code>docs/evaluation-doc/stopcube-oracle-1104/</code>：<code>launch.md</code>、<code>result.md</code>、<code>records/</code>（汇总 JSON、判定行、图）；大数组和视频留在产物根；建档时在评估索引加一行。</li>
 <li>评估从干净实现提交起跑并记录 sha；已有干净提交时不制造空 Beta。</li>
 <li>子代理 subject 用 <code>sub/S1: </code> 前缀；主会话 <code>git merge --no-ff &lt;TIP sha&gt;</code>，合并后审查通过再 push。只 <code>git add</code> 明确路径，绕开用户未跟踪文件。</li>
@@ -606,7 +620,7 @@ P 为 0 或无候选的类别跳过并记原因。顺序：放手 → A → B �
 <h2>十二 交接顺序与状态机登记</h2>
 <p>任务 id <code>stopcube-oracle-1104</code>。是否登记进 <code>docs/handoff/current.json</code> 待用户回答；未回答前不写入。</p>
 <ul>
-<li><b>交接前必须完成：</b>第七节全部判定行（保存在 <code>docs/evaluation-doc/stopcube-oracle-1104/records/verification.summary.txt</code>）、本轮 tmux 退出且退出码已核、留档已提交推送。</li>
+<li><b>交接前必须完成：</b>第七节除放手补跑外的判定行（保存在 <code>docs/evaluation-doc/stopcube-oracle-1104/records/verification.summary.txt</code>）、本轮 tmux 退出且退出码已核、留档已提交推送。</li>
 <li><b>长尾：</b>无。</li>
 <li><b>上游：</b>无解锁依赖。旧计划已停止，不使用其产物。</li>
 <li><b>下游：</b>无自动解锁。第二阶段基于 <code>query_*.npz</code> 离线做，另定计划和开工令。</li>
