@@ -52,6 +52,8 @@ FK完成后用`bash <产物根>/prepare_release38.sh`从既有汇总逐局调用
 
 ## 第二阶段的预登记接续命令
 
+实施中同规模调整：文字总组补充原有效位置/id的单词元子组，复用同一次适配器输出，原五类、帧、经过和采样口径不变。<code>ADJUST_REVIEW=PASS scale=same findings=0</code>；原S5独立工作树子提交`a7b03f1cad1e9d3b869afb7642544c2ffcf523a6`的合前审查通过。主会话合并后在`JAX_PLATFORMS=cpu`运行`-m pytest -q scripts/interpret/test_offline_mechanism.py`，11项通过、7.96秒。原词元解码由主会话用既有SPM仅用于阅读；这不证明计数理解。下面050版本的预登记命令由新增的干净机制执行版本承接，实际新版本、路径与完整命令在起跑回执中补记；原200点重放仍以050为准。
+
 全量接续实际回执：集合核验`so-collection-verify-a`于美东2026-11-05 04:00:33启动，PID689309，完整7460点通过并退出0。`so-fk38-a`、`so-offline-verify-ctx-a`、`so-offline-verify-mot-a`均于04:01:55启动，窗格PID分别691006、691010、691015。FK复用24份缓存、新增76份，已退出0，完整7460点高度最大差0；两模型200点重放尚在运行。完整50局概率曲线与M/N分面图均已实际渲染、由主会话逐图目视检查，无重叠、错位、遮挡或缺字，原始图与区间JSON存于`analysis/all/report/`并归档纯结果副本。
 
 第二阶段接续也先登记、后实际执行：38局固定放手结束后，`bash <产物根>/merge_release50.sh`分别按原12局计划和新38局固定计划验证收据、轨迹与终态；输出`analysis/release38-results.json`、`release50-summary.json`及`mechanism-source-summary.json`。原12局的高/低/早校准分母、计划和汇总保持不变，50局固定放手另表报告，机制选局只追加有效成功证据。既定附指标用`bash <产物根>/summarize_sensitivity.sh`汇总1/2/3厘米、16/20行，直接复用原逐点比例与局级bootstrap2000、种子42，不新增预测、不改主判据。

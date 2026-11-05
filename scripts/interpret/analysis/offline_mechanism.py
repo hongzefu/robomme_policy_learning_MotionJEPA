@@ -116,6 +116,13 @@ def select(summary_path, output):
     return selection
 
 
+def original_prompt_positions(observation):
+    """只读原有效文字位置及词元编号，不重新分词或解码。"""
+    ids = np.asarray(observation.tokenized_prompt).reshape(-1)
+    mask = np.asarray(observation.tokenized_prompt_mask).reshape(-1).astype(bool)
+    return [{"position": int(position), "token_id": int(ids[position])} for position in np.flatnonzero(mask)]
+
+
 def token_groups(observation, layout, frame_times, tokens_per_frame):
     """按原mem_order映射视觉历史；motion无原始时间字段时明确不臆造。"""
     p, mem = layout["P"], layout["MEM"]
@@ -159,6 +166,10 @@ def token_groups(observation, layout, frame_times, tokens_per_frame):
         mask = np.zeros(p + 20, bool)
         mask[:mem] = (times == frame)
         groups[f"真实帧:{frame}"] = mask
+    for token in original_prompt_positions(observation):
+        mask = np.zeros(p + 20, bool)
+        mask[mem + layout["IMG"] + token["position"]] = True
+        groups[f"文字位置:{token['position']}:词元:{token['token_id']}"] = mask
     return groups
 
 
@@ -226,6 +237,7 @@ def analyze_input(policy, adapter, item, entry):
             "attn_path_maxabs": difference, "groups": aggregate_attention(attention, groups)})
     replay.update(attention="ok", attn_path_maxabs=maximum)
     result["layout"] = layout
+    result["prompt_positions"] = original_prompt_positions(obs)
     result["frame_times"] = record["frame_times"].tolist()
     result["frame_to_env_offset"] = int(record["env_step"]) - int(record["step_idx"])
     result["motion_time_note"] = "motion输入没有显式原始窗口时间字段；不从位置编码反推时间"
@@ -311,6 +323,16 @@ def report(paths, output):
             if not predictions:
                 continue
             parts.append(f"<p>原十噪声想按比例P={item['p']}；分组标签来自原预测的前16行、悬停高度减2cm判据。询问来源：<code>{html.escape(item['query_path'])}</code></p>")
+            parts.append("<p>以下仅按原有效文字位置和词元编号展示注意力质量，数值对该输入既有预测、层及头取平均；单个词元可能只是子词，分组观察不能证明模型理解计数，也不能证明因果。</p>"
+                         "<table><tr><th>原位置</th><th>原词元编号</th><th>全部预测质量</th><th>下压预测质量</th><th>非下压预测质量</th></tr>")
+            for token in result.get("prompt_positions", []):
+                group = f"文字位置:{token['position']}:词元:{token['token_id']}"
+                cells = [str(token["position"]), str(token["token_id"])]
+                for pressed in (None, True, False):
+                    subset = [prediction for prediction in predictions if pressed is None or prediction["press"] == pressed]
+                    cells.append(f"{np.mean([prediction['groups'][group]['mass'] for prediction in subset]):.8g}" if subset else "缺失")
+                parts.append("<tr>" + "".join(f"<td>{cell}</td>" for cell in cells) + "</tr>")
+            parts.append("</table>")
             names = ["motion", "历史视觉", "当前视觉", "文字", "其余"]
             fig, axes = plt.subplots(1, 2, figsize=(11, 4), layout="constrained")
             for pressed, style in [(False, "--"), (True, "-")]:
