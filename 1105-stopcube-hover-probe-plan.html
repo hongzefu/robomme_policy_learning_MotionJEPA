@@ -23,7 +23,7 @@
 <main>
 <h1 class="title">StopCube 悬停期逐层探针计划（完整版）</h1>
 <div class="note">
-<b>状态：</b>用户已开工（2026-11-05 美东，「不登记状态机 开工」），实施中。实现在 sled-aspen 的策略仓库 <code>robomme_policy_learning_MotionJEPA</code>（分支 <code>v4.1-interpretMotion</code>）。<br>
+<b>状态：</b>第一批已完成（2026-11-05 美东），结果见 <code>docs/evaluation-doc/stopcube-hover-probe-1105/result.md</code>。实现在 sled-aspen 的策略仓库 <code>robomme_policy_learning_MotionJEPA</code>（分支 <code>v4.1-interpretMotion</code>）。<br>
 <b>范围：</b>只做 StopCube 的第一阶段（弱可解码）。历史反事实、RouteStick、其他任务都在待办。<br>
 <b>与其他文件的关系：</b>本计划取代 <code>probe/1105-keypoint-probe-plan.html</code> 里 StopCube 的取点与探针口径（「每次经过前 30 步」改为悬停期全程）；该文件的 RouteStick 部分与第二阶段保持原样。<br>
 <b>经验来源：</b>策略仓库 <code>docs/evaluation-doc/stopcube-rollout-1105/result.md</code>（commit <code>019542c</code>，2026-11-05 美东读取）。<br>
@@ -200,7 +200,7 @@
 <tr><td>冒烟（1 局）</td><td>每模型几分钟（含编译）</td><td>第 0 局约 40 个点，喂约 390 帧</td></tr>
 <tr><td>探针分析</td><td>CPU 上未实测</td><td>上一轮分析约 5 分钟；本轮特征数更多、还要做 PCA，冒烟后估算</td></tr>
 </table></div>
-<p>两张 A6000 各跑一个模型。墙钟要等冒烟量出单点耗时和编码耗时后才能定，回填这一节。全量回放超过 5 分钟，按规则放 detached tmux 并挂监听。</p>
+<p>两张 A6000 各跑一个模型。实测：基线回放约 21 分钟，motion 约 38 分钟（单局第 0 局 42 点分别 24.6 秒、50.6 秒），分析 8 个 worker 192 秒。全量回放超过 5 分钟，按规则放 detached tmux 并挂监听。</p>
 
 
 
@@ -297,6 +297,13 @@
 
 
 
+<h2>B10 实施中调整（完工后追加，不改写上文）</h2>
+<ul>
+<li>回放入口传运行契约：真实握手报 numerics 不符，原因是漏传上一轮 rollout 用的 <code>runtime-mot.json</code>。加 <code>--eval-target-contract</code>，校验没动。计划没写定这一细节，口径不变，未走对抗验证。</li>
+<li>基线 <code>--selftest</code> 配额 0.45 下 OOM，这一次用 0.90 重跑通过。不是新路径的问题。</li>
+<li>打乱范围另加「该不该按」的 <code>[t]</code> 基线，A9 要求每行都有这条水平线；只影响基线。</li>
+<li>与预期不符、如实记录：基线 <code>POSITIVE_CONTROL=FAIL r2=0.6880</code>，判据没改；当前画面组只在输入级和第 0 层读不出历史，第 1 层起能读出，不能再当只有画面的对照。详见 <code>result.md</code>。</li>
+</ul>
 </main>
 </body>
 </html>

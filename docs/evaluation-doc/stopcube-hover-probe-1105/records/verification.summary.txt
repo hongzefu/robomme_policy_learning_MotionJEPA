@@ -1,0 +1,45 @@
+PLAN_CONSISTENCY_REVIEW=PASS base=cd469e2 findings=4 blocking=0
+ADJUST_REVIEW=PASS scale=same findings=10 blocking=0 base=286487a
+PRE_MERGE_REVIEW=PASS task=W1 base=f2811bf tip=4385907 files=2 commits=1 findings=3
+POST_MERGE_REVIEW=PASS task=W1 merge=fdec6e8 tests=21passed files=2
+PRE_MERGE_REVIEW=PASS task=W2 base=fdec6e8 tip=c63c466 files=3 commits=1 findings=5
+POST_MERGE_REVIEW=PASS task=W2 merge=6c1d8a1 tests=45passed files=3
+PRE_MERGE_REVIEW=PASS task=W3 base=fdec6e8 tip=4b94119 files=2 commits=1 findings=6
+POST_MERGE_REVIEW=PASS task=W3 merge=87b45d0 tests=66passed files=2 protected=0
+PRE_MERGE_REVIEW=PASS task=W2-F1 base=87b45d0 tip=19b4de8 files=2 commits=1 findings=0
+POST_MERGE_REVIEW=PASS task=W2-F1 merge=84a6fe1 tests=26passed files=2
+H5_SOURCE=PASS sha256=f8be65f89eda55f41e51a148576f8ada4898d1a463abe87fd73cd0d471e1cadd
+POINTS total=2344 episodes_with_points=98 by_M=60:264,80:677,120:1403
+LABELS_PRECHECK=PASS ordinal_mismatch=0 episodes=100
+PAIR_FRAMES=PASS pairs=655 kept=608 front_maxabs=123 wrist_maxabs=183 tol=8
+LABELS=PASS ordinal_mismatch=0 episodes=10 mismatches=0
+--- ctx
+ATTN_SELFTEST=PASS f32_maxabs=1.19e-07 bf16_relfro=0.00308 rowsum_err=2.93e-07 uniform_ok=1 P=1088 M
+REPLAY_PARITY_LAYOUT compared=21
+REPLAY_PARITY=PASS layout_mismatch=0 points=21 maxabs=0
+HIDDEN_PRECISION=PASS group=历史视觉 min_dist_over_err=2598 path_maxabs=0.001953125
+HIDDEN_PRECISION=PASS group=当前视觉 min_dist_over_err=4216.44 path_maxabs=0.00390625
+HIDDEN_PRECISION=PASS group=文字 min_dist_over_err=6578.12 path_maxabs=0.0048828125
+REPLAY_RUN=PASS model=ctx points=42 expected=42
+--- mot
+ATTN_SELFTEST=PASS f32_maxabs=5.96e-08 bf16_relfro=0.00329 rowsum_err=3.02e-07 uniform_ok=1 P=1184 M
+REPLAY_PARITY_LAYOUT compared=21
+REPLAY_PARITY=PASS layout_mismatch=0 points=21 maxabs=0
+HIDDEN_PRECISION=PASS group=历史视觉 min_dist_over_err=8625 path_maxabs=0.001953125
+HIDDEN_PRECISION=PASS group=motion min_dist_over_err=23950.9 path_maxabs=0.0078125
+HIDDEN_PRECISION=PASS group=当前视觉 min_dist_over_err=5194 path_maxabs=0.00146484375
+HIDDEN_PRECISION=PASS group=文字 min_dist_over_err=6070.23 path_maxabs=0.0068359375
+HIDDEN_PRECISION=PASS group=最近motion min_dist_over_err=42692.9 path_maxabs=0.0126953125
+REPLAY_RUN=PASS model=mot points=42 expected=42
+--- 全量
+REPLAY_RUN=PASS model=ctx points=2344 expected=2344
+EXIT_CODE=0
+REPLAY_RUN=PASS model=mot points=2344 expected=2344
+EXIT_CODE=0
+GROUP_LEAK=PASS leak=0
+POSITIVE_CONTROL=PASS r2=0.8256 tol=0.8 model=mot
+POSITIVE_CONTROL=FAIL r2=0.6880 tol=0.8 model=ctx
+PROBE=PASS model=mot label=M feature=latest_motion layer=0 value=0.7533 minus_time=0.2320 ci=[0.1713,0.2895] shuffled=0.3721
+PROBE=PASS model=mot label=c_strict feature=motion layer=1 value=0.4459 minus_time=0.1181 ci=[0.0137,0.2339] shuffled=0.2652
+HOVER_PROBE_DONE seconds=191.8
+EXIT_CODE=1 reason=POSITIVE_CONTROL_FAIL model=ctx
