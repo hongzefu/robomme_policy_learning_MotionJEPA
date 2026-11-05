@@ -28,8 +28,8 @@
 <b>状态与授权：</b>只规划，未开工。这是独立的新版方案，不修订也不覆盖 <code>1104-stopcube-decision-point-plan.html</code>（下称「旧计划」）。本文件呈现后，用户不改而直接认可才算开工令；旧计划的第一阶段授权不延伸到这里。<br>
 <b>代码锚点：</b>写作时 HEAD 为 <code>64a524d</code>，分支 <code>v4.1-interpretMotion</code>；工作副本 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code>；功能提交用 <code>commitV4.1.x:</code>，文档用 <code>docs:</code>。实际运行另固定含实现的干净提交。<br>
 <b>外部依赖：</b>benchmark gitlink <code>856bc3a189d4172f3f47dbee4424d585f8d78db3</code>；模型 <code>orig100-ctx32x4x4-motion-s2concat1x1024-60k</code>，检查点 59999，模型 seed 42；资产已由旧计划核对 <code>ASSETS=PASS files=38 mismatches=0</code>，起跑前只复核 manifest 指纹。<br>
-<b>时限（待用户确认）：</b>拟沿用旧计划的绝对截止，美东 <b>2026-11-05 04:52 EST</b>（<code>2026-11-05T09:52:00Z</code>）；写作时为美东 11 月 4 日 22:50 左右，还剩约 6 小时。不重新起算，不自动延期。<br>
-<b>与旧计划的关系：</b>写作时旧计划仍由另一个会话推进，正式正常 50 局正在 GPU 1 运行（run <code>normal-gpu1-1104a</code>，已完成约 20 局）。本计划不停止、不改动它的运行，产物根独立；它之后的悬停延长是否继续由用户决定。
+<b>时限：</b>绝对截止为美东 <b>2026-11-05 04:52 EST</b>（<code>2026-11-05T09:52:00Z</code>），用户确认：「保持 04:52」。修订时为美东 11 月 4 日 23:00 左右，还剩约 5.9 小时。不重新起算，不自动延期。<br>
+<b>与旧计划的关系：</b>用户说明旧计划已停止。其正常局 run <code>normal-gpu1-1104a</code> 于美东 22:57:56 中止（<code>USER_ABORT=1</code>、<code>EXIT_CODE=143</code>），日志记录 25 局结果、11 局成功；两张卡当时空闲。本计划不恢复旧任务，产物根独立。
 </div>
 
 <h1>第一部分（给人看）</h1>
@@ -205,7 +205,7 @@
 <tr><td>K4</td><td>第一遍记录</td><td>用户定：<b>不记注意力</b>，记完整输入和输出。输入是模型 <code>HistAugObservation</code> 的全部字段，输出是 10 份噪声、归一化动作和物理动作</td></tr>
 <tr><td>K5</td><td>想按的定义</td><td>接下来 16 行的目标 TCP 高度低于悬停高度 2 cm 以上。另报全部 20 行的同一量和 1 cm、3 cm 两档。真按验证用来检查这个定义；是否换阈值交用户定</td></tr>
 <tr><td>K6</td><td>真按验证</td><td>每局最多 4 次运行：放手、按区间内比例最高点的想按预测、同点的不想按预测、更早经过中比例最高点的想按预测。按此顺序跑，时间不够时后面的如实缺失</td></tr>
-<tr><td>K7</td><td>对照（待确认）</td><td>保留正常运行 50 局作真实表现对照，优先复用旧计划的 <code>normal-gpu1-1104a</code>。这是我的建议，用户最初说的是「都只按照」Oracle</td></tr>
+<tr><td>K7</td><td>对照（待确认）</td><td>正常运行即模型全程自己控制。建议复用旧计划已完成的 25 局（<code>normal-gpu1-1104a</code>），补跑其余 25 局，凑齐 50 局作真实表现对照。用户最初说的是「都只按照」Oracle，此项待用户确认</td></tr>
 <tr><td>K8</td><td>第二阶段范围</td><td>注意力、信息流量、梯度归因、逐层投影、线性探针都不在本计划内运行，后续基于存盘输入离线做。本计划只验证离线重算可行</td></tr>
 <tr><td>K9</td><td>不干预模型内部</td><td>不做 token 遮挡、替换、伪造观测；只替换送入环境的动作</td></tr>
 <tr><td>K10</td><td>成绩口径</td><td>询问局的终局不是模型成绩；验证运行与正常局分开统计，都不计入官方成功率；不为成功重试</td></tr>
@@ -379,9 +379,9 @@ P(t)              = 10 个预测中想按的比例
 <tr><td>动作表</td><td>只悬停 50 + 带下压 50，无模型</td><td>约 20～40 分钟单卡；第 16 局探针 480 步约 10 秒</td><td>小于 1 GB</td></tr>
 <tr><td>询问存盘</td><td>50 局，约 3,730 个询问点，37,300 个预测</td><td>按每点 1.5～2.5 秒估，约 1.5～2.6 小时单卡</td><td>每点约 7.5 MB，共约 28 GB</td></tr>
 <tr><td>真按验证</td><td>最多 200 次运行</td><td>按每次 40～60 秒估，最多约 3.3 小时单卡</td><td>不存注意力，约几 GB</td></tr>
-<tr><td>正常对照</td><td>复用旧计划产物</td><td>0；未完成时实测约 45 秒／局</td><td>0</td></tr>
+<tr><td>正常对照</td><td>复用 25 局，补跑 25 局</td><td>实测约 45 秒／局，约 20 分钟单卡</td><td>按 92 MB／次估约 40 GB</td></tr>
 </table></div>
-<p>写代码按 1.5 小时估。两卡时，询问约到美东 02:15 完成，验证约到 03:50 完成，分析约到 04:20 完成，距截止余量不多。真按验证按 K6 顺序排，时间不够时缺的是最后几类，不减询问点和预测数。</p>
+<p>写代码按 1.5 小时估。两卡时，询问约到美东 02:30 完成，验证约到 04:00 完成，分析约到 04:30 完成，距截止余量不多。真按验证按 K6 顺序排，时间不够时缺的是最后几类，不减询问点和预测数。</p>
 
 <h2>验收</h2>
 <div class="tbl"><table>
@@ -394,7 +394,7 @@ P(t)              = 10 个预测中想按的比例
 <tr><td><code>QUERY_RECORD=PASS points=&lt;n&gt; predictions=10 missing=0</code></td><td>询问点数齐全，字段完整，无 NaN</td><td>分母和离线输入都完整</td></tr>
 <tr><td><code>OFFLINE_REPLAY=PASS points=&lt;n&gt; maxabs=&lt;x&gt; tol=1e-3 attention=ok</code></td><td>只用存盘输入和噪声重算动作，对比存盘输出，并能跑出注意力</td><td>第二阶段可以直接离线开始</td></tr>
 <tr><td><code>PRESS_VERIFY=PASS planned=&lt;n&gt; completed=&lt;n&gt; missing=&lt;n&gt;</code></td><td>注入动作逐位相等，运行结果和终局齐全；缺失项写明原因</td><td>有真实按下的结果；想按判定的准确度以对照表呈现</td></tr>
-<tr><td><code>NORMAL_BASELINE=PASS episodes=50 success=&lt;n&gt;</code></td><td>同模型、同 seed 的正常局齐全，来源写明</td><td>可比较理想历史与真实运行</td></tr>
+<tr><td><code>NORMAL_BASELINE=PASS episodes=50 reused=&lt;n&gt; rerun=&lt;n&gt; success=&lt;n&gt;</code></td><td>同模型、同 seed 的正常局齐全，复用与补跑分别写明</td><td>可比较理想历史与真实运行</td></tr>
 <tr><td><code>REPORT_READY=PASS</code></td><td>图目视复查，逐局可追溯到原始记录</td><td>可交用户阅读；不代表结论已被认可</td></tr>
 </table></div>
 <p>分析结果没有预设通过值，「模型不想按」也是有效结论。</p>
@@ -419,7 +419,7 @@ P(t)              = 10 个预测中想按的比例
 <ol>
 <li><b>源码边界：</b><code>src/</code>、<code>examples/</code>、<code>third_party/</code>、<code>scripts/training/</code>、<code>scripts/evaluation/</code> 零改动；实施只在 <code>scripts/interpret/</code>。任务定义、终止条件、官方评估判据不覆盖。验证：<code>git diff --name-only &lt;BASE&gt;..&lt;TIP&gt;</code> 全部以 <code>scripts/interpret/</code> 或 <code>docs/</code> 开头。</li>
 <li><b>干预边界：</b>只替换 <code>TraceRunner.step</code> 送入环境的动作。禁止 token 遮挡、<code>--ablate</code>、伪造观测、修改记忆。16 帧校验只在询问与验证模式的 interpret 侧放开，官方入口与 <code>normal</code>、<code>hold_extended</code> 模式保持原校验。</li>
-<li><b>不碰旧计划：</b>不停止、不修改旧计划的 tmux 会话、产物根 <code>v1-store/evaluation/stopcube-decision-1104/</code> 与其执行工作树；只读复用其产物。</li>
+<li><b>不碰旧计划：</b>不恢复、不修改旧计划的产物根 <code>v1-store/evaluation/stopcube-decision-1104/</code> 与其执行工作树；只读复用其已完成的正常局。</li>
 <li><b>不为成功重试：</b>只有基础设施故障可重试，须记录原因和次数。规划失败也不换 seed。</li>
 <li><b>长任务：</b>detached tmux，前缀 <code>so-</code>；日志三件套与 <code>EXIT_CODE=</code>；每份日志一个 Monitor。截止前 10 秒发 TERM，超时按非零报告。</li>
 <li><b>存储：</b>产物只落 <code>v1-store/evaluation/stopcube-oracle-1104/</code>，不进 git。</li>
@@ -532,7 +532,7 @@ P 为 0 或无候选的类别跳过并记原因。顺序：放手 → A → B �
 <tr><td>离线重算</td><td>每局抽 2 个点，用 <code>offline_query.py</code> 重算动作与存盘比较，并跑一次 <code>AttnAdapter.run</code></td><td>采样只依赖权重、输入和噪声；批量与单条路径允许微小数值差</td><td><code>OFFLINE_REPLAY=PASS points=&lt;n&gt; maxabs=&lt;x&gt; tol=1e-3 attention=ok</code></td></tr>
 <tr><td>高度换算</td><td>用 <code>state</code> 算高度与同步实测 TCP 比较</td><td>确认换算链接对</td><td><code>FK_PARITY=PASS rows=&lt;n&gt; maxabs_z=&lt;x&gt; tol=1e-3</code></td></tr>
 <tr><td>真按验证</td><td>询问点前动作等于表；注入行等于存盘预测；之后等于模型输出；结果齐全</td><td>证明控制权确实交回</td><td><code>PRESS_VERIFY=PASS planned=&lt;n&gt; completed=&lt;n&gt; missing=&lt;n&gt; late=&lt;n&gt;</code></td></tr>
-<tr><td>对照</td><td>来源 run、代码 sha、模型身份一致；代码差异只在 <code>scripts/interpret/</code> 且默认关闭</td><td>避免比较不同条件</td><td><code>NORMAL_BASELINE=PASS episodes=50 success=&lt;n&gt; source=&lt;路径&gt;</code></td></tr>
+<tr><td>对照</td><td>两段来源的 run、代码 sha、模型身份逐项核对；代码差异只在 <code>scripts/interpret/</code> 且默认关闭</td><td>避免比较不同条件</td><td><code>NORMAL_BASELINE=PASS episodes=50 reused=&lt;n&gt; rerun=&lt;n&gt; success=&lt;n&gt;</code></td></tr>
 <tr><td>时间</td><td>冒烟实测推算剩余</td><td>决定能否在截止前跑完</td><td><code>BUDGET=PASS deadline=2026-11-05T09:52:00Z remaining_s=&lt;n&gt; estimated_s=&lt;m&gt;</code></td></tr>
 <tr><td>报告</td><td>齐全、可追溯，图渲染后目视复查</td><td>第 2 条画图复查要求</td><td><code>REPORT_READY=PASS episodes=50</code></td></tr>
 </table></div>
@@ -547,7 +547,7 @@ P 为 0 或无候选的类别跳过并记原因。顺序：放手 → A → B �
 <li>全量动作表（hold、press）。</li>
 <li>询问 50 局，按已有 <code>chunk_size=5</code> 分块，两卡各写独立目录。</li>
 <li>生成 <code>verify_plan.json</code> 并固定；真按验证按「放手 → A → B → C」分块运行。</li>
-<li>核对旧计划 <code>normal/gpu1/</code>：日志有 <code>EXIT_CODE=0</code> 且 50 局齐全就登记复用；否则在 GPU 空闲时补跑。不等待。</li>
+<li>核对旧计划 <code>normal/gpu1/</code>：只复用有完整终局记录的局（日志记录 25 局），中止时未完成的局不用；其余局用相同模型和规格，写到本计划 <code>normal/</code> 补跑，代码差异写明。</li>
 <li>生产者都有终态退出码且局数齐全后，再做高度换算与分析；不读半成品。截止前未完成的运行如实列出。</li>
 <li>写 <code>result.md</code>、更新评估索引；收尾列 tmux 清单。</li>
 </ol>
@@ -562,7 +562,7 @@ P 为 0 或无候选的类别跳过并记原因。顺序：放手 → A → B �
 <tr><td>非 <code>1+16k</code> 时刻的输入模型在真实运行时不会遇到</td><td>这些点的比例含义不同</td><td>报告同时给 <code>1+16k</code> 子集的曲线；两者差异如实写</td></tr>
 <tr><td>下压判据受悬停高度影响</td><td>比例随阈值变化</td><td>保存全部高度曲线，报三档；不事后挑阈值</td></tr>
 <tr><td>时间不够</td><td>真按验证不全</td><td>按固定顺序缺失并列出；不减询问点和预测数；是否延期由用户定</td></tr>
-<tr><td>旧计划占用同一批 GPU</td><td>排队或互抢</td><td>起跑前核占用，只用空闲卡，不抢占</td></tr>
+<tr><td>其他任务占用 GPU</td><td>排队或互抢</td><td>起跑前核占用，只用空闲卡，不抢占</td></tr>
 </table></div>
 
 <h2>十 盲区诚实清单</h2>
@@ -589,7 +589,7 @@ P 为 0 或无候选的类别跳过并记原因。顺序：放手 → A → B �
 <ul>
 <li><b>交接前必须完成：</b>第七节全部判定行（保存在 <code>docs/evaluation-doc/stopcube-oracle-1104/records/verification.summary.txt</code>）、本轮 tmux 退出且退出码已核、留档已提交推送。</li>
 <li><b>长尾：</b>无。</li>
-<li><b>上游：</b>无解锁依赖。可选复用旧计划的正常 50 局，假设为 <code>RUN_LOCAL=PASS episodes=50</code>；不满足就补跑，不等待。</li>
+<li><b>上游：</b>无解锁依赖。旧计划已停止；只读复用其已完成的正常局，其余补跑，不等待。</li>
 <li><b>下游：</b>无自动解锁。第二阶段基于 <code>query_*.npz</code> 离线做，另定计划和开工令。</li>
 </ul>
 
