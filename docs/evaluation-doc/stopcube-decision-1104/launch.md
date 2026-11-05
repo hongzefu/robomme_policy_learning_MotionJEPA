@@ -4,7 +4,7 @@
 
 按[完整计划](../../../1104-stopcube-decision-point-plan.html)，正常运行官方测试集全部 50 局，对提前按错的局另外执行悬停延长，产出逐局关键时间、动作记录和人工确认页。本阶段到人工确认处停止，不运行 32 次噪声采样、梯度、逐层投影或探针。
 
-实现和 74 项定向 CPU 联测已完成；美东 2026-11-04 22:08:54 开始单局真实冒烟，正式 50 局尚未启动。固定绝对截止为美东 **2026-11-05 04:52 EST**（`2026-11-05T09:52:00Z`），从美东 11 月 4 日 20:52 起八小时，包含计划、实现、运行与人工等待；不因恢复任务重置。
+实现和 74 项定向 CPU 联测已完成；美东 2026-11-04 22:08:54 开始的第 16 局正常冒烟已成功结束（26 次推理、416 动作、退出 0），正式 50 局尚未启动。固定绝对截止为美东 **2026-11-05 04:52 EST**（`2026-11-05T09:52:00Z`），从美东 11 月 4 日 20:52 起八小时，包含计划、实现、运行与人工等待；不因恢复任务重置。
 
 ## ② 版本、环境与代码状态
 
@@ -53,7 +53,7 @@
 
 最多两张 A6000；起跑前只做必要的低频资源核对，不新增高频 GPU 监控。先单局正常/接管冒烟，再放大正常 50 局；正常结果完成后识别提前按错局，生成接管表，执行延长，再汇总人工确认页。生产者退出并核退出码和完整性后才分析其产物。
 
-截至本段落地，尚无已启动的长计算句柄。下面为已经固定、即将派发的单局冒烟，不代表起跑成功：
+下面保留单局正常冒烟的固定启动规格；实际起跑及终态见本档案末尾回执，不以预留名称替代现场句柄：
 
 - 干净执行工作树为 `/home/hongzefu/.codex/worktrees/stopcube-runner/robomme_policy_learning_MotionJEPA`，实现提交 `65395f2524b5ac9e9debf4374d6226638d1bb3f5`，与主检出已推送的整合代码一致。三次合并后审查均通过；整合定向验证 `74 passed in 14.36s`，退出 0。
 - 官方清单已签封：`MANIFEST=PASS episodes=50 chunks=50 seal=9401b7b3ff89a02d351460c388739a28c8c3312e01f9797e29803584d825f4f6`，文件位于产物根 `preflight/manifest-all.json`。
@@ -96,5 +96,23 @@ spec 的额外值为 `cuda="1"`、`xla_mem_fraction=0.55`、`startup_timeout_sec
 运行代理于美东 **2026-11-04 22:08:54 EST** 启动唯一会话 `sd-smoke-normal-1104a`，启动命令退出 0，启动前会话不存在，执行树 HEAD 为 `65395f2524b5ac9e9debf4374d6226638d1bb3f5` 且工作区干净。实用 GPU 1；本轮实际长计算会话清单目前仅此一项。
 
 日志出现 `RUN_LOCAL_BEGIN model=stage2_pool4_concat ... chunks=1 cuda=1 ablate=none` 和 `CHUNK_BEGIN ... episodes=StopCube:16 port=42969`；模型服务已监听并与客户端建立连接。运行身份为 `3d213e0b02306a0b498eeb07b30a67c012c80fac2397b406af3085652c4be5eb`。这只证明真实任务已启动，推理、终局和物理记录尚待检查，不写为冒烟通过。
+
+正常冒烟终态已核实：`NORMAL_SMOKE=PASS episodes=1 infers=26 actions=416 task_success=1 client_exit=0`，父日志 `RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=1 npz=26`、`EXIT_CODE=0`；逐步记录 416 行，命令与执行动作一致，26 份实际输入和动作 attention 有限，正常回执/视频已写。任务实际评估耗时 `87.67911048373207` 秒；它不包含完整冷启动耗时。会话已自动退出，本用户无残留模型/运行器进程。
+
+### 单局几何与时间校准冒烟规格
+
+夹爪单位修正经前后独立审查后，执行工作树快进到 `d69081fb7f98ed1984802234f79356d18c33e401`，仍干净；修正后的 S1/S3 定向联测 `54 passed in 0.13s`。正常记录入口未改，已完成的正常轨迹仍为上述原实现锚点。
+
+下一份唯一会话预留为 `sd-window-probe16-1104a`，GPU 1，只做第 16 局同 seed 无按键几何仿真，不运行策略。日志 `<产物根>/logs/sd-window-probe16-1104a.log`，输出 `<产物根>/window-probes/smoke16-a/`。环境变量沿第六节，另外显式 `CUDA_VISIBLE_DEVICES=1`，完整程序命令为：
+
+```bash
+/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/official-sim/bin/python \
+  -m scripts.interpret.stopcube_windows \
+  --probe-episode 16 --episode-key StopCube:16 \
+  --benchmark-root /data/hongzefu/robomme_policy_learning_MotionJEPA/third_party/robomme_benchmark \
+  --output-dir /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-decision-1104/window-probes/smoke16-a
+```
+
+程序外层同样使用绝对截止、`tee` 与退出码尾行。主会话生成的固定入口为 `<产物根>/probe16_entry.sh`，运行代理只执行 `tmux new-session -d -s sd-window-probe16-1104a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-decision-1104/probe16_entry.sh'`；启动前核会话不存在，不自动重试或覆盖旧目录。`WINDOW_GEOMETRY` 只证明采到了几何窗口，正式 `WINDOW_SIM` 要结合正常成功事件另验。
 
 完成后在 `result.md` 补实际覆盖、正常与延长的独立成绩、时刻与动作一致性、人工确认入口和未完成项；轻量证据进 `records/`，大数组、视频、完整轨迹留在 `v1-store`。
