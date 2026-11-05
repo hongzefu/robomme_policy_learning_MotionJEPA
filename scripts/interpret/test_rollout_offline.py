@@ -104,8 +104,8 @@ class FakeAdapter:
         return x_0, probs, text, num_steps, lay, hidden
 
 
-def write_episode(root, monkeypatch, *, nonce="ep", key="StopCube:16", motion=False, infers=2, trace=True):
-    """真实记录器写 rollout_*.npz，同时按 stopcube_runner 的字段写轨迹。"""
+def write_episode(root, monkeypatch, *, nonce="ep", key="StopCube:16", motion=False, infers=2, trace=True, terminal=True):
+    """真实记录器写 rollout_*.npz，按 stopcube_runner 的字段写轨迹，按 run_local.collect 的文件名写 accepted。"""
     policy = FakePolicy(motion)
     SA.RolloutRecorder(policy, root / "attn", model_id="/ckpt").install()
     monkeypatch.setitem(SA._RPC, "rpc", {"episode_nonce": nonce})
@@ -122,6 +122,10 @@ def write_episode(root, monkeypatch, *, nonce="ep", key="StopCube:16", motion=Fa
         directory.mkdir(parents=True)
         lines = [{"event": "episode_start", "episode_key": "错的", "infer_seq": 0, "row_in_chunk": 0}, *rows]
         (directory / "step_trace.jsonl").write_text("".join(json.dumps(row) + "\n" for row in lines))
+    if terminal:
+        accepted = root / "run" / "accepted"
+        accepted.mkdir(parents=True, exist_ok=True)
+        (accepted / f"{key}.{nonce[:8]}.terminal.json").write_text(json.dumps({"episode_key": key, "episode_nonce": nonce}))
     return policy
 
 
@@ -148,7 +152,7 @@ def test_trace_mapping_takes_row_zero_of_step_events(tmp_path, monkeypatch):
     assert rows[0]["episode_key"] == "StopCube:16"
 
 
-def test_missing_trace_stops(tmp_path, monkeypatch):
+def test_accepted_nonce_without_trace_stops(tmp_path, monkeypatch):
     policy = write_episode(tmp_path, monkeypatch, trace=False)
     with pytest.raises(SystemExit, match="step_trace"):
         RO.run(policy, FakeAdapter(), arguments(tmp_path))
@@ -224,7 +228,7 @@ def test_output_keys_values_and_no_temp_files(tmp_path, monkeypatch, capsys):
     assert result["hidden_prefix"].shape == (19, 4, 5) and result["hidden_action"].shape == (18, 3)
     output = capsys.readouterr().out
     assert "ROLLOUT_REPLAY=PASS points=2 same_path_maxabs=0 tol=1e-6" in output
-    assert "OFFLINE_RUN=PASS records=2 skipped=0 attn_path_maxabs=0.25" in output
+    assert "OFFLINE_RUN=PASS records=2 skipped=0 skipped_nonce=0 attn_path_maxabs=0.25" in output
     assert output.count("OFFLINE_EPISODE") == 1
 
 
@@ -255,7 +259,8 @@ def test_resume_skips_matching_and_rejects_changed_input(tmp_path, monkeypatch, 
     assert RO.run(policy, adapter, args) == 0
     text = capsys.readouterr().out
     # 跳过的记录仍计入全局最大值
-    assert "OFFLINE_RUN=PASS records=0 skipped=2 attn_path_maxabs=0.5" in text
+    assert "OFFLINE_RUN=PASS records=0 skipped=2 skipped_nonce=0 attn_path_maxabs=0.5" in text
+    assert "HIDDEN_PARITY=SKIPPED points=0" in text and "HIDDEN_PARITY=PASS" not in text
     assert "ROLLOUT_REPLAY=PASS points=2" in text
     assert adapter.calls == [] and output.read_bytes() == before
     path = tmp_path / "attn" / "ep" / "rollout_0000.npz"
@@ -275,7 +280,7 @@ def test_resume_processes_only_missing_records(tmp_path, monkeypatch, capsys):
     text = capsys.readouterr().out
     assert "OFFLINE_RUN=PASS records=1 skipped=1" in text
     # 第一份已在上次比过，本次不再比
-    assert "HIDDEN_PARITY=PASS points=0" in text and len(adapter.calls) == 1
+    assert "HIDDEN_PARITY=SKIPPED points=0" in text and len(adapter.calls) == 1
 
 
 def test_motion_windows_follow_mem_order():
@@ -333,12 +338,34 @@ def test_baseline_has_no_motion_windows_and_empty_motion_group(tmp_path, monkeyp
 
 
 def test_episode_filter_and_missing_episode(tmp_path, monkeypatch, capsys):
-    write_episode(tmp_path, monkeypatch, nonce="a", key="StopCube:16", infers=1)
+    # 第 16 局没有轨迹：过滤必须在读轨迹之前，不碰别的局
+    write_episode(tmp_path, monkeypatch, nonce="a", key="StopCube:16", infers=1, trace=False)
     policy = write_episode(tmp_path, monkeypatch, nonce="b", key="StopCube:17", infers=1)
     assert RO.run(policy, FakeAdapter(), arguments(tmp_path, episodes=["StopCube:17"])) == 0
     assert sorted(path.name for path in (tmp_path / "offline").iterdir()) == ["b"]
     with pytest.raises(SystemExit, match="StopCube:99"):
         RO.run(policy, FakeAdapter(), arguments(tmp_path, episodes=["StopCube:17", "StopCube:99"]))
+
+
+def test_stale_nonce_is_skipped_and_counted(tmp_path, monkeypatch, capsys):
+    # 旧 nonce 没有 terminal：一份没有轨迹，一份轨迹不完整，都不处理、不报错
+    write_episode(tmp_path, monkeypatch, nonce="old1", key="StopCube:16", infers=1, trace=False, terminal=False)
+    write_episode(tmp_path, monkeypatch, nonce="old2", key="StopCube:16", infers=2, terminal=False)
+    path = next((tmp_path / "run" / "attempts").rglob("old2/step_trace.jsonl"))
+    path.write_text(path.read_text().splitlines()[0] + "\n")
+    policy = write_episode(tmp_path, monkeypatch, nonce="new", key="StopCube:16", infers=1)
+    assert RO.run(policy, FakeAdapter(), arguments(tmp_path)) == 0
+    text = capsys.readouterr().out
+    assert "OFFLINE_SKIP nonce=old1 reason=no_terminal" in text
+    assert "OFFLINE_SKIP nonce=old2 reason=no_terminal" in text
+    assert "OFFLINE_RUN=PASS records=1 skipped=0 skipped_nonce=2 " in text
+    assert sorted(path.name for path in (tmp_path / "offline").iterdir()) == ["new"]
+
+
+def test_only_stale_nonces_is_not_a_pass(tmp_path, monkeypatch, capsys):
+    policy = write_episode(tmp_path, monkeypatch, infers=1, terminal=False)
+    with pytest.raises(SystemExit, match="records=0"):
+        RO.run(policy, FakeAdapter(), arguments(tmp_path))
 
 
 def test_empty_input_is_not_a_pass(tmp_path, monkeypatch, capsys):

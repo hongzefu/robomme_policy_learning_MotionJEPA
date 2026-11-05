@@ -7,6 +7,7 @@
   3. 用记录里的实际噪声走展开路径，取注意力组质量和隐状态组均值；
   4. 同输入同噪声比较隐状态捕获开和关（HIDDEN_PARITY，必须逐位相同）。
 任何一步不通过都立刻停止并非零退出。不替换、不遮挡任何输入。JAX 确定性环境变量由外部脚本给。
+只处理 <run-root>/accepted/*.terminal.json 登记过的 nonce；重试或中断留下的旧 nonce 打印 OFFLINE_SKIP 并计数，不处理。
 
 用法：
   python -m scripts.interpret.rollout_offline --attn-root <O>/<模型>/attn --run-root <O>/<模型>/run \
@@ -30,6 +31,15 @@ from scripts.interpret.offline_query import query_noise, replay_query, sample_pr
 
 P_PREDICTIONS = 10
 HIDDEN_GROUPS = ("历史视觉", "motion", "当前视觉", "文字")     # hidden_* 第二维的固定顺序
+
+
+def load_accepted(run_root):
+    """返回 {episode_nonce: episode_key}，来自 run_local.collect 汇到 accepted/ 的 terminal。"""
+    accepted = {}
+    for path in sorted((Path(run_root) / "accepted").glob("*.terminal.json")):
+        record = json.loads(path.read_text(encoding="utf-8"))
+        accepted[record["episode_nonce"]] = record["episode_key"]
+    return accepted
 
 
 def load_trace(run_root, nonce):
@@ -180,18 +190,23 @@ def process_record(policy, adapter, path, output_path, trace, input_sha256, *, s
 def run(policy, adapter, args):
     started = time.perf_counter()
     wanted = set(args.episodes) if args.episodes else None
+    accepted = load_accepted(args.run_root)
     seen = set()
-    written = skipped = parity_points = 0
+    written = skipped = skipped_nonce = parity_points = 0
     same_path_max = attn_path_max = 0.0
     for directory in sorted(path for path in Path(args.attn_root).iterdir() if path.is_dir()):
         paths = sorted(directory.glob("rollout_*.npz"))
         if not paths:
             continue
         nonce = directory.name
-        trace = load_trace(args.run_root, nonce)
-        episode_key = next(iter(trace.values()))["episode_key"]
+        episode_key = accepted.get(nonce)
+        if episode_key is None:
+            print(f"OFFLINE_SKIP nonce={nonce} reason=no_terminal", flush=True)
+            skipped_nonce += 1
+            continue
         if wanted is not None and episode_key not in wanted:
             continue
+        trace = load_trace(args.run_root, nonce)
         seen.add(episode_key)
         episode_started = time.perf_counter()
         episode_written = episode_skipped = 0
@@ -218,8 +233,10 @@ def run(policy, adapter, args):
     if missing or not written + skipped:
         raise SystemExit(f"没有可处理的记录或缺少指定的局：records={written + skipped} missing={missing}")
     print(f"ROLLOUT_REPLAY=PASS points={written + skipped} same_path_maxabs={same_path_max:.9g} tol=1e-6", flush=True)
-    print(f"HIDDEN_PARITY=PASS points={parity_points} maxabs=0", flush=True)
-    print(f"OFFLINE_RUN=PASS records={written} skipped={skipped} attn_path_maxabs={attn_path_max:.9g} "
+    print(f"HIDDEN_PARITY=PASS points={parity_points} maxabs=0" if parity_points else "HIDDEN_PARITY=SKIPPED points=0",
+          flush=True)
+    print(f"OFFLINE_RUN=PASS records={written} skipped={skipped} skipped_nonce={skipped_nonce} "
+          f"attn_path_maxabs={attn_path_max:.9g} "
           f"seconds={time.perf_counter() - started:.1f}", flush=True)
     return 0
 
