@@ -1,0 +1,851 @@
+{
+  "schema_version": 1,
+  "threshold_cm": 2,
+  "horizon": 16,
+  "selection_order": [
+    "fixed_release",
+    "high_probability",
+    "low_probability",
+    "early_press"
+  ],
+  "calibration_episodes": [
+    "StopCube:1",
+    "StopCube:3",
+    "StopCube:4",
+    "StopCube:5",
+    "StopCube:0",
+    "StopCube:2",
+    "StopCube:12",
+    "StopCube:13",
+    "StopCube:6",
+    "StopCube:9",
+    "StopCube:10",
+    "StopCube:14"
+  ],
+  "models": {
+    "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/assets/vla-o16cc-59999/59999": {
+      "episodes": {
+        "StopCube:1": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 161,
+            "stop_after_release": null,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/fe0303234c8c4c79a81ef526bbf91c2c/query_0040.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 185,
+            "stop_after_release": 48,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/fe0303234c8c4c79a81ef526bbf91c2c/query_0046.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 165,
+            "stop_after_release": 48,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/fe0303234c8c4c79a81ef526bbf91c2c/query_0041.npz"
+          },
+          "early_press": {
+            "status": "skipped",
+            "release_step": null,
+            "stop_after_release": 48,
+            "p": null,
+            "reason": "早按候选全部 P=0",
+            "query_path": null
+          }
+        },
+        "StopCube:3": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 53,
+            "stop_after_release": null,
+            "p": 0.0,
+            "reason": "late_release",
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/2b7a98572fb14f38a662898c00b89603/query_0013.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 65,
+            "stop_after_release": 48,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/2b7a98572fb14f38a662898c00b89603/query_0016.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 53,
+            "stop_after_release": 48,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/2b7a98572fb14f38a662898c00b89603/query_0013.npz"
+          },
+          "early_press": {
+            "status": "skipped",
+            "release_step": null,
+            "stop_after_release": 48,
+            "p": null,
+            "reason": "前 N-1 次经过没有候选",
+            "query_path": null
+          }
+        },
+        "StopCube:4": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 53,
+            "stop_after_release": null,
+            "p": 0.0,
+            "reason": "late_release",
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/feaff86e2f224791b8f5628559e6f803/query_0013.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 81,
+            "stop_after_release": 48,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/feaff86e2f224791b8f5628559e6f803/query_0020.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 53,
+            "stop_after_release": 48,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/feaff86e2f224791b8f5628559e6f803/query_0013.npz"
+          },
+          "early_press": {
+            "status": "skipped",
+            "release_step": null,
+            "stop_after_release": 48,
+            "p": null,
+            "reason": "前 N-1 次经过没有候选",
+            "query_path": null
+          }
+        },
+        "StopCube:5": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 53,
+            "stop_after_release": null,
+            "p": 0.0,
+            "reason": "late_release",
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/b8aeafef8a4f4563890b7ffde42ff087/query_0013.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 81,
+            "stop_after_release": 48,
+            "p": 0.4,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/b8aeafef8a4f4563890b7ffde42ff087/query_0020.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 53,
+            "stop_after_release": 48,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/b8aeafef8a4f4563890b7ffde42ff087/query_0013.npz"
+          },
+          "early_press": {
+            "status": "skipped",
+            "release_step": null,
+            "stop_after_release": 48,
+            "p": null,
+            "reason": "前 N-1 次经过没有候选",
+            "query_path": null
+          }
+        },
+        "StopCube:0": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 229,
+            "stop_after_release": null,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/cbc3fce8ce674787accdd55317a4f1c2/query_0057.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 253,
+            "stop_after_release": 48,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/cbc3fce8ce674787accdd55317a4f1c2/query_0063.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 233,
+            "stop_after_release": 48,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/cbc3fce8ce674787accdd55317a4f1c2/query_0058.npz"
+          },
+          "early_press": {
+            "status": "skipped",
+            "release_step": null,
+            "stop_after_release": 48,
+            "p": null,
+            "reason": "早按候选全部 P=0",
+            "query_path": null
+          }
+        },
+        "StopCube:2": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 69,
+            "stop_after_release": null,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/da6af4105b54417eb023eaa6fee3fe30/query_0017.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 73,
+            "stop_after_release": 48,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/da6af4105b54417eb023eaa6fee3fe30/query_0018.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 121,
+            "stop_after_release": 48,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/da6af4105b54417eb023eaa6fee3fe30/query_0030.npz"
+          },
+          "early_press": {
+            "status": "skipped",
+            "release_step": null,
+            "stop_after_release": 48,
+            "p": null,
+            "reason": "前 N-1 次经过没有候选",
+            "query_path": null
+          }
+        },
+        "StopCube:12": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 69,
+            "stop_after_release": null,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/ea8f947ce1324259b782e586b3492b62/query_0017.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 73,
+            "stop_after_release": 48,
+            "p": 0.9,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/ea8f947ce1324259b782e586b3492b62/query_0018.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 77,
+            "stop_after_release": 48,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/ea8f947ce1324259b782e586b3492b62/query_0019.npz"
+          },
+          "early_press": {
+            "status": "skipped",
+            "release_step": null,
+            "stop_after_release": 48,
+            "p": null,
+            "reason": "前 N-1 次经过没有候选",
+            "query_path": null
+          }
+        },
+        "StopCube:13": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 69,
+            "stop_after_release": null,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/782264ac60034eb3811d7e4c320178ad/query_0017.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 105,
+            "stop_after_release": 48,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/782264ac60034eb3811d7e4c320178ad/query_0026.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 73,
+            "stop_after_release": 48,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/782264ac60034eb3811d7e4c320178ad/query_0018.npz"
+          },
+          "early_press": {
+            "status": "skipped",
+            "release_step": null,
+            "stop_after_release": 48,
+            "p": null,
+            "reason": "前 N-1 次经过没有候选",
+            "query_path": null
+          }
+        },
+        "StopCube:6": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 249,
+            "stop_after_release": null,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/c20d9b6fbcac4d068dc473654d6749e1/query_0062.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 273,
+            "stop_after_release": 48,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/c20d9b6fbcac4d068dc473654d6749e1/query_0068.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 253,
+            "stop_after_release": 48,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/c20d9b6fbcac4d068dc473654d6749e1/query_0063.npz"
+          },
+          "early_press": {
+            "status": "skipped",
+            "release_step": null,
+            "stop_after_release": 48,
+            "p": null,
+            "reason": "早按候选全部 P=0",
+            "query_path": null
+          }
+        },
+        "StopCube:9": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 489,
+            "stop_after_release": null,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/934dfda5f04940848429584293fffcd1/query_0122.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 513,
+            "stop_after_release": 48,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/934dfda5f04940848429584293fffcd1/query_0128.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 493,
+            "stop_after_release": 48,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/934dfda5f04940848429584293fffcd1/query_0123.npz"
+          },
+          "early_press": {
+            "status": "skipped",
+            "release_step": null,
+            "stop_after_release": 48,
+            "p": null,
+            "reason": "早按候选全部 P=0",
+            "query_path": null
+          }
+        },
+        "StopCube:10": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 249,
+            "stop_after_release": null,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/42a269ffde4f482696bb6c2ac66f823b/query_0062.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 273,
+            "stop_after_release": 48,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/42a269ffde4f482696bb6c2ac66f823b/query_0068.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 253,
+            "stop_after_release": 48,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/42a269ffde4f482696bb6c2ac66f823b/query_0063.npz"
+          },
+          "early_press": {
+            "status": "skipped",
+            "release_step": null,
+            "stop_after_release": 48,
+            "p": null,
+            "reason": "早按候选全部 P=0",
+            "query_path": null
+          }
+        },
+        "StopCube:14": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 129,
+            "stop_after_release": null,
+            "p": 0.1,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/5d52f9be4c7a4228a5cafcf97ded2656/query_0032.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 157,
+            "stop_after_release": 48,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/5d52f9be4c7a4228a5cafcf97ded2656/query_0039.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 137,
+            "stop_after_release": 48,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/mot/query12-a/attn/5d52f9be4c7a4228a5cafcf97ded2656/query_0034.npz"
+          },
+          "early_press": {
+            "status": "skipped",
+            "release_step": null,
+            "stop_after_release": 48,
+            "p": null,
+            "reason": "早按候选全部 P=0",
+            "query_path": null
+          }
+        }
+      }
+    },
+    "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999": {
+      "episodes": {
+        "StopCube:1": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 161,
+            "stop_after_release": null,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/9be6613af2864160bdb39ff1c65402b0/query_0040.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 185,
+            "stop_after_release": 48,
+            "p": 0.3,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/9be6613af2864160bdb39ff1c65402b0/query_0046.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 165,
+            "stop_after_release": 48,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/9be6613af2864160bdb39ff1c65402b0/query_0041.npz"
+          },
+          "early_press": {
+            "status": "skipped",
+            "release_step": null,
+            "stop_after_release": 48,
+            "p": null,
+            "reason": "早按候选全部 P=0",
+            "query_path": null
+          }
+        },
+        "StopCube:3": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 53,
+            "stop_after_release": null,
+            "p": 0.0,
+            "reason": "late_release",
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/30ba6894d5cc455caa6801081ebe6114/query_0013.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 69,
+            "stop_after_release": 48,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/30ba6894d5cc455caa6801081ebe6114/query_0017.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 53,
+            "stop_after_release": 48,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/30ba6894d5cc455caa6801081ebe6114/query_0013.npz"
+          },
+          "early_press": {
+            "status": "skipped",
+            "release_step": null,
+            "stop_after_release": 48,
+            "p": null,
+            "reason": "前 N-1 次经过没有候选",
+            "query_path": null
+          }
+        },
+        "StopCube:4": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 53,
+            "stop_after_release": null,
+            "p": 0.0,
+            "reason": "late_release",
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/781cf11efdc0436c992b5f627e9aec27/query_0013.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 65,
+            "stop_after_release": 48,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/781cf11efdc0436c992b5f627e9aec27/query_0016.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 53,
+            "stop_after_release": 48,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/781cf11efdc0436c992b5f627e9aec27/query_0013.npz"
+          },
+          "early_press": {
+            "status": "skipped",
+            "release_step": null,
+            "stop_after_release": 48,
+            "p": null,
+            "reason": "前 N-1 次经过没有候选",
+            "query_path": null
+          }
+        },
+        "StopCube:5": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 53,
+            "stop_after_release": null,
+            "p": 0.0,
+            "reason": "late_release",
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/71ed497987f047439642c1082e6725bf/query_0013.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 69,
+            "stop_after_release": 48,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/71ed497987f047439642c1082e6725bf/query_0017.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 53,
+            "stop_after_release": 48,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/71ed497987f047439642c1082e6725bf/query_0013.npz"
+          },
+          "early_press": {
+            "status": "skipped",
+            "release_step": null,
+            "stop_after_release": 48,
+            "p": null,
+            "reason": "前 N-1 次经过没有候选",
+            "query_path": null
+          }
+        },
+        "StopCube:0": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 229,
+            "stop_after_release": null,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/75d3ec520fab45be9bdb85d44a23eac6/query_0057.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 261,
+            "stop_after_release": 48,
+            "p": 0.3,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/75d3ec520fab45be9bdb85d44a23eac6/query_0065.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 233,
+            "stop_after_release": 48,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/75d3ec520fab45be9bdb85d44a23eac6/query_0058.npz"
+          },
+          "early_press": {
+            "status": "skipped",
+            "release_step": null,
+            "stop_after_release": 48,
+            "p": null,
+            "reason": "早按候选全部 P=0",
+            "query_path": null
+          }
+        },
+        "StopCube:2": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 69,
+            "stop_after_release": null,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/5f5d802dafc34e91a8d48bdc3f52af53/query_0017.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 73,
+            "stop_after_release": 48,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/5f5d802dafc34e91a8d48bdc3f52af53/query_0018.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 81,
+            "stop_after_release": 48,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/5f5d802dafc34e91a8d48bdc3f52af53/query_0020.npz"
+          },
+          "early_press": {
+            "status": "skipped",
+            "release_step": null,
+            "stop_after_release": 48,
+            "p": null,
+            "reason": "前 N-1 次经过没有候选",
+            "query_path": null
+          }
+        },
+        "StopCube:12": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 69,
+            "stop_after_release": null,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/1190e5d6576c4c92b55511ca6e6a6414/query_0017.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 101,
+            "stop_after_release": 48,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/1190e5d6576c4c92b55511ca6e6a6414/query_0025.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 77,
+            "stop_after_release": 48,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/1190e5d6576c4c92b55511ca6e6a6414/query_0019.npz"
+          },
+          "early_press": {
+            "status": "skipped",
+            "release_step": null,
+            "stop_after_release": 48,
+            "p": null,
+            "reason": "前 N-1 次经过没有候选",
+            "query_path": null
+          }
+        },
+        "StopCube:13": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 69,
+            "stop_after_release": null,
+            "p": 0.8,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/ec1280b02d1b4d7d91d2dd110a769264/query_0017.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 101,
+            "stop_after_release": 48,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/ec1280b02d1b4d7d91d2dd110a769264/query_0025.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 77,
+            "stop_after_release": 48,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/ec1280b02d1b4d7d91d2dd110a769264/query_0019.npz"
+          },
+          "early_press": {
+            "status": "skipped",
+            "release_step": null,
+            "stop_after_release": 48,
+            "p": null,
+            "reason": "前 N-1 次经过没有候选",
+            "query_path": null
+          }
+        },
+        "StopCube:6": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 249,
+            "stop_after_release": null,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/cbf4aeea243e438483b8f2c656e7b9b5/query_0062.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 273,
+            "stop_after_release": 48,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/cbf4aeea243e438483b8f2c656e7b9b5/query_0068.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 305,
+            "stop_after_release": 48,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/cbf4aeea243e438483b8f2c656e7b9b5/query_0076.npz"
+          },
+          "early_press": {
+            "status": "skipped",
+            "release_step": null,
+            "stop_after_release": 48,
+            "p": null,
+            "reason": "早按候选全部 P=0",
+            "query_path": null
+          }
+        },
+        "StopCube:9": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 489,
+            "stop_after_release": null,
+            "p": 0.3,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/3596b13ae094435cb48496b79a189b2a/query_0122.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 501,
+            "stop_after_release": 48,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/3596b13ae094435cb48496b79a189b2a/query_0125.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 537,
+            "stop_after_release": 48,
+            "p": 0.3,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/3596b13ae094435cb48496b79a189b2a/query_0134.npz"
+          },
+          "early_press": {
+            "status": "skipped",
+            "release_step": null,
+            "stop_after_release": 48,
+            "p": null,
+            "reason": "早按候选全部 P=0",
+            "query_path": null
+          }
+        },
+        "StopCube:10": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 249,
+            "stop_after_release": null,
+            "p": 0.4,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/bc944f5026854dec9433dc644a12cae1/query_0062.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 261,
+            "stop_after_release": 48,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/bc944f5026854dec9433dc644a12cae1/query_0065.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 297,
+            "stop_after_release": 48,
+            "p": 0.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/bc944f5026854dec9433dc644a12cae1/query_0074.npz"
+          },
+          "early_press": {
+            "status": "selected",
+            "release_step": 181,
+            "stop_after_release": 48,
+            "p": 0.1,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/bc944f5026854dec9433dc644a12cae1/query_0045.npz"
+          }
+        },
+        "StopCube:14": {
+          "fixed_release": {
+            "status": "selected",
+            "release_step": 129,
+            "stop_after_release": null,
+            "p": 0.9,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/8c5b2cfa9eb74ed6acebac0af95837c7/query_0032.npz"
+          },
+          "high_probability": {
+            "status": "selected",
+            "release_step": 133,
+            "stop_after_release": 48,
+            "p": 1.0,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/8c5b2cfa9eb74ed6acebac0af95837c7/query_0033.npz"
+          },
+          "low_probability": {
+            "status": "selected",
+            "release_step": 177,
+            "stop_after_release": 48,
+            "p": 0.8,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/8c5b2cfa9eb74ed6acebac0af95837c7/query_0044.npz"
+          },
+          "early_press": {
+            "status": "selected",
+            "release_step": 65,
+            "stop_after_release": 48,
+            "p": 0.6,
+            "reason": null,
+            "query_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/query/ctx/query12-a/attn/8c5b2cfa9eb74ed6acebac0af95837c7/query_0016.npz"
+          }
+        }
+      }
+    }
+  }
+}

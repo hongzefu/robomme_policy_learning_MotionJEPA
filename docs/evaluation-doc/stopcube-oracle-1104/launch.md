@@ -40,6 +40,10 @@ benchmark 锁定 `856bc3a189d4172f3f47dbee4424d585f8d78db3`。策略环境为主
 
 ## 本轮会话清单
 
+正式query12两侧均退出0，主会话实查24局终态、1480点完整、无重复或缺失、每点十预测，两模型噪声逐位相等；动作/7臂关节/TCP/方块轨迹与各局Oracle表差0。`so-fk12-a` 实际于美东01:12:30起跑（窗格PID533057），已退出0：`FK_PARITY=PASS rows=1480 maxabs_z=0 tol=1e-3`；`PRESS_SUMMARY=PASS models=2 points=1480 threshold_cm=2 horizon=16`。固定选点文件 `analysis/query12/calibration_plan.json` 在真实校准期间保持不变。
+
+预留正式校准 `so-calibrate12-ctx-a`、`so-calibrate12-mot-a`，完整命令 `tmux new-session -d -s so-calibrate12-ctx-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_calibrate12.sh ctx'`（motion参数mot）。固定48a52f1、原模型和解释器/缓存/显存；每模型按fixed_release→high_probability→low_probability→early_press串行，各类型整段共用一服务、客户端至多5局。规格 `spec-calibrate12-<模型>-<类型>-a.json`，清单沿用12局封签，选点沿用上述不可变文件；输出 `calibrate/<模型>/<类型>-a/{attn,run}`，日志 `logs/calibrate12-<模型>-a.log`。基线选中12/12/12/2，共38次；motion选中12/12/12/0，共36次，合计74次。其余22项早按点按原规则无候选或P全0，记录跳过原因，不补局。前三类型触发或交还48步即止，固定放手官方终局；不换seed，不挑成功重试。仍按绝对08:00限时。完成后先向用户报告，再启动其余38局询问。
+
 正式分层询问实际于美东00:36:19启动：`so-query12-ctx-a`、`so-query12-mot-a`，窗格PID504851、504849。实际服务端口52005、35027，服务nonce分别9cad3d54793f4232bc5eac3b374f35ea、5f45ed2262eb4132a00d46142122d487；运行身份分别9c5188ae2e8f03114b55601abd40a87ba6174f73e4289a1576a38b7d7440248b、a1a70a1c5b4870e564f8de81ef75c813237c4f4ef1d892eb4f6a17dcc7781661。
 
 询问两模型完整退出0并核740点后，下一步预留 `so-fk12-a`：`tmux new-session -d -s so-fk12-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_fk12.sh'`。同一48a52f1，official-sim调用 `-m scripts.interpret.analysis.oracle_press_prob convert-z --query-root <产物根>/query/ctx/query12-a/attn --query-root <产物根>/query/mot/query12-a/attn --trace-root <两模型对应run目录，各一项> --oracle-table <产物根>/oracle/oracle_table.json --output-dir <产物根>/analysis/query12/cache --workers 4`；每进程OMP/MKL/OpenBLAS1线程。随后策略解释器调用同模块 `summarize --cache-root <该cache> --oracle-table <全50表> --output-dir <产物根>/analysis/query12`，固定12局校准选点，原2cm/16行判据与bootstrap2000保持。日志 `logs/fk12-a.log`，仍绝对08:00，无自动重试。此处只是预先记命令，不能据此声称已经算完或起跑。

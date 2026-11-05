@@ -1,0 +1,29 @@
+{
+  "verdicts": [
+    "QUERY_RECORD=PASS models=2 episodes=12 points=1480 predictions=10 missing=0 same_noise=1",
+    "OPEN_LOOP_EXEC=PASS models=2 episodes=12 mismatches=0 pressed=0",
+    "ORACLE_REPLAY=PASS models=2 episodes=12 maxabs_qpos=0.0 arm_dims=7 maxabs_tcp=0.0 maxabs_cube=0.0 tol=1e-3"
+  ],
+  "results": [
+    {
+      "model": "ctx",
+      "episodes": 12,
+      "points": 740,
+      "mismatches": 0,
+      "pressed": 0,
+      "maxabs_arm_qpos": 0.0,
+      "maxabs_tcp": 0.0,
+      "maxabs_cube": 0.0
+    },
+    {
+      "model": "mot",
+      "episodes": 12,
+      "points": 740,
+      "mismatches": 0,
+      "pressed": 0,
+      "maxabs_arm_qpos": 0.0,
+      "maxabs_tcp": 0.0,
+      "maxabs_cube": 0.0
+    }
+  ]
+}
