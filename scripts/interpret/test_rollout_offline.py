@@ -16,7 +16,8 @@ from scripts.interpret import serve_policy_attn as SA
 
 EXPECTED_KEYS = {"group_names", "group_mass", "group_tokens_all", "hidden_prefix", "hidden_action", "hidden_group_tokens",
                  "p_actions", "raw_state", "episode_key", "infer_seq", "step_idx", "chunk_start_env_step",
-                 "same_path_maxabs", "attn_path_maxabs", "input_sha256", "model_id", "frame_times", "motion_times"}
+                 "same_path_maxabs", "attn_path_maxabs", "input_sha256", "model_id", "frame_times", "motion_times",
+                 "parity_x0_maxabs", "parity_group_mass_maxabs", "parity_group_total_maxabs", "parity_motion_rel_maxabs"}
 
 
 def make_observation(motion):
@@ -79,8 +80,9 @@ class FakePolicy:
 class FakeAdapter:
     """形状同 AttnAdapter.run；概率在全部 key 上均匀，组质量可手算。"""
 
-    def __init__(self, *, offset=0.0, parity_bug=False):
-        self.offset, self.parity_bug = offset, parity_bug
+    def __init__(self, *, offset=0.0, x0_delta=0.0, probs_hook=None):
+        """x0_delta 只加在捕获开的 x_0 上；probs_hook(probs, capture_hidden) 就地改动作注意力。"""
+        self.offset, self.x0_delta, self.probs_hook = offset, x0_delta, probs_hook
         self.calls = []
 
     def layout(self, observation):
@@ -92,9 +94,11 @@ class FakeAdapter:
                            "out_f16": out_f16, "group_masks": group_masks})
         keys = self.layout(observation)["P"] + 20
         x_0 = noise + observation.state[:, None, :] + self.offset
-        if capture_hidden and self.parity_bug:
-            x_0 = x_0 + 1e-3
+        if capture_hidden:
+            x_0 = x_0 + self.x0_delta
         probs = np.full((num_steps, 18, 1, 8, 20, keys), 1 / keys, np.float32)
+        if self.probs_hook is not None:
+            self.probs_hook(probs, capture_hidden)
         text = np.zeros((18, 1, 8, 4, keys - 20), np.float32)
         lay = self.layout(observation)
         if not capture_hidden:
@@ -184,13 +188,181 @@ def test_replay_fail_stops_before_writing(tmp_path, monkeypatch, capsys):
     assert adapter.calls == [] and not (tmp_path / "offline").exists()
 
 
-def test_parity_mismatch_stops(tmp_path, monkeypatch, capsys):
-    policy = write_episode(tmp_path, monkeypatch, infers=1)
+def parity_values(line):
+    """把判定行里的 key=value 解析成字典。"""
+    return dict(item.split("=", 1) for item in line.split()[1:])
+
+
+def parity_line(output, prefix="HIDDEN_PARITY=PASS"):
+    lines = [line for line in output.splitlines() if line.startswith(prefix)]
+    assert len(lines) == 1, output
+    return lines[0]
+
+
+def history_key_shift(delta, *, layer=None, head=None):
+    """捕获关时只改第 0 个 key（基线属历史视觉）；layer/head 为 None 表示全部层或头。"""
+
+    def hook(probs, capture_hidden):
+        if not capture_hidden:
+            probs[:, slice(None) if layer is None else layer, :, slice(None) if head is None else head, :, 0] += delta
+
+    return hook
+
+
+def motion_mass(on, off):
+    """把 motion 的 6 个有效 key 设成给定总质量（motion 模型，key 0～5）。"""
+
+    def hook(probs, capture_hidden):
+        probs[..., :6] = (on if capture_hidden else off) / 6
+
+    return hook
+
+
+def expect_parity_fail(tmp_path, monkeypatch, capsys, adapter, *, motion=False):
+    policy = write_episode(tmp_path, monkeypatch, infers=1, motion=motion)
     with pytest.raises(SystemExit) as stopped:
-        RO.run(policy, FakeAdapter(parity_bug=True), arguments(tmp_path))
+        RO.run(policy, adapter, arguments(tmp_path))
     assert stopped.value.code == 1
-    assert "HIDDEN_PARITY=FAIL" in capsys.readouterr().out
+    output = capsys.readouterr().out
+    assert "HIDDEN_PARITY=PASS" not in output
     assert not (tmp_path / "offline" / "ep" / "offline_0000.npz").exists()
+    line = parity_line(output, "HIDDEN_PARITY=FAIL")
+    values = parity_values(line)
+    assert values["points"] == "1" and values["path"].endswith("rollout_0000.npz")
+    return values
+
+
+def test_parity_x0_over_tolerance_fails(tmp_path, monkeypatch, capsys):
+    values = expect_parity_fail(tmp_path, monkeypatch, capsys, FakeAdapter(x0_delta=0.03))
+    assert float(values["x0_maxabs"]) == pytest.approx(0.03, abs=1e-4)
+    assert float(values["group_mass_maxabs"]) == 0 and values["motion_rel_maxabs"] == "null"
+
+
+def test_parity_single_head_over_tolerance_fails(tmp_path, monkeypatch, capsys):
+    # 单头差 0.006 超限，跨 18 层 8 头平均后总质量差只有 0.006/144，未超限
+    values = expect_parity_fail(tmp_path, monkeypatch, capsys, FakeAdapter(probs_hook=history_key_shift(0.006, layer=3, head=2)))
+    assert float(values["group_mass_maxabs"]) == pytest.approx(0.006, abs=1e-6)
+    assert float(values["group_total_maxabs"]) == pytest.approx(0.006 / 144, abs=1e-7)
+
+
+def test_parity_group_total_over_tolerance_fails(tmp_path, monkeypatch, capsys):
+    # 全部层头都差 0.002：单头未超限，总质量超限
+    values = expect_parity_fail(tmp_path, monkeypatch, capsys, FakeAdapter(probs_hook=history_key_shift(0.002)))
+    assert float(values["group_mass_maxabs"]) == pytest.approx(0.002, abs=1e-6)
+    assert float(values["group_total_maxabs"]) == pytest.approx(0.002, abs=1e-6)
+
+
+def test_parity_motion_relative_over_tolerance_fails(tmp_path, monkeypatch, capsys):
+    # motion 总质量很小，绝对差都未超限，只有相对差超限
+    values = expect_parity_fail(tmp_path, monkeypatch, capsys, FakeAdapter(probs_hook=motion_mass(1e-3, 1.2e-3)), motion=True)
+    assert float(values["motion_rel_maxabs"]) == pytest.approx(0.2 / 1.2, abs=1e-5)
+    assert float(values["group_mass_maxabs"]) <= RO.TOL_GROUP and float(values["group_total_maxabs"]) <= RO.TOL_TOTAL
+
+
+def test_parity_within_tolerance_passes_with_measured_values(tmp_path, monkeypatch, capsys):
+    policy = write_episode(tmp_path, monkeypatch, infers=1, motion=True)
+    adapter = FakeAdapter(x0_delta=0.01, probs_hook=motion_mass(0.1, 0.1005))
+    assert RO.run(policy, adapter, arguments(tmp_path)) == 0
+    output = capsys.readouterr().out
+    line = parity_line(output)
+    values = parity_values(line)
+    assert values["points"] == "1"
+    assert float(values["x0_maxabs"]) == pytest.approx(0.01, abs=1e-4)
+    assert float(values["group_mass_maxabs"]) == pytest.approx(5e-4, abs=1e-6)
+    assert float(values["group_total_maxabs"]) == pytest.approx(5e-4, abs=1e-6)
+    assert float(values["motion_rel_maxabs"]) == pytest.approx(5e-4 / 0.1005, abs=1e-5)
+    assert line.endswith("tol_x0=0.02 tol_group=0.005 tol_total=0.001 tol_motion_rel=0.1")
+    assert "logic_f32" not in line and "HIDDEN_PARITY_NOTE" not in output
+    result = load(tmp_path / "offline" / "ep" / "offline_0000.npz")
+    for name in ("x0_maxabs", "group_mass_maxabs", "group_total_maxabs", "motion_rel_maxabs"):
+        assert float(result[f"parity_{name}"]) == pytest.approx(float(values[name]), rel=1e-6)
+
+
+def test_parity_summary_takes_maximum_over_points(tmp_path, monkeypatch, capsys):
+    policy = write_episode(tmp_path, monkeypatch, infers=2)
+    calls = []
+
+    def hook(probs, capture_hidden):
+        if not capture_hidden:
+            calls.append(1)
+            probs[..., 0] += 2e-4 if len(calls) == 1 else 5e-4
+
+    assert RO.run(policy, FakeAdapter(probs_hook=hook), arguments(tmp_path, parity="all")) == 0
+    values = parity_values(parity_line(capsys.readouterr().out))
+    assert values["points"] == "2"
+    assert float(values["group_total_maxabs"]) == pytest.approx(5e-4, abs=1e-6)
+    first = load(tmp_path / "offline" / "ep" / "offline_0000.npz")
+    assert float(first["parity_group_total_maxabs"]) == pytest.approx(2e-4, abs=1e-6)
+
+
+def test_merge_parity_keeps_motion_reading_across_null():
+    base = dict(x0_maxabs=0.1, group_mass_maxabs=0.2, group_total_maxabs=0.3)
+    merged = RO.merge_parity(None, base | {"motion_rel_maxabs": None})
+    merged = RO.merge_parity(merged, dict(x0_maxabs=0.05, group_mass_maxabs=0.4, group_total_maxabs=0.3, motion_rel_maxabs=0.02))
+    merged = RO.merge_parity(merged, base | {"motion_rel_maxabs": None})
+    assert merged == dict(x0_maxabs=0.1, group_mass_maxabs=0.4, group_total_maxabs=0.3, motion_rel_maxabs=0.02)
+
+
+def test_parity_baseline_skips_motion_relative(tmp_path, monkeypatch, capsys):
+    policy = write_episode(tmp_path, monkeypatch, infers=1)
+    assert RO.run(policy, FakeAdapter(), arguments(tmp_path)) == 0
+    values = parity_values(parity_line(capsys.readouterr().out))
+    assert values["motion_rel_maxabs"] == "null"
+    result = load(tmp_path / "offline" / "ep" / "offline_0000.npz")
+    assert np.isnan(result["parity_motion_rel_maxabs"])
+    assert float(result["parity_x0_maxabs"]) == 0
+
+
+def test_parity_motion_off_zero_and_on_zero_passes(tmp_path, monkeypatch, capsys):
+    policy = write_episode(tmp_path, monkeypatch, infers=1, motion=True)
+    assert RO.run(policy, FakeAdapter(probs_hook=motion_mass(0.0, 0.0)), arguments(tmp_path)) == 0
+    assert parity_values(parity_line(capsys.readouterr().out))["motion_rel_maxabs"] == "0"
+
+
+def test_parity_motion_off_zero_and_on_nonzero_fails(tmp_path, monkeypatch, capsys):
+    values = expect_parity_fail(tmp_path, monkeypatch, capsys, FakeAdapter(probs_hook=motion_mass(1e-5, 0.0)), motion=True)
+    assert values["motion_rel_maxabs"] == "inf"
+
+
+def test_parity_note_when_single_head_near_limit(tmp_path, monkeypatch, capsys):
+    policy = write_episode(tmp_path, monkeypatch, infers=1)
+    assert RO.run(policy, FakeAdapter(probs_hook=history_key_shift(0.004, layer=0, head=0)), arguments(tmp_path)) == 0
+    output = capsys.readouterr().out
+    parity_line(output)
+    values = parity_values(parity_line(output, "HIDDEN_PARITY_NOTE"))
+    assert values["path"].endswith("rollout_0000.npz")
+    assert float(values["group_mass_maxabs"]) == pytest.approx(0.004, abs=1e-6)
+
+
+def test_parity_does_not_compare_single_probability_elements(tmp_path, monkeypatch, capsys):
+    # 单元素差 0.4，平均 10 个扩散步和 16 个动作位置后组质量差 0.0025，未超限、也不到信息行
+    def hook(probs, capture_hidden):
+        if not capture_hidden:
+            probs[0, 0, 0, 0, 0, 0] += 0.4
+
+    policy = write_episode(tmp_path, monkeypatch, infers=1)
+    assert RO.run(policy, FakeAdapter(probs_hook=hook), arguments(tmp_path)) == 0
+    output = capsys.readouterr().out
+    assert float(parity_values(parity_line(output))["group_mass_maxabs"]) == pytest.approx(0.0025, abs=1e-6)
+    assert "HIDDEN_PARITY_NOTE" not in output
+
+
+def test_attention_and_hidden_come_from_capture_on_run(tmp_path, monkeypatch, capsys):
+    # 输出的组质量不受捕获关那次运行影响
+    policy = write_episode(tmp_path, monkeypatch, infers=1)
+    RO.run(policy, FakeAdapter(probs_hook=history_key_shift(5e-4)), arguments(tmp_path))
+    result = load(tmp_path / "offline" / "ep" / "offline_0000.npz")
+    np.testing.assert_allclose(result["group_mass"][:, 3, 2], result["group_tokens_all"] / 30, atol=1e-5)
+
+
+def test_parity_not_compared_records_nan(tmp_path, monkeypatch, capsys):
+    policy = write_episode(tmp_path, monkeypatch, infers=2)
+    assert RO.run(policy, FakeAdapter(), arguments(tmp_path, parity="first")) == 0
+    first = load(tmp_path / "offline" / "ep" / "offline_0000.npz")
+    second = load(tmp_path / "offline" / "ep" / "offline_0001.npz")
+    assert float(first["parity_group_mass_maxabs"]) == 0
+    for name in ("x0_maxabs", "group_mass_maxabs", "group_total_maxabs", "motion_rel_maxabs"):
+        assert np.isnan(second[f"parity_{name}"]) and second[f"parity_{name}"].dtype == np.float64
 
 
 @pytest.mark.parametrize("mode, expected", [("first", 1), ("all", 3)])
@@ -200,7 +372,8 @@ def test_parity_frequency(tmp_path, monkeypatch, capsys, mode, expected):
     assert RO.run(policy, adapter, arguments(tmp_path, parity=mode)) == 0
     plain = [call for call in adapter.calls if not call["capture_hidden"]]
     assert len(plain) == expected and sum(call["capture_hidden"] for call in adapter.calls) == 3
-    assert f"HIDDEN_PARITY=PASS points={expected} maxabs=0" in capsys.readouterr().out
+    values = parity_values(parity_line(capsys.readouterr().out))
+    assert values["points"] == str(expected) and float(values["x0_maxabs"]) == 0
 
 
 def test_output_keys_values_and_no_temp_files(tmp_path, monkeypatch, capsys):
