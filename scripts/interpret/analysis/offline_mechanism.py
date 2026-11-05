@@ -334,7 +334,9 @@ def report(paths, output):
                 parts.append("<tr>" + "".join(f"<td>{cell}</td>" for cell in cells) + "</tr>")
             parts.append("</table>")
             names = ["motion", "历史视觉", "当前视觉", "文字", "其余"]
-            fig, axes = plt.subplots(1, 2, figsize=(11, 4), layout="constrained")
+            palette = {"motion": "#1f77b4", "历史视觉": "#ff7f0e", "当前视觉": "#2ca02c", "文字": "#d62728", "其余": "#9467bd"}
+            fig, axes = plt.subplots(1, 2, figsize=(11, 4.8))
+            fig.subplots_adjust(top=.72, bottom=.15, wspace=.28)
             for pressed, style in [(False, "--"), (True, "-")]:
                 subset = [p for p in predictions if p["press"] == pressed]
                 if not subset:
@@ -342,34 +344,41 @@ def report(paths, output):
                     continue
                 for name in names:
                     mass = np.mean([p["groups"][name]["mass"] for p in subset], axis=0)
-                    axes[0].plot(mass.mean(axis=1), style, label=f"{name} {'下压' if pressed else '非下压'} n={len(subset)}")
+                    axes[0].plot(mass.mean(axis=1), style, color=palette[name], label=f"{name} {'下压' if pressed else '非下压'} n={len(subset)}")
                     per = subset[0]["groups"][name]["tokens"]
                     if per:
-                        axes[1].plot(mass.mean(axis=1) / per, style, label=f"{name} {'下压' if pressed else '非下压'}")
+                        axes[1].plot(mass.mean(axis=1) / per, style, color=palette[name], label=f"{name} {'下压' if pressed else '非下压'}")
             for ax, title in zip(axes, ["总注意力质量", "每token平均注意力"]):
                 ax.set(title=title, xlabel="层号（从0开始）", ylabel="注意力")
-                ax.legend(fontsize=6)
+            handles, labels = axes[0].get_legend_handles_labels()
+            fig.legend(handles, labels, loc="upper center", bbox_to_anchor=(.5, .99), ncol=5, fontsize=7)
             image = f"模型{model_index + 1}_输入{index + 1}.png"
-            fig.savefig(output / image, dpi=160)
+            fig.savefig(output / image, dpi=160, bbox_inches="tight")
             plt.close(fig)
             parts.append(f"<img width='100%' src='{image}'><p>逐噪声、逐层逐头、真实帧与经过分组原始聚合保存在分析JSON；不保存完整前缀矩阵。</p>")
             parts.append(f"<p>{html.escape(result['motion_time_note'])}</p>")
-            fig, axes = plt.subplots(1, 2, figsize=(11, 4), layout="constrained")
-            mass = np.mean([p["groups"]["motion"]["mass"] for p in predictions], axis=0)
-            heat = axes[0].imshow(mass, interpolation="nearest", aspect="auto")
-            fig.colorbar(heat, ax=axes[0], label="注意力质量")
-            axes[0].set(title="motion质量（逐层逐头，十噪声均值）", xlabel="头号", ylabel="层号")
+            fig, axes = plt.subplots(1, 2, figsize=(11, 4.8))
+            fig.subplots_adjust(top=.8, bottom=.15, wspace=.35)
+            if predictions[0]["groups"]["motion"]["tokens"] == 0:
+                axes[0].text(.5, .5, "无有效motion token", ha="center", va="center", transform=axes[0].transAxes)
+                axes[0].set_axis_off()
+            else:
+                mass = np.mean([p["groups"]["motion"]["mass"] for p in predictions], axis=0)
+                heat = axes[0].imshow(mass, interpolation="nearest", aspect="auto", vmin=0)
+                fig.colorbar(heat, ax=axes[0], label="注意力质量")
+                axes[0].set(title="motion质量（逐层逐头，十噪声均值）", xlabel="头号", ylabel="层号")
             frames = sorted((name for name in predictions[0]["groups"] if name.startswith("真实帧:")), key=lambda n: int(n.split(":")[1]))
             for pressed, style in [(False, "--"), (True, "-")]:
                 subset = [p for p in predictions if p["press"] == pressed]
                 if subset:
                     axes[1].plot([int(n.split(":")[1]) + result["frame_to_env_offset"] for n in frames],
                         [np.mean([p["groups"][n]["mass"] for p in subset]) for n in frames], style,
-                        label=f"{'下压' if pressed else '非下压'} n={len(subset)}")
+                        color=palette["历史视觉"], label=f"{'下压' if pressed else '非下压'} n={len(subset)}")
             axes[1].set(title="真实历史帧注意力质量", xlabel="原frame_times换算环境步", ylabel="质量（层头均值）")
-            axes[1].legend()
+            handles, labels = axes[1].get_legend_handles_labels()
+            fig.legend(handles, labels, loc="upper center", bbox_to_anchor=(.5, .99), ncol=2, fontsize=8)
             image = f"模型{model_index + 1}_输入{index + 1}_帧与头.png"
-            fig.savefig(output / image, dpi=160)
+            fig.savefig(output / image, dpi=160, bbox_inches="tight")
             plt.close(fig)
             parts.append(f"<img width='100%' src='{image}'>")
     parts.append("<p>输入与高度缓存、选择汇总及动作表均保存SHA256指纹；模型身份保留完整检查点路径。真实校准结果在固定选择的success_evidence中，禁止依注意力结果改选例。</p>")

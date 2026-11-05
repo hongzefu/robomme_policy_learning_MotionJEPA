@@ -52,6 +52,10 @@ FK完成后用`bash <产物根>/prepare_release38.sh`从既有汇总逐局调用
 
 ## 第二阶段的预登记接续命令
 
+实际机制起跑回执：两模型均于美东2026-11-05 04:33:43启动，`so-mechanism-ctx-a`窗格PID736260、`so-mechanism-mot-a`窗格PID736257，固定8d841cb干净树。两侧均已正常退出0、各8输入80原噪声预测；原路径误差0，所选输入的展开路径归一化误差基线0.00634765625、motion0.005859375。后续只做已有JSON的CPU统计和绘图，模型没有补跑。
+
+主会话发现初版图的自动配色、轴内图例及缺失motion负色条问题后，独立同规模审查通过，S5仅修改`report`显示函数。固定子提交`6f6c9882b89a0eba4622e4d630f1524b1ba6eb54`在原S5独立工作树CPU重绘到`analysis/mechanism/report-v2/`（32图），原数据与旧图保持不变；11项CPU测试7.84秒，主会话合并后11项7.80秒。最终图与HTML采用report-v2，原`report/`留作发现显示问题的证据；完整32图待主会话逐张目视确认。
+
 第二阶段实际采用新的干净执行工作树`/home/hongzefu/.codex/worktrees/stopcube-mechanism-run/robomme_policy_learning_MotionJEPA`，固定提交`8d841cbec00a4e21af5aa96d6c7957ea8608a102`。合后审查`POST_MERGE_REVIEW=PASS task=S5_prompt base=8f4995b3da3e3160426c49441777f6150f24ef5a tip=8d841cbec00a4e21af5aa96d6c7957ea8608a102 findings=0 blocking=0`已通过并推送。主会话在该树执行原`select`命令，固定M60第3局53/65步、M80第0局233/253/117步、M120第6局253/273/53步，两个模型共16输入160预测；M60无更早经过候选，按规则缺失、不补点。源为`analysis/mechanism-source-summary.json`，选择文件`analysis/mechanism/selection.json`，原12局计划保持不变。
 
 完整模型命令改由`mechanism_env.sh`指向上述新树，模型、配置、缓存、XLA和显存仍用原值；原`offline_env.sh`与050树保留给已完成200点重放。实际启动命令为`tmux new-session -d -s so-mechanism-ctx-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_mechanism_v2.sh ctx'`，motion替换会话和参数为mot；日志`logs/mechanism-<模型>-a.log`，输出`analysis/mechanism/<模型>.json`。实质仍为`analyze --selection <固定selection.json> --model-id <原checkpoint> --config <原配置名> --output <上述JSON>`。同一卡仅一份模型，08:00绝对截止不变。模型完成后的`report`同样从新树运行，文字标签解码用`bash <产物根>/decode_prompt_groups.sh`读取已有SPM和原id，输出`analysis/mechanism/prompt-tokens.{json,html}`，不新增推理。

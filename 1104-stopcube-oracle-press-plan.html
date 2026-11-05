@@ -642,6 +642,9 @@ P(t)            = 10 个预测中想按的比例（t ≥ reach_step）
 <p>美东2026-11-05实施时，将第二阶段原有的“文字总注意力”补充为原有效文字位置的单词元子组，用于区分次数相关片段、动作词与其他描述的关注，避免仅凭总质量解释计数机制。原五类、真实帧与经过分组保持不变；新增统计复用同一次适配器输出，输入、原十噪声、样本选择和模型调用次数保持原口径，最多三局24输入240预测。</p>
 <p><code>ADJUST_REVIEW=PASS scale=same findings=0</code>。独立审查确认属于同等代码与时间规模、没有额外保护层且不触硬停；主会话据此继续。S5原负责人在独立工作树修改<code>scripts/interpret/analysis/offline_mechanism.py</code>与<code>scripts/interpret/test_offline_mechanism.py</code>，子提交<code>a7b03f1cad1e9d3b869afb7642544c2ffcf523a6</code>新增原position/id子组、元数据与数字表格，CPU定向测试11项通过、7.89秒；原五类和帧组质量不变。</p>
 <p>标签以原位置和原token id为证据，主会话另用本机既有SentencePiece文件做只读解码，解码结果仅用于阅读。单个词元可能只是子词，关注次数片段不等于理解计数或因果必要性。新增执行版本须独立审查并固定在新的干净执行工作树；原生产树和已完成200点重放的执行树保持原版本，八点总截止不变。</p>
+<h2>实施中调整：离线图的显示修复（同等规模）</h2>
+<p>主会话目视发现：基线没有有效motion token时，右侧每token图跳过该组导致自动配色错位；轴内图例遮挡曲线；全零motion热图自动产生负色条。<code>ADJUST_REVIEW=PASS scale=same findings=0</code>后，由S5原负责人只修改<code>offline_mechanism.py::report</code>：固定五组配色、外移图例、缺失motion显示说明而不画热图，真实帧线沿历史视觉颜色并保留实虚线语义。</p>
+<p>子提交<code>6f6c9882b89a0eba4622e4d630f1524b1ba6eb54</code>只改显示函数，原JSON统计、输入、样本、噪声和模型调用保持不变。CPU定向11项通过，现有结果已重绘到<code>analysis/mechanism/report-v2/</code>，共32张图；原图保留，主会话对新图逐张目视复查后才写最终图验收。</p>
 </main>
 </body>
 </html>
