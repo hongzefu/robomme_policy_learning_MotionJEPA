@@ -11,6 +11,8 @@ xla_mem_fraction；可选 port（起始端口，缺省 0=临时端口）、start
 rpc_timeout_seconds、save_prefix（缺省 false；为真时服务端加 --save-prefix，另写 prefix_<seq>.npz）、
 ablate（缺省 "none"；其他值原样透传 --ablate，语义见 serve_policy_attn 文档，如 mask_motion / mask_vis / heads:L3H0 /
 motion_zero / motion_swap:<供体目录>）。
+StopCube 第一阶段可选键：stopcube_mode（normal 或 hold_extended）、stopcube_config（固定 JSON 表路径）；
+同时提供时改用 interpret 记录入口，模式与配置文件字节 sha256 并入身份，其他任务不受影响。
 S8 motion 内容替换的可选键：
   record_motion   目录；服务端加 --record-motion，每局写 <目录>/<nonce>.npz，本脚本收尾按 terminal 局身份改名为
                   <目录>/<task>_ep<id>.npz（与 motion_swap 供体文件同名规则）；局的 episode.json 记 motion_record。
@@ -28,6 +30,7 @@ RUN_LOCAL=PASS|FAIL model=<model_kind> episodes=<n> success=<k> npz=<n>。
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -87,6 +90,12 @@ def load_spec(path):
         part.strip() == "motion_zero" for part in ablate_of(spec).split("+"))
     if uses_motion and spec["model_kind"] != MOTION_MODEL_KIND:
         raise SystemExit(f"spec: motion_zero / motion_swap / record_motion 只适用于 {MOTION_MODEL_KIND}")
+    if spec.get("stopcube_mode") is not None:
+        if spec["stopcube_mode"] not in ("normal", "hold_extended") or not spec.get("stopcube_config"):
+            raise SystemExit("spec: stopcube_mode 须为 normal/hold_extended 且提供 stopcube_config")
+        spec["stopcube_config"] = str(Path(spec["stopcube_config"]).resolve())
+    elif spec.get("stopcube_config") is not None:
+        raise SystemExit("spec: stopcube_config 需要 stopcube_mode")
     return spec
 
 
@@ -128,6 +137,9 @@ def run_identity(spec, manifest):
         ident["ablate"] = ablate_of(spec)
     if spec.get("swap_map"):
         ident["swap_map"] = dict(sorted(parse_swap_map(spec["swap_map"]).items()))
+    if spec.get("stopcube_mode") is not None:
+        ident["stopcube_mode"] = spec["stopcube_mode"]
+        ident["stopcube_config_sha256"] = hashlib.sha256(Path(spec["stopcube_config"]).read_bytes()).hexdigest()
     return M.digest(ident)
 
 
@@ -221,6 +233,15 @@ def build_environment(spec):
     return environment
 
 
+def build_client_command(spec, grant_path, output, nonce, port, drain_file):
+    """默认命令逐字保留；仅显式 StopCube 模式替换 interpret 客户端。"""
+    command = RW.client_command(spec, grant_path, output, nonce, port, drain_file)
+    if spec.get("stopcube_mode") is not None:
+        command[1] = str(Path(spec["repo"]) / "scripts/interpret/stopcube_runner.py")
+        command += ["--stopcube-mode", spec["stopcube_mode"], "--stopcube-config", str(spec["stopcube_config"])]
+    return command
+
+
 def tail(path, lines=40):
     try:
         return "\n".join(Path(path).read_text(encoding="utf-8", errors="replace").splitlines()[-lines:])
@@ -255,7 +276,7 @@ def run_chunk(spec, index, chunk_id, episodes, popen=subprocess.Popen):
     write_json(grant_path, {"chunk_id": chunk_id, "run_identity_sha256": spec["run_identity_sha256"],
                             "episodes": episodes})
     server_cmd = build_server_command(spec, nonce, port, episodes)
-    client_cmd = RW.client_command(spec, grant_path, output, nonce, port, drain_file)
+    client_cmd = build_client_command(spec, grant_path, output, nonce, port, drain_file)
     write_json(attempt / "commands.json", {"server": server_cmd, "client": client_cmd, "port": port, "nonce": nonce,
                                            "chunk_id": chunk_id, "episode_keys": [e["episode_key"] for e in episodes]})
     print(f"CHUNK_BEGIN index={index} chunk_id={chunk_id} port={port} nonce={nonce} "
@@ -314,6 +335,11 @@ def collect(spec, attempt, output, episodes):
                 info["motion_record"] = motion_record
             if spec.get("swap_map"):
                 info["swap_donor"] = parse_swap_map(spec["swap_map"]).get(_episode_key(key))
+            if spec.get("stopcube_mode") is not None:
+                receipt_path = output / "traces" / nonce / "meta" / "hold_receipt.json"
+                receipt = read_json(receipt_path)
+                info.update(trajectory_kind=spec["stopcube_mode"], hold_receipt=str(receipt_path.resolve()),
+                            trace_path=receipt["trace_path"], video_path=receipt["video_path"])
             write_json(attn_out / nonce / "episode.json", info)
         # terminal 的 rpc_seq = 1 + batch_seq + replan_seq，官方循环里每次 infer 前恰好一次 add_buffer
         infers = (int(terminal["rpc_seq"]) - 1) // 2 if terminal else None
@@ -354,6 +380,9 @@ def main(argv=None, popen=subprocess.Popen):
     if spec.get("record_motion"):
         Path(spec["record_motion"]).mkdir(parents=True, exist_ok=True)
     chunks = select_chunks(manifest, args.episodes, args.chunks, single=bool(spec.get("swap_map")))
+    if spec.get("stopcube_mode") is not None and any(
+            e["task_name"] != "StopCube" for _, episodes in chunks for e in episodes):
+        raise SystemExit("stopcube_mode 只能选择 StopCube 局")
     if spec.get("swap_map"):
         missing = [e["episode_key"] for _, eps in chunks for e in eps if _episode_key(e["episode_key"]) not in spec["swap_map"]]
         if missing:
