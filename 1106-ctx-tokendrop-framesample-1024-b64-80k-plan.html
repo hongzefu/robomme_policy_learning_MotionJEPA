@@ -23,7 +23,7 @@ code{font:13px/1.6 ui-monospace,SFMono-Regular,monospace;background:var(--code);
 <p>同时跑两条 run，各占四卡，互为对照。两条都直接用未改动的官方条目 <code>mme_vla_suite</code>（<code>src/mme_vla_suite/training/config.py:450</code>），只在命令行指定数据路径、归一化目录和 history YAML，<strong>不新增 TrainConfig</strong>。相对原版，语义上只有一项改动：<code>budget</code> 从 512 改为 1024。</p>
 <div class="scroll"><table>
 <tr><th>run</th><th>GPU</th><th>记忆取法</th><th>每步记忆张量</th><th>数据</th></tr>
-<tr><td><code>orig100-ctx-tokendrop1024-b64-80k</code></td><td>0–3</td><td>tokendrop：8×8 patch，按像素差打分，取分数最高的 1024 个</td><td><code>[1024, 2048]</code>，右补零加 mask</td><td>需新打包 <code>framesamp-8x8</code>（约 100.8 GB，CPU）</td></tr>
+<tr><td><code>orig100-ctx-tokendrop1024-b64-80k</code></td><td>0–3</td><td>tokendrop：8×8 patch，按像素差打分，取分数最高的 1024 个</td><td><code>[1024, 2048]</code>，右补零加 mask</td><td>需新打包 <code>framesamp-8x8</code>（约 202 GB，CPU）</td></tr>
 <tr><td><code>orig100-ctx-framesamp1024-b64-80k</code></td><td>4–7</td><td>framesample：均匀取 64 帧，每帧 4×4（16 token）</td><td><code>[1024, 2048]</code>，右补零加 mask</td><td>现成 <code>framesamp-4x4</code>（48 GB），不用重建</td></tr>
 </table></div>
 <p><strong>预计工期约 63 小时（2.6 天），合理区间 56–71 小时。</strong>这是外推值，正式起跑前用 300 步实测替换。两条并行，所以总墙钟时间也是这个数。</p>
@@ -79,7 +79,7 @@ code{font:13px/1.6 ui-monospace,SFMono-Regular,monospace;background:var(--code);
 
 <h2>8. 磁盘与风险</h2>
 <ul>
-<li><strong>磁盘：</strong><code>/scratch</code> 剩 2.1 TB。8×8 库约 101 GB；checkpoint 按历史约 11.6 GB/份，8 份 × 2 条约 186 GB。够用。</li>
+<li><strong>磁盘：</strong><code>/scratch</code> 剩 2.1 TB。8×8 库约 202 GB；checkpoint 按历史约 11.6 GB/份，8 份 × 2 条约 186 GB。够用。</li>
 <li><strong>HF 额度：</strong>两个 bucket 共约 186 GB。10-18 曾因 HF 额度满导致上传失败，开工前先查额度。</li>
 <li><strong>单 seed：</strong>两条都只用 seed 42，与原版一致；差距小于约 2pp 时不足以判断优劣（既往三 seed 标准差约 0.6–0.7pp）。</li>
 <li><strong>工期偏长：</strong>2.6 天里卡被全占，期间其他 GPU 任务要排队。</li>
@@ -116,7 +116,7 @@ code{font:13px/1.6 ui-monospace,SFMono-Regular,monospace;background:var(--code);
 <tr><th>文件</th><th>改动</th></tr>
 <tr><td><code>src/mme_vla_suite/models/config/robomme/perceptual-framesamp-context-1024.yaml</code>（新）</td><td>上游 context 配置，<code>budget: 1024</code>，<code>token_per_image: 16</code>，<code>frame_sampling</code></td></tr>
 <tr><td><code>…/perceptual-tokendrop-context-1024.yaml</code>（新）</td><td><code>budget: 1024</code>，<code>token_per_image: 64</code>，<code>token_dropping</code></td></tr>
-<tr><td><code>src/mme_vla_suite/training/framesamp_dataset.py</code></td><td>放开上述两档；<code>token_dropping</code> 时读 <code>kept_indices.json</code>（按原顺序存为每集数组），<code>__getitem__</code> 过滤 <code>frame≤t</code>、取末 budget 个、按 (frame, view, patch) 排序，读整行后取 patch，右补零。dtype 延续 <code>_pad</code>（image bf16、pos／state f32）</td></tr>
+<tr><td><code>src/mme_vla_suite/training/framesamp_dataset.py</code></td><td>放开上述两档（含 <code>perceptual_memory.type</code> 断言按类型放行、<code>ctx_shape</code> 增加两档）；<code>token_dropping</code> 时读 <code>kept_indices.json</code>（按原顺序存为每集数组），<code>__getitem__</code> 过滤 <code>frame≤t</code>、取末 budget 个、按 (frame, view, patch) 排序，读整行后取 patch，右补零。dtype 延续 <code>_pad</code>（image bf16、pos／state f32）</td></tr>
 <tr><td><code>src/mme_vla_suite/policies/framesamp_memory.py</code>、<code>policy.py</code></td><td><code>token_dropping</code> 时开启打分：保留参考帧像素，逻辑同 <code>_process_token_drop_score</code>（stride = <code>streaming_obs_horizon//2</code> = 8）；<code>_prepare_history</code> 走 tokendrop 分支；<code>token_per_image=64</code></td></tr>
 <tr><td><code>scripts/training/run_ctx1024_b64_80k.sh</code>（新）</td><td>按 run 名启动一条；模板见下</td></tr>
 <tr><td><code>tests/…</code></td><td>A1、A2 的测试</td></tr>
@@ -134,7 +134,7 @@ uv run --no-sync python scripts/training/train.py mme_vla_suite \
 <h2>三 验收</h2>
 <div class="scroll"><table>
 <tr><th>编号</th><th>检查</th><th>判定行</th></tr>
-<tr><td>A1</td><td>每档随机 1000 个样本，打包库读取与 <code>MemoryBuffer.prepare_token_dropping／prepare_frame_sampling</code>（读 <code>token_emb_*.npy</code>）逐字节比较，覆盖全部 16 任务及长于预算的样本；既有 512 档回归</td><td><code>LOADER_EQ=PASS td=1000 fs=1000 mismatch=0</code></td></tr>
+<tr><td>A1</td><td>每档随机 1000 个样本，打包库读取与 <code>MemoryBuffer.prepare_token_dropping／prepare_frame_sampling</code>（读 <code>token_emb_*.npy</code>）比较（image 转 float32 后比数值，state 按补零后归一化，其余逐字节），覆盖全部 16 任务及长于预算的样本；既有 512 档回归</td><td><code>LOADER_EQ=PASS td=1000 fs=1000 mismatch=0</code></td></tr>
 <tr><td>A2</td><td>每任务 1 集，用 H5 帧重放在线打分：最终堆与 <code>kept_indices.json</code> 相同；在 3 个 t 上在线取样与训练取样相同（未淘汰的集）</td><td><code>ONLINE_TD_REPLAY=PASS episodes=16 mismatch=0</code></td></tr>
 <tr><td>A3</td><td>GPU 0–3 与 4–7 同时跑 20 步，再跑 300 步；记录步时、显存、loss 有限</td><td><code>DUAL_SMOKE=PASS</code> 与实测 s/步</td></tr>
 <tr><td>A4</td><td>两条 <code>EXIT_CODE=0</code>，8 份 checkpoint，79999 EMA CPU 恢复，HF 全量校验</td><td><code>CTX1024_TRAIN=PASS run=&lt;run&gt; step=79999</code>、<code>HF_VERIFY=PASS</code></td></tr>
