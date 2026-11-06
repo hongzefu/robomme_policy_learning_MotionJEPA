@@ -23,8 +23,14 @@ import mem_buffer（建库域留有冻结副本 `dataset_builder/mem_buffer.py`�
   存 `_history_feats_motion[f]`（键 = 全域起点帧号）；编完一窗后删除 `< next_grid_start` 的原始帧；
 - `_prepare_motion(step_idx)`：按训练侧同一公式取全部合法起点（>budget 立即报错、不裁剪），右填充 + mask，
   `motion_pos = pos_emb[f, 0, :pos_dim]`（与训练侧 `store.pos_rows` 同表同切片），并返回每行全域时刻（padding 记哨兵）供交错排序。
+
+── tokendrop 打分路（可选，默认关闭；关闭时不写任何打分状态，帧路数值路径不变）──────────────────────
+语义逐项对齐建库域 `dataset_builder/mem_buffer.py::MemoryBuffer` 的 `_process_token_drop_score`、
+`get_token_dropping_indices`、`filter_token_dropping_indices`、`_prepare_token_dropping`。
+与它的唯一差异：只保留打分要用的那一张参考帧（`frames[max(0, last)]`），不存全部帧像素。
 """
 
+import heapq
 import math
 from typing import Callable
 
@@ -52,6 +58,8 @@ class FrameSampMemory:
         token_per_image: int,
         motion_enc_fn: Callable | None = None,
         motion_cfg: dict | None = None,
+        token_drop_stride: int | None = None,
+        token_drop_keptsize: int = 2048,
     ):
         if vision_enc_fn is None:
             raise ValueError("FrameSampMemory 必须注入 vision_enc_fn（模型侧编码器）")
@@ -74,6 +82,16 @@ class FrameSampMemory:
         self.pos_emb = np.array(pos_embedder(ranges, grid))
 
         self._history_feats = {}
+
+        # ―― tokendrop 打分路（token_drop_stride 为 None 即关闭）――
+        self.token_drop_enabled = token_drop_stride is not None
+        if self.token_drop_enabled and token_per_image != 64:
+            raise ValueError(f"tokendrop 只支持 8×8（token_per_image=64），得到 {token_per_image}")
+        self.token_drop_stride = token_drop_stride
+        self.token_drop_keptsize = token_drop_keptsize
+        self.token_drop_last_frame = -1
+        self.scored_token_heap = []
+        self._token_drop_ref = None
 
         # ―― 运动路 ――
         self.motion_enabled = motion_enc_fn is not None
@@ -128,6 +146,9 @@ class FrameSampMemory:
         self._next_grid_start_exec = 0
         self.exec_start_idx = None
         self.motion_downsample_steps = 0
+        self.token_drop_last_frame = -1
+        self.scored_token_heap = []
+        self._token_drop_ref = None
 
     def add_buffer(
         self,
@@ -146,6 +167,10 @@ class FrameSampMemory:
             raise ValueError("images 必须为 uint8")
         if getattr(states, "shape", None) != (t, self.state_emb_dim) or states.dtype != np.float32:
             raise ValueError(f"states 须为 ({t}, {self.state_emb_dim}) float32")
+        # getattr 缺省关闭：测试夹具 / 对拍脚本用 __new__ 绕过构造，未设该字段时行为同改动前
+        token_drop = getattr(self, "token_drop_enabled", False)
+        if token_drop and (images.shape[2] % 8 or images.shape[3] % 8):
+            raise ValueError(f"tokendrop 要求帧边长能被 8 整除，得到 {tuple(images.shape[2:4])}")
 
         for step_idx in step_idx_list:
             # 有效域上界显式 raise：pos 表只有 max_steps 行，numpy 切片越界会静默
@@ -207,6 +232,8 @@ class FrameSampMemory:
                 self.pos_key: pos_emb,            # fp32
                 "state_emb": states[i],          # fp32
             }
+            if token_drop:
+                self._process_token_drop_score(step_idx, images[i])
 
         if self.motion_enabled:
             # 判据用**本批最后一帧的全域帧号**（禁止读上一批末帧：exec 段会整整晚 16 帧、首批更是 −1）
@@ -311,6 +338,65 @@ class FrameSampMemory:
         mask = np.zeros(B, np.bool_)
         mask[:k] = True
         return emb, pos, mask, pad_times(frames, B)
+
+    # ―― tokendrop 打分与装配：与 dataset_builder/mem_buffer.py 同名方法同式 ――
+
+    def _process_token_drop_score(self, step_idx: int, pixels: np.ndarray) -> None:
+        """pixels 为本帧 (v, h, w, 3) uint8，即建库侧 history_feats 的 image_pixels。"""
+        if step_idx == 0:  # 首帧全部保留；与上游一样，此处推入不做容量淘汰
+            for patch_idx in range(64):
+                for view_idx in range(self.num_views):
+                    heapq.heappush(self.scored_token_heap, (1000.0, step_idx, view_idx, patch_idx))
+            self._token_drop_ref = pixels.copy()  # 上游 frames[max(0, -1)] 即首帧
+
+        if step_idx == self.token_drop_last_frame + self.token_drop_stride:
+            prev_img = self._token_drop_ref.astype(np.float32) / 255.0 * 2.0 - 1.0
+            curr_img = pixels.astype(np.float32) / 255.0 * 2.0 - 1.0
+
+            prev_img_tokens = einops.rearrange(prev_img, "v (ph h) (pw w) c -> v (ph pw) (h w c)", ph=8, pw=8)
+            curr_img_tokens = einops.rearrange(curr_img, "v (ph h) (pw w) c -> v (ph pw) (h w c)", ph=8, pw=8)
+
+            for view_idx in range(self.num_views):
+                difference = np.abs(prev_img_tokens[view_idx] - curr_img_tokens[view_idx]).mean(axis=-1)
+                for patch_idx in range(64):
+                    if difference[patch_idx] < 1e-4:
+                        continue
+                    heapq.heappush(self.scored_token_heap, (difference[patch_idx], step_idx, view_idx, patch_idx))
+                    if len(self.scored_token_heap) > self.token_drop_keptsize:
+                        heapq.heappop(self.scored_token_heap)
+
+            self.token_drop_last_frame += self.token_drop_stride
+            self._token_drop_ref = pixels.copy()  # 恒等于 frames[last]，只留这一张
+
+    def get_token_dropping_indices(self) -> list[tuple[int, int, int]]:
+        # 元组 (分数, 帧, 视角, patch) 互不相同，全序下 sorted 与逐个 heappop 同序，且不破坏堆
+        return [(step, view, patch) for _, step, view, patch in sorted(self.scored_token_heap)]
+
+    @staticmethod
+    def filter_token_dropping_indices(kept_indices, step_idx, token_budget, is_sorted=True):
+        kept_indices_filtered = [item for item in kept_indices if item[0] <= step_idx]
+        kept_indices = kept_indices_filtered[-token_budget:]
+        if is_sorted:
+            kept_indices = sorted(kept_indices)
+        return kept_indices
+
+    def prepare_token_dropping(self, step_idx, token_budget):
+        """返回 (img (B,2048) f32, pos (B,768) f32, state (B,8) f32, mask (B,) bool)，右补零。"""
+        sorted_kept_indices = self.filter_token_dropping_indices(
+            self.get_token_dropping_indices(), step_idx, token_budget, is_sorted=True)
+        img_emb = np.zeros((token_budget, self.img_emb_dim), dtype=np.float32)
+        pos_emb = np.zeros((token_budget, self.pos_emb_dim), dtype=np.float32)
+        state_emb = np.zeros((token_budget, self.state_emb_dim), dtype=np.float32)
+        mask = np.zeros((token_budget), dtype=np.bool_)
+
+        for idx, (buffer_idx, view_idx, patch_idx) in enumerate(sorted_kept_indices):
+            feats = self._history_feats[buffer_idx]
+            img_emb[idx] = feats[self.image_key][view_idx][patch_idx]
+            pos_emb[idx] = feats[self.pos_key][view_idx][patch_idx]
+            state_emb[idx] = feats["state_emb"]
+            mask[idx] = True
+
+        return img_emb, pos_emb, state_emb, mask
 
     # ―― 以下装配路径与旧 MemoryBuffer 的 frame_sampling 支路逐字同式 ――
 
