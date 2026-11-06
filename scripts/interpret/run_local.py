@@ -28,11 +28,15 @@ S8 motion 内容替换的可选键：
                   给出时每局单独成块（chunk_id = digest([episode_key])，与 --episodes 同法），服务端按块加
                   --swap-donor <供体局>：服务端在 reset 时只知道 nonce，单局成块后「本服务进程服务的局」即确定。
                   选中的每局都必须在 swap_map 里，否则启动前报错。
+save_attn（bool，缺省按 ablate 判定）：ablate 含 motion_swap: / motion_swap_exact: / motion_shift 时一律不写 infer_<seq>.npz，
+无需配置，显式给 true 报错；其他 ablate 默认写，显式 false 时服务端加 --no-save-attn 不写。不写时与 save_prefix、rollout_record、
+Oracle 模式互斥。
 run_identity_sha256 由本脚本自算（见 run_identity；ablate 非 none 时并入身份，none 时身份与 S7 之前相同；
-swap_map 给出时也并入身份；record_motion 只记录不改行为，不并入）。
+swap_map 给出时也并入身份；record_motion 只记录不改行为，不并入；save_attn=false 时并入，缺键或 true 时身份不变）。
 
 逐局打印 EPISODE_RESULT task=<t> ep=<i> success=<0|1> npz=<n>，末行
 RUN_LOCAL=PASS|FAIL model=<model_kind> episodes=<n> success=<k> npz=<n>。
+不写注意力时判定改为：终局存在、episode.json 的 infers > 0，且 infer_*.npz 数为 0。
 """
 from __future__ import annotations
 
@@ -132,6 +136,16 @@ def load_spec(path):
             raise SystemExit("spec: rollout_record 必须为 bool")
         if spec["rollout_record"] and spec.get("stopcube_mode") != "normal" and not spec.get("bin_trace"):
             raise SystemExit("spec: rollout_record 只允许与 stopcube_mode=normal 或 bin_trace=true 同用")
+    if "save_attn" in spec:
+        if type(spec["save_attn"]) is not bool:
+            raise SystemExit("spec: save_attn 必须为 bool")
+        if spec["save_attn"] and replaces_motion(spec):
+            raise SystemExit("spec: motion 替换实验不存注意力，不能给 save_attn=true")
+    if not saves_attn(spec):
+        if spec.get("save_prefix"):
+            raise SystemExit("spec: save_prefix 需要存注意力，与不存注意力（save_attn=false 或 motion 替换实验）互斥")
+        if spec.get("rollout_record") or str(spec.get("stopcube_mode")).startswith("oracle_"):
+            raise SystemExit("spec: 不存注意力只作用于注意力记录路径，与 rollout_record、Oracle 模式互斥")
     return spec
 
 
@@ -186,12 +200,24 @@ def run_identity(spec, manifest):
         ident["rollout_record"] = True
     if spec.get("bin_trace"):
         ident["bin_trace"] = True
+    if spec.get("save_attn") is False:
+        ident["save_attn"] = False
     return M.digest(ident)
 
 
 def ablate_of(spec):
     value = spec.get("ablate")
     return "none" if value is None else str(value).strip() or "none"
+
+
+def replaces_motion(spec):
+    """与 serve_policy_attn.replaces_motion 同判据（测试盯住）；驱动端不导入服务端模块。"""
+    return any(part.strip() == "motion_shift" or part.strip().startswith(("motion_swap:", "motion_swap_exact:"))
+               for part in ablate_of(spec).split("+"))
+
+
+def saves_attn(spec):
+    return spec.get("save_attn") is not False and not replaces_motion(spec)
 
 
 def select_chunks(manifest, episodes_arg=None, limit=None, single=False):
@@ -262,6 +288,8 @@ def build_server_command(spec, nonce, port, episodes=None):
         extra += ["--save-top-frames", str(int(spec["save_top_frames"]))]
     if spec.get("save_prefix"):
         extra += ["--save-prefix"]
+    if spec.get("save_attn") is False:
+        extra += ["--no-save-attn"]
     if ablate_of(spec) != "none":
         extra += ["--ablate", ablate_of(spec)]
     if spec.get("record_motion"):
@@ -448,8 +476,10 @@ def collect(spec, attempt, output, episodes):
         query_npz = len(list((attn_out / nonce).glob("query_*.npz"))) if nonce else 0
         receipt_path = output / "traces" / str(nonce) / "meta" / "hold_receipt.json"
         receipt = read_json(receipt_path) if oracle_mode and receipt_path.exists() else None
+        episode_infers = 0
         if nonce and (attn_out / nonce / "episode.json").exists():
             info = read_json(attn_out / nonce / "episode.json")
+            episode_infers = int(info.get("infers", 0))
             info.update({k: (terminal or started)[k] for k in ("task_name", "episode_id", "env_seed", "difficulty",
                                                                "episode_key", "chunk_id", "run_identity_sha256")})
             info.update(outcome=terminal["outcome"] if terminal else None, attempt=str(attempt))
@@ -486,6 +516,8 @@ def collect(spec, attempt, output, episodes):
         success = int(bool(terminal) and terminal["outcome"] == "success")
         row = {"task": episode["task_name"], "ep": episode["episode_id"], "success": success, "npz": npz,
                "infers": infers, "terminal": terminal is not None, "nonce": nonce}
+        if not saves_attn(spec):
+            row.update(attn_saved=False, episode_infers=episode_infers)
         if oracle_mode:
             row.update(mode=mode, history_batches=history_batches, query_points=query_points,
                        execution_infers=execution_infers, query_npz=query_npz, cadence_ok=cadence_ok,
@@ -494,6 +526,15 @@ def collect(spec, attempt, output, episodes):
         print(f"EPISODE_RESULT task={episode['task_name']} ep={episode['episode_id']} success={success} npz={npz}",
               flush=True)
     return results
+
+
+def row_ok(row):
+    """单局判定：Oracle 看节奏；不存注意力看终局与 episode.json 的 infers；其余 npz 数须等于推理数。"""
+    if "cadence_ok" in row:
+        return row["cadence_ok"]
+    if row.get("attn_saved") is False:
+        return row["terminal"] and row["episode_infers"] > 0 and row["npz"] == 0
+    return row["npz"] > 0 and row["npz"] == row["infers"]
 
 
 def rename_motion_record(spec, nonce, episode):
@@ -576,7 +617,7 @@ def main(argv=None, popen=subprocess.Popen):
     finally:
         attempts.close()   # 信号或收集失败同样触发常驻服务的精确进程组收尾。
     ok = (all(code == 0 for code in codes) and all(r["terminal"] for r in results)
-          and all(r["cadence_ok"] if "cadence_ok" in r else r["npz"] > 0 and r["npz"] == r["infers"] for r in results))
+          and all(row_ok(r) for r in results))
     total_npz, success = sum(r["npz"] for r in results), sum(r["success"] for r in results)
     write_json(Path(spec["run_root"]) / f"run_local-{uuid.uuid4().hex[:8]}.json",
                {"run_identity_sha256": spec["run_identity_sha256"], "client_exit_codes": codes, "results": results,

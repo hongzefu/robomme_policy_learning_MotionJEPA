@@ -45,6 +45,11 @@ motion 内容替换（S8；只换 motion 编码内容，motion token 个数、�
   每次 add_buffer / infer 后有新窗口即重写（先写临时文件再 os.replace），进程被杀也不丢已完成窗口；
   记录的永远是原 client 的编码（替换前）。run_local 收尾时按 terminal 记录的局身份把 <nonce>.npz 改名为 <task>_ep<id>.npz。
 
+不存注意力（只要轨迹、终局与 episode.json 时）：
+  ablate 含 motion_swap: / motion_swap_exact: / motion_shift 时一律不写 infer_<seq>.npz，不需要配置，也没有存注意力的路径；
+  其他 ablate 加 --no-save-attn 同样不写。两种情况都与 --save-prefix 互斥，也不存 top-N 帧原图；episode.json 照常更新并记 attn_saved=false。
+  只跳过 infer 返回之后的记录与写盘；采样仍走同一条 AttnAdapter 路径（含其 device_get），返回动作不变。
+
 用法（通常由 scripts/interpret/run_local.py 启动）：
   python -m scripts.interpret.serve_policy_attn --port 8011 --seed 42 --attn-out <dir> \
       policy:checkpoint --policy.config <cfg> --policy.dir <ckpt>
@@ -142,6 +147,22 @@ def parse_ablate(name) -> dict:
                 raise ValueError(f"--ablate {text!r}: 未知项 {part!r}（可选 none / {' / '.join(MASK_KINDS)} / "
                                  f"heads:L<i>H<j>,... / motion_zero / motion_swap:<DIR> / motion_swap_exact:<DIR> / motion_shift）")
     return {"name": text, "masks": frozenset(masks), "heads": tuple(sorted(heads)), "motion": motion}
+
+
+def replaces_motion(ablate: dict) -> bool:
+    """parse_ablate 结果是否为只看轨迹的 motion 替换实验（motion_zero 不算，保持原行为）。"""
+    motion = ablate["motion"]
+    return motion is not None and motion["kind"] in ("swap", "swap_exact", "shift")
+
+
+def resolve_save_attn(ablate: dict, save_attn: bool | None = None, *, save_prefix: bool = False) -> bool:
+    """本次运行是否写 infer_<seq>.npz；save_attn 为 None 表示未显式指定。"""
+    if replaces_motion(ablate) and save_attn is True:
+        raise SystemExit(f"错误: --ablate {ablate['name']} 是 motion 替换实验，不存注意力，不能显式要求 save_attn")
+    saved = save_attn is not False and not replaces_motion(ablate)
+    if save_prefix and not saved:
+        raise SystemExit("错误: save_prefix 需要存注意力，与不存注意力（save_attn=false 或 motion 替换实验）互斥")
+    return saved
 
 
 def parse_episode(text) -> tuple[str, int]:
@@ -614,7 +635,8 @@ class AttnRecorder:
     """在 policy 实例属性上遮蔽 reset / add_buffer / infer / _sample_actions，每次推理落一份 npz。"""
 
     def __init__(self, policy, adapter, attn_out, *, save_top_frames: int = 3, save_prefix: bool = False,
-                 ablate: str = "none", record_motion=None, swap_donor: str | None = None):
+                 ablate: str = "none", record_motion=None, swap_donor: str | None = None,
+                 save_attn: bool | None = None):
         self.policy, self.adapter = policy, adapter
         self.attn_out = Path(attn_out)
         self.save_top_frames = int(save_top_frames)
@@ -628,6 +650,9 @@ class AttnRecorder:
         self.motion_enabled = bool(policy.motion_enabled)
         self.motion_budget = int(cfg.motion.budget) if self.motion_enabled else 0
         self.ablate = parse_ablate(ablate)
+        self.save_attn = resolve_save_attn(self.ablate, save_attn, save_prefix=self.save_prefix)
+        if not self.save_attn:
+            self.save_top_frames = 0   # 选帧依赖注意力；不存注意力就不缓存、不写帧图
         if "mask_motion" in self.ablate["masks"] and not self.motion_enabled:
             raise SystemExit(f"错误: --ablate {self.ablate['name']} 含 mask_motion，但本模型无 motion token（基线）")
         motion = self.ablate["motion"]
@@ -753,6 +778,8 @@ class AttnRecorder:
                         "model_kind": self.policy.metadata.get("model_kind"), "motion_enabled": self.motion_enabled,
                         "save_top_frames": self.save_top_frames, "infers": 0, "prompt": None,
                         "ablate": self.ablate["name"], "n_masked_keys": []}
+        if not self.save_attn:
+            self.episode["attn_saved"] = False
         if self.motion_client is not None:
             self.episode["motion_content"] = self.motion_client.summary()
         _write_json(self.ep_dir / "episode.json", self.episode)
@@ -774,6 +801,21 @@ class AttnRecorder:
         self.captured = {}
         outputs = self._orig_infer(obs)
         # 写盘在 infer 返回之后（infer_time_ms 已在原 infer 计时段内算完）
+        if self.save_attn:
+            n_masked_keys = self._write_infer(obs, outputs)
+        else:
+            n_masked_keys = self._log_unsaved_infer()
+        self.infer_seq += 1
+        self.episode.setdefault("n_masked_keys", []).append(n_masked_keys)
+        if self.motion_client is not None:
+            self.motion_client.flush()
+            self.episode["motion_content"] = self.motion_client.summary()
+        self.episode.update(infers=self.infer_seq, prompt=self.episode.get("prompt") or _as_str(obs.get("prompt")))
+        _write_json(self.ep_dir / "episode.json", self.episode)
+        return outputs
+
+    # ―― 记录 ――
+    def _write_infer(self, obs: dict, outputs: dict) -> int:
         record = self.build_record(obs, outputs)
         path = self.ep_dir / f"infer_{self.infer_seq:04d}.npz"
         tmp = self.ep_dir / f".infer_{self.infer_seq:04d}.{uuid.uuid4().hex}.tmp.npz"
@@ -791,16 +833,25 @@ class AttnRecorder:
               f"n_masked_keys={int(record['n_masked_keys'])}"
               + (f" n_motion_replaced={int(record['n_motion_replaced'])}" if "n_motion_replaced" in record else ""),
               flush=True)
-        self.infer_seq += 1
-        self.episode.setdefault("n_masked_keys", []).append(int(record["n_masked_keys"]))
-        if self.motion_client is not None:
-            self.motion_client.flush()
-            self.episode["motion_content"] = self.motion_client.summary()
-        self.episode.update(infers=self.infer_seq, prompt=self.episode.get("prompt") or _as_str(obs.get("prompt")))
-        _write_json(self.ep_dir / "episode.json", self.episode)
-        return outputs
+        return int(record["n_masked_keys"])
 
-    # ―― 记录 ――
+    def _log_unsaved_infer(self) -> int:
+        """不存注意力时跳过 build_record 与全部写盘（它们只读，不影响后续动作），只打日志并返回被遮 key 数。"""
+        last = getattr(self.adapter, "last_attn", None)
+        if not isinstance(last, dict):
+            raise RuntimeError("adapter.last_attn 缺失：采样函数没有走 AttnAdapter")
+        n_masked_keys = int(self.captured.get("n_masked_keys", 0))
+        if not self.printed_env:
+            print(f"ATTN_SERVE_ENV P={int(last['P'])} motion={int(self.motion_enabled)} L={NUM_LAYERS} AH={ACTION_HORIZON} "
+                  f"attn_out={self.attn_out} ablate={self.ablate['name']} save_attn=0", flush=True)
+            self.printed_env = True
+        print(f"ATTN_INFER nonce={self.episode['episode_nonce']} infer_seq={self.infer_seq} step_idx={int(self.policy.step_idx)} "
+              f"npz=none ablate={self.ablate['name']} n_masked_keys={n_masked_keys}"
+              + (f" n_motion_replaced={int(self.motion_client.replaced)}"
+                 if self.ablate["motion"] is not None and self.motion_client is not None else ""),
+              flush=True)
+        return n_masked_keys
+
     def build_record(self, obs: dict, outputs: dict) -> dict:
         last = getattr(self.adapter, "last_attn", None)
         if not isinstance(last, dict):
@@ -976,6 +1027,8 @@ def _make_args_class():
         save_top_frames: int = 3
         # 另写 prefix_<seq>.npz：prefill 每层完整 prefix 自注意力 (18, 8, P, P) f16；默认关
         save_prefix: bool = False
+        # 不写 infer_<seq>.npz；motion_swap / motion_swap_exact / motion_shift 不需要此参数，一律不写
+        no_save_attn: bool = False
         # 因果遮挡 / motion 内容替换：none | mask_motion | mask_vis | heads:L3H0,L16H0 | motion_zero |
         # motion_swap:<供体目录> | motion_swap_exact:<供体目录> | motion_shift，可用 + 组合；默认 none
         ablate: str = "none"
@@ -1012,12 +1065,16 @@ def main(args) -> None:
         ablate = parse_ablate(ablate_name)
     except ValueError as exc:
         raise SystemExit(f"错误: {exc}") from exc
-    if query_count and (ablate["name"] != "none" or args.save_prefix or args.record_motion or args.swap_donor):
+    no_save_attn = bool(getattr(args, "no_save_attn", False))
+    if query_count and (ablate["name"] != "none" or args.save_prefix or args.record_motion or args.swap_donor
+                        or no_save_attn):
         raise SystemExit("询问模式不允许遮挡、注意力或 motion 内容替换")
     rollout_record = bool(getattr(args, "rollout_record", False))
     if rollout_record and (query_count or ablate["name"] != "none" or args.save_prefix or args.record_motion
-                           or args.swap_donor):
-        raise SystemExit("--rollout-record 与 --query-record、--ablate、--save-prefix、--record-motion、--swap-donor 互斥")
+                           or args.swap_donor or no_save_attn):
+        raise SystemExit("--rollout-record 与 --query-record、--ablate、--save-prefix、--record-motion、--swap-donor、"
+                         "--no-save-attn 互斥")
+    save_attn = resolve_save_attn(ablate, False if no_save_attn else None, save_prefix=bool(args.save_prefix))
     attn_out = Path(args.attn_out).resolve()
     attn_out.mkdir(parents=True, exist_ok=True)
     original_create = serve_policy.create_policy
@@ -1045,7 +1102,8 @@ def main(args) -> None:
         recorder = AttnRecorder(policy, adapter, attn_out, save_top_frames=args.save_top_frames,
                                 save_prefix=save_prefix, ablate=ablate_name,
                                 record_motion=Path(record_motion).resolve() if record_motion else None,
-                                swap_donor=getattr(args, "swap_donor", None))
+                                swap_donor=getattr(args, "swap_donor", None),
+                                save_attn=False if no_save_attn else None)
         recorder.install()
         P = getattr(recorder.adapter, "P", None)
         if P is not None:
@@ -1057,7 +1115,7 @@ def main(args) -> None:
     serve_policy.create_policy = create_policy
     print(f"ATTN_ABLATE name={ablate['name']} masks={sorted(ablate['masks'])} heads={list(ablate['heads'])} "
           f"motion={ablate['motion']} swap_donor={getattr(args, 'swap_donor', None)} "
-          f"record_motion={getattr(args, 'record_motion', None)}", flush=True)
+          f"record_motion={getattr(args, 'record_motion', None)} save_attn={int(save_attn)}", flush=True)
     _install_rpc_tracking(query_record=query_count, oracle_mode=oracle_mode)
     # metadata、server 构造与 sidecar 收尾全部走主线 main，字段与 serve_policy.py 完全一致
     serve_policy.main(args)
