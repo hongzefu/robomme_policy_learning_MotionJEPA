@@ -128,6 +128,60 @@ def test_aggregation_preserves_layer_head_and_mass_partition():
         M.aggregate_attention(values, groups)
 
 
+def text_probabilities(valid, keys=6):
+    """层2×1×头3×文字4×key6；有效行在前 keys 个 key 上按固定权重分配，padding 行置 0（同 attn_adapter）。"""
+    weights = np.arange(1, keys + 1, dtype=np.float64)
+    values = np.zeros((2, 1, 3, 4, keys))
+    values[:, :, :, valid, :] = weights / weights.sum()
+    return values
+
+
+def test_text_attention_shape_slice_and_mass_partition():
+    valid = np.array([True, True, True, False])
+    values = text_probabilities(valid)
+    groups = {"前": np.arange(26) < 2, "中": (np.arange(26) >= 2) & (np.arange(26) < 6),
+              "动作": np.arange(26) >= 6, "跨界": np.isin(np.arange(26), [5, 6, 25])}
+    result = M.aggregate_text_attention(values, groups, valid)
+    assert np.asarray(result["前"]["mass"]).shape == (2, 3)
+    np.testing.assert_allclose(result["前"]["mass"], 3 / 21)
+    np.testing.assert_allclose(np.asarray(result["前"]["mass"]) + result["中"]["mass"], 1)
+    # 只有前 P 位计数和累加：动作 key 不在文字读者的 key 里
+    assert result["动作"]["tokens"] == 0 and result["动作"]["per_token"] is None
+    np.testing.assert_allclose(result["动作"]["mass"], 0)
+    assert result["跨界"]["tokens"] == 1
+    np.testing.assert_allclose(result["跨界"]["mass"], 6 / 21)
+    np.testing.assert_allclose(result["跨界"]["per_token"], 6 / 21)
+
+
+def test_text_attention_ignores_padding_rows():
+    # 按 mask 选行，不是按「全 0 行」猜：padding 行即使非零也不计，也不进分母
+    valid = np.array([True, False, True, False])
+    values = text_probabilities(valid)
+    values[:, :, :, 2, :] = 0
+    values[:, :, :, 2, 0] = 1
+    values[:, :, :, 1, 5] = 7
+    groups = {"首": np.arange(26) == 0, "前缀": np.arange(26) < 6}
+    result = M.aggregate_text_attention(values, groups, valid[None])
+    np.testing.assert_allclose(result["首"]["mass"], (1 / 21 + 1) / 2)
+    np.testing.assert_allclose(result["前缀"]["mass"], 1)
+
+
+def test_text_attention_rejects_bad_input():
+    valid = np.array([True, True, True, False])
+    values = text_probabilities(valid)
+    groups = {"前": np.arange(26) < 2}
+    with pytest.raises(ValueError, match="key长度"):
+        M.aggregate_text_attention(values, {"前": np.arange(6) < 2}, valid)
+    with pytest.raises(ValueError, match="行数"):
+        M.aggregate_text_attention(values, groups, valid[:3])
+    with pytest.raises(ValueError, match="没有有效"):
+        M.aggregate_text_attention(values, groups, np.zeros(4, bool))
+    with pytest.raises(ValueError, match="有限"):
+        M.aggregate_text_attention(np.full_like(values, np.nan), groups, valid)
+    with pytest.raises(ValueError, match="有限"):
+        M.aggregate_text_attention(values[:, 0], groups, valid)
+
+
 def test_selection_manifest_cannot_be_changed(tmp_path):
     path = tmp_path / "selection.json"
     M.write_json(path, {"choice": 1}, fixed=True)
