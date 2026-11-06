@@ -141,6 +141,8 @@ P 是每次推理用 10 份独立噪声走原路径算出的预测里，前 16 �
 
 ![每一层的换算准确率](records/rollout-class-layers.png)
 
+用户随后要求论文用的英文图，不再画配对准确率。四张图都只读已有结果、没有重算回归，放在 `records/paper-figures/`（PDF 和 PNG），脚本 `records/diagnostics/make_paper_figs.py`：`fig-r2-layers-baseline`、`fig-r2-layers-motion`、`fig-r2-fit`（第 17 层两模型对比）、`fig-point-accuracy`（逐点准确率，来自回归换算，换算时用了真实 M、N）。
+
 ### motion 输入带有互补的进度信息
 
 下表是计划外的事后分解，只用已有隐状态和同一折划分，没有新增推理，见 `records/probe-decompose.json`、`records/probe-decompose-ci.json`。
