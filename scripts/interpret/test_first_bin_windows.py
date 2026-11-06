@@ -17,8 +17,9 @@ CHUNK = 8
 BIN_XY = [(0.0, 0.0), (0.3, 0.0), (0.6, 0.0)]
 
 
-def make_rows(n=40, closed=(), lifts=None, hover=None, subgoal=2, opened_at_start=True):
-    """逐步合成轨迹。closed：夹爪闭合的步集合；lifts：{bin: (起, 止)} 这些步之后 z=0.2；hover：{步: bin}。"""
+def make_rows(n=40, closed=(), lifts=None, hover=None, subgoal=2, opened_at_start=True, exec_start=0):
+    """逐步合成轨迹。closed：夹爪闭合的步集合；lifts：{bin: (起, 止)} 这些步之后 z=0.2；hover：{步: bin}；
+    exec_start：reset 写入视频的帧数减 1（Button 为 0，Video 为 D）。"""
     lifts, hover, rows, over = lifts or {}, hover or {}, [], 0
     for step in range(n):
         over = hover.get(step, over)
@@ -27,7 +28,7 @@ def make_rows(n=40, closed=(), lifts=None, hover=None, subgoal=2, opened_at_star
                 for b, (x, y) in enumerate(BIN_XY)]
         rows.append({"event": "step", "episode_key": "x", "infer_seq": step // CHUNK, "row_in_chunk": step % CHUNK,
                      "chunk_start_env_step": step // CHUNK * CHUNK, "state_before": [0.0] * 8,
-                     "action_index": step, "exec_start_idx": 0, "command_action": [0.0] * 7 + [g],
+                     "action_index": step, "exec_start_idx": exec_start, "command_action": [0.0] * 7 + [g],
                      "executed_action": [0.0] * 7 + [g], "state_after": [0.0] * 8,
                      "env_step_before": step, "env_step_after": step + 1,
                      "tcp_before": [BIN_XY[over][0], 0.0, 0.1], "tcp_after": [BIN_XY[over][0], 0.0, 0.1],
@@ -54,15 +55,25 @@ def write_episode(run_root, episode_id, rows, task=BUTTON, target=0, outcome="fa
 
 
 def write_video(path, frames):
-    """第 i 帧的亮度编码帧号，用来核对帧号映射。"""
+    """第 i 帧用 8 条黑白竖条按二进制编码帧号；有损压缩不会让解码差一帧。"""
     cv2 = pytest.importorskip("cv2")
     import numpy as np
     path.parent.mkdir(parents=True, exist_ok=True)
     writer = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*"mp4v"), 10, (64, 64))
     assert writer.isOpened()
     for i in range(frames):
-        writer.write(np.full((64, 64, 3), i * 5, np.uint8))
+        image = np.zeros((64, 64, 3), np.uint8)
+        for bit in range(8):
+            if i >> bit & 1:
+                image[:, bit * 8:(bit + 1) * 8] = 255
+        writer.write(image)
     writer.release()
+
+
+def decode_frame_number(image):
+    """按竖条中线读回 write_video 编码的帧号，与图像尺寸无关。"""
+    width = image.shape[1]
+    return sum(1 << bit for bit in range(8) if image[:, int((bit + 0.5) * width / 8)].mean() > 127)
 
 
 def run(tmp_path, capsys, episodes, extra=()):
@@ -271,14 +282,43 @@ def test_two_models_rejected(tmp_path):
                 "--output", str(tmp_path / "out"), "--no-sheets"])
 
 
-def test_frame_mapping_reads_env_step_minus_one(tmp_path):
+def test_read_frames_fails_past_end(tmp_path):
     cv2 = pytest.importorskip("cv2")
     video = tmp_path / "v.mp4"
     write_video(video, 40)
-    frames = W.read_frames(video, [27, 35], cv2)
-    assert abs(float(frames[27].mean()) - 27 * 5) < 12 and abs(float(frames[35].mean()) - 35 * 5) < 12
     with pytest.raises(SystemExit, match="只有 40 帧"):
         W.read_frames(video, [40], cv2)
+
+
+@pytest.mark.parametrize("task,exec_start", [(BUTTON, 0), (VIDEO, 5)])
+def test_tile_uses_reset_offset_frames(tmp_path, capsys, task, exec_start):
+    """帧号 = exec_start_idx + action_index + 1；画面编码帧号，错一帧也要被发现。"""
+    cv2 = pytest.importorskip("cv2")
+    import numpy as np
+    rows = make_rows(closed=range(25, 40), lifts={0: (33, 40)}, exec_start=exec_start)
+    root = tmp_path / "mot" / "g0" / "run"
+    write_episode(root, 0, rows, task=task, video=50)
+    output = tmp_path / "out"
+    assert W.main(["--run-root", str(root), "--output", str(output), "--expect-episodes", "1", "--no-sheets"]) == 0
+    entry = json.loads((output / "windows.json").read_text())["episodes"][0]
+    assert entry["C_frame"] == exec_start + 26 and entry["L_frame"] == exec_start + 34
+    assert entry["C"] == 26 and entry["L"] == 34
+    capsys.readouterr()
+    tile = W.episode_tile(entry, W.trace_path(root, entry["episode_nonce"]), cv2, np)
+    body = tile[W.CAPTION_HEIGHT:]
+    left, right = body[:, :W.TILE_HEIGHT], body[:, W.TILE_HEIGHT:]
+    assert decode_frame_number(left) == entry["C_frame"]
+    assert decode_frame_number(right) == entry["L_frame"]
+
+
+def test_no_pick_has_no_frames(tmp_path, capsys):
+    entry, _, _ = one(tmp_path, capsys, make_rows())
+    assert entry["C_frame"] is None and entry["L_frame"] is None
+
+
+def test_no_close_has_only_l_frame(tmp_path, capsys):
+    entry, _, _ = one(tmp_path, capsys, make_rows(lifts={0: (33, 40)}, opened_at_start=False))
+    assert entry["C_frame"] is None and entry["L_frame"] == 34
 
 
 def test_sheets_written_for_picked_episodes(tmp_path, capsys):

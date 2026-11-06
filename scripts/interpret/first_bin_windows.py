@@ -5,8 +5,10 @@
 - C：L 之前最后一个 executed_action[7] 由 >0 转 <=0 的行，跨 chunk 也成立；
 - G：C 行的 infer_seq；窗口为 [max(0, G-3) .. G]。
 
-windows.json 里 L、C 和 earlier_closes 的步数都取该行的 env_step_after，
-对应的视频帧号是 env_step_after - 1。普通计算只用标准库，只有拼图才需要 cv2。
+windows.json 里 L、C 和 earlier_closes 的步数都取该行的 env_step_after。
+视频先写 reset 的全部图像（Video 为 D+1 帧，Button 为 1 帧），之后每个动作一帧，
+所以 C_frame、L_frame = exec_start_idx + action_index + 1，与 decision_points.event_video_frames 同口径。
+普通计算只用标准库，只有拼图才需要 cv2。
 """
 from __future__ import annotations
 
@@ -95,6 +97,11 @@ def nearest_bin(row):
     return distances.index(min(distances))
 
 
+def video_frame(row):
+    """该行动作执行后写入视频的帧号；reset 图像占 0..exec_start_idx。"""
+    return row["exec_start_idx"] + row["action_index"] + 1
+
+
 def analyze_episode(terminal, rows, receipt, model, shard):
     """单局标签与窗口；不补点，缺窗口的局只写原因。"""
     task = terminal["task_name"]
@@ -106,7 +113,7 @@ def analyze_episode(terminal, rows, receipt, model, shard):
              "task": task, "episode_id": terminal["episode_id"], "model": model, "shard": shard,
              "label": "no_pick", "picked_bin": None, "first_target_bin": target,
              "window_status": "no_pick", "G": None, "window": [], "C": None, "close_row_in_chunk": None,
-             "L": None, "earlier_closes": [], "nearest_bin_at_C": None, "before_buttons": None,
+             "L": None, "C_frame": None, "L_frame": None, "earlier_closes": [], "nearest_bin_at_C": None, "before_buttons": None,
              "outcome": terminal["outcome"], "difficulty": receipt["difficulty"],
              "swap_times": receipt["swap_times"], "pick_times": receipt["pick_times"],
              "bin_count": len(rows[0]["bins_after"])}
@@ -114,7 +121,8 @@ def analyze_episode(terminal, rows, receipt, model, shard):
     if lift_index is None:
         return entry
     lift_row = rows[lift_index]
-    entry.update(label="correct" if picked == target else "wrong", picked_bin=picked, L=lift_row["env_step_after"])
+    entry.update(label="correct" if picked == target else "wrong", picked_bin=picked, L=lift_row["env_step_after"],
+                 L_frame=video_frame(lift_row))
     if task in BUTTON_TASKS:
         entry["before_buttons"] = lift_row["subgoal_index"] < 2
     closes = [i for i in close_indices(rows) if i < lift_index]
@@ -125,7 +133,7 @@ def analyze_episode(terminal, rows, receipt, model, shard):
     g = close_row["infer_seq"]
     window = list(range(max(0, g - WINDOW_INFERS + 1), g + 1))
     entry.update(window_status="complete" if len(window) == WINDOW_INFERS else "incomplete",
-                 G=g, window=window, C=close_row["env_step_after"],
+                 G=g, window=window, C=close_row["env_step_after"], C_frame=video_frame(close_row),
                  close_row_in_chunk=close_row["row_in_chunk"], nearest_bin_at_C=nearest_bin(close_row),
                  earlier_closes=[{"step": rows[i]["env_step_after"], "nearest_bin": nearest_bin(rows[i])}
                                  for i in closes[:-1] if rows[i]["env_step_after"] >= swap_end])
@@ -203,11 +211,11 @@ def read_frames(video, indices, cv2):
 def episode_tile(entry, trace, cv2, np):
     """一局一个拼块：左 C 帧、右 L 帧；no_close_before_pick 的局左侧留黑。"""
     video = find_video(trace, entry["task"], entry["episode_id"])
-    steps = {name: entry[name] for name in ("C", "L") if entry[name] is not None}
-    frames = read_frames(video, [step - 1 for step in steps.values()], cv2)
+    indices = {name: entry[f"{name}_frame"] for name in ("C", "L") if entry[f"{name}_frame"] is not None}
+    frames = read_frames(video, list(indices.values()), cv2)
     panels = {}
-    for name, step in steps.items():
-        frame = frames[step - 1]
+    for name, index in indices.items():
+        frame = frames[index]
         width = round(frame.shape[1] * TILE_HEIGHT / frame.shape[0])
         panels[name] = cv2.resize(frame, (width, TILE_HEIGHT), interpolation=cv2.INTER_AREA)
     left = panels.get("C", np.zeros_like(panels["L"]))
