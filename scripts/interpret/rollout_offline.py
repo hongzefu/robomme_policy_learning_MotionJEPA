@@ -12,10 +12,14 @@
 任何一步不通过都立刻停止并非零退出。不替换、不遮挡任何输入。JAX 确定性环境变量由外部脚本给。
 只处理 <run-root>/accepted/*.terminal.json 登记过的 nonce；重试或中断留下的旧 nonce 打印 OFFLINE_SKIP 并计数，不处理。
 
+--attention-only（计划 1106-patternlock-routestick-subgoal-attention-plan.html，K6）：只做第 0、1 步和注意力分组，
+同时存动作和文字两类读者的组质量；不算 P、不捕获隐状态、不比较 parity（忽略 --parity），原始注意力矩阵不落盘。
+另有闸门 ATTN_GROUPS（容差 1e-3）：两类读者每层每头在五大组上的质量之和必须为 1，不通过立刻停止并非零退出。
+
 用法：
   python -m scripts.interpret.rollout_offline --attn-root <O>/<模型>/attn --run-root <O>/<模型>/run \
     --output <O>/<模型>/offline --ckpt <dir> --config <配置名> --seed 42 \
-    [--parity all|first] [--query-batch-size 2] [--episodes StopCube:16 ...]
+    [--parity all|first] [--query-batch-size 2] [--episodes StopCube:16 ...] [--attention-only]
 """
 from __future__ import annotations
 
@@ -29,7 +33,8 @@ import uuid
 
 import numpy as np
 
-from scripts.interpret.analysis.offline_mechanism import aggregate_attention, fingerprint, token_groups
+from scripts.interpret.analysis.offline_mechanism import (aggregate_attention, aggregate_text_attention, fingerprint,
+                                                          token_groups)
 from scripts.interpret.offline_query import query_noise, replay_query, sample_predictions, unpack_observation
 
 P_PREDICTIONS = 10
@@ -42,6 +47,13 @@ TOL_GROUP = 0.02          # 五大组单头质量最大绝对差
 TOL_TOTAL = 0.001         # 五大组总质量（跨层头平均）最大绝对差
 TOL_MOTION_REL = 0.1      # motion 组总质量相对差 |on-off|/|off|
 NOTE_GROUP = 0.003        # 汇总时统计单头差超过它的点数，不影响判定
+
+# --attention-only 的产物键（计划第二部分第一节的 npz 契约）与 ATTN_GROUPS 容差（≤ 容差算通过）
+ATTENTION_ONLY_KEYS = frozenset({
+    "group_names", "group_mass_action", "group_mass_text", "group_tokens_all", "episode_key", "infer_seq", "step_idx",
+    "chunk_start_env_step", "same_path_maxabs", "attn_path_maxabs", "input_sha256", "model_id", "frame_times", "motion_times"})
+TOL_REPLAY = 1e-6         # 与 replay_query 的原路径容差相同，续跑时核对已存读数
+TOL_ATTN_SUM = 1e-3
 
 
 def parity_readings(x_on, x_off, attention_on, attention_off, has_motion):
@@ -82,6 +94,21 @@ def merge_parity(total, reading):
         return dict(reading)
     return {name: reading[name] if total[name] is None else
             total[name] if reading[name] is None else max(total[name], reading[name]) for name in total}
+
+
+def attention_sum_error(group_names, *group_masses):
+    """每个读者的质量（组×层×头）在 PARITY_GROUPS 这五个互不相交块上求和，返回与 1 的最大绝对差；NaN 原样传出。"""
+    names = list(group_names)
+    indices = [names.index(name) for name in PARITY_GROUPS]
+    errors = [np.max(np.abs(np.asarray(mass, dtype=np.float64)[indices].sum(axis=0) - 1)) for mass in group_masses]
+    return float(np.max(errors))
+
+
+def require_attn_groups(sum_err, attn_path, path):
+    """超容差就打印 FAIL 并非零退出；NaN 比较结果为假，也算不通过。"""
+    if not sum_err <= TOL_ATTN_SUM:
+        print(f"ATTN_GROUPS=FAIL points=1 sum_err={sum_err:.9g} tol=1e-3 attn_path_maxabs={attn_path:.9g} path={path}", flush=True)
+        raise SystemExit(1)
 
 
 def load_accepted(run_root):
@@ -141,19 +168,82 @@ def build_groups(observation, layout, record, tokens_per_frame):
     return groups, hidden_masks
 
 
-def existing_result(path, input_sha256):
-    """输出已存在时返回其读数；指纹与当前输入不一致就报错，不覆盖。"""
+def existing_result(path, input_sha256, *, attention_only=False):
+    """输出已存在时返回其读数；指纹与当前输入不一致、或产物属于另一种模式就报错，不覆盖。
+
+    attention_only 时键集必须等于契约，并用已存的读数重新核对重放和 ATTN_GROUPS 闸门。
+    """
     if not path.exists():
         return None
     with np.load(path, allow_pickle=False) as archive:
         if str(archive["input_sha256"]) != input_sha256:
             raise SystemExit(f"{path} 的 input_sha256 与当前输入不一致，不覆盖")
+        if attention_only:
+            if set(archive.files) != ATTENTION_ONLY_KEYS:
+                raise SystemExit(f"{path} 不是 --attention-only 的产物，不覆盖")
+            same_path = float(archive["same_path_maxabs"])
+            attn_path = float(archive["attn_path_maxabs"])
+            if not same_path <= TOL_REPLAY:
+                print(f"ROLLOUT_REPLAY=FAIL points=1 same_path_maxabs={same_path:.9g} tol=1e-6 path={path}", flush=True)
+                raise SystemExit(1)
+            sum_err = attention_sum_error(archive["group_names"].tolist(), archive["group_mass_action"], archive["group_mass_text"])
+            require_attn_groups(sum_err, attn_path, path)
+            return {"same_path_maxabs": same_path, "attn_path_maxabs": attn_path, "sum_err": sum_err}
+        if "group_mass" not in archive.files:
+            raise SystemExit(f"{path} 是 --attention-only 的产物，不能当默认产物，不覆盖")
         return {"same_path_maxabs": float(archive["same_path_maxabs"]),
                 "attn_path_maxabs": float(archive["attn_path_maxabs"])}
 
 
-def process_record(policy, adapter, path, output_path, trace, input_sha256, *, seed, query_batch_size, check_parity):
-    """算一份记录并写出；返回读数。parity 为 None 表示本份不比较。"""
+def process_attention_only(policy, adapter, path, output_path, record, row, observation, *, num_steps, same_path, input_sha256):
+    """用记录里的实际噪声走展开路径，只存动作和文字两类读者的组质量；ATTN_GROUPS 不通过时不写产物。"""
+    import jax
+    import jax.numpy as jnp
+
+    layout = adapter.layout(observation)
+    tokens_per_frame = int(policy.config.token_per_image) * int(policy.config.num_views)
+    groups, _ = build_groups(observation, layout, record, tokens_per_frame)
+    output = adapter.run(jnp.asarray(record["sample_rng"], dtype=jnp.uint32), observation, noise=jnp.asarray(record["noise"]),
+                         num_steps=num_steps, out_f16=False, capture_hidden=False, group_masks=None)
+    x_0, probs_action, probs_text = jax.device_get(output[:3])
+    attn_path = float(np.max(np.abs(np.asarray(x_0) - record["actions_normalized"])))
+    if not np.isfinite(attn_path):
+        raise ValueError(f"{path}：展开路径动作含非有限值")
+
+    action = aggregate_attention(probs_action, groups)
+    text = aggregate_text_attention(probs_text, groups, observation.tokenized_prompt_mask)
+    names = list(action)
+    mass_action = np.asarray([action[name]["mass"] for name in names], dtype=np.float32)
+    mass_text = np.asarray([text[name]["mass"] for name in names], dtype=np.float32)
+    sum_err = attention_sum_error(names, mass_action, mass_text)
+    require_attn_groups(sum_err, attn_path, path)
+
+    result = dict(
+        group_names=np.asarray(names),
+        group_mass_action=mass_action,
+        group_mass_text=mass_text,
+        group_tokens_all=np.asarray([action[name]["tokens"] for name in names], dtype=np.int64),
+        episode_key=np.str_(row["episode_key"]),
+        infer_seq=np.int64(record["infer_seq"]),
+        step_idx=np.int64(record["step_idx"]),
+        chunk_start_env_step=np.int64(row["chunk_start_env_step"]),
+        same_path_maxabs=np.float64(same_path),
+        attn_path_maxabs=np.float64(attn_path),
+        input_sha256=np.str_(input_sha256),
+        model_id=np.str_(str(record["model_id"])),
+        frame_times=record["frame_times"],
+        motion_times=record["motion_times"],
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = output_path.parent / f".{output_path.stem}.{uuid.uuid4().hex}.tmp.npz"
+    np.savez(temporary, **result)
+    os.replace(temporary, output_path)
+    return {"same_path_maxabs": same_path, "attn_path_maxabs": attn_path, "sum_err": sum_err, "parity": None}
+
+
+def process_record(policy, adapter, path, output_path, trace, input_sha256, *, seed, query_batch_size, check_parity,
+                   attention_only=False):
+    """算一份记录并写出；返回读数。parity 为 None 表示本份不比较。attention_only 时只用实际噪声算注意力，seed 等参数不起作用。"""
     import jax
     import jax.numpy as jnp
     from mme_vla_suite.models.integration.history_observation import HistAugObservation
@@ -164,9 +254,10 @@ def process_record(policy, adapter, path, output_path, trace, input_sha256, *, s
     row = trace.get(infer_seq)
     if row is None:
         raise SystemExit(f"{path}：轨迹里没有 infer_seq={infer_seq} 的 row_in_chunk==0 行")
-    raw_state = np.asarray(row["state_before"], dtype=np.float32)
-    if raw_state.shape != (8,):
-        raise SystemExit(f"{path}：state_before 形状 {raw_state.shape} 不是 (8,)")
+    if not attention_only:
+        raw_state = np.asarray(row["state_before"], dtype=np.float32)
+        if raw_state.shape != (8,):
+            raise SystemExit(f"{path}：state_before 形状 {raw_state.shape} 不是 (8,)")
 
     replay = replay_query(policy, path)
     same_path = float(replay["same_path_maxabs"])
@@ -179,6 +270,9 @@ def process_record(policy, adapter, path, output_path, trace, input_sha256, *, s
     if set(kwargs) - {"num_steps"}:
         raise ValueError(f"适配器不支持原采样参数：{sorted(kwargs)}")
     num_steps = int(kwargs.get("num_steps", 10))
+    if attention_only:
+        return process_attention_only(policy, adapter, path, output_path, record, row, observation, num_steps=num_steps,
+                                      same_path=same_path, input_sha256=input_sha256)
 
     noise = query_noise(seed, row["episode_key"], infer_seq, P_PREDICTIONS,
                         int(policy._model.action_horizon), int(policy._model.action_dim))
@@ -246,7 +340,7 @@ def run(policy, adapter, args):
     accepted = load_accepted(args.run_root)
     seen = set()
     written = skipped = skipped_nonce = parity_points = parity_notes = 0
-    same_path_max = attn_path_max = 0.0
+    same_path_max = attn_path_max = sum_err_max = 0.0
     parity_max = None
     for directory in sorted(path for path in Path(args.attn_root).iterdir() if path.is_dir()):
         paths = sorted(directory.glob("rollout_*.npz"))
@@ -268,13 +362,14 @@ def run(policy, adapter, args):
             seq = re.fullmatch(r"rollout_(\d+)\.npz", path.name).group(1)
             output_path = Path(args.output) / nonce / f"offline_{seq}.npz"
             input_sha256 = fingerprint(path)["sha256"]
-            item = existing_result(output_path, input_sha256)
+            item = existing_result(output_path, input_sha256, attention_only=args.attention_only)
             if item is not None:
                 episode_skipped += 1
             else:
                 item = process_record(policy, adapter, path, output_path, trace, input_sha256, seed=args.seed,
                                       query_batch_size=args.query_batch_size,
-                                      check_parity=args.parity == "all" or index == 0)
+                                      check_parity=args.parity == "all" or index == 0,
+                                      attention_only=args.attention_only)
                 episode_written += 1
                 if item["parity"] is not None:
                     parity_points += 1
@@ -282,6 +377,8 @@ def run(policy, adapter, args):
                     parity_notes += item["parity"]["group_mass_maxabs"] > NOTE_GROUP
             same_path_max = max(same_path_max, item["same_path_maxabs"])
             attn_path_max = max(attn_path_max, item["attn_path_maxabs"])
+            if args.attention_only:
+                sum_err_max = max(sum_err_max, item["sum_err"])
         written += episode_written
         skipped += episode_skipped
         print(f"OFFLINE_EPISODE episode={episode_key} nonce={nonce} records={episode_written} skipped={episode_skipped} "
@@ -290,6 +387,9 @@ def run(policy, adapter, args):
     if missing or not written + skipped:
         raise SystemExit(f"没有可处理的记录或缺少指定的局：records={written + skipped} missing={missing}")
     print(f"ROLLOUT_REPLAY=PASS points={written + skipped} same_path_maxabs={same_path_max:.9g} tol=1e-6", flush=True)
+    if args.attention_only:
+        print(f"ATTN_GROUPS=PASS points={written + skipped} sum_err={sum_err_max:.9g} tol=1e-3 "
+              f"attn_path_maxabs={attn_path_max:.9g}", flush=True)
     if parity_points:
         print(f"HIDDEN_PARITY=PASS points={parity_points} {format_parity(parity_max)} "
               f"tol_x0={TOL_X0} tol_group={TOL_GROUP} tol_total={TOL_TOTAL} tol_motion_rel={TOL_MOTION_REL}", flush=True)
@@ -314,6 +414,7 @@ def main(argv=None):
     parser.add_argument("--parity", choices=("all", "first"), default="first")
     parser.add_argument("--query-batch-size", type=int, default=2)
     parser.add_argument("--episodes", nargs="+")
+    parser.add_argument("--attention-only", action="store_true", help="只算注意力分组：不算 P、不捕获隐状态、忽略 --parity")
     args = parser.parse_args(argv)
     # 同 offline_query.main：离线没有编码请求，不启动 motion sidecar。
     from scripts.interpret.attn_adapter import AttnAdapter, _ZeroMotion, _MV_DIR

@@ -18,6 +18,9 @@ EXPECTED_KEYS = {"group_names", "group_mass", "group_tokens_all", "hidden_prefix
                  "p_actions", "raw_state", "episode_key", "infer_seq", "step_idx", "chunk_start_env_step",
                  "same_path_maxabs", "attn_path_maxabs", "input_sha256", "model_id", "frame_times", "motion_times",
                  "parity_x0_maxabs", "parity_group_mass_maxabs", "parity_group_total_maxabs", "parity_motion_rel_maxabs"}
+ATTENTION_ONLY_KEYS = {"group_names", "group_mass_action", "group_mass_text", "group_tokens_all", "episode_key", "infer_seq",
+                       "step_idx", "chunk_start_env_step", "same_path_maxabs", "attn_path_maxabs", "input_sha256", "model_id",
+                       "frame_times", "motion_times"}
 
 
 def make_observation(motion):
@@ -108,6 +111,32 @@ class FakeAdapter:
         return x_0, probs, text, num_steps, lay, hidden
 
 
+class ValidKeyAdapter(FakeAdapter):
+    """--attention-only 用：两类读者只在有效 key 上均匀分配（和为 1），padding 文字行置 0，同 AttnAdapter。
+
+    action_delta、text_delta 加到第 3 层第 2 头的第 0 个 key 上（文字读者只改有效行），用来造出和不为 1 的情况。
+    """
+
+    def __init__(self, *, action_delta=0.0, text_delta=0.0, **kwargs):
+        super().__init__(**kwargs)
+        self.action_delta, self.text_delta = action_delta, text_delta
+
+    def run(self, rng, observation, **kwargs):
+        x_0, probs, text, *rest = super().run(rng, observation, **kwargs)
+        lay = self.layout(observation)
+        static = np.asarray(observation.static_mask).reshape(-1)
+        motion = np.asarray(observation.motion_mask).reshape(-1) if observation.motion_mask is not None else np.zeros(0, bool)
+        order = np.asarray(observation.mem_order).reshape(-1) if observation.mem_order is not None else np.arange(lay["MEM"])
+        rows = np.asarray(observation.tokenized_prompt_mask).reshape(-1)
+        prefix = np.concatenate([np.concatenate([static, motion])[order], np.ones(lay["IMG"], bool), rows])
+        keys = np.concatenate([prefix, np.ones(20, bool)])
+        probs[...] = keys / keys.sum()
+        probs[:, 3, :, 2, :, 0] += self.action_delta
+        text[:, :, :, rows, :] = prefix / prefix.sum()
+        text[3, :, 2, rows, 0] += self.text_delta
+        return (x_0, probs, text, *rest)
+
+
 def write_episode(root, monkeypatch, *, nonce="ep", key="StopCube:16", motion=False, infers=2, trace=True, terminal=True):
     """真实记录器写 rollout_*.npz，按 stopcube_runner 的字段写轨迹，按 run_local.collect 的文件名写 accepted。"""
     policy = FakePolicy(motion)
@@ -135,7 +164,7 @@ def write_episode(root, monkeypatch, *, nonce="ep", key="StopCube:16", motion=Fa
 
 def arguments(root, **changes):
     values = dict(attn_root=root / "attn", run_root=root / "run", output=root / "offline", seed=42,
-                  parity="first", query_batch_size=2, episodes=None)
+                  parity="first", query_batch_size=2, episodes=None, attention_only=False)
     return SimpleNamespace(**(values | changes))
 
 
@@ -565,6 +594,231 @@ def test_non_finite_attention_path_stops(tmp_path, monkeypatch, capsys):
     with pytest.raises(ValueError, match="非有限"):
         RO.run(policy, FakeAdapter(offset=float("nan")), arguments(tmp_path))
     assert not (tmp_path / "offline" / "ep" / "offline_0000.npz").exists()
+
+
+def attention_only_args(root, **changes):
+    return arguments(root, attention_only=True, **changes)
+
+
+def test_attention_only_skips_p_and_hidden_and_writes_exact_keys(tmp_path, monkeypatch, capsys):
+    policy = write_episode(tmp_path, monkeypatch, infers=2)
+    adapter = ValidKeyAdapter(offset=0.25)
+    policy.sample_batches.clear()
+    assert RO.run(policy, adapter, attention_only_args(tmp_path)) == 0
+    # 每份只有一次重放（batch=1），没有 P 用动作
+    assert policy.sample_batches == [1, 1]
+    assert len(adapter.calls) == 2
+    record = load(tmp_path / "attn" / "ep" / "rollout_0000.npz")
+    first = adapter.calls[0]
+    assert first["capture_hidden"] is False and first["group_masks"] is None
+    assert first["out_f16"] is False and first["num_steps"] == 10
+    np.testing.assert_array_equal(first["noise"], record["noise"])
+
+    directory = tmp_path / "offline" / "ep"
+    assert sorted(path.name for path in directory.iterdir()) == ["offline_0000.npz", "offline_0001.npz"]
+    result = load(directory / "offline_0001.npz")
+    assert set(result) == ATTENTION_ONLY_KEYS
+    assert str(result["episode_key"]) == "StopCube:16" and int(result["infer_seq"]) == 1
+    assert int(result["step_idx"]) == 32 and int(result["chunk_start_env_step"]) == 116
+    assert float(result["same_path_maxabs"]) == 0
+    assert float(result["attn_path_maxabs"]) == pytest.approx(0.25, abs=1e-4)
+    assert str(result["model_id"]) == "/ckpt" and result["frame_times"].tolist() == [0, 4, 8, 32]
+
+    names = result["group_names"].tolist()
+    assert names[:5] == ["motion", "历史视觉", "当前视觉", "文字", "其余"]
+    for key in ("group_mass_action", "group_mass_text"):
+        assert result[key].shape == (len(names), 18, 8) and result[key].dtype == np.float32
+    tokens = dict(zip(names, result["group_tokens_all"].tolist()))
+    # 基线有效 key：帧 3 + 图像 2 + 文字 3 + 动作 20；动作读者分母 28，文字读者分母 8 且读不到动作 key
+    assert tokens["motion"] == 0 and tokens["其余"] == 20
+    for name, action, text in (("motion", 0, 0), ("历史视觉", 3 / 28, 3 / 8), ("当前视觉", 2 / 28, 2 / 8),
+                               ("文字", 3 / 28, 3 / 8), ("其余", 20 / 28, 0)):
+        np.testing.assert_allclose(result["group_mass_action"][names.index(name)], action, atol=1e-6)
+        np.testing.assert_allclose(result["group_mass_text"][names.index(name)], text, atol=1e-6)
+
+    output = capsys.readouterr().out
+    assert "ROLLOUT_REPLAY=PASS points=2 same_path_maxabs=0 tol=1e-6" in output
+    values = parity_values(parity_line(output, "ATTN_GROUPS=PASS"))
+    assert values["points"] == "2" and values["tol"] == "1e-3"
+    assert float(values["sum_err"]) < 1e-5 and float(values["attn_path_maxabs"]) == pytest.approx(0.25, abs=1e-4)
+    assert "OFFLINE_RUN=PASS records=2 skipped=0 skipped_nonce=0" in output
+
+
+@pytest.mark.parametrize("parity", ["first", "all"])
+def test_attention_only_ignores_parity(tmp_path, monkeypatch, capsys, parity):
+    policy = write_episode(tmp_path, monkeypatch, infers=2)
+    adapter = ValidKeyAdapter()
+    assert RO.run(policy, adapter, attention_only_args(tmp_path, parity=parity)) == 0
+    output = capsys.readouterr().out
+    assert len(adapter.calls) == 2                # 每份只运行一次，没有捕获开和关的对比
+    assert "HIDDEN_PARITY=SKIPPED points=0" in output and "HIDDEN_PARITY=PASS" not in output
+    assert "HIDDEN_PARITY_NOTE" not in output
+
+
+def test_attention_only_motion_model_aligns_both_readers_by_group_name(tmp_path, monkeypatch, capsys):
+    policy = write_episode(tmp_path, monkeypatch, motion=True, infers=1)
+    assert RO.run(policy, ValidKeyAdapter(), attention_only_args(tmp_path)) == 0
+    result = load(tmp_path / "offline" / "ep" / "offline_0000.npz")
+    names = result["group_names"].tolist()
+    tokens = dict(zip(names, result["group_tokens_all"].tolist()))
+    assert tokens["motion"] == 6 and tokens["motion窗:4"] == 4 and tokens["motion窗:8"] == 2
+    # 有效前缀：motion 6 + 帧 3 + 图像 2 + 文字 3 = 14
+    for name, count in (("motion", 6), ("motion窗:4", 4), ("motion窗:8", 2), ("历史视觉", 3)):
+        np.testing.assert_allclose(result["group_mass_text"][names.index(name)], count / 14, atol=1e-6)
+        np.testing.assert_allclose(result["group_mass_action"][names.index(name)], count / 34, atol=1e-6)
+    assert float(parity_values(parity_line(capsys.readouterr().out, "ATTN_GROUPS=PASS"))["sum_err"]) < 1e-5
+
+
+@pytest.mark.parametrize("reader", ["action_delta", "text_delta"])
+def test_attn_groups_over_tolerance_stops_before_writing(tmp_path, monkeypatch, capsys, reader):
+    policy = write_episode(tmp_path, monkeypatch, infers=1)
+    with pytest.raises(SystemExit) as stopped:
+        RO.run(policy, ValidKeyAdapter(**{reader: 0.002}), attention_only_args(tmp_path))
+    assert stopped.value.code == 1
+    output = capsys.readouterr().out
+    values = parity_values(parity_line(output, "ATTN_GROUPS=FAIL"))
+    assert values["points"] == "1" and values["tol"] == "1e-3" and values["path"].endswith("rollout_0000.npz")
+    assert float(values["sum_err"]) == pytest.approx(0.002, abs=1e-5)
+    assert "ATTN_GROUPS=PASS" not in output and "OFFLINE_RUN=PASS" not in output
+    assert not (tmp_path / "offline" / "ep" / "offline_0000.npz").exists()
+
+
+@pytest.mark.parametrize("reader", ["action_delta", "text_delta"])
+def test_attn_groups_within_tolerance_passes_with_measured_value(tmp_path, monkeypatch, capsys, reader):
+    policy = write_episode(tmp_path, monkeypatch, infers=1)
+    assert RO.run(policy, ValidKeyAdapter(**{reader: 5e-4}), attention_only_args(tmp_path)) == 0
+    values = parity_values(parity_line(capsys.readouterr().out, "ATTN_GROUPS=PASS"))
+    assert float(values["sum_err"]) == pytest.approx(5e-4, abs=1e-5)
+
+
+def test_attn_groups_non_finite_fails():
+    names = list(RO.PARITY_GROUPS)
+    mass = np.full((5, 18, 8), 0.2)
+    assert RO.attention_sum_error(names, mass, mass) == pytest.approx(0)
+    mass[0, 0, 0] = np.nan
+    good = np.full((5, 18, 8), 0.2)
+    with pytest.raises(SystemExit):
+        RO.require_attn_groups(RO.attention_sum_error(names, good, mass), 0.0, "x")
+
+
+def test_attention_only_replay_fail_stops_before_adapter(tmp_path, monkeypatch, capsys):
+    policy = write_episode(tmp_path, monkeypatch, infers=1)
+    path = tmp_path / "attn" / "ep" / "rollout_0000.npz"
+    damaged = load(path)
+    damaged["noise"] = damaged["noise"] + 0.01
+    np.savez(path, **damaged)
+    adapter = ValidKeyAdapter()
+    with pytest.raises(SystemExit) as stopped:
+        RO.run(policy, adapter, attention_only_args(tmp_path))
+    assert stopped.value.code == 1
+    assert "ROLLOUT_REPLAY=FAIL" in capsys.readouterr().out
+    assert adapter.calls == [] and not (tmp_path / "offline").exists()
+
+
+def test_attention_only_non_finite_path_stops(tmp_path, monkeypatch, capsys):
+    policy = write_episode(tmp_path, monkeypatch, infers=1)
+    with pytest.raises(ValueError, match="非有限"):
+        RO.run(policy, ValidKeyAdapter(offset=float("nan")), attention_only_args(tmp_path))
+    assert not (tmp_path / "offline" / "ep" / "offline_0000.npz").exists()
+
+
+def test_attention_only_does_not_need_raw_state(tmp_path, monkeypatch, capsys):
+    policy = write_episode(tmp_path, monkeypatch, infers=1)
+    path = next((tmp_path / "run").rglob("step_trace.jsonl"))
+    rows = [json.loads(line) for line in path.read_text().splitlines()]
+    for row in rows:
+        row.pop("state_before", None)
+    path.write_text("".join(json.dumps(row) + "\n" for row in rows))
+    assert RO.run(policy, ValidKeyAdapter(), attention_only_args(tmp_path)) == 0
+
+
+def test_attention_only_resume_skips_after_checking_and_rejects_changed_input(tmp_path, monkeypatch, capsys):
+    policy = write_episode(tmp_path, monkeypatch)
+    args = attention_only_args(tmp_path)
+    RO.run(policy, ValidKeyAdapter(offset=0.5, action_delta=5e-4), args)
+    capsys.readouterr()
+    output = tmp_path / "offline" / "ep" / "offline_0000.npz"
+    before = output.read_bytes()
+    adapter = ValidKeyAdapter()
+    assert RO.run(policy, adapter, args) == 0
+    text = capsys.readouterr().out
+    # 跳过的记录仍计入全局最大值和 ATTN_GROUPS 点数
+    assert "OFFLINE_RUN=PASS records=0 skipped=2 skipped_nonce=0 attn_path_maxabs=0.5" in text
+    values = parity_values(parity_line(text, "ATTN_GROUPS=PASS"))
+    assert values["points"] == "2" and float(values["sum_err"]) == pytest.approx(5e-4, abs=1e-5)
+    assert adapter.calls == [] and output.read_bytes() == before
+    path = tmp_path / "attn" / "ep" / "rollout_0000.npz"
+    path.write_bytes(path.read_bytes() + b"\0")
+    with pytest.raises(SystemExit, match="input_sha256"):
+        RO.run(policy, adapter, args)
+    assert output.read_bytes() == before
+
+
+@pytest.mark.parametrize("change, line", [
+    (lambda stored: stored["group_mass_text"].__setitem__((3, 0, 0), stored["group_mass_text"][3, 0, 0] + 0.01), "ATTN_GROUPS=FAIL"),
+    (lambda stored: stored.__setitem__("same_path_maxabs", np.float64(1e-3)), "ROLLOUT_REPLAY=FAIL")])
+def test_attention_only_resume_rechecks_saved_readings(tmp_path, monkeypatch, capsys, change, line):
+    policy = write_episode(tmp_path, monkeypatch, infers=1)
+    RO.run(policy, ValidKeyAdapter(), attention_only_args(tmp_path))
+    output = tmp_path / "offline" / "ep" / "offline_0000.npz"
+    stored = load(output)
+    change(stored)
+    np.savez(output, **stored)
+    capsys.readouterr()
+    with pytest.raises(SystemExit) as stopped:
+        RO.run(policy, ValidKeyAdapter(), attention_only_args(tmp_path))
+    assert stopped.value.code == 1
+    assert line in capsys.readouterr().out
+
+
+def test_output_of_other_mode_is_not_reused(tmp_path, monkeypatch, capsys):
+    policy = write_episode(tmp_path, monkeypatch, infers=1)
+    output = tmp_path / "offline" / "ep" / "offline_0000.npz"
+    RO.run(policy, FakeAdapter(), arguments(tmp_path))
+    before = output.read_bytes()
+    with pytest.raises(SystemExit, match="不是 --attention-only"):
+        RO.run(policy, ValidKeyAdapter(), attention_only_args(tmp_path))
+    assert output.read_bytes() == before
+    output.unlink()
+    RO.run(policy, ValidKeyAdapter(), attention_only_args(tmp_path))
+    before = output.read_bytes()
+    with pytest.raises(SystemExit, match="不能当默认产物"):
+        RO.run(policy, FakeAdapter(), arguments(tmp_path))
+    assert output.read_bytes() == before
+
+
+def test_default_mode_has_no_attention_only_output(tmp_path, monkeypatch, capsys):
+    policy = write_episode(tmp_path, monkeypatch, infers=1)
+    assert RO.run(policy, FakeAdapter(), arguments(tmp_path)) == 0
+    assert "ATTN_GROUPS" not in capsys.readouterr().out
+    assert set(load(tmp_path / "offline" / "ep" / "offline_0000.npz")) == EXPECTED_KEYS
+
+
+def run_main(root, monkeypatch, policy, adapter, *extra):
+    """走 main 的命令行解析；模型加载换成现成的假对象，不加载权重。"""
+    from mme_vla_suite.training import config
+    from scripts.interpret import attn_adapter
+    import mv_model_adapter      # attn_adapter 导入时才把它的目录加进 sys.path
+
+    monkeypatch.setattr(attn_adapter, "AttnAdapter", lambda _: adapter)
+    monkeypatch.setattr(mv_model_adapter, "build_policy", lambda *args, **kwargs: policy)
+    monkeypatch.setattr(config, "get_config", lambda name: None)
+    return RO.main(["--attn-root", str(root / "attn"), "--run-root", str(root / "run"), "--output", str(root / "offline"),
+                    "--ckpt", str(root / "ckpt"), "--config", "假配置", *extra])
+
+
+def test_main_attention_only_flag(tmp_path, monkeypatch, capsys):
+    policy = write_episode(tmp_path, monkeypatch, infers=1)
+    adapter = ValidKeyAdapter()
+    assert run_main(tmp_path, monkeypatch, policy, adapter, "--attention-only", "--parity", "all") == 0
+    assert len(adapter.calls) == 1 and adapter.calls[0]["capture_hidden"] is False
+    assert set(load(tmp_path / "offline" / "ep" / "offline_0000.npz")) == ATTENTION_ONLY_KEYS
+
+
+def test_main_default_keeps_full_output(tmp_path, monkeypatch, capsys):
+    policy = write_episode(tmp_path, monkeypatch, infers=1)
+    assert run_main(tmp_path, monkeypatch, policy, FakeAdapter()) == 0
+    assert set(load(tmp_path / "offline" / "ep" / "offline_0000.npz")) == EXPECTED_KEYS
 
 
 @pytest.fixture(scope="module", autouse=True)

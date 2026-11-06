@@ -190,6 +190,34 @@ def aggregate_attention(probabilities, groups):
     return result
 
 
+def aggregate_text_attention(probs_text, groups, text_valid):
+    """文字读者的组质量：保留层、头，在有效文字行上平均；结构同 aggregate_attention。
+
+    probs_text 形状为 层×1×头×TXT×P，第 i 行是 tokenized_prompt 第 i 位（attn_adapter 按 [MEM+IMG:P] 切行，padding 行已置 0），
+    text_valid 取 observation.tokenized_prompt_mask，padding 行不进分母。key 只有前缀 P 个；分组 mask 长 P+20，切到前 P 位后累加。
+    """
+    values = np.asarray(probs_text, dtype=np.float64)
+    if values.ndim != 5 or values.shape[1] != 1 or not np.isfinite(values).all():
+        raise ValueError("文字注意力应为层×1×头×文字×key且有限")
+    valid = np.asarray(text_valid).reshape(-1).astype(bool)
+    if valid.size != values.shape[3]:
+        raise ValueError("有效文字mask与文字行数不符")
+    if not valid.any():
+        raise ValueError("没有有效文字行")
+    key_mean = values[:, 0][:, :, valid].mean(axis=2)
+    keys = values.shape[-1]
+    result = {}
+    for name, mask in groups.items():
+        if len(mask) != keys + 20:
+            raise ValueError("token分组与文字注意力key长度不符")
+        prefix = np.asarray(mask, bool)[:keys]
+        count = int(prefix.sum())
+        mass = key_mean[..., prefix].sum(-1)
+        result[name] = {"tokens": count, "mass": mass.tolist(),
+                        "per_token": (mass / count).tolist() if count else None}
+    return result
+
+
 def analyze_input(policy, adapter, item, entry):
     import jax
     import jax.numpy as jnp
