@@ -104,6 +104,52 @@
 - **motion 读交换按层不同：** Button 最高在 `L17`（1.15%，均匀 0.89%），区间很宽，主要来自 160 窗；Video 最高在 `L13`（0.32%，均匀 0.17%），交换 1 次的局主要来自 96 窗。
 - **这些是事后挑选的头和层，没有校正多重比较。**
 
+### 当前帧有没有融合历史、谁重点读哪段（探索性）
+
+用户原话（美东 2026-11-06）：「有没有把在当前帧的这些地方它有没有 fuse……别的这个之前历史帧的这个信息，或者是之前的这个 motion 的信息。」「你就分析 SWOP 任务它的这个注意力结构，它这个文字和当前的图像，以及动作 token，它都读了哪些的这个历史帧和 motion 的信息……重点读了哪些部分」
+
+结构来自 `history_pi0.make_attn_mask` 与 `embed_prefix`，实测来自已保存的 `prefix_*.npz`、`infer_*.npz`，没有重跑模型。脚本 [analyze_current_frame_fusion.py](records/analyze_current_frame_fusion.py)、[analyze_read_targets.py](records/analyze_read_targets.py)、[plot_read_targets.py](records/plot_read_targets.py)，数值 [current-frame-fusion.json](records/current-frame-fusion.json)、[read-targets.json](records/read-targets.json)。判定行 `CURRENT_FUSION=PASS episodes=199 image_to_memory_max_pct=0.000e+00`、`READ_TARGETS=PASS episodes=199`；tmux `sfb-fusion`、`sfb-readtargets`。
+
+| 谁来读 | 历史帧、motion | 当前图像 | 文字 | 动作 token |
+| --- | --- | --- | --- | --- |
+| 历史帧、motion | 能 | 不能 | 不能 | 不能 |
+| 当前图像 | 不能（实测 0） | 能 | 能 | 不能 |
+| 文字 | 能 | 能 | 能 | 不能 |
+| 动作 token | 能 | 能 | 能 | 能 |
+
+![融合流量](records/fig_fusion_flow.png)
+
+当前图像不会直接融合历史，只能走“记忆 → 文字 → 图像”。motion 模型的文字在第 0 层读历史帧 26%、读 motion 24%～33%，第 1 层读 motion 33%～56%，第 2 层起两者都接近 0。图像读文字在第 14～16 层升到约 60%～83%。基线的文字在第 0 层读历史帧约 70%，第 1 层起就很少。
+
+下表是读这一流的总量里各段的占比，全部层合并，括号是均匀水平。图像是两跳估计，只考虑注意力，忽略 MLP 和残差。
+
+![重点读哪段](records/fig_read_targets_share.png)
+
+![逐层读取](records/fig_read_targets_layers.png)
+
+| 模型 · 任务 | 谁读 | 哪一流 | 开局 | 盖住 | 交换 | 其后 |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| motion · Button | 文字 | 帧 | 32%（11） | 5%（10） | 10%（27） | 54%（51） |
+| motion · Button | 文字 | motion | 0%（11） | 10%（11） | 26%（36） | 64%（42） |
+| motion · Button | 图像两跳 | 帧 | 6% | 1% | 3% | 90% |
+| motion · Button | 图像两跳 | motion | 0% | 9% | 26% | 64% |
+| motion · Button | 动作 | 帧 | 15% | 10% | 24% | 51% |
+| motion · Button | 动作 | motion | 4% | 7% | 36% | 52% |
+| motion · Video | 文字 | 帧 | 32%（17） | 7%（16） | 19%（36） | 43%（31） |
+| motion · Video | 文字 | motion | 1%（16） | 5%（16） | 40%（43） | 55%（26） |
+| motion · Video | 图像两跳 | 帧 | 8% | 2% | 5% | 85% |
+| motion · Video | 图像两跳 | motion | 1% | 4% | 38% | 57% |
+| motion · Video | 动作 | 帧 | 26% | 14% | 30% | 30% |
+| motion · Video | 动作 | motion | 26% | 12% | 35% | 27% |
+| 基线 · Button | 文字 / 图像两跳 / 动作 | 帧 | 6% / 1% / 7%（12） | 1% / 1% / 6%（11） | 18% / 7% / 19%（28） | 75% / 91% / 68%（49） |
+| 基线 · Video | 文字 / 图像两跳 / 动作 | 帧 | 8% / 2% / 14%（18） | 5% / 2% / 11%（17） | 39% / 15% / 26%（38） | 48% / 81% / 49%（27） |
+
+- **文字读开局帧是 motion 模型才明显：** 第 0 层 motion 模型 Button 11.9%、Video 10.8%，基线 Button 0.0%、Video 0.4%。
+- **文字几乎不读开局 motion 窗：** 占读 motion 总量的 0%～1%。动作 token 在 Video 上才明显读它（26%）。
+- **图像经文字拿到的主要是交换之后的内容：** 帧 85%～91%。这是估计，没有验证流量。
+- **交换段：** 三类读取在帧流和 motion 流上都不超过均匀，只有 Button 动作读 motion 约等于均匀（36%）。
+- **限制：** 两跳估计是 attention-only；注意力不等于因果；StopCube 只有 4 份 prefix，这些数字来自 Swap，结构相同但流量未在 StopCube 上测。
+
 ### 峰值换任务后变了（探索性）
 
 这部分是在全部 144 个头里事后挑最大值，没有校正。
