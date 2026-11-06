@@ -351,6 +351,32 @@ tmux new-session -d -s sfb-analysis "bash $O/run_analysis.sh"</pre>
 <tr><td>主会话操作失误</td><td>杀掉第一次冒烟的 tmux 后，基线策略服务成了孤儿并占 18 GB，导致 GPU0 冒烟 SAPIEN 显存不足。按精确 PID 结束后重跑；此后停任务要先核对子进程</td></tr>
 <tr><td>W2 合并前审查：F9 的帧号写法有误</td><td><code>env_step_after − 1</code> → <code>exec_start_idx + action_index + 1</code>，只影响拼图目视</td></tr>
 </table></div>
+<h1>附：motion 替换实验（第二阶段）</h1>
+<div class="note"><b>授权：</b>用户 2026-11-06 美东原话：「做完了之后，可以尝试像上一次一样，就是做一些 masking 和替换的工作，看看它的成功率会不会有变化。就是利用好这个时间，我一直到早上六点才六点六点到八点才会回复，所以你尽可能多做一些实验……注意一下，尽可能不要出现 out of distribution……emotion token 滞空这种都是不可以接受的，或者去掉 motion token 这种都是不可以接受的，只能接受把 motion token 换成别的相邻的 token 这种形式。」<br><b>规模：</b>只跑 motion 模型（基线没有 motion token），两任务各 50 局，同样按奇偶分卡。正常失败不重试。</div>
+<h2>条件</h2>
+<div class="tbl"><table>
+<tr><th>编号</th><th>条件</th><th>怎么替换</th><th>回答什么</th><th>顺序</th></tr>
+<tr><td>E0</td><td>正常对照</td><td>不替换，走注意力展开路径（<code>ablate=none</code>）</td><td>替换实验和这条路径比，排除路径差异</td><td>1</td></tr>
+<tr><td>E1</td><td>换成相邻局</td><td>全部窗口换成下一个同交换次数、同 bin 数的局的同起点窗口（现有 <code>motion_swap</code>）</td><td>模型靠不靠本局 motion 内容</td><td>2</td></tr>
+<tr><td>E2</td><td>只换交换段窗口</td><td>只替换与交换区间有重叠的窗口，供体同 E1，其余窗口保留本局原值（新增 <code>motion_swap_exact</code>）</td><td>本局交换信息是否起作用</td><td>3</td></tr>
+<tr><td>E3</td><td>换成同局相邻窗口</td><td>每个窗口换成本局上一个窗口的真实编码，第一个保留（新增 <code>motion_shift</code>）</td><td>motion 的时间位置是否重要</td><td>4</td></tr>
+<tr><td>E4</td><td>遮注意力头（时间够才做）</td><td><code>heads:L3H0,L16H0</code>，模型内部干预，输入不变</td><td>上一轮候选头是否必要</td><td>5</td></tr>
+</table></div>
+<p><b>明确不做：</b>motion 置零、遮挡或去掉 motion token（用户禁止）；遮挡帧 key（输入缺失，同样有超出分布风险）。上一轮 <code>motion_zero</code>、<code>mask_motion</code> 的结果不再引用为本轮依据。</p>
+<h2>供体</h2>
+<p>供体从本轮正式 motion rollout 的最后一次推理提取（<code>motion_emb</code> 与 <code>motion_times</code>），写成 <code>&lt;task&gt;_ep&lt;id&gt;.npz</code>。限定同交换次数，因为 Video 的执行段窗口起点是 <code>D+32u</code>，<code>D</code> 由交换次数决定，这样同起点窗口才有意义。派生脚本放 <code>docs/evaluation-doc/swap-first-bin-attn-seed42-1105/records/</code>，先核对提取值与客户端原编码逐值相等。</p>
+<h2>读数与判定</h2>
+<p>每个条件与 E0 按局配对，只比 motion 模型自己。主读数：官方成功率差、第一个 bin 选对率差，分任务报告；局级重采样 2000 次（种子 42）给区间，配对符号检验给 p 值，多个条件未校正，都按线索读。判定行 <code>SWAP_EXP=PASS cond=&lt;名&gt; episodes=100 infra_errors=&lt;n&gt; replaced=&lt;n&gt;</code>。E1～E3 必须核对 <code>motion_content</code> 确实替换过，E0 替换数必须为 0。</p>
+<h2>实施与资源</h2>
+<div class="tbl"><table>
+<tr><th>项目</th><th>内容</th></tr>
+<tr><td>W5（<code>opus</code>，独立 worktree）</td><td>可写 <code>serve_policy_attn.py</code>、<code>run_local.py</code>、<code>test_motion_swap_modes.py</code>（新）；只加两个模式，<code>none</code>、<code>motion_swap</code> 行为逐字不变；不碰模型</td></tr>
+<tr><td>运行</td><td>注意力分析的 GPU 部分结束后，按 E0→E4 依次起跑，tmux 前缀 <code>sfb-e&lt;n&gt;-</code>；每条件一次占两卡；每局单独重启服务（swap 既有约束），E1～E3 每条件预计 1.2～1.5 小时</td></tr>
+<tr><td>存储</td><td>不存 prefix，约 84 MiB/次，每条件约 210 GiB（失败局跑满时更多）；累计超过 1.5 TiB 就停止起新条件</td></tr>
+<tr><td>时间</td><td>美东 07:30 不再起新条件，已起的跑完；优先保证条件完整，不做半套</td></tr>
+<tr><td>冒烟</td><td>每个新模式先跑 1 局，核对 <code>replace_log</code> 和判定行</td></tr>
+</table></div>
+<p>不新增长期代码以外的机制；OOM 按实施中调整的避让口径换卡补跑。结果写入同一 <code>result.md</code>。</p>
 </main>
 </body>
 </html>
