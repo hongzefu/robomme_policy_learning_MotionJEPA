@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 """论文用四张英文图（StopCube rollout 线性探针，预测「到正确窗口还有几步」）。
 
-fig-r2-layers-baseline / fig-r2-layers-motion：逐层 R²（单分面，单栏尺寸）。
-fig-r2-fit：第 17 层两模型叠画的拟合直线对比（2×3，双栏尺寸）。
-fig-point-accuracy：逐点准确率逐层图（2×2，双栏尺寸）。
+fig-r2-layers-baseline / fig-r2-layers-motion：逐层 R²（单分面，单栏尺寸；参考线只留 Time only 与 R²=0）。
+fig-r2-fit：第 17 层五组 × 两模型的拟合直线整合在一个坐标轴里（不画散点），右侧文字表列 R² 与 slope。
+fig-point-accuracy：逐点准确率逐层图（2×2，双栏尺寸，无参考线）。
+四张图都不含 "Time + target count"。
 每张同时输出 PDF（fonttype 42）与 PNG（dpi 300）。只读数据，只写本目录。
 数据键沿用同仓库 records/diagnostics/plot_q4_compare.py 与 plot_r2_complete.py。
 """
@@ -70,11 +71,10 @@ GROUPS = [
     ("Motion",         "#e87ba4", 1.1, "motion"),
 ]
 GROUP_COLOR = {g: c for g, c, _, _ in GROUPS}
-TIME_N_NAME = "Time + target count"
 TIME_NAME = "Time only"
 MODELS = [("ctx", "Baseline"), ("mot", "Motion model")]
-# 图 3 两模型的颜色与标记（与五组配色错开）
-MODEL_STYLE = {"ctx": ("#5a5a5a", "o"), "mot": ("#8e44ad", "^")}
+# 图 3 线型按模型：Motion model 实线、Baseline 虚线
+MODEL_LS = {"ctx": (0, (4.5, 2.2)), "mot": "-"}
 
 
 def load_json(path):
@@ -169,18 +169,15 @@ def series_r2(L, key):
 
 def fig_r2_layers(p, fit, m, m_name, out_stem):
     L = p["models"][m]["labels"][LAB]
-    tb_n = L["time_baseline"]["r2"]          # Time + target count
     tb_t = fit[m][LAB]["time"]["r2"]          # Time only
-    assert abs(tb_n - fit[m][LAB]["time_N"]["r2"]) < 1e-9
     n_ep = L["n_episodes"]
 
     fig, ax = plt.subplots(figsize=(3.5, 2.8))
     style_axes(ax)
     hline(ax, 0, color=ZERO, lw=0.7, zorder=1)
-    hline(ax, tb_n, color=INK, lw=1.4, ls=(0, (5, 2.5)), zorder=2)
     hline(ax, tb_t, color=INK, lw=0.8, ls=(0, (1.2, 2.0)), zorder=2)
 
-    ends = [(TIME_N_NAME, tb_n, INK, False), (TIME_NAME, tb_t, INK, False)]
+    ends = [(TIME_NAME, tb_t, INK, False)]
     r2_at_17 = {}
     for name, color, lw, key in GROUPS:
         sv = series_r2(L, key)
@@ -204,11 +201,11 @@ def fig_r2_layers(p, fit, m, m_name, out_stem):
     ax.set_title(f"{m_name} ({n_ep} episodes)", loc="left", fontweight="bold", pad=4)
     fig.tight_layout(pad=0.3)
     save(fig, out_stem)
-    return r2_at_17, tb_n, tb_t
+    return r2_at_17, tb_t
 
 
 # =====================================================================
-# 图 3：第 17 层拟合直线，两模型叠画
+# 图 3：第 17 层拟合直线，五组 × 两模型整合在一个坐标轴
 # =====================================================================
 PANELS = [
     ("Action token", "action"),
@@ -216,7 +213,6 @@ PANELS = [
     ("Current frame", "当前视觉"),
     ("History frames", "历史视觉"),
     ("Motion", "motion"),
-    (TIME_N_NAME, "time_N"),
 ]
 
 
@@ -232,86 +228,127 @@ def wls_line(x, yhat, groups):
 
 
 def fig_r2_fit(fit, npz, out_stem):
-    table = []
-    data, vals = {}, []
-    for m, _ in MODELS:
+    """单坐标轴：9 条拟合直线（每局等权 WLS），右侧文字表列 R²（fit-summary）与 slope（现算）。"""
+    # ---- 先算所有直线 ----
+    table = []                      # (组名, 模型名, R², slope, n points)
+    segs = []                       # (组名, 模型键, x0, x1, 截距, 斜率)
+    counts = {}                     # 模型键 → (局数, 点数)，从 npz 现数
+    for m, m_name in MODELS:
         y = npz[f"{m}/{LAB}/y"].astype(float)
         g = npz[f"{m}/{LAB}/groups"]
-        data[m] = (y, g)
-        vals.append(y)
-        for _, key in PANELS:
-            k = f"{m}/{LAB}/{key}"
-            if k in npz.files:
-                v = npz[k].astype(float)
-                vals.append(v[np.isfinite(v)])
-    allv = np.concatenate(vals)
-    lo, hi = allv.min(), allv.max()
-    pad = (hi - lo) * 0.04
-    lim = (lo - pad, hi + pad)
-
-    fig, axes = plt.subplots(2, 3, figsize=(7.2, 5.8))
-    fig.subplots_adjust(left=0.075, right=0.985, top=0.845, bottom=0.075,
-                        hspace=0.52, wspace=0.12)
-    for idx, (name, key) in enumerate(PANELS):
-        ax = axes[idx // 3][idx % 3]
-        ax.set_facecolor("white")
-        ax.set_xlim(*lim)
-        ax.set_ylim(*lim)
-        ax.set_aspect("equal", adjustable="box")
-        ax.set_anchor("N")
-        ax.grid(color=GRID, lw=0.5, zorder=0)
-        for s in ("top", "right"):
-            ax.spines[s].set_visible(False)
-        for s in ("left", "bottom"):
-            ax.spines[s].set_color(SPINE)
-        ax.tick_params(colors=INK2, labelcolor=INK)
-        ax.plot(lim, lim, color=ZERO, lw=0.7, zorder=1)
-
-        lines = []
-        for m, m_name in MODELS:
+        counts[m] = (len(np.unique(g)), len(y))
+        assert counts[m] == (fit[m][LAB]["n_episodes"], fit[m][LAB]["n_samples"])
+        for name, key in PANELS:
             k = f"{m}/{LAB}/{key}"
             if k not in npz.files:
+                table.append((name, m_name, None, None, 0))
                 continue
-            y, g = data[m]
             pred = npz[k].astype(float)
             ok = np.isfinite(pred) & np.isfinite(y)
             xx, yy, gg = y[ok], pred[ok], g[ok]
-            color, marker = MODEL_STYLE[m]
-            ax.scatter(xx, yy, s=7, marker=marker, color=color, alpha=0.28,
-                       linewidths=0, zorder=2)
             a, b = wls_line(xx, yy, gg)
-            xs = np.array([xx.min(), xx.max()])
-            ax.plot(xs, a + b * xs, color=color, lw=1.8, solid_capstyle="round", zorder=4,
-                    path_effects=[pe.Stroke(linewidth=3.2, foreground="white"), pe.Normal()])
-            r2 = fit[m][LAB][key]["r2"]
-            lines.append((f"{m_name}: R² = {r2:.2f}, slope = {b:.2f}", color))
-            table.append((name, m_name, r2, b, int(ok.sum())))
-        if key == "motion":
-            lines.append(("Baseline: no motion tokens", MUTED))
-            table.append((name, "Baseline", None, None, 0))
-        # 小标题（黑、粗）在最上，其下按模型颜色各写一行统计量，都放在轴外、不压数据
-        ax.set_title(name, fontweight="bold", pad=3 + 9.5 * len(lines))
-        for i, (txt, color) in enumerate(lines):
-            ax.text(0.5, 1.015 + 0.062 * (len(lines) - 1 - i), txt, transform=ax.transAxes,
-                    ha="center", va="bottom", fontsize=7, color=color)
-        if idx // 3 == 1:
-            ax.set_xlabel("True steps to correct window")
-        if idx % 3 == 0:
-            ax.set_ylabel("Predicted steps")
+            segs.append((name, m, xx.min(), xx.max(), a, b))
+            table.append((name, m_name, fit[m][LAB][key]["r2"], b, int(ok.sum())))
+
+    # 坐标范围：只需包住 9 条线段的端点（x、y 共用同一范围，等比例）
+    ends = []
+    for _, _, x0, x1, a, b in segs:
+        ends += [x0, x1, a + b * x0, a + b * x1]
+    lo, hi = min(ends), max(ends)
+    pad = (hi - lo) * 0.05
+    lim = (lo - pad, hi + pad)
+
+    # ---- 版式：左方形坐标轴，右文字表 + 图例 ----
+    fig = plt.figure(figsize=(7.2, 3.6))
+    ax = fig.add_axes([0.085, 0.14, 0.40, 0.78])
+    ax.set_facecolor("white")
+    ax.set_xlim(*lim)
+    ax.set_ylim(*lim)
+    ax.set_aspect("equal", adjustable="box")
+    ax.set_anchor("W")
+    ax.grid(color=GRID, lw=0.5, zorder=0)
+    for s in ("top", "right"):
+        ax.spines[s].set_visible(False)
+    for s in ("left", "bottom"):
+        ax.spines[s].set_color(SPINE)
+    ax.tick_params(colors=INK2, labelcolor=INK)
+    ax.plot(lim, lim, color=ZERO, lw=0.8, zorder=1)
+
+    # 不加白边（白边会盖住贴着的另一条线）；实线在下、虚线在上让虚线缝隙里透出实线。
+    # Motion 与 History frames 的 Motion model 直线几乎重合（slope 0.128 vs 0.126），
+    # 故 Motion 画粗、History frames 画细且压在最上，两条都能看见。
+    SOLID_LW = {"Action token": 2.0, "Text": 2.0, "Current frame": 2.0,
+                "History frames": 1.1, "Motion": 2.8}
+    SOLID_Z = {"Action token": 3, "Text": 3, "Current frame": 3, "Motion": 3.2,
+               "History frames": 3.4}
+    for name, m, x0, x1, a, b in segs:
+        color = GROUP_COLOR[name]
+        xs = np.array([x0, x1])
+        if m == "mot":
+            ax.plot(xs, a + b * xs, color=color, lw=SOLID_LW[name], ls="-",
+                    solid_capstyle="butt", zorder=SOLID_Z[name])
         else:
-            ax.set_yticklabels([])
-    n_c, n_m = fit["ctx"][LAB], fit["mot"][LAB]
+            ax.plot(xs, a + b * xs, color=color, lw=1.5, ls=MODEL_LS[m],
+                    dash_capstyle="butt", zorder=4)
+
+    ticks = np.arange(0, lim[1] + 1, 100)
+    ax.set_xticks(ticks)
+    ax.set_yticks(ticks)
+    ax.set_xlabel("True steps to correct window")
+    ax.set_ylabel("Predicted steps")
+    ax.set_title("Layer 17", loc="left", fontweight="bold", pad=4)
+
+    # ---- 右侧文字表（坐标 0–1 的隐形轴）----
+    axt = fig.add_axes([0.54, 0.05, 0.45, 0.90])
+    axt.set_axis_off()
+    axt.set_xlim(0, 1)
+    axt.set_ylim(0, 1)
+    FS = 7.5
+    x_grp, x_br, x_bs, x_mr, x_ms = 0.00, 0.44, 0.60, 0.80, 0.96   # 列右端（数值右对齐）
+    y_top, dy = 0.94, 0.082
+    # 表头两行
+    axt.text((x_br + x_bs) / 2 - 0.045, y_top, "Baseline", ha="center", va="center",
+             fontsize=FS, fontweight="bold", color=INK)
+    axt.text((x_mr + x_ms) / 2 - 0.045, y_top, "Motion model", ha="center", va="center",
+             fontsize=FS, fontweight="bold", color=INK)
+    y_sub = y_top - dy * 0.85
+    for xr, xs_ in ((x_br, x_bs), (x_mr, x_ms)):
+        axt.text(xr, y_sub, "R²", ha="right", va="center", fontsize=FS, color=INK2)
+        axt.text(xs_, y_sub, "slope", ha="right", va="center", fontsize=FS, color=INK2)
+    y_rule = y_sub - dy * 0.55
+    axt.plot([x_grp, x_ms], [y_rule, y_rule], color=SPINE, lw=0.6)
+    # 数据行
+    by_cell = {(n, mn): (r2, b) for n, mn, r2, b, _ in table}
+    for i, (name, _) in enumerate(PANELS):
+        yy = y_rule - dy * 0.6 - dy * i
+        axt.text(x_grp, yy, name, ha="left", va="center", fontsize=FS,
+                 color=GROUP_COLOR[name], fontweight="bold")
+        for mn, (xr, xs_) in (("Baseline", (x_br, x_bs)), ("Motion model", (x_mr, x_ms))):
+            r2, b = by_cell[(name, mn)]
+            if r2 is None:
+                axt.text((xr + xs_) / 2 - 0.045, yy, "—", ha="center", va="center",
+                         fontsize=FS, color=MUTED)
+            else:
+                axt.text(xr, yy, f"{r2:.2f}", ha="right", va="center", fontsize=FS, color=INK)
+                axt.text(xs_, yy, f"{b:.2f}", ha="right", va="center", fontsize=FS, color=INK)
+    y_bot = y_rule - dy * 0.6 - dy * (len(PANELS) - 1) - dy * 0.55
+    axt.plot([x_grp, x_ms], [y_bot, y_bot], color=SPINE, lw=0.6)
+
+    # 表下：线型含义与局数（从数据算）
+    n_c, n_m = counts["ctx"], counts["mot"]
     handles = [
-        Line2D([], [], color=MODEL_STYLE["ctx"][0], marker="o", ms=5, lw=0, alpha=0.8,
-               label=f"Baseline ({n_c['n_episodes']} episodes, {n_c['n_samples']} decision points)"),
-        Line2D([], [], color=MODEL_STYLE["mot"][0], marker="^", ms=5, lw=0, alpha=0.8,
-               label=f"Motion model ({n_m['n_episodes']} episodes, {n_m['n_samples']} decision points)"),
-        Line2D([], [], color=INK, lw=1.8, label="Episode-weighted least-squares fit"),
-        Line2D([], [], color=ZERO, lw=0.9, label="y = x"),
+        Line2D([], [], color=INK, lw=1.9, ls=MODEL_LS["mot"],
+               label=f"Motion model ({n_m[0]} episodes, {n_m[1]} points)"),
+        Line2D([], [], color=INK, lw=1.5, ls=MODEL_LS["ctx"],
+               label=f"Baseline ({n_c[0]} episodes, {n_c[1]} points)"),
+        Line2D([], [], color=ZERO, lw=0.8, label="y = x"),
     ]
-    fig.legend(handles=handles, loc="upper center", ncol=2, frameon=False,
-               bbox_to_anchor=(0.5, 0.995), handlelength=2.0, columnspacing=1.6,
-               handletextpad=0.5, labelspacing=0.3)
+    axt.legend(handles=handles, loc="upper left", bbox_to_anchor=(-0.02, y_bot - 0.03),
+               frameon=False, fontsize=FS, handlelength=2.6, handletextpad=0.6,
+               labelspacing=0.35, borderaxespad=0)
+    axt.text(0.0, 0.0, "Each line: episode-weighted least-squares fit of predicted vs. true\n"
+             "steps, drawn over that model's range of true values.",
+             ha="left", va="bottom", fontsize=7, color=INK2, linespacing=1.3)
     save(fig, out_stem)
     return table
 
@@ -342,9 +379,7 @@ def fig_point_accuracy(cls, p, out_stem):
         for c, (m, m_name) in enumerate(MODELS):
             ax = axes[r][c]
             style_axes(ax)
-            tb = cls[m]["time_N"][task]["point"]["mean"]
-            hline(ax, tb, color=INK, lw=1.4, ls=(0, (5, 2.5)), zorder=2)
-            ends = [(TIME_N_NAME, tb, INK, False)]
+            ends = []
             for name, color, lw, key in GROUPS:
                 rd = cls[m]["readers"].get(key)
                 if rd is None:
@@ -354,7 +389,6 @@ def fig_point_accuracy(cls, p, out_stem):
                         mec="white", mew=0.4, solid_capstyle="round", zorder=3)
                 ends.append((name, y[-1], color, lw > 1.5))
                 vals[(task, m, name)] = y[-1]
-            vals[(task, m, TIME_N_NAME)] = tb
             end_labels(ax, ends, YLIM_ACC, (YLIM_ACC[1] - YLIM_ACC[0]) / 13.5,
                        X_LAYERS[-1], X_TEXT)
             ax.set_xlim(-0.7, N_LAYERS + 7.4)
@@ -388,18 +422,17 @@ def main():
     from matplotlib import font_manager
     print("font:", font_manager.findfont(font_manager.FontProperties(family="Liberation Sans")))
 
-    print("\n== Fig 1/2: layer-17 R² per group, and time baselines ==")
+    print("\n== Fig 1/2: layer-17 R² per group, and Time-only baseline ==")
     for m, m_name in MODELS:
         stem = "fig-r2-layers-baseline" if m == "ctx" else "fig-r2-layers-motion"
-        r2_17, tb_n, tb_t = fig_r2_layers(p, fit, m, m_name, stem)
+        r2_17, tb_t = fig_r2_layers(p, fit, m, m_name, stem)
         print(f"[{m_name}] episodes={p['models'][m]['labels'][LAB]['n_episodes']} "
               f"samples={p['models'][m]['labels'][LAB]['n_samples']}")
         for name, v in r2_17.items():
             print(f"  layer 17 {name:16s} R² = {v:.4f}")
-        print(f"  {TIME_N_NAME:16s} R² = {tb_n:.4f}")
         print(f"  {TIME_NAME:16s} R² = {tb_t:.4f}")
 
-    print("\n== Fig 3: layer 17, per panel (group | model | R² | slope | n points) ==")
+    print("\n== Fig 3: layer 17, 9 lines (group | model | R² | slope | n points) ==")
     table = fig_r2_fit(fit, npz, "fig-r2-fit")
     for name, m_name, r2, b, n in table:
         if r2 is None:
@@ -407,7 +440,7 @@ def main():
         else:
             print(f"{name:20s} | {m_name:13s} | {r2:.4f} | {b:.4f} | {n}")
 
-    print("\n== Fig 4: layer-17 point accuracy and time baseline ==")
+    print("\n== Fig 4: layer-17 point accuracy ==")
     vals = fig_point_accuracy(cls, p, "fig-point-accuracy")
     for (task, m, name), v in sorted(vals.items()):
         print(f"{task:5s} | {m:3s} | {name:20s} | {v:.4f}")

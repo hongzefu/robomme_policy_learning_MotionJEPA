@@ -141,7 +141,7 @@ P 是每次推理用 10 份独立噪声走原路径算出的预测里，前 16 �
 
 ![每一层的换算准确率](records/rollout-class-layers.png)
 
-用户随后要求论文用的英文图，不再画配对准确率。四张图都只读已有结果、没有重算回归，放在 `records/paper-figures/`（PDF 和 PNG），脚本 `records/diagnostics/make_paper_figs.py`：`fig-r2-layers-baseline`、`fig-r2-layers-motion`、`fig-r2-fit`（第 17 层两模型对比）、`fig-point-accuracy`（逐点准确率，来自回归换算，换算时用了真实 M、N）。
+用户随后要求论文用的英文图，不再画配对准确率。四张图都只读已有结果、没有重算回归，放在 `records/paper-figures/`（PDF 和 PNG），脚本 `records/diagnostics/make_paper_figs.py`：`fig-r2-layers-baseline`、`fig-r2-layers-motion`、`fig-r2-fit`（第 17 层两模型对比）、`fig-point-accuracy`（逐点准确率，来自回归换算，换算时用了真实 M、N）。用户随后要求四张图都去掉时间加次数这条基准线，并把 `fig-r2-fit` 从分面整合成单图（只留拟合直线，不画散点）。这条基准线仍在 `records/probe-summary.json` 和 `records/class-layers.json` 里，第 17 层 R² 基线 0.62、motion 0.55。
 
 ### motion 输入带有互补的进度信息
 
