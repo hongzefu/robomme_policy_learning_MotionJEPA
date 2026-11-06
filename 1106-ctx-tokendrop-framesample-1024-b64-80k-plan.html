@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Context 1024 训练计划</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1b2733;--muted:#566575;--line:#d8dfe6;--accent:#1f5fbf;--warn:#a2650a;--warnbg:#fff7e8;--notebg:#eef4fd;--code:#edf1f5}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12171d;--card:#1a212a;--ink:#e4e9ee;--muted:#9fadba;--line:#303b47;--accent:#7fb0f2;--warn:#e0a84e;--warnbg:#2c2416;--notebg:#18263a;--code:#26303b}}
+:root[data-theme="dark"]{--bg:#12171d;--card:#1a212a;--ink:#e4e9ee;--muted:#9fadba;--line:#303b47;--accent:#7fb0f2;--warn:#e0a84e;--warnbg:#2c2416;--notebg:#18263a;--code:#26303b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 system-ui,-apple-system,"Noto Sans CJK SC",sans-serif}
+main{max-width:1040px;margin:auto;padding:32px 16px 72px}h1{font-size:25px;margin:40px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--line)}h2{font-size:19px;margin:28px 0 8px}
+.title{font-size:29px;font-weight:700;line-height:1.35;margin:0 0 8px}.meta{color:var(--muted);font-size:14px}
+table{width:100%;border-collapse:collapse;font-size:14px;margin:12px 0;background:var(--card)}th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{font-weight:650}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}.scroll{overflow-x:auto}
+code{font:13px/1.6 ui-monospace,SFMono-Regular,monospace;background:var(--code);padding:1px 4px;border-radius:4px;overflow-wrap:anywhere}pre{background:var(--code);padding:14px;border-radius:8px;overflow-x:auto;font-size:13px;line-height:1.6}pre code{background:none;padding:0}
+.note,.warn{padding:10px 14px;margin:14px 0;border-left:4px solid var(--accent);background:var(--notebg)}.warn{border-color:var(--warn);background:var(--warnbg)}
+</style></head><body><main>
+<p class="title">Context 模式 tokendrop / framesample，预算 1024，对齐原版 b64 80k</p>
+<p class="meta">创建：2026-11-06 美东 · 分支 <code>v8-ctx-td-fs-1024-b64-80k</code>（基于 <code>v4-256concat1@d80d660</code>）· 状态：方案待确认，开工令未给</p>
+<blockquote>用户原话：「给出方案 训context模式下的tokendrop和framesample 但是1024 尽可能和原版设计对齐 就是robomme policy learning原版 batch64 80k的设计」「我们现在是八卡，所以说就会分两个四卡来做。」</blockquote>
+
+<h1>第一部分（给人看）</h1>
+
+<h2>1. 结论</h2>
+<p>同时跑两条 run，各占四卡，互为对照。两条都直接用未改动的官方条目 <code>mme_vla_suite</code>（<code>src/mme_vla_suite/training/config.py:450</code>），只在命令行指定数据路径、归一化目录和 history YAML，<strong>不新增 TrainConfig</strong>。相对原版，语义上只有一项改动：<code>budget</code> 从 512 改为 1024。</p>
+<div class="scroll"><table>
+<tr><th>run</th><th>GPU</th><th>记忆取法</th><th>每步记忆张量</th><th>数据</th></tr>
+<tr><td><code>orig100-ctx-tokendrop1024-b64-80k</code></td><td>0–3</td><td>tokendrop：8×8 patch，按像素差打分，取分数最高的 1024 个</td><td><code>[1024, 2048]</code>，右补零加 mask</td><td>需新打包 <code>framesamp-8x8</code>（约 100.8 GB，CPU）</td></tr>
+<tr><td><code>orig100-ctx-framesamp1024-b64-80k</code></td><td>4–7</td><td>framesample：均匀取 64 帧，每帧 4×4（16 token）</td><td><code>[1024, 2048]</code>，右补零加 mask</td><td>现成 <code>framesamp-4x4</code>（48 GB），不用重建</td></tr>
+</table></div>
+<p><strong>预计工期约 63 小时（2.6 天），合理区间 56–71 小时。</strong>这是外推值，正式起跑前用 300 步实测替换。两条并行，所以总墙钟时间也是这个数。</p>
+
+<h2>2. 「1024」按记忆预算理解</h2>
+<p>context 模式的 <code>memory_token_dim</code> 必须等于主干宽度 2048，<code>FrameSampDataset</code> 的形制断言也只接受 <code>(context, 2048)</code>，所以 1024 不可能是 token 维度，只能是 <code>budget</code>。每帧 token 数保持原版：framesample 16、tokendrop 64。framesample 因此从 32 帧变 64 帧，不改成 8×8 的 16 帧。motion 按原版关闭（<code>motion.enabled</code> 不开）。</p>
+
+<h2>3. 与原版逐项对照</h2>
+<div class="scroll"><table>
+<tr><th>项目</th><th>原版（<code>ecf086c</code>／<code>finetune_mme_vla_suite.sh</code>）</th><th>本方案</th></tr>
+<tr><td>global batch／卡数／每卡</td><td>64／4／16</td><td>相同</td></tr>
+<tr><td>步数</td><td>80000（约 10.74 遍数据）</td><td>相同</td></tr>
+<tr><td>学习率</td><td>warmup 10000，peak = decay = 5e-5，decay_steps 100000</td><td>相同</td></tr>
+<tr><td>优化器／EMA／冻结／seed</td><td>AdamW clip 1.0／0.999／官方 filter／42</td><td>相同</td></tr>
+<tr><td>action_horizon／streaming_obs_horizon</td><td>20／16</td><td>相同</td></tr>
+<tr><td>初始权重</td><td><code>pi05_base</code></td><td>相同，取本机 <code>v1-store/models</code></td></tr>
+<tr><td>保存</td><td>每 10000 步，共 8 份，末份 79999</td><td>相同</td></tr>
+<tr><td>num_workers</td><td>4</td><td>相同；只有 300 步实测发现数据等待时才提高，不影响 batch 组成</td></tr>
+<tr><td>打分参数</td><td>stride 8，kept 堆 2048，首帧 64 token 固定 1000 分</td><td>相同</td></tr>
+<tr><td>数据</td><td>16 任务 × 100 集</td><td><code>16task-orig100-1600ep-9e109419</code>：476857 样本／768897 行；<code>norm_stats</code> md5 与此前复现官方用的 <code>16task-pub-1600ep</code> 相同（<code>cf425386…</code>）</td></tr>
+<tr><td><strong>budget</strong></td><td><strong>512</strong></td><td><strong>1024（用户指定）</strong></td></tr>
+<tr><td>读取方式</td><td>逐帧读 <code>token_emb_*.npy</code></td><td>打包库读取，要求与原逻辑逐字节相同（A1），不算语义差异</td></tr>
+<tr><td>上传</td><td>无</td><td>每份 checkpoint 上传 HF：<code>/scratch</code> 是临时盘，必须有远端副本</td></tr>
+</table></div>
+
+<h2>4. 全量统计发现：tokendrop 大多填不满 1024</h2>
+<p>对 1600 个 episode、476857 个样本的全量统计（只读）：</p>
+<div class="scroll"><table>
+<tr><th>指标</th><th class="n">tokendrop</th><th class="n">framesample</th></tr>
+<tr><td>样本填满 512 的比例</td><td class="n">26.9%</td><td class="n">95.3%（t≥32）</td></tr>
+<tr><td>样本填满 1024 的比例</td><td class="n">8.2%</td><td class="n">90.5%（t≥64）</td></tr>
+<tr><td>预算 512 时的平均有效 token</td><td class="n">317</td><td class="n">未统计</td></tr>
+<tr><td>预算 1024 时的平均有效 token</td><td class="n">392</td><td class="n">976</td></tr>
+</table></div>
+<p>原因是打分每 8 帧才做一次，且差异小于 1e-4 的 patch 直接跳过，平均每帧产生的 token 很少。把预算翻倍的增益集中在长历史任务：tokendrop 填满 1024 的比例在 VideoPlaceOrder 是 95.1%，VideoPlaceButton 是 74.9%，VideoRepick 是 4.4%，其余任务不超过 2.4%；StopCube、VideoUnmask 这类任务连 512 都基本填不满（0%、0.5%）。</p>
+<p>后果有二：① tokendrop 在多数任务上和原版 512 取到的 token 几乎一样，不要预期全任务大幅提升；② 补零 token 仍占序列长度，两条 run 的算力开销相同，tokendrop 的效率会低一些。为了对齐原版，我建议<strong>不改打分参数</strong>，把这作为实验结果如实报告。</p>
+<div class="note">好消息：kept 堆只有 4/1600 个 episode 达到 2048（全在 VideoPlaceOrder）。训练用「整集最终堆再按 t 过滤」，在线用「截至 t 的堆」，两者只在堆发生过淘汰时才可能不同，所以这个原版固有差异在本数据上基本可以忽略。</div>
+
+<h2>5. 工期怎么估的</h2>
+<p>实测锚点：① context 512，四卡 b128 是 3.25 s/步，八卡 b128（每卡 16）是 1.727 s/步，比值 1.88（<code>docs/training-doc/ctx-stock-scaling-20260928/result.md</code>，GPU 利用率 99% 以上，是 GPU 瓶颈）；② context 2048，四卡 b128 是 10.09 s/步（<code>mixed8-200-m32x8x8-context-b128-80k/result.md</code>，显存 79445 MiB）。</p>
+<p>前缀长度估为记忆加两路图像 512 再加文本 64：512 档 1088，2048 档 2624。由①②拟合 <code>t ∝ L^1.29</code>，1024 档（L=1600）相对 512 档慢 1.64 倍。四卡 b64 每卡 16，和八卡 b128 同密度，所以 1.727 × 1.64 ≈ <strong>2.84 s/步</strong>，80000 步约 63 小时。显存预计明显低于 80 GB（每卡 16、预算只有上述 2048 档的一半；每卡 16 的 context 512 实测约 41.8 GB）。</p>
+
+<h2>6. 要改什么</h2>
+<ul>
+<li><strong>两份 YAML：</strong>从上游 <code>perceptual-framesamp-context.yaml</code>（去掉 motion 段）和 <code>perceptual-tokendrop-context.yaml</code> 复制，只改 <code>budget: 1024</code>。</li>
+<li><strong>训练读取：</strong><code>FrameSampDataset</code> 放开两个档位（<code>(1024,16,1)</code>、<code>(1024,64,1)</code>，都限定 context + 2048 + 无 motion）；新增 tokendrop 分支，逻辑照搬 <code>mem_buffer.py::filter_token_dropping_indices</code>。tokendrop 的训练入口在 V4.3 被删，但打分和取样函数还在，<code>kept_indices.json</code> 也已随库建好。</li>
+<li><strong>在线记忆：</strong>当前 <code>FrameSampMemory</code> 不存像素、不打分，tokendrop 模型评估时用不了。需补一个最小的在线打分分支，否则模型训完无法 eval。本计划只实现并验证，不跑 eval。</li>
+<li><strong>启动脚本：</strong>一份简单的双 tmux 启动脚本，不套 <code>orig80k_contract</code> 那类多层合同。</li>
+</ul>
+
+<h2>7. 不做什么</h2>
+<p>不开 motion，不跑 modulation，不改打分参数，不做学习率缩放，不改 <code>mme_vla_suite</code> 条目。本轮不评估成功率，eval 等训完另行确认；届时 tokendrop 与 framesample 都用官方 800 局比较。</p>
+
+<h2>8. 磁盘与风险</h2>
+<ul>
+<li><strong>磁盘：</strong><code>/scratch</code> 剩 2.1 TB。8×8 库约 101 GB；checkpoint 按历史约 11.6 GB/份，8 份 × 2 条约 186 GB。够用。</li>
+<li><strong>HF 额度：</strong>两个 bucket 共约 186 GB。10-18 曾因 HF 额度满导致上传失败，开工前先查额度。</li>
+<li><strong>单 seed：</strong>两条都只用 seed 42，与原版一致；差距小于约 2pp 时不足以判断优劣（既往三 seed 标准差约 0.6–0.7pp）。</li>
+<li><strong>工期偏长：</strong>2.6 天里卡被全占，期间其他 GPU 任务要排队。</li>
+</ul>
+
+<h2>9. 子代理分工与合并（简述）</h2>
+<p>代码拆三块，各用独立 worktree 写：S1 训练读取和 YAML，S2 在线 tokendrop，S3 启动脚本。按 S1 → S2 → S3 合回工作分支，每次合并前后由 sonnet 审查（<code>PRE/POST_MERGE_REVIEW</code>）。8×8 打包和正式启动由主检出的运行代理负责，只启动、不改代码。主会话负责监听和上传登记。</p>
+
+<h1>第二部分（技术细节，供 agent 追踪）</h1>
+
+<h2>〇 前置声明与红线</h2>
+<ol>
+<li><strong>R1</strong> 开工令范围覆盖下表 P1–P5，含 GPU 短测和正式训练；eval 不在内。</li>
+<li><strong>R2</strong> <code>mme_vla_suite</code> 条目一字不动，超参不走 CLI 覆盖；prod 不传 <code>--num-train-steps</code>、<code>--batch-size</code>。</li>
+<li><strong>R3</strong> 现有 framesamp 档位的读取结果不变（关闭态逐字节相同）。</li>
+<li><strong>R4</strong> 工作分支 <code>v8-ctx-td-fs-1024-b64-80k</code>；训练用固定 commit 的只读副本，不在开发 worktree 上跑。</li>
+<li><strong>R5</strong> 开工先派 sonnet 做 <code>PLAN_CONSISTENCY_REVIEW</code>；只加计划要求的闸门，不叠加额外检查。</li>
+</ol>
+<p class="meta">已核实：官方条目参数、YAML 差异、kept_indices／8×8 特征存在、全量统计、历史步速、<code>norm_stats</code> md5、GPU 空闲（11-06 美东 08:2x）。待验证：8×8 打包耗时、1024 步速、在线打分重放一致性。</p>
+
+<h2>一 步骤总览</h2>
+<div class="scroll"><table>
+<tr><th>步骤</th><th>内容</th><th>判定</th></tr>
+<tr><td>P0</td><td>计划一致性审查，查 HF 额度，登记 <code>docs/handoff/current.json</code></td><td><code>PLAN_CONSISTENCY_REVIEW=PASS</code></td></tr>
+<tr><td>P1</td><td>打包 8×8：<code>scripts/dataset/pack_framesamp_store.py pack --layout framesamp-8x8-v1 --source &lt;库&gt;/source --manifest &lt;库&gt;/meta/episode_manifest.json --out &lt;库&gt;/framesamp-8x8 --reader decode --procs 16</code>，再跑既有 verify 子命令</td><td><code>store_meta.json</code> 中 <code>status=verified</code>，行数 768897</td></tr>
+<tr><td>P2</td><td>S1／S2／S3 实现、审查、合并</td><td>A1、A2 通过，两次合并审查 PASS</td></tr>
+<tr><td>P3</td><td>双四卡并行 20 步短测 + 300 步测速</td><td>A3；更新工期估计</td></tr>
+<tr><td>P4</td><td>固定 commit，起两个 tmux，挂 Monitor 和增量上传</td><td>两条都过第一个日志步</td></tr>
+<tr><td>P5</td><td>结束收尾：恢复校验、上传校验、训练档案、状态机</td><td>A4</td></tr>
+</table></div>
+
+<h2>二 逐文件改动</h2>
+<div class="scroll"><table>
+<tr><th>文件</th><th>改动</th></tr>
+<tr><td><code>src/mme_vla_suite/models/config/robomme/perceptual-framesamp-context-1024.yaml</code>（新）</td><td>上游 context 配置，<code>budget: 1024</code>，<code>token_per_image: 16</code>，<code>frame_sampling</code></td></tr>
+<tr><td><code>…/perceptual-tokendrop-context-1024.yaml</code>（新）</td><td><code>budget: 1024</code>，<code>token_per_image: 64</code>，<code>token_dropping</code></td></tr>
+<tr><td><code>src/mme_vla_suite/training/framesamp_dataset.py</code></td><td>放开上述两档；<code>token_dropping</code> 时读 <code>kept_indices.json</code>（按原顺序存为每集数组），<code>__getitem__</code> 过滤 <code>frame≤t</code>、取末 budget 个、按 (frame, view, patch) 排序，读整行后取 patch，右补零。dtype 延续 <code>_pad</code>（image bf16、pos／state f32）</td></tr>
+<tr><td><code>src/mme_vla_suite/policies/framesamp_memory.py</code>、<code>policy.py</code></td><td><code>token_dropping</code> 时开启打分：保留参考帧像素，逻辑同 <code>_process_token_drop_score</code>（stride = <code>streaming_obs_horizon//2</code> = 8）；<code>_prepare_history</code> 走 tokendrop 分支；<code>token_per_image=64</code></td></tr>
+<tr><td><code>scripts/training/run_ctx1024_b64_80k.sh</code>（新）</td><td>按 run 名启动一条；模板见下</td></tr>
+<tr><td><code>tests/…</code></td><td>A1、A2 的测试</td></tr>
+</table></div>
+<pre><code>CUDA_VISIBLE_DEVICES=&lt;0,1,2,3|4,5,6,7&gt; XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 \
+uv run --no-sync python scripts/training/train.py mme_vla_suite \
+  --exp-name &lt;run&gt; --dataset-path &lt;库&gt;/&lt;framesamp-8x8|framesamp-4x4&gt; \
+  --assets-base-dir v1-store/train-assets \
+  --data.assets.assets-dir v1-store/train-assets/mme_vla_suite/16task-orig100-1600ep-9e109419 \
+  --data.assets.asset-id robomme --checkpoint-base-dir v1-store/train-runs \
+  --weight-loader.params-path v1-store/models/openpi-assets/checkpoints/pi05_base/params \
+  --model.use-history --model.history-config &lt;yaml&gt;</code></pre>
+<p>tmux：<code>c1k-td-train</code>、<code>c1k-fs-train</code>（日志三件套，含 <code>EXIT_CODE=</code> 尾行）；日志 <code>v1-store/logs/&lt;run&gt;.log</code>。Bucket：<code>HongzeFu/robomme-vla-orig100-ctx-tokendrop1024-b64-80k-v1</code>、<code>HongzeFu/robomme-vla-orig100-ctx-framesamp1024-b64-80k-v1</code>。</p>
+
+<h2>三 验收</h2>
+<div class="scroll"><table>
+<tr><th>编号</th><th>检查</th><th>判定行</th></tr>
+<tr><td>A1</td><td>每档随机 1000 个样本，打包库读取与 <code>MemoryBuffer.prepare_token_dropping／prepare_frame_sampling</code>（读 <code>token_emb_*.npy</code>）逐字节比较，覆盖全部 16 任务及长于预算的样本；既有 512 档回归</td><td><code>LOADER_EQ=PASS td=1000 fs=1000 mismatch=0</code></td></tr>
+<tr><td>A2</td><td>每任务 1 集，用 H5 帧重放在线打分：最终堆与 <code>kept_indices.json</code> 相同；在 3 个 t 上在线取样与训练取样相同（未淘汰的集）</td><td><code>ONLINE_TD_REPLAY=PASS episodes=16 mismatch=0</code></td></tr>
+<tr><td>A3</td><td>GPU 0–3 与 4–7 同时跑 20 步，再跑 300 步；记录步时、显存、loss 有限</td><td><code>DUAL_SMOKE=PASS</code> 与实测 s/步</td></tr>
+<tr><td>A4</td><td>两条 <code>EXIT_CODE=0</code>，8 份 checkpoint，79999 EMA CPU 恢复，HF 全量校验</td><td><code>CTX1024_TRAIN=PASS run=&lt;run&gt; step=79999</code>、<code>HF_VERIFY=PASS</code></td></tr>
+</table></div>
+
+<h2>四 子代理分配表</h2>
+<div class="scroll"><table>
+<tr><th>子任务</th><th>目标</th><th>可写文件</th><th>禁触路径</th><th>模型／依赖</th><th>验收</th></tr>
+<tr><td>S1</td><td>YAML 与训练读取</td><td>两份 YAML、<code>framesamp_dataset.py</code>、对应测试</td><td><code>training/config.py</code>、<code>models/integration/</code></td><td>opus；P1 后</td><td>A1</td></tr>
+<tr><td>S2</td><td>在线 tokendrop</td><td><code>framesamp_memory.py</code>、<code>policy.py</code>、对应测试</td><td>训练读取、模型文件</td><td>opus；S1 后</td><td>A2</td></tr>
+<tr><td>S3</td><td>启动脚本</td><td><code>scripts/training/run_ctx1024_b64_80k.sh</code></td><td>其余全部</td><td>opus；S1 后</td><td>脚本语法与参数检查</td></tr>
+<tr><td>R*</td><td>计划一致性与合并前后审查</td><td>只读</td><td>全部</td><td>sonnet</td><td>判定行</td></tr>
+<tr><td>RUN</td><td>P1 打包、P3 短测、P4 起跑</td><td>无代码改动</td><td>代码、配置、参数</td><td>opus，无 worktree</td><td>交回句柄</td></tr>
+</table></div>
+<p>合并：<code>git merge --no-ff</code> S1 → S2 → S3；commit subject 用 <code>sub/&lt;编号&gt;: </code> 前缀；只有主会话 push。</p>
+</main></body></html>
