@@ -373,6 +373,7 @@ tmux new-session -d -s sfb-analysis "bash $O/run_analysis.sh"</pre>
 <tr><td>W5（<code>opus</code>，独立 worktree）</td><td>可写 <code>serve_policy_attn.py</code>、<code>run_local.py</code>、<code>test_motion_swap_modes.py</code>（新）；只加两个模式，<code>none</code>、<code>motion_swap</code> 行为逐字不变；不碰模型</td></tr>
 <tr><td>运行</td><td>注意力分析的 GPU 部分结束后，按 E0→E1→E3→E2 依次起跑，E4 看时间，tmux 前缀 <code>sfb-e&lt;n&gt;-</code>；每条件一次占两卡；每局单独重启服务（swap 既有约束），E1、E2 每条件约 1.7 小时，E0、E3 约 1 小时，合计约 5.4 小时（对抗验证按旧实测外推，未核实）</td></tr>
 <tr><td>存储</td><td>不存 prefix，约 87 MiB/次，按第一阶段推理次数约 150 GiB/条件；累计超过 1.5 TiB 就停止起新条件</td></tr>
+<tr><td>存储调整（实验后）</td><td>用户要求之后替换实验不存注意力，已删除本轮约 606 GiB 的 <code>infer_*.npz</code>，配对统计逐字节不变；<code>commitV4.1.41</code> 起默认不写</td></tr>
 <tr><td>时间</td><td>美东 07:30 不再起新条件，已起的跑完；优先保证条件完整，不做半套</td></tr>
 <tr><td>冒烟</td><td>每个新模式先跑 1 局，核对 <code>replace_log</code> 和判定行</td></tr>
 </table></div>

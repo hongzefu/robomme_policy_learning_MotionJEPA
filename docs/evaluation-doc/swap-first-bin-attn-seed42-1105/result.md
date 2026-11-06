@@ -172,7 +172,9 @@ E1、E3 在 Button 上总数相同是巧合：两组成功局只有 4 局重合�
 | E3 | 05:04 ～ 06:30 |
 | E2 | 06:30 ～ 08:07 |
 
-全部运行都已退出，没有在跑的本轮进程，没有操作其他用户的进程。`/data` 剩余 3.9 T。产物约 1.1 T（其中替换实验 617 G）留在 `v1-store/evaluation/swap-first-bin-attn-seed42-1105/`，干净执行树 `swap-first-bin-run`、`swap-first-bin-analysis`、`swap-first-bin-exp` 保留，供原命令复现。按不阻塞口径未登记状态机，人工交接。
+全部运行都已退出，没有在跑的本轮进程，没有操作其他用户的进程。产物约 440 G 留在 `v1-store/evaluation/swap-first-bin-attn-seed42-1105/`，干净执行树 `swap-first-bin-run`、`swap-first-bin-analysis`、`swap-first-bin-exp`、`swap-first-bin-nosave` 保留，供原命令复现。
+
+替换实验原来每次推理都写注意力，约 606 GiB。用户 2026-11-06 美东原话：「之后替换实验都不存这个注意力，然后把它把它的占用现在就删掉。」已只删除 `exp/e*/*/attn/*/infer_*.npz`（`exp` 由 617 G 降到 577 M），轨迹、`episode.json`、视频都保留。删后重算配对统计与删前逐字节相同（`COMPARE_IDENTICAL`）。这些条件的注意力要重跑才能恢复。`/data` 剩余 4.5 T。按不阻塞口径未登记状态机，人工交接。
 
 实施中调整见计划第二部分，配对统计原始值见 [records/swap-exp-compare.json](records/swap-exp-compare.json)，判定行见 [records/swap-exp.summary.txt](records/swap-exp.summary.txt)。
 

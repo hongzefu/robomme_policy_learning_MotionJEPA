@@ -109,3 +109,11 @@ python scripts/interpret/analysis/first_bin_attention.py --bridge-old22 v1-store
 驱动 `exp/run_exp_chain.sh` 依次运行，美东 07:30 后不起新条件。tmux：`sfb-e1-smoke`、`sfb-e2-smoke`、`sfb-e3-smoke`、`sfb-exp-chain`、`sfb-off-chain`、`sfb-analysis`。
 
 计划外事件：基线和 motion 的 `.log` 被 gitignore 拦下，清洗后日志改存 `.summary.txt`；合并时一次重复使用版本号 `commitV4.1.35`，历史未改写，后续跳过 36。
+
+## 替换实验不再存注意力（美东 2026-11-06）
+
+用户原话：「之后替换实验都不存这个注意力，然后把它把它的占用现在就删掉。」
+
+`commitV4.1.41`（`d77041a`）起，`motion_swap`、`motion_swap_exact`、`motion_shift` 一律不写 `infer_*.npz` 和帧图，显式 `save_attn=true` 报错；对照组用 `save_attn=false` 同样不写。注意力仍在内存里计算，省的是落盘，不是推理时间。
+
+真实模型冒烟（第 8、0 局）：`RUN_LOCAL=PASS` 两组，`npz=0`，`attn_saved=false`；E3 与之前写注意力的同条件运行相比，全部动作最大差 0（391、286 步）。tmux：`sfb-nosave-e3`、`sfb-nosave-e0`。
