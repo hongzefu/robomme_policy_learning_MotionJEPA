@@ -10,7 +10,7 @@ model_kind（history | stage2_pool4_concat）, model_seed=42, purpose=validation
 xla_mem_fraction；可选 port（起始端口，缺省 0=临时端口）、startup_timeout_seconds（缺省 600）、save_top_frames、
 rpc_timeout_seconds、save_prefix（缺省 false；为真时服务端加 --save-prefix，另写 prefix_<seq>.npz）、
 ablate（缺省 "none"；其他值原样透传 --ablate，语义见 serve_policy_attn 文档，如 mask_motion / mask_vis / heads:L3H0 /
-motion_zero / motion_swap:<供体目录>）。
+motion_zero / motion_swap:<供体目录> / motion_swap_exact:<供体目录> / motion_shift）。
 StopCube 可选键：stopcube_mode（normal、hold_extended、oracle_query、oracle_calibrate）、stopcube_config（固定 JSON 表路径）；
 同时提供时改用 interpret 记录入口，模式与配置文件字节 sha256 并入身份，其他任务不受影响。
 Oracle 另用 query_interval=4（节奏诊断可16）、query_record=10；校准另需 calibration_plan、calibration_kind，
@@ -23,8 +23,8 @@ bin_trace（bool，与 stopcube_mode 互斥，清单只能含 ButtonUnmaskSwap�
 S8 motion 内容替换的可选键：
   record_motion   目录；服务端加 --record-motion，每局写 <目录>/<nonce>.npz，本脚本收尾按 terminal 局身份改名为
                   <目录>/<task>_ep<id>.npz（与 motion_swap 供体文件同名规则）；局的 episode.json 记 motion_record。
-  swap_map        motion_swap 的供体映射，{"ButtonUnmaskSwap:4": "ButtonUnmaskSwap:8", ...} 或字符串
-                  "ButtonUnmaskSwap:4=ButtonUnmaskSwap:8,..."；ablate 含 motion_swap 时必填、否则不得给出。
+  swap_map        motion_swap / motion_swap_exact 的供体映射，{"ButtonUnmaskSwap:4": "ButtonUnmaskSwap:8", ...} 或字符串
+                  "ButtonUnmaskSwap:4=ButtonUnmaskSwap:8,..."；ablate 含这两者之一时必填、否则不得给出（motion_shift 不需要）。
                   给出时每局单独成块（chunk_id = digest([episode_key])，与 --episodes 同法），服务端按块加
                   --swap-donor <供体局>：服务端在 reset 时只知道 nonce，单局成块后「本服务进程服务的局」即确定。
                   选中的每局都必须在 swap_map 里，否则启动前报错。
@@ -90,15 +90,15 @@ def load_spec(path):
     spec.setdefault("model_seed", 42)
     spec.setdefault("purpose", "validation")
     spec["cuda"] = str(spec["cuda"])
-    has_swap = any(part.strip().startswith("motion_swap:") for part in ablate_of(spec).split("+"))
+    has_swap = any(part.strip().startswith(("motion_swap:", "motion_swap_exact:")) for part in ablate_of(spec).split("+"))
     if spec.get("swap_map") is not None:
         spec["swap_map"] = parse_swap_map(spec["swap_map"])
     if has_swap != bool(spec.get("swap_map")):
-        raise SystemExit("spec: ablate 含 motion_swap 时必须给非空 swap_map，反之 swap_map 只能配 motion_swap")
+        raise SystemExit("spec: ablate 含 motion_swap / motion_swap_exact 时必须给非空 swap_map，反之 swap_map 只能配这两者")
     uses_motion = has_swap or spec.get("record_motion") or any(
-        part.strip() == "motion_zero" for part in ablate_of(spec).split("+"))
+        part.strip() in ("motion_zero", "motion_shift") for part in ablate_of(spec).split("+"))
     if uses_motion and spec["model_kind"] != MOTION_MODEL_KIND:
-        raise SystemExit(f"spec: motion_zero / motion_swap / record_motion 只适用于 {MOTION_MODEL_KIND}")
+        raise SystemExit(f"spec: motion_zero / motion_swap / motion_swap_exact / motion_shift / record_motion 只适用于 {MOTION_MODEL_KIND}")
     if spec.get("stopcube_mode") is not None:
         if spec["stopcube_mode"] not in ("normal", "hold_extended", "oracle_query", "oracle_calibrate") or not spec.get("stopcube_config"):
             raise SystemExit("spec: stopcube_mode 非法或未提供 stopcube_config")
