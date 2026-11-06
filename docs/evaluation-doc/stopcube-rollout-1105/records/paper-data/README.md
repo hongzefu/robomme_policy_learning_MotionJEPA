@@ -49,6 +49,18 @@
 - `press_now`：`0 < 预测步数 ≤ M` 判为该按。
 - `passes_elapsed`：`N − ceil(预测步数 / M)`。
 
+## 逐点预测（`predictions/`）
+
+这三份 npz 是回归的折外预测，用 `numpy.load` 读取，不需要 pickle。模型键 `ctx` 是基线，`mot` 是 motion 模型；读数键 `action`、`文字`、`当前视觉`、`历史视觉`、`motion` 依次对应上面的五个组。
+
+| 文件 | 键 | 内容 |
+| --- | --- | --- |
+| `fit-predictions.npz` | `{模型}/{标签}/y`、`groups`、`{读数}` | 第 17 层的真实步数、局编号和预测，另有 `time`、`time_N` 基准。标签 `q4` 是离正确窗口，`q3` 是离自己按 |
+| `class-layers-predictions.npz` | `{模型}/{读数}/{层}` | 离正确窗口的所有层预测，float32。层 `-1` 是输入，`0`～`17` 是各层 |
+| `class-derived.npz` | `{模型}/press_pairs_yes_no`、`press_true_ratio`、`ratio/{读数}` | 第 17 层换算分类和配对下标，论文图不用，只为留档 |
+
+`class-layers-predictions.npz` 没有真实步数和局编号。它的点序与 `fit-predictions.npz` 的 `{模型}/q4/y`、`{模型}/q4/groups` 相同，要配合使用。
+
 ## 复现原图的设置
 
 | 项目 | 取值 |
