@@ -3,7 +3,8 @@
 （本文件注释中的「旧路径」均指已删除的 legacy 数据链 RoboMMEDataset +
 散 npy + MemoryBuffer——commitV4.1 删除，见 git 历史；对齐结论在删除前逐字核对固化。）
 
-共享装配路径，支持成对的 context/2048 与 modulation/1024 配置：
+共享装配路径，支持成对的 context/2048 与 modulation/1024 配置；token_dropping 只有
+context/2048 的 (1024,64,1) 一档，③–⑤ 换成 _fill_token_dropping，其余步骤共用：
 ① 清单查表得 (g, step)（O(1) 数组，含 exec_start_idx 换算，不读目录）；
 ② pickle.load 源库 data/{idx}.pkl（与旧路径同源同字节）＋ pkl 内身份互校
    （不符显式 raise——行号错位的最后一道闸，禁 assert，R6）；
@@ -23,6 +24,7 @@ pid 失配先显式 close() 旧句柄再重建；close() + atexit 兜底。
 from __future__ import annotations
 
 import atexit
+import json
 import logging
 import os
 import pathlib
@@ -123,8 +125,9 @@ class FrameSampDataset(Dataset):
         _req(hc is not None, "history_config 不能为 None")
         _req(hc.representation_type == "perceptual",
              f"representation_type={hc.representation_type!r} != 'perceptual'")
-        _req(hc.perceptual_memory.type == "frame_sampling",
-             f"perceptual_memory.type={hc.perceptual_memory.type!r} != 'frame_sampling'")
+        _req(hc.perceptual_memory.type in ("frame_sampling", "token_dropping"),
+             f"perceptual_memory.type={hc.perceptual_memory.type!r} 不在 frame_sampling/token_dropping 中")
+        self._token_dropping = hc.perceptual_memory.type == "token_dropping"
         _req((str(hc.integration_type), int(hc.memory_token_dim)) in {("context", 2048), ("modulation", 1024)},
              f"(integration_type, memory_token_dim)=({hc.integration_type!r}, {hc.memory_token_dim}) "
              f"不在支持的 (context,2048)/(modulation,1024) 档位中")
@@ -140,19 +143,24 @@ class FrameSampDataset(Dataset):
             and str(hc.integration_type) == "modulation"
             and not self._motion_enabled
         )
-        # context 2048 档（1018 计划 R2）：只放行 (2048,64,1)+context+memory_token_dim 2048+无 motion。
-        ctx_shape = (
+        # context 大预算档（1018 计划 R2；1106 计划加 1024）：都限 context+memory_token_dim 2048+无 motion；
+        # frame_sampling 放行 (2048,64,1)/(1024,16,1)，token_dropping 只放行 (1024,64,1)。
+        ctx_contract = (
             all(type(v) is int for v in raw)
-            and raw == (2048, 64, 1)
             and str(hc.integration_type) == "context"
             and hc.memory_token_dim == 2048
             and not self._motion_enabled
         )
-        _req(legacy_shape or new_shape or ctx_shape,
+        ctx_shape = ctx_contract and raw in {(2048, 64, 1), (1024, 16, 1)}
+        td_shape = ctx_contract and raw == (1024, 64, 1)
+        shape_ok = td_shape if self._token_dropping else (legacy_shape or new_shape or ctx_shape)
+        _req(shape_ok,
+             f"perceptual_memory.type={hc.perceptual_memory.type!r}、"
              f"(budget,token_per_image,num_views)={raw}（类型 {tuple(type(v).__name__ for v in raw)}）、"
              f"integration_type={hc.integration_type!r}、motion_enabled={self._motion_enabled} "
-             "不在支持的 (512,16,1)/(512,64,1)、(1024/2048/4096,64,1)+modulation+无 motion "
-             "与 (2048,64,1)+context+memory_token_dim 2048+无 motion 档位中")
+             "不在支持的档位中：frame_sampling 为 (512,16,1)/(512,64,1)、(1024/2048/4096,64,1)+modulation+无 motion、"
+             "(2048,64,1)/(1024,16,1)+context+memory_token_dim 2048+无 motion；"
+             "token_dropping 只有 (1024,64,1)+context+memory_token_dim 2048+无 motion")
         _req(int(hc.memory_feature.img.input_dim) == 2048,
              f"memory_feature.img.input_dim={hc.memory_feature.img.input_dim} != 2048")
         _req(int(hc.memory_feature.pos.input_dim) == 768,
@@ -205,6 +213,9 @@ class FrameSampDataset(Dataset):
         self.use_quantiles = data_config.use_quantile_norm
         self._max_frames = int(hc.budget) // (int(hc.token_per_image) * int(hc.num_views))
         self._tokens_per_frame = int(hc.token_per_image) * int(hc.num_views)
+        self._budget = int(hc.budget)
+        # token_dropping：主进程载入（fork 前就绪）；纯 numpy 字典，随 __getstate__ 进 spawn worker
+        self._kept_indices = self._load_kept_indices(manifest) if self._token_dropping else None
 
         self._store: FrameSampStore | None = None
         self._atexit_registered = False
@@ -246,6 +257,23 @@ class FrameSampDataset(Dataset):
                         f"episode g={e.g} ({e.h5_file}#{e.raw_ep_idx}) 最大合法起点数 {mx} > 窗口容量 "
                         f"{self._motion_window_budget}（motion.budget={self._motion_budget}，"
                         f"每窗 {self._motion_num_tokens} 个 token）——零截断契约要求按全集重新定标，不做最近 N 裁剪")
+
+    def _load_kept_indices(self, manifest: dict) -> dict[int, np.ndarray]:
+        """{g: (n,3) int32 [frame,view,patch]}，保持 JSON 原顺序（即分数升序），只载有执行样本的 episode。"""
+        kept = {}
+        for g in np.unique(self._epis_of).tolist():
+            path = os.path.join(self._source_root, "features", f"episode_{g}", "kept_indices.json")
+            with open(path, encoding="utf-8") as f:
+                arr = np.asarray(json.load(f), dtype=np.int32)
+            if arr.ndim != 2 or arr.shape[1] != 3:
+                raise ValueError(f"{path} 形状 {arr.shape} != (n,3)")
+            frame, view, patch = arr.T
+            if (frame.min() < 0 or frame.max() >= int(manifest["episodes"][g]["num_timesteps"])
+                    or np.any(view != 0)
+                    or patch.min() < 0 or patch.max() >= self._tokens_per_frame):
+                raise ValueError(f"{path} 含越界的 (frame,view,patch)")
+            kept[g] = arr
+        return kept
 
     # ―― spawn 生命周期（B.2）――
     def __getstate__(self):
@@ -355,6 +383,35 @@ class FrameSampDataset(Dataset):
             times = np.repeat(times, self._motion_num_tokens)
         return out_emb, out_pos, mask, times
 
+    def _fill_token_dropping(self, data: dict, store: FrameSampStore, g: int, step: int) -> None:
+        """与 mem_buffer.py 的 filter_token_dropping_indices + _prepare_token_dropping 同语义。
+
+        JSON 序的 frame≤step 项取末 budget 个，按 (frame,view,patch) 排序，读整行后按 patch 取值，右补零。
+        交付 dtype 同 _pad（image bf16 / pos f32 / stt f32）。
+        """
+        kept = self._kept_indices[g]
+        sel = kept[kept[:, 0] <= step][-self._budget:]
+        sel = sel[np.lexsort((sel[:, 2], sel[:, 1], sel[:, 0]))]
+        k = len(sel)
+        frames, frame_of_token = np.unique(sel[:, 0].astype(np.int64), return_inverse=True)
+        rows = self._row_base[g] + frames
+        patch = sel[:, 2]
+        img = store.read_image_rows(rows)[frame_of_token, patch]
+        pos = store.pos_rows(frames)[frame_of_token, patch]
+        stt = store.state_rows(rows)[frame_of_token]
+        out_img = np.zeros((self._budget,) + img.shape[1:], dtype=img.dtype)
+        out_pos = np.zeros((self._budget,) + pos.shape[1:], dtype=pos.dtype)
+        out_stt = np.zeros((self._budget,) + stt.shape[1:], dtype=stt.dtype)
+        out_img[:k] = img
+        out_pos[:k] = pos
+        out_stt[:k] = stt
+        mask = np.zeros(self._budget, dtype=np.bool_)
+        mask[:k] = True
+        data["static_image_emb"] = out_img
+        data["static_pos_emb"] = out_pos
+        data["static_state_emb"] = self._normalize_state(out_stt)
+        data["static_mask"] = mask
+
     def __getitem__(self, idx):
         idx = int(idx)
         if not 0 <= idx < len(self._epis_of):
@@ -377,22 +434,25 @@ class FrameSampDataset(Dataset):
         data.pop("simple_subgoal_online")
         data.pop("grounded_subgoal_online")
 
-        frames = even_sampling_indices(step, self._max_frames)     # 同一函数 import（R4）
-        frames_arr = np.asarray(frames, dtype=np.int64)
-        rows = self._row_base[g] + frames_arr
-        img = store.read_image_rows(rows)          # (n,tokens_per_frame,2048) bf16
-        pos = store.pos_rows(frames_arr)           # (n,tokens_per_frame,768) f32
-        stt = store.state_rows(rows)               # (n,8) f32
-        n = len(frames)
-        img, pos, stt, mask = self._pad(img, pos, stt, n)
+        if self._token_dropping:
+            self._fill_token_dropping(data, store, g, step)
+        else:
+            frames = even_sampling_indices(step, self._max_frames)     # 同一函数 import（R4）
+            frames_arr = np.asarray(frames, dtype=np.int64)
+            rows = self._row_base[g] + frames_arr
+            img = store.read_image_rows(rows)          # (n,tokens_per_frame,2048) bf16
+            pos = store.pos_rows(frames_arr)           # (n,tokens_per_frame,768) f32
+            stt = store.state_rows(rows)               # (n,8) f32
+            n = len(frames)
+            img, pos, stt, mask = self._pad(img, pos, stt, n)
 
-        # 与旧路径 _prepare_frame_sampling 的 reshape/repeat 逐字对齐：
-        # (max_frames,tokens_per_frame,2048)→(budget,2048)，C-order 保留原始字节。
-        data["static_image_emb"] = img.reshape(-1, img.shape[-1])
-        data["static_pos_emb"] = pos.reshape(-1, pos.shape[-1])
-        data["static_state_emb"] = self._normalize_state(
-            np.repeat(stt, self._tokens_per_frame, axis=0))
-        data["static_mask"] = np.repeat(mask, self._tokens_per_frame)
+            # 与旧路径 _prepare_frame_sampling 的 reshape/repeat 逐字对齐：
+            # (max_frames,tokens_per_frame,2048)→(budget,2048)，C-order 保留原始字节。
+            data["static_image_emb"] = img.reshape(-1, img.shape[-1])
+            data["static_pos_emb"] = pos.reshape(-1, pos.shape[-1])
+            data["static_state_emb"] = self._normalize_state(
+                np.repeat(stt, self._tokens_per_frame, axis=0))
+            data["static_mask"] = np.repeat(mask, self._tokens_per_frame)
 
         if self._motion_enabled:
             # ①′ 起点集合（段内绝对网格、前视 33 帧、尾端 ≤ 当前帧；三侧同式 visible_motion_rows）
