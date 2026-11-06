@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>两个 Swap 任务第一次取 bin 的注意力计划</title>
+<style>
+  body { margin: 0; background: #f7f8f8; color: #1d2528; font: 16px/1.75 -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 36px 24px 72px; }
+  h1 { font-size: 1.7rem; line-height: 1.35; margin: 44px 0 14px; padding-top: 16px; border-top: 3px solid #1d2528; }
+  h1.title { border-top: 0; margin-top: 0; padding-top: 0; font-size: 2rem; }
+  h2 { font-size: 1.22rem; margin: 30px 0 8px; }
+  p { margin: 9px 0; } ul, ol { margin: 9px 0; padding-left: 1.4em; } li { margin: 4px 0; }
+  code { font: 0.87em ui-monospace, Menlo, monospace; overflow-wrap: anywhere; }
+  pre { background: #eef2f3; padding: 10px 12px; overflow-x: auto; font: 0.84rem/1.5 ui-monospace, Menlo, monospace; }
+  .note { background: #e9eef0; padding: 10px 14px; margin: 14px 0; }
+  .warn { background: #fbf1e3; padding: 10px 14px; margin: 14px 0; }
+  .tbl { overflow-x: auto; margin: 12px 0; }
+  table { border-collapse: collapse; font-size: 0.91rem; width: 100%; background: #fff; }
+  th, td { border: 1px solid #d3dbde; padding: 6px 9px; text-align: left; vertical-align: top; }
+  th { background: #eef2f3; white-space: nowrap; }
+</style>
+</head>
+<body>
+<main>
+<h1 class="title">两个 Swap 任务第一次取 bin 的注意力计划</h1>
+<div class="note">
+<b>状态：</b>只规划、未实施。用户对这份计划不改而明确同意后才算开工（第 2 条）；每次开工前另派一个独立审查子代理。<br>
+<b>代码锚点：</b>分支 <code>v4.1-interpretMotion</code>，commit <code>2a8b445</code>；第三方 <code>third_party/robomme_benchmark</code> gitlink <code>856bc3a</code>，本计划不改它。<br>
+<b>工作副本：</b>sled-aspen <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code>，环境 A，产物全部落 <code>v1-store/</code>。<br>
+<b>commit 体例：</b>功能合并 <code>commitV4.1.&lt;n&gt;:</code>（从 <code>git log</code> 最近编号接续），子代理 <code>sub/W&lt;n&gt;:</code>，文档 <code>docs:</code>。<br>
+<b>待用户确认：</b>判据表写 <code>RTX 6000 Ada Generation</code>，本机实测 <code>NVIDIA RTX A6000</code>；上一轮 <code>attn-buttonunmaskswap-success-seed42-1103/launch.md</code> 记录相同。本计划按环境 A 写。
+</div>
+
+<h1>第一部分（给人看）</h1>
+
+<h2>一、要做什么与全部运行一览</h2>
+<p>在 <code>ButtonUnmaskSwap</code> 和 <code>VideoUnmaskSwap</code> 各自的官方 test 50 局上，两个模型全程真实 rollout。每局只分析模型去取第一个 bin 的决策段：<b>靠近、抓取，夹爪闭合就结束</b>。按第一个 bin 选对或选错分组，最后汇总两个任务共同和各自特有的注意力 pattern。</p>
+<p>前面的推理不能跳过，因为记忆靠开局以来的帧积累。所以全程只记录输入和噪声，注意力只离线算决策段。</p>
+<div class="tbl"><table>
+<tr><th>批次</th><th>模型 / 卡</th><th>任务</th><th>局数</th><th>存什么</th></tr>
+<tr><td>R1</td><td>motion 59999 / GPU1</td><td>ButtonUnmaskSwap、VideoUnmaskSwap</td><td>各 50</td><td>全部推理的输入与噪声；逐步轨迹；每个 bin 的位置</td></tr>
+<tr><td>R2</td><td>基线 ctx512 79999 / GPU0</td><td>同上</td><td>各 50</td><td>同上</td></tr>
+<tr><td>O1</td><td>同上两卡</td><td>两任务</td><td>每局最多 4 次推理</td><td>完整 attention 与 prefix</td></tr>
+<tr><td>A1</td><td>CPU</td><td>两任务</td><td>全部窗口</td><td>标签表、指标、图、pattern 汇总</td></tr>
+</table></div>
+
+<h2>二、已定口径</h2>
+<div class="tbl"><table>
+<tr><th>编号</th><th>口径</th><th>依据</th></tr>
+<tr><td>K1</td><td>每个任务跑全部 50 局，不挑成功局</td><td>用户：「能不能所有五十局都跑关键决策点」（本计划第一节）</td></tr>
+<tr><td>K2</td><td>只分析第一次取 bin 的过程，第二个目标和后续重试都不算</td><td>用户：「一路往下找到这个第一个第一个病，并且把它拿起来的这么一个过程」；「病」确认指 bin</td></tr>
+<tr><td>K3</td><td>窗口截断到靠近、抓取，夹爪闭合就结束，不含抬起</td><td>用户：「你应该把它截断到靠近、抓取，就是假爪闭合就算结束了」（第三节）</td></tr>
+<tr><td>K4</td><td>按第一个 bin 选对或选错分组</td><td>用户：「就是按照第一个bin选对还是选错来判断」（第四节）</td></tr>
+<tr><td>K5</td><td>VideoUnmaskSwap 同样跑</td><td>用户：「你需要再跑一下 video and mask swap 任务也要跑」</td></tr>
+<tr><td>K6</td><td>总结两个任务的注意力，找 pattern</td><td>用户：「总结一下这两个任务的这个注意力机制，看看能不能找到一些…pattern」（第六节）</td></tr>
+<tr><td>K7</td><td>两模型 × 两任务 200 局全部重跑，走原采样路径；上一轮 22 局只作对照，不混入</td><td>上一轮动作来自注意力展开路径，bf16 下与原路径不逐位相同（第五节）</td></tr>
+<tr><td>K8</td><td>跑到官方终局，但终局前的后段不算注意力</td><td>要拿官方结局；后段只多存少量输入</td></tr>
+<tr><td>K9</td><td>模型 seed 42，环境 seed 与难度逐局取官方元数据；正常失败不重试，只有基础设施故障才重试</td><td>第 22 条</td></tr>
+</table></div>
+
+<h2>三、决策窗口怎么定</h2>
+<p><b>定义。</b>先找第一次抬起 <code>L</code>：最后一次交换结束后，第一个让官方 <code>is_bin_pickup</code> 成立（bin 的 z &gt; 0.15）的环境步。再找闭合 <code>C</code>：<code>L</code> 之前最后一次夹爪命令由开转闭（<code>g&gt;0</code> 到 <code>g≤0</code>）的那一步。发出 <code>C</code> 这条动作的推理记为 <code>G</code>。</p>
+<div class="tbl"><table>
+<tr><th>推理</th><th>阶段</th><th>说明</th></tr>
+<tr><td><code>G−3</code>、<code>G−2</code>、<code>G−1</code></td><td>靠近</td><td>上一轮多见抬高并平移，随后开始下探；不再依赖“最后一次张开”这一条</td></tr>
+<tr><td><code>G</code></td><td>抓取</td><td>动作块里含闭合命令。<b>窗口到此结束</b></td></tr>
+<tr><td><code>G+1</code> 以后</td><td>不分析</td><td>抬起和之后的动作只用来判定标签</td></tr>
+</table></div>
+<p><b>为什么取 4 次。</b>上一轮 ButtonUnmaskSwap 22 局（当时以“交换后第一次闭合”定位）实测：<code>G</code> 的推理起点在 step 272～320；<code>G−3</code> 时夹爪开度都不低于 0.035，TCP 高度 0.148～0.201 米；<code>G</code> 时高度 0.059～0.192 米。所以往前 3 次已覆盖张开、移动和开始下探。上一轮的“靠近”只取 <code>G−1</code>，会漏掉选择方向的那段。</p>
+<p><b>为什么锚在“抬起前最后一次闭合”。</b>交换期间和按按钮时都会有闭合：实测 ButtonUnmaskSwap 第 53 步前后就有一次按钮闭合，第 20 局 motion 还在第 157 步多闭合过一次。旧脚本 <code>prepare_phases.py</code> 取的是“最后 N 次闭合”，换成抓空重试或双目标时会选错。</p>
+<div class="warn"><b>⚠ 边界情况，全部如实保留：</b>整局没有抬起任何 bin 的局没有窗口，记 <code>no_pick</code>，不补点；<code>G&lt;3</code> 的局只取现有推理，记 <code>incomplete</code>；抓空后再抓的局用最终抬起 bin 的那次闭合，同时在标签表里记下之前的闭合次数。</div>
+
+<h2>四、第一个 bin 选对还是选错</h2>
+<p>不靠人工判断，直接用环境里的官方定义。两个任务的第一目标都是 <code>selected_bins[0]</code>，官方判败函数 <code>is_any_bin_pickup</code> 检查其他 bin 是否被抬起。</p>
+<div class="tbl"><table>
+<tr><th>标签</th><th>判定</th><th>进主比较</th></tr>
+<tr><td><code>correct</code></td><td>第一个抬起的是 <code>selected_bins[0]</code></td><td>是</td></tr>
+<tr><td><code>wrong</code></td><td>第一个抬起的是其他 bin</td><td>是</td></tr>
+<tr><td><code>no_pick</code></td><td>整局没有 bin 被抬起</td><td>否，只报局数</td></tr>
+</table></div>
+<p>双目标局只看第一个目标，所以 <code>correct</code> 不等于官方成功，官方结局单独报告。标签用逐步轨迹里写的 bin 位姿计算，再用两条交叉核对：闭合时距 TCP 最近的 bin 应该就是后来抬起的 bin；<code>wrong</code> 的局官方结局不能是成功。</p>
+
+<h2>五、两个任务的差异</h2>
+<div class="tbl"><table>
+<tr><th></th><th>ButtonUnmaskSwap</th><th>VideoUnmaskSwap</th></tr>
+<tr><td>交换</td><td>交换发生在模型控制期间，第 j 次为 <code>[64+50(j−1), 64+50j)</code></td><td>常量相同，但发生在演示视频段（第一条 <code>demonstration=True</code> 子目标）</td></tr>
+<tr><td>模型开始控制</td><td>开局就控制，要先按两个按钮</td><td>看完视频才控制，夹爪没有按钮闭合</td></tr>
+<tr><td>裸露窗 <code>[0,32)</code></td><td>上一轮已目视核实</td><td>同一函数 <code>lift_and_drop_objects_back_to_original</code>，但<b>未目视核实</b>，冒烟时必查</td></tr>
+<tr><td>难度配置</td><td>bin 3～4 个，交换 1～3 次，取 1～2 次</td><td>相同</td></tr>
+<tr><td>官方三 seed 成功率（concat）</td><td>27.33 ± 3.06</td><td>37.33 ± 4.62</td></tr>
+<tr><td>已有注意力结果</td><td>有，<a href="docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/result.md">上一轮报告</a></td><td>没有，这是第一次</td></tr>
+</table></div>
+<p>因为注意力采集链从没跑过 Video 任务，冒烟必须确认 <code>frame_times</code>、motion 窗口与演示段的时间关系，不能直接套 Button 的结论。</p>
+
+<h2>六、怎么找 pattern</h2>
+<p>沿用上一轮的指标定义（<code>success_attention.py</code>、<code>x1</code>、<code>r2</code>、<code>r3</code>、<code>r4</code>），只是把分析单位改成决策窗口。每个读数都按 模型 × 任务 × 选对/选错 × 相对推理（−3、−2、−1、0）展开。</p>
+<div class="tbl"><table>
+<tr><th>编号</th><th>问题</th><th>主读数</th></tr>
+<tr><td>P1</td><td>谁更会选</td><td>第一个 bin 选对率、官方成功率，按交换次数和 bin 数分层</td></tr>
+<tr><td>P2</td><td>是否回看开局</td><td>帧流 <code>[0,32)</code> 去汇聚点富集（RB）及是否高于 1</td></tr>
+<tr><td>P3</td><td>是否读交换过程</td><td>motion 流、帧流在交换区间的重叠计权富集</td></tr>
+<tr><td>P4</td><td>上一轮的头和固定峰是否重现</td><td><code>L3H0</code>、<code>L16H0</code> 的开局偏好；motion 最大窗口是否仍是 <code>[160,193)</code>、是否仍由 <code>L17H1</code> 承担</td></tr>
+<tr><td>P5</td><td>选对和选错差在哪</td><td>P2～P4 在同模型内 correct 减 wrong 的局级差值</td></tr>
+<tr><td>P6</td><td>记忆区内部的通路</td><td>motion token 汇聚比例、R4 一跳间接读取（探索性）</td></tr>
+</table></div>
+<p><b>怎样才算 pattern，事先定死。</b>局级重采样 2000 次（种子 42），统计单位是局。</p>
+<div class="tbl"><table>
+<tr><th>结论</th><th>判定</th></tr>
+<tr><td>共同 pattern</td><td>同模型下两个任务方向相同，且两个任务的区间都不含参照值（富集看 1，差值看 0）</td></tr>
+<tr><td>任务特有</td><td>只有一个任务的区间不含参照值</td></tr>
+<tr><td>未见</td><td>两个任务都含参照值</td></tr>
+<tr><td>与选择相关</td><td>P5 的差值区间不含 0；头级结果未校正多重比较，一律标探索性</td></tr>
+</table></div>
+<p>注意力只说明“看哪里”，这些 pattern 不能证明因果。需要因果结论时，再用同一批局另外立计划做遮挡或替换。</p>
+
+<h2>七、我们这一侧要改什么</h2>
+<p>现有 <code>rollout_record</code> 只允许 StopCube，逐步轨迹也写在 StopCube 专用客户端里，而离线计算依赖这份轨迹，所以非改不可。全部新增文件，不动 StopCube 现有路径。</p>
+<div class="tbl"><table>
+<tr><th>文件</th><th>改什么</th></tr>
+<tr><td><code>scripts/interpret/bin_trace_runner.py</code>（新）</td><td>Swap 任务的轨迹客户端：逐步写动作、状态、TCP、每个 bin 的位姿</td></tr>
+<tr><td><code>scripts/interpret/run_local.py</code></td><td>新键 <code>bin_trace</code>，允许 <code>rollout_record</code> 与它同用，默认路径不变</td></tr>
+<tr><td><code>scripts/interpret/first_bin_windows.py</code>（新）</td><td>从轨迹算 <code>L</code>、<code>C</code>、<code>G</code>、窗口与标签</td></tr>
+<tr><td><code>scripts/interpret/first_bin_offline.py</code>（新）</td><td>只对窗口内推理原路径重放，再算完整 attention 和 prefix</td></tr>
+<tr><td><code>scripts/interpret/analysis/first_bin_attention.py</code>（新）</td><td>P1～P6、pattern 判定和出图</td></tr>
+</table></div>
+
+<h2>八、规模</h2>
+<div class="tbl"><table>
+<tr><th>项目</th><th>估算</th><th>依据</th></tr>
+<tr><td>rollout 推理</td><td>每格 1250～4000 次，共 5000～16000 次</td><td>上一轮每局约 23 次；上限 80 次取自遮挡实验，正常失败局未实测</td></tr>
+<tr><td>rollout 记录</td><td>24～78 GiB</td><td>StopCube 实测 4.9 MiB/次</td></tr>
+<tr><td>注意力</td><td>最多 800 次，约 345 GiB</td><td>上一轮实测 84 + 358 MiB/次</td></tr>
+<tr><td>总存储</td><td>约 370～425 GiB，硬上限 600 GiB</td><td><code>/data</code> 剩 5.1 T</td></tr>
+<tr><td>rollout 时间</td><td>motion 1.5～5 小时，基线 1～3.2 小时，两卡并行</td><td>StopCube 实测 motion 约 2.2 秒/次、基线约 1.4 秒/次</td></tr>
+<tr><td>离线与分析</td><td>各约 1 小时量级</td><td>StopCube 离线约 3 秒/条，但未含 prefix；上一轮分析约 16 CPU·秒/次；冒烟后修正</td></tr>
+</table></div>
+
+<h2>九、验收</h2>
+<div class="tbl"><table>
+<tr><th>查什么</th><th>怎么查</th><th>过了说明什么</th><th>判定行</th></tr>
+<tr><td>200 局齐全</td><td>对清单封签逐局核终局</td><td>没有漏局、没有替换</td><td><code>ROLLOUT_COVERAGE=PASS cells=4 episodes=200 infra_errors=&lt;n&gt;</code></td></tr>
+<tr><td>记录能还原动作</td><td>窗口内每次推理走原路径重放，容差 1e-6</td><td>分析的输入就是实际决策的输入</td><td><code>ROLLOUT_REPLAY=PASS points=&lt;n&gt; same_path_maxabs=&lt;x&gt; tol=1e-6</code></td></tr>
+<tr><td>标签可信</td><td>最近 bin 与抬起 bin 比较；wrong 局官方不成功</td><td>选对选错不是算错的</td><td><code>FIRST_BIN_LABEL=PASS episodes=200 correct=&lt;n&gt; wrong=&lt;n&gt; no_pick=&lt;n&gt; geom_mismatch=&lt;n&gt; wrong_but_success=0</code></td></tr>
+<tr><td>窗口正确</td><td>每个窗口核对 <code>G</code> 含闭合、无窗口局有原因</td><td>确实截断在闭合</td><td><code>FIRST_BIN_WINDOW=PASS windows=&lt;n&gt; complete=&lt;n&gt; incomplete=&lt;n&gt;</code></td></tr>
+<tr><td>注意力有效</td><td>行和、padding、有限性、展开路径动作差</td><td>注意力数组可用；展开路径差如实报告，不算逐位等价</td><td><code>ATTN_WINDOW=PASS records=&lt;n&gt; rowsum_err=&lt;x&gt; attn_path_maxabs=&lt;x&gt;</code></td></tr>
+<tr><td>主会话目视</td><td>全部窗口拼图：闭合帧、抬起帧；Video 裸露窗</td><td>几何判定与画面一致</td><td><code>WINDOW_VISUAL=PASS reviewed=&lt;n&gt; mismatches=&lt;n&gt;</code></td></tr>
+<tr><td>pattern 汇总</td><td>按第六节规则写出每项判定</td><td>结论是预定规则得出的</td><td><code>PATTERN_SUMMARY=PASS tasks=2 models=2 readouts=&lt;n&gt;</code></td></tr>
+</table></div>
+<p>验收 FAIL 只记证据，不改判据，交用户裁决。<code>correct</code> 或 <code>wrong</code> 在某一格太少时照实报告，不凑样本。</p>
+
+<h2>十、步骤</h2>
+<div class="tbl"><table>
+<tr><th>阶段</th><th>内容</th><th>判据</th></tr>
+<tr><td>S0</td><td>开工审查计划；固定基线 sha</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS</code></td></tr>
+<tr><td>S1</td><td>四个子任务实现、审查、合并</td><td>各 <code>PRE_MERGE_REVIEW</code>、<code>POST_MERGE_REVIEW=PASS</code></td></tr>
+<tr><td>S2</td><td>四格各冒烟 1 局，含离线和窗口；目视 Video 裸露窗；修正时间和存储估算</td><td>全部判定行 PASS，规模不超硬上限</td></tr>
+<tr><td>S3</td><td>正式 200 局 rollout</td><td><code>ROLLOUT_COVERAGE</code></td></tr>
+<tr><td>S4</td><td>定窗口、打标签、目视</td><td><code>FIRST_BIN_LABEL</code>、<code>FIRST_BIN_WINDOW</code>、<code>WINDOW_VISUAL</code></td></tr>
+<tr><td>S5</td><td>离线算窗口注意力</td><td><code>ROLLOUT_REPLAY</code>、<code>ATTN_WINDOW</code></td></tr>
+<tr><td>S6</td><td>pattern 分析与报告，图目视复查</td><td><code>PATTERN_SUMMARY</code>；<code>REPORT_CONTENT_REVIEW=PASS</code></td></tr>
+</table></div>
+
+<h2>十一、子代理分工与合并（简述）</h2>
+<p>拆成四块，每块一个独立 worktree、只写自己的文件：W1 管轨迹客户端和 <code>run_local.py</code>，W2 管窗口与标签，W3 管离线注意力，W4 管分析与出图。按 W1、W2、W3、W4 的顺序合回工作分支。每次合并前审范围、接口和测试，合并后跑定向短测，再 push。运行由 opus 运行代理起跑后交回句柄，监听和清理归主会话；报告由主会话写。</p>
+
+<h2>十二、交接顺序与状态机登记</h2>
+<ul>
+<li><b>任务 id：</b><code>swap-first-bin-attn</code>；是否登记进 <code>current.json</code> 待用户答复。不登记就按人工交接。</li>
+<li><b>交接前必须完成：</b>第九节全部判定行，<code>launch.md</code> 和 <code>result.md</code> 已提交。</li>
+<li><b>长尾：</b>无。</li>
+<li><b>上游依赖：</b>无。<code>gl-abl-encoders-train</code> 在 GreatLakes，不占本机卡。</li>
+<li><b>解锁的下游：</b>无自动解锁；因果实验另立计划、另给开工令。</li>
+</ul>
+<p>逐文件接口、分配表、runbook 与风险见第二部分。</p>
+
+<h1>第二部分（技术细节，供 agent 追踪）</h1>
+
+<h2>〇、前置声明与红线</h2>
+<ol>
+<li>不改 <code>third_party/robomme_benchmark</code>、<code>rollout_offline.py</code>、<code>stopcube_runner.py</code> 与模型代码；<code>run_local.py</code> 不带 <code>bin_trace</code> 时命令必须逐字不变。</li>
+<li>不换模型、不换 seed、不为成功重试。基础设施故障才重试，每局至多 1 次并记录原因。</li>
+<li>新 run 名 <code>swap-first-bin-attn-seed42-1105</code>，产物根 <code>O=v1-store/evaluation/swap-first-bin-attn-seed42-1105</code>；不写上一轮目录。</li>
+<li>不操作其他用户或任务的进程与 tmux；tmux 前缀 <code>sfb-</code>；每次清理只针对清单内确切名称。</li>
+<li>总存储超过 600 GiB 立即停止，报告用户。</li>
+<li>主检出现有未跟踪文件 <code>TODO_RoboMME_Qwen3VL_FrameSamp_Context.en (1).html</code> 不读不动；运行放在干净执行树。</li>
+</ol>
+<p>现有能力与拟新增要分清：<code>--rollout-record</code>、<code>RolloutRecorder</code>、<code>AttnAdapter.run(save_prefix=True)</code>、<code>offline_query.replay_query</code>、<code>rollout_offline.load_trace</code>、<code>load_accepted</code> 是现有能力；第一节清单内的新文件与 <code>bin_trace</code> 是拟新增；下面的存储和时间未在 Swap 任务上实测，待 S2 修正。</p>
+
+<h2>一、逐文件改动清单</h2>
+<h3>1.1 <code>scripts/interpret/bin_trace_runner.py</code>（新）</h3>
+<ul>
+<li>入口按 <code>stopcube_runner.py::evaluate</code> 的结构，<code>TraceRunner</code>、<code>TraceEvaluator</code> 对应新类；只接受 <code>ButtonUnmaskSwap</code>、<code>VideoUnmaskSwap</code>。</li>
+<li>每步写 <code>client/traces/&lt;nonce&gt;/step_trace.jsonl</code>，必含 <code>rollout_offline.load_trace</code> 要的键：<code>event</code>、<code>episode_key</code>、<code>infer_seq</code>、<code>row_in_chunk</code>、<code>chunk_start_env_step</code>、<code>state_before</code>；另含 <code>action_index</code>、<code>exec_start_idx</code>、<code>command_action</code>、<code>executed_action</code>、<code>state_after</code>、<code>env_step_before/after</code>、<code>tcp_before/after</code>、<code>bins_before/after</code>（按 <code>spawned_bins</code> 顺序的位置列表）。</li>
+<li>回执写 <code>difficulty</code>、<code>swap_times</code>、<code>pick_times</code>、<code>swap_end</code>（<code>swap_schedule[-1][3]</code>）、<code>D</code>、<code>exec_start_idx</code>、<code>color_names</code>、<code>first_target_bin_index</code>（<code>selected_bins[0]</code> 在 <code>spawned_bins</code> 中的下标）。读取只读，不改环境，不调用多余 <code>step</code>。</li>
+</ul>
+<h3>1.2 <code>scripts/interpret/run_local.py</code></h3>
+<ul>
+<li><code>load_spec</code> 校验：<code>bin_trace</code> 必须为 bool；<code>rollout_record</code> 允许 <code>stopcube_mode=normal</code> 或 <code>bin_trace=true</code>；两者互斥；<code>bin_trace</code> 下 manifest 只能含上述两任务。</li>
+<li><code>build_client_command</code>：<code>bin_trace</code> 时替换 <code>command[1]</code> 为新入口。身份字典 <code>ident</code> 加 <code>bin_trace</code>。其余路径不动。</li>
+</ul>
+<h3>1.3 <code>scripts/interpret/first_bin_windows.py</code>（新）</h3>
+<ul>
+<li>输入 <code>--run-root</code>、<code>--output</code>。对每份 accepted 终局读轨迹与回执。</li>
+<li><code>L</code>：<code>env_step_after ≥ swap_end</code> 中，第一个有 bin 的 z &gt; 0.15 的行；用常量 <code>BIN_PICKUP_Z = 0.15</code>，并由测试核对与 <code>subgoal_evaluate_func.is_bin_pickup</code> 同值。</li>
+<li><code>C</code>：<code>L</code> 之前最后一行满足上一行 <code>executed_action[7]&gt;0</code> 且本行 <code>≤0</code>；没有则 <code>no_close_before_pick</code>，计入判定行。</li>
+<li><code>G=该行 infer_seq</code>；<code>window=[max(0,G-3)…G]</code>；输出 <code>windows.json</code>：<code>episode_key、model、label、picked_bin、first_target_bin、G、window、C、L、earlier_closes、nearest_bin_at_C、outcome、difficulty、swap_times、pick_times、bin_count</code>。</li>
+<li>末行打印 <code>FIRST_BIN_LABEL</code>、<code>FIRST_BIN_WINDOW</code>；<code>wrong_but_success&gt;0</code> 或 <code>geom_mismatch&gt;0</code> 打印 FAIL 与局号，不改判据。</li>
+<li>生成拼图：每局 <code>C</code> 帧与 <code>L</code> 帧，每张 20 局。视频路径从 <code>attempts/*/client/videos</code> 取。</li>
+</ul>
+<h3>1.4 <code>scripts/interpret/first_bin_offline.py</code>（新）</h3>
+<ul>
+<li>从 <code>rollout_offline</code> 导入 <code>load_accepted</code>、<code>load_trace</code>，从 <code>offline_query</code> 导入 <code>replay_query</code>、<code>unpack_observation</code>。只处理 <code>windows.json</code> 内的 <code>rollout_&lt;seq&gt;.npz</code>。</li>
+<li>每条先走原路径重放，超 1e-6 立即非零退出；再用记录里的 <code>sample_rng</code> 和 <code>noise</code> 调 <code>AttnAdapter.run(..., out_f16=True, save_prefix=True)</code>。</li>
+<li>输出 <code>&lt;output&gt;/&lt;nonce&gt;/infer_&lt;seq&gt;.npz</code>、<code>prefix_&lt;seq&gt;.npz</code>，键沿用 <code>serve_policy_attn.NPZ_KEYS</code> 与 <code>PREFIX_NPZ_KEYS</code>，额外存 <code>same_path_maxabs</code>、<code>attn_path_maxabs</code>、<code>input_sha256</code>；断点续跑按 <code>input_sha256</code> 跳过。</li>
+<li>末行 <code>ROLLOUT_REPLAY</code>、<code>ATTN_WINDOW</code>。</li>
+</ul>
+<h3>1.5 <code>scripts/interpret/analysis/first_bin_attention.py</code>（新）</h3>
+<ul>
+<li>导入复用：<code>success_attention.memory_metrics</code>、<code>stream_metrics</code>、<code>sink_observation</code>、<code>robust_infer</code>、<code>target_color_family</code> 与 <code>x1.infer_metrics</code>，公式不改。文字族只用第一目标颜色。</li>
+<li>4 个 CPU 进程按局并行，每进程 BLAS/OMP/MKL 单线程。</li>
+<li>输出 <code>pattern-summary.json</code>（P1～P6 每项：点估计、局数、区间、判定）与图：选对率；富集随相对推理变化（模型 × 任务 × 选对选错）；144 头差值矩阵；motion 窗口峰位置；共同 pattern 表。</li>
+<li>重采样复用 <code>oracle_press_prob.bootstrap</code>，2000 次，种子 42，单位局。</li>
+<li>patch 级热力图放大只用 <code>cv2.INTER_NEAREST</code>（第 5 条）。</li>
+</ul>
+
+<h2>二、子代理分配表</h2>
+<div class="tbl"><table>
+<tr><th>编号</th><th>目标</th><th>可写集合</th><th>禁触</th><th>接口与依赖</th><th>合并顺序</th><th>验收（worktree 内 CPU，≤5 分钟）</th><th>资源</th></tr>
+<tr><td>W1 <code>opus</code></td><td>轨迹客户端与开关</td><td><code>bin_trace_runner.py</code>、<code>run_local.py</code>、<code>test_bin_trace_runner.py</code></td><td>其余全部</td><td>输出 1.1 键表</td><td>1</td><td><code>test_bin_trace_runner.py</code>、<code>test_rollout_record.py</code>；<code>W1_CPU=PASS</code></td><td>无 GPU</td></tr>
+<tr><td>W2 <code>opus</code></td><td>窗口与标签</td><td><code>first_bin_windows.py</code>、<code>test_first_bin_windows.py</code></td><td>其余全部</td><td>读 1.1，写 1.3 <code>windows.json</code></td><td>2</td><td>合成轨迹覆盖抓空、双目标、无抬起、交换期抬高；<code>W2_CPU=PASS</code></td><td>无 GPU</td></tr>
+<tr><td>W3 <code>opus</code></td><td>离线注意力</td><td><code>first_bin_offline.py</code>、<code>test_first_bin_offline.py</code></td><td>其余全部</td><td>读 <code>windows.json</code></td><td>3</td><td>假策略测试选取、续跑、重放失败退出；<code>W3_CPU=PASS</code></td><td>无 GPU</td></tr>
+<tr><td>W4 <code>opus</code></td><td>分析与出图</td><td><code>analysis/first_bin_attention.py</code>、<code>test_first_bin_attention.py</code></td><td>其余全部</td><td>读 <code>windows.json</code> 与 1.4 输出</td><td>4</td><td>合成数据核对判定规则；<code>W4_CPU=PASS</code></td><td>无 GPU</td></tr>
+<tr><td>主会话</td><td>报告、留档、提交</td><td><code>docs/evaluation-doc/swap-first-bin-attn-seed42-1105/</code>、总索引</td><td>代码</td><td>依赖全部</td><td>末尾</td><td>第九节判定行</td><td>无</td></tr>
+</table></div>
+<p>共享文件只有 <code>run_local.py</code>，归 W1。worktree 环境按 <code>CLAUDE.md</code> 取法：<code>UV_PROJECT_ENVIRONMENT=&lt;主 .venv&gt; PYTHONPATH=&lt;worktree&gt;/src uv run --no-sync …</code>，先打印模块 <code>__file__</code> 核实。</p>
+<p><b>运行型委派</b>（<code>opus</code>，主检出的干净执行树 <code>v1-store/worktrees/swap-first-bin-run</code>，不改代码）：</p>
+<div class="tbl"><table>
+<tr><th>tmux</th><th>命令</th><th>卡 / 显存比例</th><th>日志</th><th>起跑判据</th><th>最长等待</th><th>失败处置</th></tr>
+<tr><td><code>sfb-roll-mot</code></td><td><code>run_local --spec $O/spec-mot.json</code>（S2 后写定）</td><td>GPU1 / 0.55</td><td><code>$O/logs/roll-mot.log</code></td><td>首个 <code>ATTN_INFER</code> 或首份 <code>rollout_0000.npz</code></td><td>15 分钟</td><td>交回证据，不改配置</td></tr>
+<tr><td><code>sfb-roll-ctx</code></td><td><code>run_local --spec $O/spec-ctx.json</code></td><td>GPU0 / 0.40</td><td><code>$O/logs/roll-ctx.log</code></td><td>同上</td><td>15 分钟</td><td>同上</td></tr>
+<tr><td><code>sfb-off-mot</code>、<code>sfb-off-ctx</code></td><td><code>first_bin_offline</code></td><td>同上</td><td><code>$O/logs/off-*.log</code></td><td>首条 <code>ROLLOUT_REPLAY</code> 记录</td><td>15 分钟</td><td>同上</td></tr>
+<tr><td><code>sfb-analysis</code></td><td><code>first_bin_attention</code></td><td>CPU</td><td><code>$O/logs/analysis.log</code></td><td>首局完成</td><td>30 分钟</td><td>同上</td></tr>
+</table></div>
+
+<h2>三、闸门总表</h2>
+<div class="tbl"><table>
+<tr><th>闸门</th><th>通过条件</th><th>不通过</th></tr>
+<tr><td>G1 冒烟</td><td>四格各 1 局全链路 PASS；ButtonUnmaskSwap 第 8 局 <code>G</code> 落在上一轮 step 附近（只作观察）；Video 裸露窗目视</td><td>停，不起正式</td></tr>
+<tr><td>G2 规模</td><td>冒烟外推不超过 600 GiB；时间超预估 2 倍时告知用户并继续</td><td>超存储即停</td></tr>
+<tr><td>G3 标签</td><td><code>wrong_but_success=0</code>；几何不一致逐局看视频</td><td>交用户，不改判据</td></tr>
+<tr><td>G4 目视</td><td>窗口与画面一致</td><td>记录局号，交用户</td></tr>
+</table></div>
+
+<h2>四、Runbook</h2>
+<pre>TZ=America/New_York date
+git worktree add --detach v1-store/worktrees/swap-first-bin-run &lt;合并后 sha&gt;
+python -m scripts.interpret.build_manifest --episodes ButtonUnmaskSwap:0,…,VideoUnmaskSwap:49 --chunk-size 5 --out $O/manifest-all.json
+# 冒烟：每格 1 局，规格键 bin_trace=true、rollout_record=true、model_seed=42、purpose=validation
+# 正式 rollout（S2 后写定完整命令进 launch.md）
+tmux new-session -d -s sfb-roll-mot "bash $O/run_rollout.sh mot"
+python -m scripts.interpret.first_bin_windows --run-root $O/&lt;模型&gt;/run --output $O/&lt;模型&gt;/windows
+tmux new-session -d -s sfb-off-mot "bash $O/run_offline.sh mot"
+tmux new-session -d -s sfb-analysis "bash $O/run_analysis.sh"</pre>
+<p>每份日志挂一个 Monitor，过滤 <code>EXIT_CODE=|RUN_LOCAL=|OFFLINE|Traceback|Error|out of memory|Killed</code>。运行命令按第 7 条日志三件套。第 16 条：不额外高频查询 GPU。</p>
+
+<h2>五、风险登记</h2>
+<div class="tbl"><table>
+<tr><th>风险</th><th>处置</th></tr>
+<tr><td>某格 <code>wrong</code> 或 <code>correct</code> 局数很少</td><td>照实报告，该格区间过宽就判“未见”，不补局</td></tr>
+<tr><td>两目标局、4 bin 局混合影响选对率</td><td>按 <code>pick_times</code>、<code>bin_count</code>、<code>swap_times</code> 分层报告</td></tr>
+<tr><td>Video 没有抬起的局占比高</td><td>先看冒烟，正式结果如实列 <code>no_pick</code>，不改窗口规则</td></tr>
+<tr><td>展开路径注意力和实际动作不完全一致（StopCube 实测最大 0.0615）</td><td>每条记录 <code>attn_path_maxabs</code>，单头差小于 0.01 不解读</td></tr>
+<tr><td>显存被其他进程占用</td><td>沿用 0.55 / 0.40；不足则 OOM 停止，不操作他人进程，改期交用户</td></tr>
+<tr><td>人工拼图工作量大</td><td>每张 20 局、约 10 张，主会话全部目视</td></tr>
+</table></div>
+
+<h2>六、盲区</h2>
+<ul>
+<li>单模型 seed，两模型训练来源和步数不同，差异不能都归因于 motion。</li>
+<li>这些局不是在模型训练见过的数据上，但只有一个官方 test 集，不代表更大范围。</li>
+<li>决策可能早于 <code>G−3</code>，本计划按用户截断后不看更早推理；固定 4 次也未随动作快慢调整。</li>
+<li>选对可能出于运气（基线上一轮接近随机），选对组不等于模型记住了位置。</li>
+<li>attention 只是概率，不含 value 范数；一跳间接是线性近似。</li>
+<li>VideoUnmaskSwap 的裸露窗和交换帧未目视核实前，P2、P3 的 Video 列不能解读。</li>
+</ul>
+
+<h2>七、留档与 commit 纪律</h2>
+<ul>
+<li>run 名确认即建 <code>docs/evaluation-doc/swap-first-bin-attn-seed42-1105/</code>；起跑写 <code>launch.md</code>（含 tmux 清单与本计划用户原话），结束写 <code>result.md</code>，<code>records/</code> 只存轻量数值、窗口表和已目视的图；总索引加一行。</li>
+<li>评估从干净 HEAD 启动，记 HEAD sha，不制造空 commit。</li>
+<li>只逐路径 add；子代理不 push；每次合并后 push。实施中调整按第 2 条：先对抗验证，事后写入本计划“实施中调整”小节。</li>
+<li>日志按第 12 条 (3) 清洗后归档。</li>
+</ul>
+</main>
+</body>
+</html>
