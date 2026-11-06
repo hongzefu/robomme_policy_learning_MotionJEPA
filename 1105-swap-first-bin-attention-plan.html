@@ -345,6 +345,9 @@ tmux new-session -d -s sfb-analysis "bash $O/run_analysis.sh"</pre>
 <tr><td>F4 对照闸门无算法</td><td>写明比较键、容差 1e-5、<code>peak160_in_window</code> 定义</td></tr>
 <tr><td>F5 重建键和形状</td><td>列出缺失键来源、去 batch 轴、回执写 prompt</td></tr>
 <tr><td>F6、F7、F8、F9、F10</td><td>冒烟记录启动开销；删除错误的随机数风险；Z 常量按文本核对；写明视频帧号映射；算术与判定行小修</td></tr>
+<tr><td>用户：「如果有其他用户占了卡的话，你就尽可能地避开。尽可能还是做完」</td><td>K10、K11 不变；不动他人进程，起跑前看占用，某卡放不下就先用另一张；因显存不足失败的局按基础设施故障换卡补跑</td></tr>
+<tr><td>W4 实现选择（审查认可）</td><td>M2、M4 用原始 motion 流；M3、M4 的区间由 <code>bootstrap_diff</code> 按局分组重采样；两任务区间都不含参照值但方向相反时，输出“方向相反（第六节规则未覆盖）”</td></tr>
+<tr><td>主会话操作失误</td><td>杀掉第一次冒烟的 tmux 后，基线策略服务成了孤儿并占 18 GB，导致 GPU0 冒烟 SAPIEN 显存不足。按精确 PID 结束后重跑；此后停任务要先核对子进程</td></tr>
 <tr><td>W2 合并前审查：F9 的帧号写法有误</td><td><code>env_step_after − 1</code> → <code>exec_start_idx + action_index + 1</code>，只影响拼图目视</td></tr>
 </table></div>
 </main>
