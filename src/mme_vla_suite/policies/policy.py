@@ -27,6 +27,12 @@ def motion_overflow_from_env() -> str:
     return overflow
 
 
+def _token_dropping_enabled(config) -> bool:
+    """perceptual_memory.type 的在线判定式；缺该段的配置按 frame_sampling 处理。"""
+    perceptual_memory = getattr(config, "perceptual_memory", None)
+    return getattr(perceptual_memory, "type", None) == "token_dropping"
+
+
 class MME_VLA_Policy:
     def __init__(
         self,
@@ -62,6 +68,8 @@ class MME_VLA_Policy:
         #    FrameSampMemory 每 episode 随 reset() 销毁重建，只注入引用
         mcfg = getattr(self.config, "motion", None)
         self.motion_enabled = _motion_enabled(self.config)      # 与模型侧同一判定式
+        if self.motion_enabled and _token_dropping_enabled(self.config):
+            raise ValueError("perceptual_memory.type=token_dropping 不支持 motion.enabled=true")
         self._motion_client = motion_enc_fn
         if self.motion_enabled and self._motion_client is None:
             raise ValueError("motion.enabled=true 的模型必须注入 motion_enc_fn（MotionEncoderClient 或 stub）")
@@ -84,8 +92,12 @@ class MME_VLA_Policy:
         
     
     def _prepare_mem_buffer(self):
-        # commitV4.4：framesamp 是唯一在线记忆路径（recurrent/symbolic/token_dropping
-        # 与 pi05_baseline 的 config is None 分支均已删除，见 git 历史）
+        # commitV4.4：framesamp 是唯一在线记忆类（recurrent/symbolic 与 pi05_baseline 的
+        # config is None 分支均已删除，见 git 历史）；token_dropping 在同一类上开打分路
+        token_drop_kwargs = (
+            {"token_drop_stride": self.config.streaming_obs_horizon // 2}
+            if _token_dropping_enabled(self.config) else {}
+        )
         self.mem_buffer = FrameSampMemory(
             num_views=self.config.num_views,
             img_emb_dim=self.config.memory_feature.img.input_dim,
@@ -95,6 +107,7 @@ class MME_VLA_Policy:
             token_per_image=int(self.config.token_per_image),
             motion_enc_fn=self._motion_client if self.motion_enabled else None,
             motion_cfg=self._motion_cfg if self.motion_enabled else None,
+            **token_drop_kwargs,
         )
 
     @override
@@ -170,6 +183,15 @@ class MME_VLA_Policy:
             return (state - self.state_norm_stats.mean) / (self.state_norm_stats.std + 1e-6)
 
     def _prepare_history(self, inputs: dict) -> dict:
+        if _token_dropping_enabled(self.config):
+            static_image_emb, static_pos_emb, static_state_emb, static_mask = \
+                self.mem_buffer.prepare_token_dropping(self.step_idx, self.config.budget)
+            inputs["static_image_emb"] = static_image_emb
+            inputs["static_pos_emb"] = static_pos_emb
+            inputs["static_state_emb"] = self._normalize_state(static_state_emb)
+            inputs["static_mask"] = static_mask
+            return inputs
+
         history_feats_gather_fn = self.mem_buffer.default_history_feats_gather_fn
         token_budget = self.config.budget
         token_per_image = self.config.token_per_image
