@@ -26,7 +26,7 @@
 <main>
 <div style="font-size:2rem;font-weight:700;line-height:1.35">PatternLock、RouteStick：按子目标的真实 rollout 注意力分析计划</div>
 <div class="note">
-<b>状态与授权：</b>只规划，未实施。开工须用户对本计划不做修改、明确同意；任何增量都要先改计划再次呈现。<br>
+<b>状态与授权：</b>用户已给开工令（美东 2026-11-06「好的，可以开始了」），并在开工审查裁决时说明「审查完毕之后直接开始，不用再来等我批准」。实施中调整按 <code>AGENTS.md</code> 第 2 条执行，修订记录见第二部分第九节。<br>
 <b>用户口径原话（美东 2026-11-06）：</b>「两个 Unmask Swap 任务的这个注意力分析不是很明显……重新做一下这个分析。但这次我们分析 Pattern Lock 和 Root Stake 这两个任务。」「能不能够不分析关键点，就是在所有的动作的时候都分析。就不需要再造造这个关键位置了」「通过rollout」「你通过 sub-goal 不就可以看出来了吗？……它的 sub-goal 就是呃很明确的语义的边界，就我们只关注它不同 sub-goal 之间的这个动作。」<br>
 <b>代码锚点：</b>写作时 HEAD <code>43019316d275833e18af6a386ae049baa34d6c76</code>，分支 <code>v4.1-interpretMotion</code>，工作副本 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code>（环境 A，sled-aspen，两张卡，型号见第二部分盲区）。<br>
 <b>外部依赖：</b>benchmark gitlink <code>856bc3a189d4172f3f47dbee4424d585f8d78db3</code>，不改；两个模型的权重与环境都已在本机，不下载。<br>
@@ -51,12 +51,12 @@
 <tr><th>编号</th><th>口径</th><th>依据</th></tr>
 <tr><td>K1</td><td>只用真实 rollout。不用 Oracle、不接管、不跳步、不造假 episode</td><td>用户原话；<code>1105-patternlock-context-steering-plan.html</code> 的假 episode 方案不进入本轮</td></tr>
 <tr><td>K2</td><td>每局全部推理都分析。「只关注不同 sub-goal 之间的动作」按以下理解执行：每次推理按所在子目标分组，统计以子目标为单位，不再挑局内的关键点。动作块跨越子目标边界的推理也全部保留，另标记 <code>crosses_subgoal</code>，单独多报一列</td><td>用户原话，这是本计划对原话的理解，用户可改</td></tr>
-<tr><td>K3</td><td>切分只用 simulator 的 <code>current_task_index</code>，不用文字名，也不用杆尖距离。环境不改</td><td>用户原话；§三.1 实测</td></tr>
+<tr><td>K3</td><td>切分只用 simulator 的 <code>current_task_index</code>，不用文字名，也不用杆尖距离。不改第三方文件（reset 期间的实例级钩子见 §三.1）</td><td>用户原话；§三.1 实测</td></tr>
 <tr><td>K4</td><td>基线：官方 ctx512 <code>perceptual-framesamp-context/79999</code>；motion：<code>vla-o16cc-59999/59999</code>；模型 seed 42；官方 test 局 0～49，每个模型每局跑 1 次</td><td>沿用 Swap、StopCube 两轮</td></tr>
 <tr><td>K5</td><td>实际动作走原采样路径；注意力事后离线用实际执行的噪声算</td><td>沿用 1105 rollout 计划</td></tr>
 <tr><td>K6</td><td>读者只分析动作 token 和文字两类。原始注意力矩阵不落盘，只存按 token 分组后的质量</td><td>Swap 的原始矩阵每次推理 <code>infer</code> 约 92 MB、<code>prefix</code> 约 404 MB，那轮只算 4 个窗口就占了 440 G；本轮每局全算，不可能照存</td></tr>
 <tr><td>K7</td><td>motion 窗归属用用户定的「有重叠就算」：窗内容范围 <code>[t,t+32)</code>，和哪个子目标有重叠就整窗算哪个；均匀水平用同一规则算。另报按重叠比例计权的结果作复核</td><td>用户原话（2026-11-06，记录于 Swap 档案）</td></tr>
-<tr><td>K8</td><td>一个模型占两张卡，跑完再跑下一个。按 <code>episode_id%8&lt;4</code> 静态分片，两张卡都有三档难度</td><td>用户在 Swap 的原话；Swap 用奇偶分片，卡号与难度完全重合、分不开，这里改掉</td></tr>
+<tr><td>K8</td><td>一个模型跑完再跑下一个。每卡 2 个 worker，共 4 片，按 <code>episode_id%16</code> 静态分：0～3 为 s0、4～7 为 s1（GPU0），8～11 为 s2、12～15 为 s3（GPU1），每片都有三档难度。每个 worker 显存比例 0.30。显存不够就降 worker：每卡 1 个，4 片合成 2 片（s0+s1、s2+s3），比例回到 motion 0.55、基线 0.40，其他不变</td><td>用户原话「你能够在单卡上同时启动两个 worker 吗？」「如果不够的话就把 worker 数量降低」；Swap 用奇偶分片，卡号与难度完全重合、分不开，这里改掉</td></tr>
 <tr><td>K9</td><td>正常任务失败不重试。基础设施故障每局最多重试 1 次，记录原因和次数，仍失败记无效局；单模型无效局超过 5 局就停工问用户</td><td>第 22 条；沿用 1105 计划</td></tr>
 <tr><td>K10</td><td>不做：探针、想按比例 P、隐状态、motion 替换、遮挡、prefix 全链路累积。结论只到「看了哪里」，不写因果</td><td>本轮未点名；全链路累积需要每次推理约 404 MB 的 prefix 矩阵，用户要时另算</td></tr>
 </table></div>
@@ -146,10 +146,10 @@
 <figcaption>图 1　数据链路：在线只记录真实发生的事，所有分析都在离线完成。</figcaption>
 </figure>
 <h3>1. 子目标切分：直接读 simulator</h3>
-<p>两个任务的任务表结构相同：示范段是第 1～m 个子目标（<code>demonstration=True</code>），中间是复位用的 <code>NO RECORD</code>，然后执行段是第 m+3～2m+2 个，内容和示范一一对应（<code>PatternLock._load_scene</code>、<code>RouteStick._load_scene</code>）。所以：</p>
+<p>两个任务的任务表结构相同：示范段是第 1～m 个子目标（<code>demonstration=True</code>），中间是复位用的两项 <code>NO RECORD</code>（第 m+1、m+2 个），然后执行段是第 m+3～2m+2 个，内容和示范一一对应（<code>PatternLock._load_scene</code>、<code>RouteStick._load_scene</code>）。所以：</p>
 <ul>
 <li><b>示范第 j 段：</b>帧的 <code>current_task_index == j</code>。</li>
-<li><b>执行第 j 段：</b><code>current_task_index − (m+2) == j</code>。</li>
+<li><b>执行第 j 段：</b><code>current_task_index − (m+2) == j</code>。最后一个子目标完成时，环境把序号设成总任务数 2m+3（<code>sequential_task_check</code>），这只是局末终值，不算第 m+1 段。</li>
 </ul>
 <p>只读探针（reset 两任务各前 16 局，不跑模型、不写仓库）实测如下：</p>
 <div class="tbl"><table>
@@ -337,16 +337,16 @@
 </svg>
 <figcaption>图 2　按子目标的对位读数（示意图，不是实测结果）。子目标切换帧来自 RouteStick 第 2 局的探针实测。</figcaption>
 </figure>
-<p>每次推理得到一个分布：在所有示范帧（或示范 motion 窗）里，读者的注意力落在第 j′ 个示范子目标的比例，记作 <code>share(j′)</code>；同时按这次推理实际进入记忆的 token 数算出均匀比例 <code>uniform(j′)</code>。记忆采样随时间变化（帧流全程只留 32 帧、均匀抽取），所以均匀水平必须逐次推理计算，不能用常数。</p>
+<p>每次推理得到一个分布：在所有示范帧（或示范 motion 窗）里，读者的注意力落在第 j′ 个示范子目标的比例，记作 <code>share(j′)</code>；同时按这次推理实际进入记忆的 token 数算出均匀比例 <code>uniform(j′)</code>。记忆采样随时间变化（帧流全程只留 32 帧、均匀抽取），所以均匀水平必须逐次推理计算，不能用常数。motion 流按「有重叠就算」时一个窗计入多段，<code>share</code> 和 <code>uniform</code> 都不归一化，各段之和可以大于 1，D 仍按两者之比计算；帧流和比例计权的结果各段之和为 1。</p>
 <ul>
 <li><b>对角富集：</b><code>D = 对角 share 的均值 ÷ 对角 uniform 的均值</code>。D=1 表示和按 token 数均分一样。先按局求平均，每局等权。</li>
 <li><b>偏移分布：</b>注意力相对 j 的偏移 <code>j′−j</code>，看读的是当前这一步、下一步还是上一步。</li>
 <li><b>质心斜率：</b>每局拟合「示范注意力质心（归一化到 0～1）随执行进度（归一化到 0～1）的斜率」。斜率约 0 表示读示范的位置不随进度变；斜率约 1 表示跟着走。零假设用局内打乱推理顺序。</li>
 </ul>
-<p>⚠ 限制有三个。第一，m=1 的局（PatternLock 8 局）对角恒为 1，不进 A2，所以 A2 分母是 PatternLock 42 局、RouteStick 50 局。第二，失败的局走不到后面的子目标，大 j 的样本主要来自成功局，A2 另按 j 分层报告。第三，motion 窗按「有重叠就算」时，一个 32 帧的窗常跨两个子目标，会把相邻子目标混在一起，真实对位会被压低，所以同时报比例计权的 D。</p>
+<p>⚠ 限制有三个。第一，m=1 的局（PatternLock 官方 50 局里有 8 局，来自全量 reset 探针）对角恒为 1，不进 A2；扣除后理论分母是 PatternLock 42 局、RouteStick 50 局，实际以有效局为准。第二，失败的局走不到后面的子目标，大 j 的样本主要来自成功局，A2 另按 j 分层报告。第三，motion 窗按「有重叠就算」时，一个 32 帧的窗常跨两个子目标，会把相邻子目标混在一起，真实对位会被压低，所以同时报比例计权的 D。</p>
 
 <h3>3. 判据写在跑数据之前</h3>
-<p>Swap 那轮读数「不明显」，这次提前定好什么算明显：主读数是「任务 × 模型 × 读者 × 流」下的 D 和斜率，局级重采样 2000 次。<b>D 的区间下界 ≥ 1.2，或斜率区间下界 ≥ 0.2</b>，记为「明显」；区间不含零假设但没到门槛，记为「弱」；否则记为「未见」。两个任务都明显才叫共同 pattern。A2 共 12 组（基线没有 motion 流）、2 个读数，未校正多重比较，在结果里写明。A3 每侧不足 10 局记为「样本不足」。A4 是事后挑选，只作描述。</p>
+<p>Swap 那轮读数「不明显」，这次提前定好什么算明显：主读数是「任务 × 模型 × 读者 × 流」下的 D 和斜率，局级重采样 2000 次。<b>D 的区间下界 ≥ 1.2，或斜率区间下界 ≥ 0.2</b>，记为「明显」；区间不含零假设但没到门槛，记为「弱」；否则记为「未见」。两个任务都明显才叫共同 pattern。A2 主读数共 12 组（基线没有 motion 流）、2 个读数，比例计权另加 4 组只作复核，未校正多重比较，在结果里写明。判定只看区间下界与门槛、零假设的比较：上界低于零假设也记为「未见」，方向单独写。A3 每侧不足 10 局记为「样本不足」。A4 是事后挑选，只作描述。</p>
 <div class="tbl"><table>
 <tr><th>可能的结果</th><th>能说什么</th><th>不能说什么</th></tr>
 <tr><td>motion 模型 D 明显、基线不明显</td><td>motion 模型执行时会按子目标回读示范</td><td>不能说这解释了成功率差异；两个模型训练来源不同</td></tr>
@@ -361,13 +361,13 @@
 <h2>四、验收</h2>
 <div class="tbl"><table>
 <tr><th>查什么</th><th>怎么查</th><th>过了说明什么</th><th>判定行</th></tr>
-<tr><td>子目标标签正确</td><td>每个有效局：示范序号恰为 1～m，末帧 m+3，切换 m 次；执行段序号单调不减，都落在 m+3～2m+2</td><td>分段就是环境自己的语义边界</td><td><code>SUBGOAL_LABEL=PASS models=2 episodes=&lt;n&gt; mismatches=0</code></td></tr>
-<tr><td>reset 钩子无影响</td><td>两任务各 3 局（easy、medium、hard 各 1），包与不包各 reset 一次，全部图像与状态逐帧逐位比较</td><td>钩子只多带了序号</td><td><code>RESET_HOOK_PARITY=PASS episodes=6 frames=&lt;n&gt; diff=0</code></td></tr>
-<tr><td>rollout 跑完</td><td>每局有终局或重试后记无效；单模型无效局 ≤5</td><td>分母清楚</td><td><code>ROLLOUT_RUN=PASS models=2 valid_ctx=&lt;n&gt; valid_mot=&lt;n&gt; invalid=&lt;n&gt; infra_retries=&lt;n&gt;</code></td></tr>
+<tr><td>子目标标签正确</td><td>每个有效局：示范序号恰为 1～m，末帧 m+3，切换 m 次；执行段每步执行前的序号单调不减，都落在 m+3～2m+2；执行后的序号只允许局末出现终值 2m+3</td><td>分段就是环境自己的语义边界</td><td><code>SUBGOAL_LABEL=PASS models=2 episodes=&lt;n&gt; mismatches=0</code></td></tr>
+<tr><td>reset 钩子无影响</td><td>单独跑，不用模型，不占冒烟局：两任务各 3 局（easy、medium、hard 各 1），包与不包各 reset 一次，全部图像与状态逐帧逐位比较</td><td>钩子只多带了序号</td><td><code>RESET_HOOK_PARITY=PASS episodes=6 frames=&lt;n&gt; diff=0</code></td></tr>
+<tr><td>rollout 跑完</td><td>每局有终局或重试后记无效；单模型无效局 ≤5</td><td>分母清楚</td><td><code>ROLLOUT_RUN=PASS models=2 valid_ctx=&lt;n&gt; valid_mot=&lt;n&gt; invalid_ctx=&lt;n&gt; invalid_mot=&lt;n&gt; infra_retries=&lt;n&gt;</code></td></tr>
 <tr><td>输入记录完整</td><td>记录数等于轨迹动作块数，步号对应，写后读回一致</td><td>每次推理都能离线算</td><td><code>ROLLOUT_RECORD=PASS models=2 valid_episodes=&lt;n&gt; inferences=&lt;n&gt; missing=0 readback=1</code></td></tr>
 <tr><td>原路径可复现</td><td>全部记录用保存的噪声走原路径，与实际动作比较，容差 1e-6</td><td>离线用的就是实际发生的那份输入和噪声</td><td><code>ROLLOUT_REPLAY=PASS models=2 points=&lt;n&gt; same_path_maxabs=&lt;x&gt; tol=1e-6</code></td></tr>
-<tr><td>注意力分组没丢</td><td>每个读者、每层每头，七块占比之和等于 1；展开路径动作差如实记录</td><td>没有分错组或漏 token</td><td><code>ATTN_GROUPS=PASS models=2 points=&lt;n&gt; sum_err=&lt;x&gt; attn_path_maxabs=&lt;y&gt;</code></td></tr>
-<tr><td>分析读数</td><td>用合成注意力（完全对角、完全均匀）测试 D 与斜率，分别得到预期值；均匀水平之和为 1</td><td>读数公式没写错</td><td><code>SUBGOAL_ALIGN=PASS models=2 tasks=2 sanity_diag=&lt;x&gt; sanity_uniform=&lt;y&gt;</code></td></tr>
+<tr><td>注意力分组没丢</td><td>每个读者、每层每头，互不相交的各块（基线无 motion；文字读者没有动作 token 块）占比之和等于 1，容差 1e-3；展开路径动作差如实记录</td><td>没有分错组或漏 token</td><td><code>ATTN_GROUPS=PASS models=2 points=&lt;n&gt; sum_err=&lt;x&gt; tol=1e-3 attn_path_maxabs=&lt;y&gt;</code></td></tr>
+<tr><td>分析读数</td><td>分析入口先在真实分析前用合成注意力（完全对角、完全均匀）跑 D 与斜率，分别得到预期值，再对全部任务和模型算真实读数；帧流与比例计权的均匀水平之和为 1</td><td>读数公式没写错</td><td><code>SUBGOAL_ALIGN=PASS models=2 tasks=2 sanity_diag=&lt;x&gt; sanity_uniform=&lt;y&gt;</code></td></tr>
 <tr><td>报告与图</td><td>主会话把全部图渲染成位图逐张目视</td><td>可交付</td><td><code>SUBGOAL_REPORT=PASS figures=&lt;n&gt; visual_review=pass</code></td></tr>
 </table></div>
 <p>这些判定只保证流程正确。<code>SUBGOAL_ALIGN=PASS</code> 不表示看到了对位，科学结论写在结果档案里。</p>
@@ -377,13 +377,13 @@
 <tr><th>阶段</th><th>内容</th><th>判据</th></tr>
 <tr><td>S0</td><td>开工审查：独立代理通读本计划，查自相矛盾</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS</code></td></tr>
 <tr><td>S1</td><td>写代码、合并、CPU 测试；固定干净执行树</td><td>各子任务合并前后审查</td></tr>
-<tr><td>S2</td><td>冒烟：每个模型、每个任务各 1 局（第 2 局，medium）跑完 rollout、离线和分析；实测耗时和体积；同时跑钩子比较</td><td><code>RESET_HOOK_PARITY</code> 及该局的 <code>SUBGOAL_LABEL</code>、<code>ROLLOUT_RECORD</code>、<code>ROLLOUT_REPLAY</code>、<code>ATTN_GROUPS</code></td></tr>
-<tr><td>S3</td><td>正式 rollout：先 motion 占两张卡，再基线占两张卡，每个模型 100 局</td><td><code>ROLLOUT_RUN</code>、<code>ROLLOUT_RECORD</code>、<code>SUBGOAL_LABEL</code></td></tr>
+<tr><td>S2</td><td>冒烟：先单独跑钩子比较 6 局。再跑每个模型、每个任务各 1 局（第 2 局，medium）的 rollout、离线和分析，实测耗时和体积。同时在 GPU1 上起 2 个 motion worker（比例 0.30），两个都完成推理后读显存，定每卡 worker 数</td><td><code>RESET_HOOK_PARITY</code> 及该局的 <code>SUBGOAL_LABEL</code>、<code>ROLLOUT_RECORD</code>、<code>ROLLOUT_REPLAY</code>、<code>ATTN_GROUPS</code></td></tr>
+<tr><td>S3</td><td>正式 rollout：先 motion 跑完 4 片，再基线跑完 4 片，每个模型 100 局</td><td><code>ROLLOUT_RUN</code>、<code>ROLLOUT_RECORD</code>、<code>SUBGOAL_LABEL</code></td></tr>
 <tr><td>S4</td><td>全量离线：原路径重放，算注意力分组（同样按模型占两张卡）</td><td><code>ROLLOUT_REPLAY</code>、<code>ATTN_GROUPS</code></td></tr>
 <tr><td>S5</td><td>CPU 分析：A1～A4</td><td><code>SUBGOAL_ALIGN</code></td></tr>
 <tr><td>S6</td><td>目视图表，写结果档案，独立复核，提交推送</td><td><code>SUBGOAL_REPORT</code></td></tr>
 </table></div>
-<p><b>规模（估算，S2 实测后更新）：</b>按专家轨迹每局约 3～20 次推理估算，每个模型约 1500 次，共约 3000 次；失败绕圈的局最多到 1300÷16≈81 次。StopCube 实测 50 局 rollout 17～30 分钟（单卡）、离线约 3 秒每次（含本轮不做的 P 和隐状态，所以这是上界）。估计 rollout 每个模型约 30 分钟（两卡），离线约 40 分钟（两卡），全程约 2.5 小时。预算上限 12 GPU·h、总盘 60 GB；<code>rollout_*.npz</code> 约 5.4 MB 每次，3000 次约 16 GB。<code>/data</code> 现余 4.4 T。</p>
+<p><b>规模（估算，S2 实测后更新）：</b>专家轨迹每局约 3～20 次推理（示范中位长度下 PatternLock 约 6 次、RouteStick 约 10 次），算上失败绕圈的长局按保守值每个模型约 1500 次、共约 3000 次；单局最多 1300÷16≈81 次。StopCube 实测 50 局 rollout 17～30 分钟（单卡）、离线约 3 秒每次（含本轮不做的 P 和隐状态，所以这是上界）。估计 rollout 每个模型约 30 分钟，离线约 40 分钟，全程约 2.5 小时；同卡双 worker 的提速待 S2 实测。预算软线 12 GPU·h、总盘 60 GB，超过就继续并告知用户，超过 5 倍硬停；<code>rollout_*.npz</code> 约 5.4 MB 每次，3000 次约 16 GB。<code>/data</code> 现余 4.4 T。</p>
 
 <h2>六、子代理分工与合并（简述）</h2>
 <p>代码拆成三块，各在独立 worktree 修改：通用轨迹客户端与 spec 放行、离线的只算注意力模式、子目标分析。第三块依赖前两块的产物格式，但格式已在第二部分写定，所以三块可以并行写。按客户端 → 离线 → 分析的顺序逐个合回工作分支。每次合并前由独立审查代理核对改动范围和接口，主会话在 worktree 里复跑验收；合并后跑定向短测，通过后 push。运行型代理只按确定版本启动 rollout 和离线任务，发现问题交回主会话，另派修复代理。逐文件细节见第二部分。</p>
@@ -396,28 +396,28 @@
 <li>不改 <code>src/</code>、<code>third_party/</code>、<code>scripts/training/</code>、<code>scripts/evaluation/</code>；不改依赖。</li>
 <li>reset 钩子只在 <code>get_init_obs</code> 内存在，<code>finally</code> 里撤销；执行段任何动作、观测、rng 都不改。rollout 期间不调用 <code>AttnAdapter</code>，不新增推理。</li>
 <li>不替换、不遮挡、不改 mask；<code>--ablate</code> 必须为 <code>none</code>。</li>
-<li>新产物只写 <code>v1-store/evaluation/subgoal-rollout-attn-seed42-1106/</code>；此前的评估目录只读。</li>
-<li>不操作其他用户或其他任务的进程；tmux 只用 Runbook 里的名字，清理按第 7 条逐个精确删除。</li>
+<li>运行产物只写 <code>v1-store/evaluation/subgoal-rollout-attn-seed42-1106/</code>（绝对路径），档案只写第八节的 <code>docs/evaluation-doc/</code> 路径；此前的评估目录只读。</li>
+<li>不操作其他用户或其他任务的进程；tmux 只用 Runbook 里的名字，清理按 <code>AGENTS.md</code> 第 7 条逐个精确删除。本计划所写「第 N 条」都指 <code>AGENTS.md</code>。</li>
 </ol>
 
 <h2>一、逐文件改动</h2>
 <div class="tbl"><table>
 <tr><th>文件</th><th>锚点</th><th>改什么</th><th>关闭态</th></tr>
-<tr><td><code>scripts/interpret/subgoal_trace_runner.py</code>（新）</td><td><code>TraceRunner</code>、<code>TraceEvaluator</code>、<code>evaluate</code>，结构照 <code>bin_trace_runner.py</code></td><td><code>TASKS=("PatternLock","RouteStick")</code>。<code>get_init_obs</code>：沿 <code>.env</code> 链找到 <code>DemonstrationWrapper</code> 实例，实例级包 <code>_augment_obs_and_info</code> 写入 <code>subgoal_task_index</code>（读 <code>current_task_index</code>），调 <code>super().get_init_obs()</code>，<code>finally</code> 撤销；从 <code>env.demonstration_data[4]</code> 取序号写入 receipt 的 <code>demo_task_index</code>，另记 <code>m</code>、<code>exec_start_idx</code>、<code>initial_env_step</code>、<code>prompt</code>。<code>snapshot</code>：<code>env_step</code>、<code>tcp</code>、<code>task_index</code>、<code>timestep</code>。逐步字段同 <code>bin_trace_runner.TraceRunner.step</code>，把 <code>bins_*</code> 换成 <code>task_index_before/after</code>、<code>timestep_before/after</code></td><td>不选用该客户端即不存在</td></tr>
-<tr><td><code>scripts/interpret/run_local.py</code></td><td><code>load_spec</code>、<code>run_identity</code>、<code>build_client_command</code></td><td>新 spec 键 <code>subgoal_trace</code>（bool），与 <code>stopcube_mode</code>、<code>bin_trace</code> 互斥，清单只能含两任务；<code>rollout_record</code> 的放行条件加上它；纳入 <code>run_identity</code>；客户端替换分支</td><td>不给该键时命令逐字不变</td></tr>
-<tr><td><code>scripts/interpret/rollout_offline.py</code></td><td><code>main</code>、<code>process_record</code></td><td>新参数 <code>--attention-only</code>：跳过 P 与隐状态捕获（<code>capture_hidden=False</code>），不做 parity；重放闸门照旧。输出见下表。不给参数时行为与产物不变</td><td>默认关</td></tr>
-<tr><td><code>scripts/interpret/analysis/offline_mechanism.py</code></td><td>新函数 <code>aggregate_text_attention</code>，紧邻 <code>aggregate_attention</code></td><td>输入 <code>probs_text</code>（L,b,G,TXT,P），在有效文字行上平均，按分组对 P 累加，返回与 <code>aggregate_attention</code> 同结构；不改现有函数</td><td>只新增</td></tr>
-<tr><td><code>scripts/interpret/analysis/subgoal_attention.py</code>（新）</td><td><code>load_episode</code>、<code>label_inferences</code>、<code>segment_of_frame</code>、<code>segments_of_window</code>、<code>stream_shares</code>、<code>align_matrix</code>、<code>diag_enrichment</code>、<code>centroid_slope</code>、<code>summarize</code>、<code>plot</code></td><td>计算 A1～A4 与判定行。复用 <code>oracle_press_prob.bootstrap</code>、<code>first_bin_attention.bootstrap_diff</code>、<code>_judge_interval</code></td><td>新脚本</td></tr>
+<tr><td><code>scripts/interpret/subgoal_trace_runner.py</code>（新）</td><td><code>TraceRunner</code>、<code>TraceEvaluator</code>、<code>evaluate</code>，结构照 <code>bin_trace_runner.py</code></td><td><code>TASKS=("PatternLock","RouteStick")</code>，删去 Swap 专属的 bins、<code>selected_bins</code>、<code>swap_times</code> 等。<code>get_init_obs</code>：沿 <code>.env</code> 链找到 <code>DemonstrationWrapper</code> 实例，实例级包 <code>_augment_obs_and_info</code> 写入 <code>subgoal_task_index</code>（读 <code>current_task_index</code>），调 <code>super().get_init_obs()</code>，<code>finally</code> 撤销；从 <code>env.demonstration_data[4]</code> 取序号写入 receipt 的 <code>demo_task_index</code>，另记 <code>m</code>、<code>exec_start_idx</code>、<code>initial_env_step</code>、<code>prompt</code>。<code>snapshot</code>：<code>env_step</code>、<code>tcp</code>、<code>task_index</code>、<code>timestep</code>。逐步字段同 <code>bin_trace_runner.TraceRunner.step</code>，把 <code>bins_*</code> 换成 <code>task_index_before/after</code>、<code>timestep_before/after</code>，删去 <code>subgoal_index</code></td><td>不选用该客户端即不存在</td></tr>
+<tr><td><code>scripts/interpret/run_local.py</code></td><td><code>load_spec</code>、<code>run_identity</code>、<code>build_client_command</code></td><td>新 spec 键 <code>subgoal_trace</code>（bool），新常量 <code>SUBGOAL_TRACE_TASKS</code>（测试钉住与 runner 的 <code>TASKS</code> 相同），与 <code>stopcube_mode</code>、<code>bin_trace</code> 互斥，清单只能含两任务；报错文案保留 <code>rollout_record</code> 字样；<code>rollout_record</code> 的放行条件加上它；纳入 <code>run_identity</code>；客户端替换分支</td><td>不给该键时命令逐字不变</td></tr>
+<tr><td><code>scripts/interpret/rollout_offline.py</code></td><td><code>main</code>、<code>process_record</code></td><td>新参数 <code>--attention-only</code>：跳过 P 与隐状态捕获（<code>capture_hidden=False</code>、<code>group_masks=None</code>，此时 <code>adapter.run</code> 末项是 layout，不能当隐状态读），强制不做 parity，忽略 <code>--parity</code>；重放闸门照旧。输出见下面的契约。不给参数时行为与产物不变</td><td>默认关</td></tr>
+<tr><td><code>scripts/interpret/analysis/offline_mechanism.py</code></td><td>新函数 <code>aggregate_text_attention</code>，紧邻 <code>aggregate_attention</code></td><td>输入 <code>probs_text</code>（层,batch,头,TXT,P），在有效文字行上平均，分组 mask 切到前 P 位后累加，返回与 <code>aggregate_attention</code> 同结构；不改现有函数</td><td>只新增</td></tr>
+<tr><td><code>scripts/interpret/analysis/subgoal_attention.py</code>（新）</td><td><code>load_episode</code>、<code>label_inferences</code>、<code>segment_of_frame</code>、<code>segments_of_window</code>、<code>stream_shares</code>、<code>align_matrix</code>、<code>diag_enrichment</code>、<code>centroid_slope</code>、<code>summarize</code>、<code>plot</code></td><td>计算 A1～A4 与判定行。复用 <code>oracle_press_prob.bootstrap</code>、<code>first_bin_attention.bootstrap_diff</code>；三档判定按 §三.3 自写，不用 <code>_judge_interval</code> 的双侧语义</td><td>新脚本</td></tr>
 <tr><td>测试（新）</td><td><code>test_subgoal_trace_runner.py</code>、<code>test_subgoal_attention.py</code>；<code>test_rollout_offline.py</code> 增补</td><td>假环境覆盖钩子撤销、标签逻辑；合成注意力覆盖 D、斜率；<code>--attention-only</code> 的键与默认路径不变</td><td>—</td></tr>
 </table></div>
-<p><b><code>offline_&lt;seq&gt;.npz</code>（<code>--attention-only</code>）契约：</b><code>group_names</code>；<code>group_mass_action</code>、<code>group_mass_text</code>（float32，G×18×8）；<code>group_tokens_all</code>；<code>episode_key</code>；<code>infer_seq</code>；<code>step_idx</code>；<code>chunk_start_env_step</code>；<code>same_path_maxabs</code>；<code>attn_path_maxabs</code>；<code>input_sha256</code>；<code>model_id</code>；<code>frame_times</code>；<code>motion_times</code>。组名沿用 <code>真实帧:&lt;t&gt;</code>、<code>motion窗:&lt;t&gt;</code>、<code>motion</code>、<code>历史视觉</code>、<code>当前视觉</code>、<code>文字</code>、<code>其余</code>（动作 query 落在 <code>其余</code>），跨文件按组名对齐。</p>
-<p><b>标签：</b>推理的 j 取该动作块第 0 行的 <code>task_index_before − (m+2)</code>；块内序号有变化则 <code>crosses_subgoal=1</code>。全局帧号与环境步的换算沿用 <code>offline_mechanism.analyze_input</code>。帧 <code>t&lt;exec_start_idx</code> 为示范帧，段号 <code>demo_task_index[t]</code>。motion 窗 <code>t</code> 内容范围 <code>[t,min(t+32,exec_start_idx))</code>，起点在示范段内才算示范窗。</p>
+<p><b><code>offline_&lt;seq&gt;.npz</code>（<code>--attention-only</code>）契约：</b><code>group_names</code>；<code>group_mass_action</code>、<code>group_mass_text</code>（float32，组数×18×8）；<code>group_tokens_all</code>；<code>episode_key</code>；<code>infer_seq</code>；<code>step_idx</code>；<code>chunk_start_env_step</code>；<code>same_path_maxabs</code>；<code>attn_path_maxabs</code>；<code>input_sha256</code>；<code>model_id</code>；<code>frame_times</code>；<code>motion_times</code>。组名沿用 <code>motion</code>、<code>历史视觉</code>、<code>当前视觉</code>、<code>文字</code>、<code>其余</code>（动作 query 落在 <code>其余</code>）这五块互不相交；<code>真实帧:&lt;t&gt;</code>、<code>motion窗:&lt;t&gt;</code>、<code>文字位置:*</code> 是子集，不参与求和；跨文件按组名对齐。</p>
+<p><b>标签：</b>推理的 j 取该动作块第 0 行的 <code>task_index_before − (m+2)</code>；块内各行 <code>task_index_before</code> 有变化则 <code>crosses_subgoal=1</code>（局末终值不计）。全局帧号与环境步的换算沿用 <code>offline_mechanism.analyze_input</code>。帧 <code>t&lt;exec_start_idx</code> 为示范帧，段号 <code>demo_task_index[t]</code>。motion 窗 <code>t</code> 内容范围 <code>[t,min(t+32,exec_start_idx))</code>，起点在示范段内才算示范窗。</p>
 
 <h2>二、子代理分配表</h2>
 <div class="tbl"><table>
 <tr><th>编号</th><th>目标</th><th>可写文件集合</th><th>禁触路径</th><th>接口与依赖</th><th>合并顺序</th><th>验收（worktree，CPU）</th><th>资源</th></tr>
-<tr><td>W1（opus，worktree）</td><td>通用轨迹客户端与放行</td><td><code>subgoal_trace_runner.py</code>、<code>run_local.py</code>、<code>test_subgoal_trace_runner.py</code></td><td rowspan="3"><code>src/</code>、<code>third_party/</code>、<code>scripts/training/</code>、<code>scripts/evaluation/</code>、规则文件、彼此的文件</td><td>产出第一节 receipt 与轨迹字段</td><td>1</td><td><code>uv run python -m pytest scripts/interpret/test_subgoal_trace_runner.py -q</code> 全过</td><td>CPU</td></tr>
-<tr><td>W2（opus，worktree）</td><td>只算注意力模式</td><td><code>rollout_offline.py</code>、<code>offline_mechanism.py</code>、<code>test_rollout_offline.py</code></td><td>产出第一节 npz 契约；消费 W1 字段</td><td>2</td><td><code>uv run python -m pytest scripts/interpret/test_rollout_offline.py scripts/interpret/test_offline_mechanism.py -q</code> 全过</td><td>CPU</td></tr>
+<tr><td>W1（opus，worktree）</td><td>通用轨迹客户端与放行</td><td><code>subgoal_trace_runner.py</code>、<code>run_local.py</code>、<code>test_subgoal_trace_runner.py</code></td><td rowspan="3"><code>src/</code>、<code>third_party/</code>、<code>scripts/training/</code>、<code>scripts/evaluation/</code>、规则文件、彼此的文件</td><td>产出第一节 receipt 与轨迹字段</td><td>1</td><td><code>uv run python -m pytest scripts/interpret/test_subgoal_trace_runner.py scripts/interpret/test_bin_trace_runner.py scripts/interpret/test_motion_swap_modes.py -q</code> 全过</td><td>CPU</td></tr>
+<tr><td>W2（opus，worktree）</td><td>只算注意力模式</td><td><code>rollout_offline.py</code>、<code>offline_mechanism.py</code>、<code>test_rollout_offline.py</code>、<code>test_offline_mechanism.py</code></td><td>产出第一节 npz 契约；消费 W1 字段</td><td>2</td><td><code>uv run python -m pytest scripts/interpret/test_rollout_offline.py scripts/interpret/test_offline_mechanism.py -q</code> 全过</td><td>CPU</td></tr>
 <tr><td>W3（opus，worktree）</td><td>子目标分析</td><td><code>analysis/subgoal_attention.py</code>、<code>test_subgoal_attention.py</code></td><td>消费 W1、W2 契约，用假数据开发</td><td>3</td><td><code>uv run python -m pytest scripts/interpret/test_subgoal_attention.py -q</code> 全过，含 <code>SUBGOAL_ALIGN</code> 合成读数</td><td>CPU</td></tr>
 <tr><td>R1（opus，运行型，主检出外的执行树）</td><td>S3 rollout</td><td>只写产物目录</td><td>不改代码、配置、脚本、参数</td><td>确定 commit；命令见 Runbook；tmux <code>sra-roll-*</code>；起跑判据：日志出现首个 <code>EVAL_EPISODE</code>；最长等 15 分钟；失败交回主会话，不自修</td><td>—</td><td>日志与 <code>tmux ls</code> 留证</td><td>GPU0、GPU1</td></tr>
 <tr><td>R2（opus，运行型）</td><td>S4 离线</td><td>只写产物目录</td><td>同上</td><td>同上；tmux <code>sra-off-*</code></td><td>—</td><td>同上</td><td>GPU0、GPU1</td></tr>
@@ -425,32 +425,30 @@
 <p>共享文件归属：<code>run_local.py</code> 归 W1，<code>rollout_offline.py</code>、<code>offline_mechanism.py</code> 归 W2，不存在共同写者。监听、预算账本与清理归主会话。审查用 sonnet，钉死 <code>REVIEW_BASE</code>／<code>REVIEW_TIP</code>。</p>
 
 <h2>三、闸门总表</h2>
-<p>判定行全部见第一部分第四节。失败处置：<code>SUBGOAL_LABEL</code>、<code>RESET_HOOK_PARITY</code>、<code>ROLLOUT_REPLAY</code> 任一 FAIL 即停止放大并交证据，不放宽。无效局超过 5 局停工。规模超过已批上限 5 倍（60 GPU·h 或 300 GB）硬停。</p>
+<p>判定行全部见第一部分第四节。失败处置：<code>SUBGOAL_LABEL</code>、<code>RESET_HOOK_PARITY</code>、<code>ROLLOUT_RECORD</code>、<code>ROLLOUT_REPLAY</code>、<code>ATTN_GROUPS</code>、<code>SUBGOAL_ALIGN</code> 任一 FAIL 即停止放大并交证据，不放宽。<code>SUBGOAL_REPORT</code> 改到通过为止。单模型无效局超过 5 局停工。规模超过软线 5 倍（60 GPU·h 或 300 GB）硬停。</p>
 
 <h2>四、Runbook</h2>
-<pre>O=v1-store/evaluation/subgoal-rollout-attn-seed42-1106
-# 清单：两任务 0～49，按 episode_id%8&lt;4 分 g0、g1，chunk_size 5
-python -m scripts.interpret.build_manifest --episodes &lt;g0 列表&gt; --chunk-size 5 --out $O/manifest-g0.json
-python -m scripts.interpret.build_manifest --episodes &lt;g1 列表&gt; --chunk-size 5 --out $O/manifest-g1.json
+<pre>O=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/subgoal-rollout-attn-seed42-1106
+# 清单：两任务 0～49，按 episode_id%16 分 s0～s3，chunk_size 5
+python -m scripts.interpret.build_manifest --episodes &lt;s0 列表&gt; --chunk-size 5 --out $O/manifest-s0.json   # s1～s3 同理
 # rollout（规格 $O/spec-&lt;片&gt;-&lt;模型&gt;.json：subgoal_trace=true、rollout_record=true、save_prefix=false）
-tmux new-session -d -s sra-roll-mot-g0 "bash $O/run_rollout.sh mot 0 g0"
-tmux new-session -d -s sra-roll-mot-g1 "bash $O/run_rollout.sh mot 1 g1"
-# 离线
+tmux new-session -d -s sra-roll-mot-s0 "bash $O/run_rollout.sh mot 0 s0"   # s1 同卡；s2、s3 在 GPU1；基线在 motion 全部结束后起
+# 离线（tmux sra-off-&lt;模型&gt;-&lt;片&gt;，同样 4 片、同样一个模型跑完再跑下一个）
 python -m scripts.interpret.rollout_offline --attention-only --attn-root $O/&lt;模型&gt;/&lt;片&gt;/attn --run-root $O/&lt;模型&gt;/&lt;片&gt;/run \
   --output $O/&lt;模型&gt;/offline --ckpt &lt;权重&gt; --config &lt;配置&gt; --seed 42 --query-batch-size 2
 # 分析
 python -m scripts.interpret.analysis.subgoal_attention --root $O --out $O/analysis</pre>
-<p>脚本都按 <code>stopcube-rollout-1105/env.sh</code> 的写法固定环境：XLA 确定性参数、显存比例 motion 0.55、基线 0.40，起跑前核对 HEAD 和 <code>git status --porcelain</code> 为空。全部按第 7 条日志三件套写 <code>EXIT_CODE=</code>，每份日志挂一个 Monitor，过滤词含 <code>EXIT_CODE=|Traceback|Error|out of memory|Killed</code>。motion 两片结束后才起基线。</p>
+<p>脚本都按 <code>stopcube-rollout-1105/env.sh</code> 的写法固定环境：XLA 确定性参数、显存比例见 K8，起跑前核对 HEAD 和 <code>git status --porcelain</code> 为空。全部按第 7 条日志三件套写 <code>EXIT_CODE=</code>，每份日志挂一个 Monitor，过滤词含 <code>EXIT_CODE=|Traceback|Error|out of memory|Killed</code>。motion 全部片结束后才起基线。</p>
 
 <h2>五、风险登记</h2>
 <div class="tbl"><table>
 <tr><th>风险</th><th>影响</th><th>处置</th></tr>
-<tr><td>基线常卡住跑满 1300 步</td><td>推理数比估算多，最坏每局 81 次</td><td>S2 后更新估算；预算内继续，超 5 倍硬停</td></tr>
+<tr><td>基线常卡住跑满 1300 步</td><td>推理数比估算多，最坏每局 81 次</td><td>S2 后更新估算；超软线继续并告知，超 5 倍硬停</td></tr>
 <tr><td>执行段序号与示范段含义错位（理论上一一对应，探针只验证了 reset 时刻）</td><td>A2 全部失效</td><td>冒烟 <code>SUBGOAL_LABEL</code> 看执行段序号走向；不符即停</td></tr>
 <tr><td>失败局走不到后面的子目标</td><td>大 j 样本有选择偏差</td><td>按 j 分层报告，A3 只比两侧都有的 j</td></tr>
 <tr><td>PatternLock 子目标短（中位 35 帧）而 motion 窗 32 帧</td><td>motion 流对位被相邻段稀释</td><td>同时报比例计权 D；帧流不受影响</td></tr>
 <tr><td>帧流全程只留 32 帧</td><td>长局每个子目标只分到 3～5 帧，局内波动大</td><td>每局先平均、局级重采样，逐次算均匀水平</td></tr>
-<tr><td>两卡上有其他用户的小显存进程</td><td>显存余量波动</td><td>沿用 0.55、0.40 比例，不操作他人进程</td></tr>
+<tr><td>GPU1 上有其他用户约 10 GB 占用；motion 在线编码是单独进程，不受 XLA 比例约束，每 5 局还会重启一次服务</td><td>同卡双 worker 可能爆显存</td><td>S2 在 GPU1 实测；不够就降 worker（K8）；不操作他人进程</td></tr>
 </table></div>
 
 <h2>六、盲区诚实清单</h2>
@@ -482,6 +480,9 @@ python -m scripts.interpret.analysis.subgoal_attention --root $O --out $O/analys
 <li>实施中调整按第 2 条先派对抗验证，收尾单列「实施中调整」，并追加到本计划末尾。</li>
 </ul>
 
+<h2>九、开工审查修订记录</h2>
+<p>审查判定行 <code>PLAN_CONSISTENCY_REVIEW=FAIL base=bc4379a findings=18 blocking=6</code>。主会话逐条回原文和代码核实，全部成立。用户裁决（美东 2026-11-06）：提出的 5 项建议未作修改，并说「审查完毕之后直接开始，不用再来等我批准」；据此按建议修订：局末序号 2m+3 合法、motion 流不归一化、预算为软线、钩子比较单独跑 6 局、<code>ATTN_GROUPS</code> 容差 1e-3 与各闸门失败处置。另 13 条为文字统一，不改口径。</p>
+<p>实施中调整（用户点名）：旧为每卡 1 个 worker、按 <code>episode_id%8</code> 分 2 片；新为每卡 2 个 worker、按 <code>episode_id%16</code> 分 4 片、比例 0.30，显存不够就降 worker。对抗验证 <code>ADJUST_REVIEW=FAIL scale=same findings=3</code>：指出拟定的 0.38 在 GPU1 上几乎没有余量，且在线编码不受比例约束；据此改为 0.30、在 GPU1 上冒烟。规模不变。</p>
 </main>
 </body>
 </html>
