@@ -1,0 +1,2287 @@
+{
+ "schema_version": 1,
+ "bootstrap": {
+  "repeats": 2000,
+  "seed": 42,
+  "unit": "局"
+ },
+ "min_episodes_per_group": 10,
+ "primary_definition": {
+  "M1": "窗口版 RB 的帧流 [0,32) 富集，参照 1",
+  "M2": "原始 motion 流交换区间重叠计权富集，参照 1",
+  "M3": "M1 的 correct 减 wrong，参照 0",
+  "M4": "M2 的 correct 减 wrong，参照 0"
+ },
+ "primary": {
+  "intervals": [
+   {
+    "n_episodes": 49,
+    "mean": 1.2364319522520213,
+    "ref": 1.0,
+    "insufficient": false,
+    "excludes_ref": true,
+    "direction": 1,
+    "ci95": [
+     1.2078878632745933,
+     1.2670372734027189
+    ],
+    "support": 48,
+    "counterexamples": [
+     "ButtonUnmaskSwap:41"
+    ],
+    "readout": "M1",
+    "source": "rb_vis_enrich",
+    "model": "with_motion",
+    "task": "ButtonUnmaskSwap"
+   },
+   {
+    "n_episodes": 50,
+    "mean": 1.4867410445615876,
+    "ref": 1.0,
+    "insufficient": false,
+    "excludes_ref": true,
+    "direction": 1,
+    "ci95": [
+     1.4485290403896967,
+     1.5235564972173157
+    ],
+    "support": 50,
+    "counterexamples": [],
+    "readout": "M1",
+    "source": "rb_vis_enrich",
+    "model": "with_motion",
+    "task": "VideoUnmaskSwap"
+   },
+   {
+    "n_episodes": 50,
+    "mean": 0.6592450920658639,
+    "ref": 1.0,
+    "insufficient": false,
+    "excludes_ref": true,
+    "direction": -1,
+    "ci95": [
+     0.6230436748865541,
+     0.7004771609216477
+    ],
+    "support": 2,
+    "counterexamples": [
+     "ButtonUnmaskSwap:0",
+     "ButtonUnmaskSwap:1",
+     "ButtonUnmaskSwap:2",
+     "ButtonUnmaskSwap:3",
+     "ButtonUnmaskSwap:4",
+     "ButtonUnmaskSwap:5",
+     "ButtonUnmaskSwap:6",
+     "ButtonUnmaskSwap:7",
+     "ButtonUnmaskSwap:8",
+     "ButtonUnmaskSwap:9",
+     "ButtonUnmaskSwap:10",
+     "ButtonUnmaskSwap:11",
+     "ButtonUnmaskSwap:12",
+     "ButtonUnmaskSwap:14",
+     "ButtonUnmaskSwap:16",
+     "ButtonUnmaskSwap:17",
+     "ButtonUnmaskSwap:18",
+     "ButtonUnmaskSwap:19",
+     "ButtonUnmaskSwap:20",
+     "ButtonUnmaskSwap:21",
+     "ButtonUnmaskSwap:22",
+     "ButtonUnmaskSwap:23",
+     "ButtonUnmaskSwap:24",
+     "ButtonUnmaskSwap:25",
+     "ButtonUnmaskSwap:26",
+     "ButtonUnmaskSwap:27",
+     "ButtonUnmaskSwap:28",
+     "ButtonUnmaskSwap:29",
+     "ButtonUnmaskSwap:30",
+     "ButtonUnmaskSwap:31",
+     "ButtonUnmaskSwap:32",
+     "ButtonUnmaskSwap:33",
+     "ButtonUnmaskSwap:34",
+     "ButtonUnmaskSwap:35",
+     "ButtonUnmaskSwap:36",
+     "ButtonUnmaskSwap:37",
+     "ButtonUnmaskSwap:38",
+     "ButtonUnmaskSwap:39",
+     "ButtonUnmaskSwap:40",
+     "ButtonUnmaskSwap:41",
+     "ButtonUnmaskSwap:42",
+     "ButtonUnmaskSwap:43",
+     "ButtonUnmaskSwap:44",
+     "ButtonUnmaskSwap:45",
+     "ButtonUnmaskSwap:46",
+     "ButtonUnmaskSwap:47",
+     "ButtonUnmaskSwap:48",
+     "ButtonUnmaskSwap:49"
+    ],
+    "readout": "M1",
+    "source": "rb_vis_enrich",
+    "model": "without_motion",
+    "task": "ButtonUnmaskSwap"
+   },
+   {
+    "n_episodes": 50,
+    "mean": 0.9843786180613716,
+    "ref": 1.0,
+    "insufficient": false,
+    "excludes_ref": false,
+    "direction": -1,
+    "ci95": [
+     0.9612828973826102,
+     1.0050118178196155
+    ],
+    "support": 17,
+    "counterexamples": [
+     "VideoUnmaskSwap:0",
+     "VideoUnmaskSwap:1",
+     "VideoUnmaskSwap:2",
+     "VideoUnmaskSwap:4",
+     "VideoUnmaskSwap:5",
+     "VideoUnmaskSwap:6",
+     "VideoUnmaskSwap:8",
+     "VideoUnmaskSwap:9",
+     "VideoUnmaskSwap:10",
+     "VideoUnmaskSwap:13",
+     "VideoUnmaskSwap:14",
+     "VideoUnmaskSwap:15",
+     "VideoUnmaskSwap:16",
+     "VideoUnmaskSwap:17",
+     "VideoUnmaskSwap:18",
+     "VideoUnmaskSwap:20",
+     "VideoUnmaskSwap:21",
+     "VideoUnmaskSwap:22",
+     "VideoUnmaskSwap:25",
+     "VideoUnmaskSwap:26",
+     "VideoUnmaskSwap:28",
+     "VideoUnmaskSwap:29",
+     "VideoUnmaskSwap:30",
+     "VideoUnmaskSwap:32",
+     "VideoUnmaskSwap:35",
+     "VideoUnmaskSwap:37",
+     "VideoUnmaskSwap:40",
+     "VideoUnmaskSwap:41",
+     "VideoUnmaskSwap:42",
+     "VideoUnmaskSwap:43",
+     "VideoUnmaskSwap:44",
+     "VideoUnmaskSwap:46",
+     "VideoUnmaskSwap:48"
+    ],
+    "readout": "M1",
+    "source": "rb_vis_enrich",
+    "model": "without_motion",
+    "task": "VideoUnmaskSwap"
+   },
+   {
+    "n_episodes": 49,
+    "mean": 0.6302268935278016,
+    "ref": 1.0,
+    "insufficient": false,
+    "excludes_ref": true,
+    "direction": -1,
+    "ci95": [
+     0.5508247768264488,
+     0.7158000930323676
+    ],
+    "support": 5,
+    "counterexamples": [
+     "ButtonUnmaskSwap:0",
+     "ButtonUnmaskSwap:1",
+     "ButtonUnmaskSwap:2",
+     "ButtonUnmaskSwap:3",
+     "ButtonUnmaskSwap:4",
+     "ButtonUnmaskSwap:5",
+     "ButtonUnmaskSwap:6",
+     "ButtonUnmaskSwap:7",
+     "ButtonUnmaskSwap:8",
+     "ButtonUnmaskSwap:9",
+     "ButtonUnmaskSwap:10",
+     "ButtonUnmaskSwap:12",
+     "ButtonUnmaskSwap:13",
+     "ButtonUnmaskSwap:14",
+     "ButtonUnmaskSwap:16",
+     "ButtonUnmaskSwap:18",
+     "ButtonUnmaskSwap:19",
+     "ButtonUnmaskSwap:20",
+     "ButtonUnmaskSwap:21",
+     "ButtonUnmaskSwap:22",
+     "ButtonUnmaskSwap:23",
+     "ButtonUnmaskSwap:24",
+     "ButtonUnmaskSwap:25",
+     "ButtonUnmaskSwap:26",
+     "ButtonUnmaskSwap:28",
+     "ButtonUnmaskSwap:29",
+     "ButtonUnmaskSwap:30",
+     "ButtonUnmaskSwap:31",
+     "ButtonUnmaskSwap:32",
+     "ButtonUnmaskSwap:33",
+     "ButtonUnmaskSwap:34",
+     "ButtonUnmaskSwap:36",
+     "ButtonUnmaskSwap:37",
+     "ButtonUnmaskSwap:38",
+     "ButtonUnmaskSwap:40",
+     "ButtonUnmaskSwap:41",
+     "ButtonUnmaskSwap:42",
+     "ButtonUnmaskSwap:43",
+     "ButtonUnmaskSwap:44",
+     "ButtonUnmaskSwap:45",
+     "ButtonUnmaskSwap:46",
+     "ButtonUnmaskSwap:47",
+     "ButtonUnmaskSwap:48",
+     "ButtonUnmaskSwap:49"
+    ],
+    "readout": "M2",
+    "source": "m_swap_enrich",
+    "model": "with_motion",
+    "task": "ButtonUnmaskSwap"
+   },
+   {
+    "n_episodes": 50,
+    "mean": 0.7871156731471238,
+    "ref": 1.0,
+    "insufficient": false,
+    "excludes_ref": true,
+    "direction": -1,
+    "ci95": [
+     0.7449098268414265,
+     0.8277849626653628
+    ],
+    "support": 4,
+    "counterexamples": [
+     "VideoUnmaskSwap:0",
+     "VideoUnmaskSwap:1",
+     "VideoUnmaskSwap:2",
+     "VideoUnmaskSwap:3",
+     "VideoUnmaskSwap:4",
+     "VideoUnmaskSwap:5",
+     "VideoUnmaskSwap:6",
+     "VideoUnmaskSwap:7",
+     "VideoUnmaskSwap:8",
+     "VideoUnmaskSwap:9",
+     "VideoUnmaskSwap:10",
+     "VideoUnmaskSwap:11",
+     "VideoUnmaskSwap:13",
+     "VideoUnmaskSwap:14",
+     "VideoUnmaskSwap:15",
+     "VideoUnmaskSwap:16",
+     "VideoUnmaskSwap:17",
+     "VideoUnmaskSwap:18",
+     "VideoUnmaskSwap:19",
+     "VideoUnmaskSwap:20",
+     "VideoUnmaskSwap:22",
+     "VideoUnmaskSwap:23",
+     "VideoUnmaskSwap:24",
+     "VideoUnmaskSwap:25",
+     "VideoUnmaskSwap:26",
+     "VideoUnmaskSwap:27",
+     "VideoUnmaskSwap:29",
+     "VideoUnmaskSwap:30",
+     "VideoUnmaskSwap:31",
+     "VideoUnmaskSwap:32",
+     "VideoUnmaskSwap:33",
+     "VideoUnmaskSwap:34",
+     "VideoUnmaskSwap:35",
+     "VideoUnmaskSwap:36",
+     "VideoUnmaskSwap:37",
+     "VideoUnmaskSwap:38",
+     "VideoUnmaskSwap:39",
+     "VideoUnmaskSwap:41",
+     "VideoUnmaskSwap:42",
+     "VideoUnmaskSwap:43",
+     "VideoUnmaskSwap:44",
+     "VideoUnmaskSwap:45",
+     "VideoUnmaskSwap:46",
+     "VideoUnmaskSwap:47",
+     "VideoUnmaskSwap:48",
+     "VideoUnmaskSwap:49"
+    ],
+    "readout": "M2",
+    "source": "m_swap_enrich",
+    "model": "with_motion",
+    "task": "VideoUnmaskSwap"
+   },
+   {
+    "n_correct": 13,
+    "n_wrong": 36,
+    "mean": -0.019992937529355714,
+    "ref": 0.0,
+    "insufficient": false,
+    "excludes_ref": false,
+    "direction": -1,
+    "ci95": [
+     -0.08024934793250489,
+     0.03905729329654694
+    ],
+    "readout": "M3",
+    "source": "rb_vis_enrich",
+    "model": "with_motion",
+    "task": "ButtonUnmaskSwap"
+   },
+   {
+    "n_correct": 21,
+    "n_wrong": 29,
+    "mean": -0.031585786589399145,
+    "ref": 0.0,
+    "insufficient": false,
+    "excludes_ref": false,
+    "direction": -1,
+    "ci95": [
+     -0.10774088156732962,
+     0.049947047040520755
+    ],
+    "readout": "M3",
+    "source": "rb_vis_enrich",
+    "model": "with_motion",
+    "task": "VideoUnmaskSwap"
+   },
+   {
+    "n_correct": 10,
+    "n_wrong": 40,
+    "mean": 0.03310941278434443,
+    "ref": 0.0,
+    "insufficient": false,
+    "excludes_ref": false,
+    "direction": 1,
+    "ci95": [
+     -0.059582158041147436,
+     0.12626246505325062
+    ],
+    "readout": "M3",
+    "source": "rb_vis_enrich",
+    "model": "without_motion",
+    "task": "ButtonUnmaskSwap"
+   },
+   {
+    "n_correct": 12,
+    "n_wrong": 38,
+    "mean": -0.02498216116549279,
+    "ref": 0.0,
+    "insufficient": false,
+    "excludes_ref": false,
+    "direction": -1,
+    "ci95": [
+     -0.0709363807719344,
+     0.01629087742753504
+    ],
+    "readout": "M3",
+    "source": "rb_vis_enrich",
+    "model": "without_motion",
+    "task": "VideoUnmaskSwap"
+   },
+   {
+    "n_correct": 13,
+    "n_wrong": 36,
+    "mean": -0.07268895254337104,
+    "ref": 0.0,
+    "insufficient": false,
+    "excludes_ref": false,
+    "direction": -1,
+    "ci95": [
+     -0.2569840838761715,
+     0.12826340059393337
+    ],
+    "readout": "M4",
+    "source": "m_swap_enrich",
+    "model": "with_motion",
+    "task": "ButtonUnmaskSwap"
+   },
+   {
+    "n_correct": 21,
+    "n_wrong": 29,
+    "mean": -0.07076162315832413,
+    "ref": 0.0,
+    "insufficient": false,
+    "excludes_ref": false,
+    "direction": -1,
+    "ci95": [
+     -0.15611050732044973,
+     0.013339022919146676
+    ],
+    "readout": "M4",
+    "source": "m_swap_enrich",
+    "model": "with_motion",
+    "task": "VideoUnmaskSwap"
+   }
+  ],
+  "verdicts": [
+   {
+    "verdict": "共同 pattern",
+    "task": null,
+    "reason": "两任务方向相同且区间都不含参照值",
+    "readout": "M1",
+    "model": "with_motion"
+   },
+   {
+    "verdict": "任务特有",
+    "task": "ButtonUnmaskSwap",
+    "reason": "只有一个任务的区间不含参照值",
+    "readout": "M1",
+    "model": "without_motion"
+   },
+   {
+    "verdict": "共同 pattern",
+    "task": null,
+    "reason": "两任务方向相同且区间都不含参照值",
+    "readout": "M2",
+    "model": "with_motion"
+   },
+   {
+    "verdict": "未见",
+    "task": null,
+    "reason": "两任务区间都含参照值",
+    "readout": "M3",
+    "model": "with_motion"
+   },
+   {
+    "verdict": "未见",
+    "task": null,
+    "reason": "两任务区间都含参照值",
+    "readout": "M3",
+    "model": "without_motion"
+   },
+   {
+    "verdict": "未见",
+    "task": null,
+    "reason": "两任务区间都含参照值",
+    "readout": "M4",
+    "model": "with_motion"
+   }
+  ],
+  "selection_related": []
+ },
+ "P1": {
+  "grade": "描述性",
+  "cells": {
+   "with_motion": {
+    "ButtonUnmaskSwap": {
+     "episodes": 50,
+     "correct": 13,
+     "wrong": 36,
+     "no_pick": 1,
+     "selection_rate": {
+      "n_episodes": 49,
+      "mean": 0.2653061224489796,
+      "ci95": [
+       0.14285714285714285,
+       0.3877551020408163
+      ]
+     },
+     "official_success": {
+      "n_episodes": 50,
+      "mean": 0.26,
+      "ci95": [
+       0.14,
+       0.38
+      ]
+     },
+     "strata": {
+      "pick_times": {
+       "1": {
+        "episodes": 28,
+        "correct": 10,
+        "wrong": 18,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 28,
+         "mean": 0.35714285714285715,
+         "ci95": [
+          0.17857142857142858,
+          0.5357142857142857
+         ]
+        },
+        "official_success": {
+         "n_episodes": 28,
+         "mean": 0.35714285714285715,
+         "ci95": [
+          0.17857142857142858,
+          0.5357142857142857
+         ]
+        }
+       },
+       "2": {
+        "episodes": 22,
+        "correct": 3,
+        "wrong": 18,
+        "no_pick": 1,
+        "selection_rate": {
+         "n_episodes": 21,
+         "mean": 0.14285714285714285,
+         "ci95": [
+          0.0,
+          0.2857142857142857
+         ]
+        },
+        "official_success": {
+         "n_episodes": 22,
+         "mean": 0.13636363636363635,
+         "ci95": [
+          0.0,
+          0.3181818181818182
+         ]
+        }
+       }
+      },
+      "bin_count": {
+       "3": {
+        "episodes": 26,
+        "correct": 6,
+        "wrong": 19,
+        "no_pick": 1,
+        "selection_rate": {
+         "n_episodes": 25,
+         "mean": 0.24,
+         "ci95": [
+          0.08,
+          0.44
+         ]
+        },
+        "official_success": {
+         "n_episodes": 26,
+         "mean": 0.23076923076923078,
+         "ci95": [
+          0.07692307692307693,
+          0.38461538461538464
+         ]
+        }
+       },
+       "4": {
+        "episodes": 24,
+        "correct": 7,
+        "wrong": 17,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 24,
+         "mean": 0.2916666666666667,
+         "ci95": [
+          0.125,
+          0.5
+         ]
+        },
+        "official_success": {
+         "n_episodes": 24,
+         "mean": 0.2916666666666667,
+         "ci95": [
+          0.125,
+          0.5
+         ]
+        }
+       }
+      },
+      "swap_times": {
+       "1": {
+        "episodes": 19,
+        "correct": 5,
+        "wrong": 13,
+        "no_pick": 1,
+        "selection_rate": {
+         "n_episodes": 18,
+         "mean": 0.2777777777777778,
+         "ci95": [
+          0.1111111111111111,
+          0.5
+         ]
+        },
+        "official_success": {
+         "n_episodes": 19,
+         "mean": 0.2631578947368421,
+         "ci95": [
+          0.10526315789473684,
+          0.47368421052631576
+         ]
+        }
+       },
+       "2": {
+        "episodes": 27,
+        "correct": 7,
+        "wrong": 20,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 27,
+         "mean": 0.25925925925925924,
+         "ci95": [
+          0.1111111111111111,
+          0.4444444444444444
+         ]
+        },
+        "official_success": {
+         "n_episodes": 27,
+         "mean": 0.25925925925925924,
+         "ci95": [
+          0.1111111111111111,
+          0.4444444444444444
+         ]
+        }
+       },
+       "3": {
+        "episodes": 4,
+        "correct": 1,
+        "wrong": 3,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 4,
+         "mean": 0.25,
+         "ci95": [
+          0.0,
+          0.75
+         ]
+        },
+        "official_success": {
+         "n_episodes": 4,
+         "mean": 0.25,
+         "ci95": [
+          0.0,
+          0.75
+         ]
+        }
+       }
+      }
+     }
+    },
+    "VideoUnmaskSwap": {
+     "episodes": 50,
+     "correct": 21,
+     "wrong": 29,
+     "no_pick": 0,
+     "selection_rate": {
+      "n_episodes": 50,
+      "mean": 0.42,
+      "ci95": [
+       0.3,
+       0.56
+      ]
+     },
+     "official_success": {
+      "n_episodes": 50,
+      "mean": 0.32,
+      "ci95": [
+       0.2,
+       0.46
+      ]
+     },
+     "strata": {
+      "pick_times": {
+       "1": {
+        "episodes": 27,
+        "correct": 13,
+        "wrong": 14,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 27,
+         "mean": 0.48148148148148145,
+         "ci95": [
+          0.2962962962962963,
+          0.6666666666666666
+         ]
+        },
+        "official_success": {
+         "n_episodes": 27,
+         "mean": 0.48148148148148145,
+         "ci95": [
+          0.2962962962962963,
+          0.6666666666666666
+         ]
+        }
+       },
+       "2": {
+        "episodes": 23,
+        "correct": 8,
+        "wrong": 15,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 23,
+         "mean": 0.34782608695652173,
+         "ci95": [
+          0.17391304347826086,
+          0.5217391304347826
+         ]
+        },
+        "official_success": {
+         "n_episodes": 23,
+         "mean": 0.13043478260869565,
+         "ci95": [
+          0.0,
+          0.2608695652173913
+         ]
+        }
+       }
+      },
+      "bin_count": {
+       "3": {
+        "episodes": 26,
+        "correct": 11,
+        "wrong": 15,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 26,
+         "mean": 0.4230769230769231,
+         "ci95": [
+          0.23076923076923078,
+          0.6153846153846154
+         ]
+        },
+        "official_success": {
+         "n_episodes": 26,
+         "mean": 0.34615384615384615,
+         "ci95": [
+          0.15384615384615385,
+          0.5384615384615384
+         ]
+        }
+       },
+       "4": {
+        "episodes": 24,
+        "correct": 10,
+        "wrong": 14,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 24,
+         "mean": 0.4166666666666667,
+         "ci95": [
+          0.20833333333333334,
+          0.625
+         ]
+        },
+        "official_success": {
+         "n_episodes": 24,
+         "mean": 0.2916666666666667,
+         "ci95": [
+          0.125,
+          0.4593749999999943
+         ]
+        }
+       }
+      },
+      "swap_times": {
+       "1": {
+        "episodes": 26,
+        "correct": 10,
+        "wrong": 16,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 26,
+         "mean": 0.38461538461538464,
+         "ci95": [
+          0.19230769230769232,
+          0.5769230769230769
+         ]
+        },
+        "official_success": {
+         "n_episodes": 26,
+         "mean": 0.34615384615384615,
+         "ci95": [
+          0.15384615384615385,
+          0.5384615384615384
+         ]
+        }
+       },
+       "2": {
+        "episodes": 15,
+        "correct": 8,
+        "wrong": 7,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 15,
+         "mean": 0.5333333333333333,
+         "ci95": [
+          0.26666666666666666,
+          0.8
+         ]
+        },
+        "official_success": {
+         "n_episodes": 15,
+         "mean": 0.4666666666666667,
+         "ci95": [
+          0.2,
+          0.7333333333333333
+         ]
+        }
+       },
+       "3": {
+        "episodes": 9,
+        "correct": 3,
+        "wrong": 6,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 9,
+         "mean": 0.3333333333333333,
+         "ci95": [
+          0.0,
+          0.6666666666666666
+         ]
+        },
+        "official_success": {
+         "n_episodes": 9,
+         "mean": 0.0,
+         "ci95": [
+          0.0,
+          0.0
+         ]
+        }
+       }
+      }
+     }
+    }
+   },
+   "without_motion": {
+    "ButtonUnmaskSwap": {
+     "episodes": 50,
+     "correct": 10,
+     "wrong": 40,
+     "no_pick": 0,
+     "selection_rate": {
+      "n_episodes": 50,
+      "mean": 0.2,
+      "ci95": [
+       0.1,
+       0.32
+      ]
+     },
+     "official_success": {
+      "n_episodes": 50,
+      "mean": 0.18,
+      "ci95": [
+       0.08,
+       0.28
+      ]
+     },
+     "strata": {
+      "pick_times": {
+       "1": {
+        "episodes": 28,
+        "correct": 7,
+        "wrong": 21,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 28,
+         "mean": 0.25,
+         "ci95": [
+          0.10714285714285714,
+          0.42857142857142855
+         ]
+        },
+        "official_success": {
+         "n_episodes": 28,
+         "mean": 0.25,
+         "ci95": [
+          0.10714285714285714,
+          0.42857142857142855
+         ]
+        }
+       },
+       "2": {
+        "episodes": 22,
+        "correct": 3,
+        "wrong": 19,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 22,
+         "mean": 0.13636363636363635,
+         "ci95": [
+          0.0,
+          0.2727272727272727
+         ]
+        },
+        "official_success": {
+         "n_episodes": 22,
+         "mean": 0.09090909090909091,
+         "ci95": [
+          0.0,
+          0.22727272727272727
+         ]
+        }
+       }
+      },
+      "bin_count": {
+       "3": {
+        "episodes": 26,
+        "correct": 4,
+        "wrong": 22,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 26,
+         "mean": 0.15384615384615385,
+         "ci95": [
+          0.038461538461538464,
+          0.3076923076923077
+         ]
+        },
+        "official_success": {
+         "n_episodes": 26,
+         "mean": 0.15384615384615385,
+         "ci95": [
+          0.038461538461538464,
+          0.3076923076923077
+         ]
+        }
+       },
+       "4": {
+        "episodes": 24,
+        "correct": 6,
+        "wrong": 18,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 24,
+         "mean": 0.25,
+         "ci95": [
+          0.08333333333333333,
+          0.4166666666666667
+         ]
+        },
+        "official_success": {
+         "n_episodes": 24,
+         "mean": 0.20833333333333334,
+         "ci95": [
+          0.08333333333333333,
+          0.375
+         ]
+        }
+       }
+      },
+      "swap_times": {
+       "1": {
+        "episodes": 19,
+        "correct": 3,
+        "wrong": 16,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 19,
+         "mean": 0.15789473684210525,
+         "ci95": [
+          0.0,
+          0.3684210526315789
+         ]
+        },
+        "official_success": {
+         "n_episodes": 19,
+         "mean": 0.15789473684210525,
+         "ci95": [
+          0.0,
+          0.3684210526315789
+         ]
+        }
+       },
+       "2": {
+        "episodes": 27,
+        "correct": 5,
+        "wrong": 22,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 27,
+         "mean": 0.18518518518518517,
+         "ci95": [
+          0.037037037037037035,
+          0.3333333333333333
+         ]
+        },
+        "official_success": {
+         "n_episodes": 27,
+         "mean": 0.18518518518518517,
+         "ci95": [
+          0.037037037037037035,
+          0.3333333333333333
+         ]
+        }
+       },
+       "3": {
+        "episodes": 4,
+        "correct": 2,
+        "wrong": 2,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 4,
+         "mean": 0.5,
+         "ci95": [
+          0.0,
+          1.0
+         ]
+        },
+        "official_success": {
+         "n_episodes": 4,
+         "mean": 0.25,
+         "ci95": [
+          0.0,
+          0.75
+         ]
+        }
+       }
+      }
+     }
+    },
+    "VideoUnmaskSwap": {
+     "episodes": 50,
+     "correct": 12,
+     "wrong": 38,
+     "no_pick": 0,
+     "selection_rate": {
+      "n_episodes": 50,
+      "mean": 0.24,
+      "ci95": [
+       0.12,
+       0.36
+      ]
+     },
+     "official_success": {
+      "n_episodes": 50,
+      "mean": 0.22,
+      "ci95": [
+       0.12,
+       0.34
+      ]
+     },
+     "strata": {
+      "pick_times": {
+       "1": {
+        "episodes": 27,
+        "correct": 11,
+        "wrong": 16,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 27,
+         "mean": 0.4074074074074074,
+         "ci95": [
+          0.2222222222222222,
+          0.5925925925925926
+         ]
+        },
+        "official_success": {
+         "n_episodes": 27,
+         "mean": 0.4074074074074074,
+         "ci95": [
+          0.2222222222222222,
+          0.5925925925925926
+         ]
+        }
+       },
+       "2": {
+        "episodes": 23,
+        "correct": 1,
+        "wrong": 22,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 23,
+         "mean": 0.043478260869565216,
+         "ci95": [
+          0.0,
+          0.13043478260869565
+         ]
+        },
+        "official_success": {
+         "n_episodes": 23,
+         "mean": 0.0,
+         "ci95": [
+          0.0,
+          0.0
+         ]
+        }
+       }
+      },
+      "bin_count": {
+       "3": {
+        "episodes": 26,
+        "correct": 5,
+        "wrong": 21,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 26,
+         "mean": 0.19230769230769232,
+         "ci95": [
+          0.038461538461538464,
+          0.34615384615384615
+         ]
+        },
+        "official_success": {
+         "n_episodes": 26,
+         "mean": 0.19230769230769232,
+         "ci95": [
+          0.038461538461538464,
+          0.34615384615384615
+         ]
+        }
+       },
+       "4": {
+        "episodes": 24,
+        "correct": 7,
+        "wrong": 17,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 24,
+         "mean": 0.2916666666666667,
+         "ci95": [
+          0.125,
+          0.4583333333333333
+         ]
+        },
+        "official_success": {
+         "n_episodes": 24,
+         "mean": 0.25,
+         "ci95": [
+          0.08333333333333333,
+          0.4166666666666667
+         ]
+        }
+       }
+      },
+      "swap_times": {
+       "1": {
+        "episodes": 26,
+        "correct": 6,
+        "wrong": 20,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 26,
+         "mean": 0.23076923076923078,
+         "ci95": [
+          0.07692307692307693,
+          0.4230769230769231
+         ]
+        },
+        "official_success": {
+         "n_episodes": 26,
+         "mean": 0.23076923076923078,
+         "ci95": [
+          0.07692307692307693,
+          0.4230769230769231
+         ]
+        }
+       },
+       "2": {
+        "episodes": 15,
+        "correct": 6,
+        "wrong": 9,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 15,
+         "mean": 0.4,
+         "ci95": [
+          0.2,
+          0.6666666666666666
+         ]
+        },
+        "official_success": {
+         "n_episodes": 15,
+         "mean": 0.3333333333333333,
+         "ci95": [
+          0.13333333333333333,
+          0.6
+         ]
+        }
+       },
+       "3": {
+        "episodes": 9,
+        "correct": 0,
+        "wrong": 9,
+        "no_pick": 0,
+        "selection_rate": {
+         "n_episodes": 9,
+         "mean": 0.0,
+         "ci95": [
+          0.0,
+          0.0
+         ]
+        },
+        "official_success": {
+         "n_episodes": 9,
+         "mean": 0.0,
+         "ci95": [
+          0.0,
+          0.0
+         ]
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "sensitivity": {
+  "close_row": {
+   "with_motion": {
+    "ButtonUnmaskSwap": {
+     "episodes": 49,
+     "frame_mass": {
+      "partial": {
+       "n_episodes": 49,
+       "mean": 0.012253214103509526,
+       "ci95": [
+        0.011645912508679605,
+        0.012842170453498395
+       ]
+      },
+      "full": {
+       "n_episodes": 49,
+       "mean": 0.014383098292301772,
+       "ci95": [
+        0.013697713150675547,
+        0.015048352721298237
+       ]
+      },
+      "partial_minus_full": {
+       "n_episodes": 49,
+       "mean": -0.002129884188792249,
+       "ci95": [
+        -0.0027479376844710187,
+        -0.0015649564566270209
+       ]
+      }
+     },
+     "motion_mass": {
+      "partial": {
+       "n_episodes": 49,
+       "mean": 0.003563870627453491,
+       "ci95": [
+        0.003305086710487221,
+        0.0038316283415893333
+       ]
+      },
+      "full": {
+       "n_episodes": 49,
+       "mean": 0.003945034767824168,
+       "ci95": [
+        0.0036115315546600517,
+        0.004279963927872504
+       ]
+      },
+      "partial_minus_full": {
+       "n_episodes": 49,
+       "mean": -0.0003811641403706776,
+       "ci95": [
+        -0.0005663004173812013,
+        -0.00021533322618662792
+       ]
+      }
+     },
+     "vis_enrich": {
+      "partial": {
+       "n_episodes": 49,
+       "mean": 1.1378341026385097,
+       "ci95": [
+        1.0980206128248189,
+        1.1781707807404034
+       ]
+      },
+      "full": {
+       "n_episodes": 49,
+       "mean": 1.194213877746068,
+       "ci95": [
+        1.1513719635671757,
+        1.233662323610236
+       ]
+      },
+      "partial_minus_full": {
+       "n_episodes": 49,
+       "mean": -0.056379775107558365,
+       "ci95": [
+        -0.08120148064285375,
+        -0.030741935771400716
+       ]
+      }
+     },
+     "m_swap_enrich": {
+      "partial": {
+       "n_episodes": 49,
+       "mean": 0.6867131913231337,
+       "ci95": [
+        0.5991172754381522,
+        0.7727933503958944
+       ]
+      },
+      "full": {
+       "n_episodes": 49,
+       "mean": 0.6556742613793246,
+       "ci95": [
+        0.5740551472818485,
+        0.7371965676245104
+       ]
+      },
+      "partial_minus_full": {
+       "n_episodes": 49,
+       "mean": 0.031038929943809062,
+       "ci95": [
+        0.002221539070927935,
+        0.05718764835886715
+       ]
+      }
+     }
+    },
+    "VideoUnmaskSwap": {
+     "episodes": 50,
+     "frame_mass": {
+      "partial": {
+       "n_episodes": 50,
+       "mean": 0.011217997796655008,
+       "ci95": [
+        0.010733431255109003,
+        0.011740827726508392
+       ]
+      },
+      "full": {
+       "n_episodes": 50,
+       "mean": 0.012764694005416497,
+       "ci95": [
+        0.012143231513427779,
+        0.013393863278623257
+       ]
+      },
+      "partial_minus_full": {
+       "n_episodes": 50,
+       "mean": -0.0015466962087614885,
+       "ci95": [
+        -0.0018783496426114509,
+        -0.0012107615565143818
+       ]
+      }
+     },
+     "motion_mass": {
+      "partial": {
+       "n_episodes": 50,
+       "mean": 0.0027224544303271,
+       "ci95": [
+        0.002454475611511998,
+        0.0030049243709641695
+       ]
+      },
+      "full": {
+       "n_episodes": 50,
+       "mean": 0.002860615741461516,
+       "ci95": [
+        0.0025904496860535203,
+        0.003133563807927486
+       ]
+      },
+      "partial_minus_full": {
+       "n_episodes": 50,
+       "mean": -0.00013816131113441642,
+       "ci95": [
+        -0.00030183378301853016,
+        2.669508128162444e-05
+       ]
+      }
+     },
+     "vis_enrich": {
+      "partial": {
+       "n_episodes": 50,
+       "mean": 1.2330562655731574,
+       "ci95": [
+        1.1873459148987264,
+        1.2785668683832465
+       ]
+      },
+      "full": {
+       "n_episodes": 50,
+       "mean": 1.2971245604792156,
+       "ci95": [
+        1.2603033579556364,
+        1.3318282467058626
+       ]
+      },
+      "partial_minus_full": {
+       "n_episodes": 50,
+       "mean": -0.06406829490605821,
+       "ci95": [
+        -0.09445377761861948,
+        -0.03330242737867442
+       ]
+      }
+     },
+     "m_swap_enrich": {
+      "partial": {
+       "n_episodes": 50,
+       "mean": 0.972814102957549,
+       "ci95": [
+        0.8990789408666278,
+        1.0464076237029052
+       ]
+      },
+      "full": {
+       "n_episodes": 50,
+       "mean": 0.9315795289867494,
+       "ci95": [
+        0.8647917515133507,
+        1.0000414387098107
+       ]
+      },
+      "partial_minus_full": {
+       "n_episodes": 50,
+       "mean": 0.04123457397079939,
+       "ci95": [
+        -0.00042738456882901227,
+        0.0834434673344309
+       ]
+      }
+     }
+    }
+   },
+   "without_motion": {
+    "ButtonUnmaskSwap": {
+     "episodes": 50,
+     "frame_mass": {
+      "partial": {
+       "n_episodes": 50,
+       "mean": 0.005029757199336694,
+       "ci95": [
+        0.00474219395084621,
+        0.005318677956293325
+       ]
+      },
+      "full": {
+       "n_episodes": 50,
+       "mean": 0.007122618829458952,
+       "ci95": [
+        0.006766900903510137,
+        0.007460185037508813
+       ]
+      },
+      "partial_minus_full": {
+       "n_episodes": 50,
+       "mean": -0.0020928616301222583,
+       "ci95": [
+        -0.0023580688883635104,
+        -0.0018218332598824432
+       ]
+      }
+     },
+     "motion_mass": {
+      "partial": {
+       "n_episodes": 0,
+       "mean": null,
+       "ci95": null
+      },
+      "full": {
+       "n_episodes": 0,
+       "mean": null,
+       "ci95": null
+      },
+      "partial_minus_full": {
+       "n_episodes": 0,
+       "mean": null,
+       "ci95": null
+      }
+     },
+     "vis_enrich": {
+      "partial": {
+       "n_episodes": 50,
+       "mean": 0.6881824997159938,
+       "ci95": [
+        0.6332963738470395,
+        0.7460936314627226
+       ]
+      },
+      "full": {
+       "n_episodes": 50,
+       "mean": 0.48236628707791235,
+       "ci95": [
+        0.4557084772870167,
+        0.5110780787329784
+       ]
+      },
+      "partial_minus_full": {
+       "n_episodes": 50,
+       "mean": 0.20581621263808142,
+       "ci95": [
+        0.16137073069275057,
+        0.2554151411255066
+       ]
+      }
+     },
+     "m_swap_enrich": {
+      "partial": {
+       "n_episodes": 0,
+       "mean": null,
+       "ci95": null
+      },
+      "full": {
+       "n_episodes": 0,
+       "mean": null,
+       "ci95": null
+      },
+      "partial_minus_full": {
+       "n_episodes": 0,
+       "mean": null,
+       "ci95": null
+      }
+     }
+    },
+    "VideoUnmaskSwap": {
+     "episodes": 50,
+     "frame_mass": {
+      "partial": {
+       "n_episodes": 50,
+       "mean": 0.0042059274546089485,
+       "ci95": [
+        0.004029688269224309,
+        0.004374495038508022
+       ]
+      },
+      "full": {
+       "n_episodes": 50,
+       "mean": 0.006764686495645179,
+       "ci95": [
+        0.006492262188374169,
+        0.007027814280977472
+       ]
+      },
+      "partial_minus_full": {
+       "n_episodes": 50,
+       "mean": -0.002558759041036231,
+       "ci95": [
+        -0.002796146190832615,
+        -0.0023369887865108212
+       ]
+      }
+     },
+     "motion_mass": {
+      "partial": {
+       "n_episodes": 0,
+       "mean": null,
+       "ci95": null
+      },
+      "full": {
+       "n_episodes": 0,
+       "mean": null,
+       "ci95": null
+      },
+      "partial_minus_full": {
+       "n_episodes": 0,
+       "mean": null,
+       "ci95": null
+      }
+     },
+     "vis_enrich": {
+      "partial": {
+       "n_episodes": 50,
+       "mean": 0.7632763158873763,
+       "ci95": [
+        0.6979367806023573,
+        0.8260650018221434
+       ]
+      },
+      "full": {
+       "n_episodes": 50,
+       "mean": 0.4703506702373641,
+       "ci95": [
+        0.4495079774851441,
+        0.4929433729321636
+       ]
+      },
+      "partial_minus_full": {
+       "n_episodes": 50,
+       "mean": 0.2929256456500123,
+       "ci95": [
+        0.24161797992286302,
+        0.34330442107975256
+       ]
+      }
+     },
+     "m_swap_enrich": {
+      "partial": {
+       "n_episodes": 0,
+       "mean": null,
+       "ci95": null
+      },
+      "full": {
+       "n_episodes": 0,
+       "mean": null,
+       "ci95": null
+      },
+      "partial_minus_full": {
+       "n_episodes": 0,
+       "mean": null,
+       "ci95": null
+      }
+     }
+    }
+   }
+  },
+  "exclude_earlier_closes": {
+   "intervals": [
+    {
+     "n_episodes": 25,
+     "mean": 1.2585056393620615,
+     "ref": 1.0,
+     "insufficient": false,
+     "excludes_ref": true,
+     "direction": 1,
+     "ci95": [
+      1.224022713857038,
+      1.2919330817730295
+     ],
+     "support": 25,
+     "counterexamples": [],
+     "readout": "M1",
+     "source": "rb_vis_enrich",
+     "model": "with_motion",
+     "task": "ButtonUnmaskSwap"
+    },
+    {
+     "n_episodes": 42,
+     "mean": 1.5174885204547264,
+     "ref": 1.0,
+     "insufficient": false,
+     "excludes_ref": true,
+     "direction": 1,
+     "ci95": [
+      1.4848891977269938,
+      1.5523000709917456
+     ],
+     "support": 42,
+     "counterexamples": [],
+     "readout": "M1",
+     "source": "rb_vis_enrich",
+     "model": "with_motion",
+     "task": "VideoUnmaskSwap"
+    },
+    {
+     "n_episodes": 41,
+     "mean": 0.6075085593087051,
+     "ref": 1.0,
+     "insufficient": false,
+     "excludes_ref": true,
+     "direction": -1,
+     "ci95": [
+      0.5886333040487192,
+      0.6254632296318222
+     ],
+     "support": 0,
+     "counterexamples": [
+      "ButtonUnmaskSwap:0",
+      "ButtonUnmaskSwap:1",
+      "ButtonUnmaskSwap:2",
+      "ButtonUnmaskSwap:4",
+      "ButtonUnmaskSwap:6",
+      "ButtonUnmaskSwap:7",
+      "ButtonUnmaskSwap:8",
+      "ButtonUnmaskSwap:9",
+      "ButtonUnmaskSwap:10",
+      "ButtonUnmaskSwap:11",
+      "ButtonUnmaskSwap:12",
+      "ButtonUnmaskSwap:14",
+      "ButtonUnmaskSwap:16",
+      "ButtonUnmaskSwap:17",
+      "ButtonUnmaskSwap:18",
+      "ButtonUnmaskSwap:19",
+      "ButtonUnmaskSwap:20",
+      "ButtonUnmaskSwap:21",
+      "ButtonUnmaskSwap:23",
+      "ButtonUnmaskSwap:24",
+      "ButtonUnmaskSwap:25",
+      "ButtonUnmaskSwap:26",
+      "ButtonUnmaskSwap:27",
+      "ButtonUnmaskSwap:28",
+      "ButtonUnmaskSwap:29",
+      "ButtonUnmaskSwap:30",
+      "ButtonUnmaskSwap:31",
+      "ButtonUnmaskSwap:33",
+      "ButtonUnmaskSwap:34",
+      "ButtonUnmaskSwap:36",
+      "ButtonUnmaskSwap:37",
+      "ButtonUnmaskSwap:38",
+      "ButtonUnmaskSwap:39",
+      "ButtonUnmaskSwap:41",
+      "ButtonUnmaskSwap:42",
+      "ButtonUnmaskSwap:43",
+      "ButtonUnmaskSwap:44",
+      "ButtonUnmaskSwap:45",
+      "ButtonUnmaskSwap:46",
+      "ButtonUnmaskSwap:48",
+      "ButtonUnmaskSwap:49"
+     ],
+     "readout": "M1",
+     "source": "rb_vis_enrich",
+     "model": "without_motion",
+     "task": "ButtonUnmaskSwap"
+    },
+    {
+     "n_episodes": 50,
+     "mean": 0.9843786180613716,
+     "ref": 1.0,
+     "insufficient": false,
+     "excludes_ref": false,
+     "direction": -1,
+     "ci95": [
+      0.9612828973826102,
+      1.0050118178196155
+     ],
+     "support": 17,
+     "counterexamples": [
+      "VideoUnmaskSwap:0",
+      "VideoUnmaskSwap:1",
+      "VideoUnmaskSwap:2",
+      "VideoUnmaskSwap:4",
+      "VideoUnmaskSwap:5",
+      "VideoUnmaskSwap:6",
+      "VideoUnmaskSwap:8",
+      "VideoUnmaskSwap:9",
+      "VideoUnmaskSwap:10",
+      "VideoUnmaskSwap:13",
+      "VideoUnmaskSwap:14",
+      "VideoUnmaskSwap:15",
+      "VideoUnmaskSwap:16",
+      "VideoUnmaskSwap:17",
+      "VideoUnmaskSwap:18",
+      "VideoUnmaskSwap:20",
+      "VideoUnmaskSwap:21",
+      "VideoUnmaskSwap:22",
+      "VideoUnmaskSwap:25",
+      "VideoUnmaskSwap:26",
+      "VideoUnmaskSwap:28",
+      "VideoUnmaskSwap:29",
+      "VideoUnmaskSwap:30",
+      "VideoUnmaskSwap:32",
+      "VideoUnmaskSwap:35",
+      "VideoUnmaskSwap:37",
+      "VideoUnmaskSwap:40",
+      "VideoUnmaskSwap:41",
+      "VideoUnmaskSwap:42",
+      "VideoUnmaskSwap:43",
+      "VideoUnmaskSwap:44",
+      "VideoUnmaskSwap:46",
+      "VideoUnmaskSwap:48"
+     ],
+     "readout": "M1",
+     "source": "rb_vis_enrich",
+     "model": "without_motion",
+     "task": "VideoUnmaskSwap"
+    },
+    {
+     "n_episodes": 25,
+     "mean": 0.5739158704372777,
+     "ref": 1.0,
+     "insufficient": false,
+     "excludes_ref": true,
+     "direction": -1,
+     "ci95": [
+      0.46205417459659237,
+      0.7048774073439166
+     ],
+     "support": 3,
+     "counterexamples": [
+      "ButtonUnmaskSwap:2",
+      "ButtonUnmaskSwap:4",
+      "ButtonUnmaskSwap:7",
+      "ButtonUnmaskSwap:8",
+      "ButtonUnmaskSwap:12",
+      "ButtonUnmaskSwap:13",
+      "ButtonUnmaskSwap:19",
+      "ButtonUnmaskSwap:24",
+      "ButtonUnmaskSwap:25",
+      "ButtonUnmaskSwap:28",
+      "ButtonUnmaskSwap:29",
+      "ButtonUnmaskSwap:30",
+      "ButtonUnmaskSwap:33",
+      "ButtonUnmaskSwap:34",
+      "ButtonUnmaskSwap:36",
+      "ButtonUnmaskSwap:38",
+      "ButtonUnmaskSwap:40",
+      "ButtonUnmaskSwap:43",
+      "ButtonUnmaskSwap:44",
+      "ButtonUnmaskSwap:45",
+      "ButtonUnmaskSwap:46",
+      "ButtonUnmaskSwap:47"
+     ],
+     "readout": "M2",
+     "source": "m_swap_enrich",
+     "model": "with_motion",
+     "task": "ButtonUnmaskSwap"
+    },
+    {
+     "n_episodes": 42,
+     "mean": 0.8089084485786137,
+     "ref": 1.0,
+     "insufficient": false,
+     "excludes_ref": true,
+     "direction": -1,
+     "ci95": [
+      0.7686076724355624,
+      0.8490443071713123
+     ],
+     "support": 4,
+     "counterexamples": [
+      "VideoUnmaskSwap:0",
+      "VideoUnmaskSwap:1",
+      "VideoUnmaskSwap:2",
+      "VideoUnmaskSwap:3",
+      "VideoUnmaskSwap:4",
+      "VideoUnmaskSwap:5",
+      "VideoUnmaskSwap:6",
+      "VideoUnmaskSwap:7",
+      "VideoUnmaskSwap:8",
+      "VideoUnmaskSwap:10",
+      "VideoUnmaskSwap:11",
+      "VideoUnmaskSwap:13",
+      "VideoUnmaskSwap:14",
+      "VideoUnmaskSwap:15",
+      "VideoUnmaskSwap:16",
+      "VideoUnmaskSwap:17",
+      "VideoUnmaskSwap:18",
+      "VideoUnmaskSwap:20",
+      "VideoUnmaskSwap:22",
+      "VideoUnmaskSwap:23",
+      "VideoUnmaskSwap:25",
+      "VideoUnmaskSwap:26",
+      "VideoUnmaskSwap:29",
+      "VideoUnmaskSwap:31",
+      "VideoUnmaskSwap:32",
+      "VideoUnmaskSwap:33",
+      "VideoUnmaskSwap:34",
+      "VideoUnmaskSwap:35",
+      "VideoUnmaskSwap:37",
+      "VideoUnmaskSwap:38",
+      "VideoUnmaskSwap:39",
+      "VideoUnmaskSwap:41",
+      "VideoUnmaskSwap:42",
+      "VideoUnmaskSwap:43",
+      "VideoUnmaskSwap:46",
+      "VideoUnmaskSwap:47",
+      "VideoUnmaskSwap:48",
+      "VideoUnmaskSwap:49"
+     ],
+     "readout": "M2",
+     "source": "m_swap_enrich",
+     "model": "with_motion",
+     "task": "VideoUnmaskSwap"
+    },
+    {
+     "n_correct": 10,
+     "n_wrong": 15,
+     "mean": -0.04325025133473415,
+     "ref": 0.0,
+     "insufficient": false,
+     "excludes_ref": false,
+     "direction": -1,
+     "ci95": [
+      -0.11462895491019418,
+      0.025505513258926048
+     ],
+     "readout": "M3",
+     "source": "rb_vis_enrich",
+     "model": "with_motion",
+     "task": "ButtonUnmaskSwap"
+    },
+    {
+     "n_correct": 17,
+     "n_wrong": 25,
+     "mean": -0.01618043440325856,
+     "ref": 0.0,
+     "insufficient": false,
+     "excludes_ref": false,
+     "direction": -1,
+     "ci95": [
+      -0.08601666149260065,
+      0.05113836277323565
+     ],
+     "readout": "M3",
+     "source": "rb_vis_enrich",
+     "model": "with_motion",
+     "task": "VideoUnmaskSwap"
+    },
+    {
+     "n_correct": 7,
+     "n_wrong": 34,
+     "mean": -0.009851848165248644,
+     "ref": 0.0,
+     "insufficient": true,
+     "excludes_ref": false,
+     "direction": -1,
+     "ci95": null,
+     "readout": "M3",
+     "source": "rb_vis_enrich",
+     "model": "without_motion",
+     "task": "ButtonUnmaskSwap"
+    },
+    {
+     "n_correct": 12,
+     "n_wrong": 38,
+     "mean": -0.02498216116549279,
+     "ref": 0.0,
+     "insufficient": false,
+     "excludes_ref": false,
+     "direction": -1,
+     "ci95": [
+      -0.0709363807719344,
+      0.01629087742753504
+     ],
+     "readout": "M3",
+     "source": "rb_vis_enrich",
+     "model": "without_motion",
+     "task": "VideoUnmaskSwap"
+    },
+    {
+     "n_correct": 10,
+     "n_wrong": 15,
+     "mean": -0.0480531566782586,
+     "ref": 0.0,
+     "insufficient": false,
+     "excludes_ref": false,
+     "direction": -1,
+     "ci95": [
+      -0.2919481348705216,
+      0.21855769471157627
+     ],
+     "readout": "M4",
+     "source": "m_swap_enrich",
+     "model": "with_motion",
+     "task": "ButtonUnmaskSwap"
+    },
+    {
+     "n_correct": 17,
+     "n_wrong": 25,
+     "mean": -0.036196119069135224,
+     "ref": 0.0,
+     "insufficient": false,
+     "excludes_ref": false,
+     "direction": -1,
+     "ci95": [
+      -0.12056860233556119,
+      0.04513412971403975
+     ],
+     "readout": "M4",
+     "source": "m_swap_enrich",
+     "model": "with_motion",
+     "task": "VideoUnmaskSwap"
+    }
+   ],
+   "verdicts": [
+    {
+     "verdict": "共同 pattern",
+     "task": null,
+     "reason": "两任务方向相同且区间都不含参照值",
+     "readout": "M1",
+     "model": "with_motion"
+    },
+    {
+     "verdict": "任务特有",
+     "task": "ButtonUnmaskSwap",
+     "reason": "只有一个任务的区间不含参照值",
+     "readout": "M1",
+     "model": "without_motion"
+    },
+    {
+     "verdict": "共同 pattern",
+     "task": null,
+     "reason": "两任务方向相同且区间都不含参照值",
+     "readout": "M2",
+     "model": "with_motion"
+    },
+    {
+     "verdict": "未见",
+     "task": null,
+     "reason": "两任务区间都含参照值",
+     "readout": "M3",
+     "model": "with_motion"
+    },
+    {
+     "verdict": "未见",
+     "task": null,
+     "reason": "存在少于10局的分组",
+     "readout": "M3",
+     "model": "without_motion"
+    },
+    {
+     "verdict": "未见",
+     "task": null,
+     "reason": "两任务区间都含参照值",
+     "readout": "M4",
+     "model": "with_motion"
+    }
+   ],
+   "selection_related": [],
+   "excluded": [
+    "with_motion:ButtonUnmaskSwap:0",
+    "with_motion:ButtonUnmaskSwap:1",
+    "with_motion:ButtonUnmaskSwap:3",
+    "with_motion:ButtonUnmaskSwap:5",
+    "with_motion:ButtonUnmaskSwap:6",
+    "with_motion:ButtonUnmaskSwap:9",
+    "with_motion:ButtonUnmaskSwap:10",
+    "with_motion:ButtonUnmaskSwap:14",
+    "with_motion:ButtonUnmaskSwap:15",
+    "with_motion:ButtonUnmaskSwap:16",
+    "with_motion:ButtonUnmaskSwap:18",
+    "with_motion:ButtonUnmaskSwap:20",
+    "with_motion:ButtonUnmaskSwap:21",
+    "with_motion:ButtonUnmaskSwap:22",
+    "with_motion:ButtonUnmaskSwap:23",
+    "with_motion:ButtonUnmaskSwap:26",
+    "with_motion:ButtonUnmaskSwap:31",
+    "with_motion:ButtonUnmaskSwap:32",
+    "with_motion:ButtonUnmaskSwap:35",
+    "with_motion:ButtonUnmaskSwap:37",
+    "with_motion:ButtonUnmaskSwap:41",
+    "with_motion:ButtonUnmaskSwap:42",
+    "with_motion:ButtonUnmaskSwap:48",
+    "with_motion:ButtonUnmaskSwap:49",
+    "with_motion:VideoUnmaskSwap:9",
+    "with_motion:VideoUnmaskSwap:19",
+    "with_motion:VideoUnmaskSwap:24",
+    "with_motion:VideoUnmaskSwap:27",
+    "with_motion:VideoUnmaskSwap:30",
+    "with_motion:VideoUnmaskSwap:36",
+    "with_motion:VideoUnmaskSwap:44",
+    "with_motion:VideoUnmaskSwap:45",
+    "without_motion:ButtonUnmaskSwap:3",
+    "without_motion:ButtonUnmaskSwap:5",
+    "without_motion:ButtonUnmaskSwap:13",
+    "without_motion:ButtonUnmaskSwap:15",
+    "without_motion:ButtonUnmaskSwap:22",
+    "without_motion:ButtonUnmaskSwap:32",
+    "without_motion:ButtonUnmaskSwap:35",
+    "without_motion:ButtonUnmaskSwap:40",
+    "without_motion:ButtonUnmaskSwap:47"
+   ]
+  }
+ },
+ "checks": {
+  "episodes_with_window": 199,
+  "episodes_total": 200,
+  "attn_path_maxabs": 1.8037109375,
+  "same_path_maxabs": 0.0
+ },
+ "limitations": [
+  "注意力只说明看哪里，这些 pattern 不能证明因果",
+  "只有窗口数据：整局固定峰、整局 R2、抬起阶段都不能复核，上一轮这些结论既不证实也不推翻",
+  "窗口版 RB 的汇聚点确认只来自最多 4 次推理（至少 2 次命中），与上一轮整局版不等同",
+  "双目标局文字族只取第一目标色，与上一轮两目标色等权不同，只影响 R3 稳健列",
+  "12 个主区间未校正多重比较，单个结果按线索读；头级结果一律探索性",
+  "注意力由展开路径重算，与实际执行的原路径有数值差；单头差小于 0.01 不解读",
+  "VideoUnmaskSwap 的裸露窗和交换帧未目视核实前，P2、P3 的 Video 列不能解读"
+ ],
+ "P7_overlap": {
+  "with_motion": {
+   "motion": {
+    "top": {
+     "ButtonUnmaskSwap": [
+      {
+       "head": "L17H1",
+       "count": 56
+      },
+      {
+       "head": "L14H0",
+       "count": 39
+      },
+      {
+       "head": "L15H6",
+       "count": 31
+      },
+      {
+       "head": "L13H6",
+       "count": 28
+      },
+      {
+       "head": "L15H1",
+       "count": 13
+      },
+      {
+       "head": "L14H3",
+       "count": 9
+      },
+      {
+       "head": "L15H7",
+       "count": 9
+      },
+      {
+       "head": "L7H1",
+       "count": 4
+      },
+      {
+       "head": "L10H1",
+       "count": 3
+      },
+      {
+       "head": "L16H0",
+       "count": 3
+      }
+     ],
+     "VideoUnmaskSwap": [
+      {
+       "head": "L16H6",
+       "count": 49
+      },
+      {
+       "head": "L13H6",
+       "count": 34
+      },
+      {
+       "head": "L15H6",
+       "count": 31
+      },
+      {
+       "head": "L14H0",
+       "count": 24
+      },
+      {
+       "head": "L12H0",
+       "count": 19
+      },
+      {
+       "head": "L16H4",
+       "count": 12
+      },
+      {
+       "head": "L15H1",
+       "count": 7
+      },
+      {
+       "head": "L12H6",
+       "count": 6
+      },
+      {
+       "head": "L7H1",
+       "count": 5
+      },
+      {
+       "head": "L17H1",
+       "count": 5
+      }
+     ]
+    },
+    "overlap": 6,
+    "shared": [
+     "L13H6",
+     "L14H0",
+     "L15H1",
+     "L15H6",
+     "L17H1",
+     "L7H1"
+    ]
+   },
+   "frame": {
+    "top": {
+     "ButtonUnmaskSwap": [
+      {
+       "head": "L15H6",
+       "count": 76
+      },
+      {
+       "head": "L14H0",
+       "count": 56
+      },
+      {
+       "head": "L16H0",
+       "count": 27
+      },
+      {
+       "head": "L3H0",
+       "count": 16
+      },
+      {
+       "head": "L16H6",
+       "count": 15
+      },
+      {
+       "head": "L14H3",
+       "count": 3
+      },
+      {
+       "head": "L15H1",
+       "count": 3
+      }
+     ],
+     "VideoUnmaskSwap": [
+      {
+       "head": "L15H6",
+       "count": 46
+      },
+      {
+       "head": "L16H6",
+       "count": 41
+      },
+      {
+       "head": "L14H0",
+       "count": 40
+      },
+      {
+       "head": "L16H0",
+       "count": 27
+      },
+      {
+       "head": "L16H4",
+       "count": 27
+      },
+      {
+       "head": "L3H0",
+       "count": 19
+      }
+     ]
+    },
+    "overlap": 5,
+    "shared": [
+     "L14H0",
+     "L15H6",
+     "L16H0",
+     "L16H6",
+     "L3H0"
+    ]
+   }
+  },
+  "without_motion": {
+   "motion": null,
+   "frame": {
+    "top": {
+     "ButtonUnmaskSwap": [
+      {
+       "head": "L15H1",
+       "count": 80
+      },
+      {
+       "head": "L15H6",
+       "count": 49
+      },
+      {
+       "head": "L16H4",
+       "count": 39
+      },
+      {
+       "head": "L16H7",
+       "count": 29
+      },
+      {
+       "head": "L14H5",
+       "count": 1
+      },
+      {
+       "head": "L16H0",
+       "count": 1
+      },
+      {
+       "head": "L16H6",
+       "count": 1
+      }
+     ],
+     "VideoUnmaskSwap": [
+      {
+       "head": "L15H1",
+       "count": 80
+      },
+      {
+       "head": "L16H4",
+       "count": 51
+      },
+      {
+       "head": "L16H7",
+       "count": 40
+      },
+      {
+       "head": "L5H5",
+       "count": 25
+      },
+      {
+       "head": "L16H6",
+       "count": 3
+      },
+      {
+       "head": "L16H2",
+       "count": 1
+      }
+     ]
+    },
+    "overlap": 4,
+    "shared": [
+     "L15H1",
+     "L16H4",
+     "L16H6",
+     "L16H7"
+    ]
+   }
+  }
+ }
+}
