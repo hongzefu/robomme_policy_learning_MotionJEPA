@@ -20,8 +20,8 @@ case "$1" in
 esac
 case "$2" in
   prod) RUN=$BASE; EXTRA=() ;;
-  smoke) RUN=$BASE-smoke; EXTRA=(--num-train-steps 20 --overwrite --no-wandb-enabled) ;;
-  perf) RUN=$BASE-perf; EXTRA=(--num-train-steps 300 --overwrite --no-wandb-enabled) ;;
+  smoke) RUN=$BASE-smoke; EXTRA=(--num-train-steps 20 --no-wandb-enabled) ;;
+  perf) RUN=$BASE-perf; EXTRA=(--num-train-steps 300 --no-wandb-enabled) ;;
   *) echo "未知模式: $2" >&2; exit 2 ;;
 esac
 
