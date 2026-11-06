@@ -6,6 +6,12 @@
 
 ## 一、环境 B 现行（AWS 8×A100，2026-09-04 起）
 
+### Context 1024 双四卡 80k（2026-11-06美东开工）
+
+| 目录 | 内容 | 状态 |
+|---|---|---|
+| [`orig100-ctx-tokendrop-framesamp1024-b64-80k/`](orig100-ctx-tokendrop-framesamp1024-b64-80k/launch.md) | 官方 b64 80k，context，tokendrop（GPU 0–3）与 framesample（GPU 4–7），budget 1024 | 训练中 |
+
 ### 官方16×100两条串行60k（2026-10-27美东开工）
 
 | 目录 | 内容 | 状态 |

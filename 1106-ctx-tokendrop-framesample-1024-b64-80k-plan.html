@@ -150,4 +150,4 @@ uv run --no-sync python scripts/training/train.py mme_vla_suite \
 <tr><td>RUN</td><td>P1 打包、P3 短测、P4 起跑</td><td>无代码改动</td><td>代码、配置、参数</td><td>opus，无 worktree</td><td>交回句柄</td></tr>
 </table></div>
 <p>合并：<code>git merge --no-ff</code> S1 → S2 → S3；commit subject 用 <code>sub/&lt;编号&gt;: </code> 前缀；只有主会话 push。</p>
-</main></body></html>
+<h1 style="font-size:21px">实施中调整</h1><ul><li>S3 的 smoke、perf 去掉 <code>--overwrite</code>：<code>train.py</code> 禁用该参数，属实现细节。</li><li>打包并行度由 16 提到 32，只为提速。</li><li>新增起跑前 GPU 采样：第 200 步后单进程 1 Hz、240 秒。</li></ul></main></body></html>

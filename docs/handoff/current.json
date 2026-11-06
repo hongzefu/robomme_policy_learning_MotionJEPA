@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-01T04:30:36+00:00",
-    "america_new_york": "2026-11-01T00:30:36-04:00"
+    "utc": "2026-11-06T14:21:33+00:00",
+    "america_new_york": "2026-11-06T09:21:33-05:00"
   },
   "repo": {
-    "branch": "v4-256concat1",
-    "base_head": "8596cff"
+    "branch": "v8-ctx-td-fs-1024-b64-80k",
+    "base_head": "46ac3cc"
   },
   "freeze": {
     "active": false,
@@ -1402,6 +1402,91 @@
         }
       ],
       "next_steps": []
+    },
+    "ctx1024-b64-80k": {
+      "plan": {
+        "file": "1106-ctx-tokendrop-framesample-1024-b64-80k-plan.html",
+        "sha": "7893709"
+      },
+      "state": "running",
+      "state_changed_at": "2026-11-06T14:21:33+00:00",
+      "state_reason": "双四卡正式训练 80k",
+      "owner": {
+        "session": "https://claude.ai/code/session_01WvPQiSDswMZKnEDugbjZbH",
+        "host": "ip-10-242-11-177.us-west-2.compute.internal"
+      },
+      "depends_on": [],
+      "pre_handoff": [
+        {
+          "what": "loader 对拍",
+          "evidence": "LOADER_EQ=PASS td=1000 fs=1000 mismatch=0",
+          "where": "merge c350bdf commit body",
+          "status": "pass"
+        },
+        {
+          "what": "在线打分重放",
+          "evidence": "ONLINE_TD_REPLAY=PASS episodes=16 mismatch=0",
+          "where": "merge c002da1 commit body",
+          "status": "pass"
+        },
+        {
+          "what": "tokendrop 训练与恢复",
+          "evidence": "",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx-tokendrop1024-b64-80k.log",
+          "status": "pending"
+        },
+        {
+          "what": "framesample 训练与恢复",
+          "evidence": "",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx-framesamp1024-b64-80k.log",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [],
+      "running_handles": [
+        {
+          "tmux": "c1k-td-train",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx-tokendrop1024-b64-80k.log",
+          "done_line": "EXIT_CODE=0"
+        },
+        {
+          "tmux": "c1k-fs-train",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx-framesamp1024-b64-80k.log",
+          "done_line": "EXIT_CODE=0"
+        },
+        {
+          "tmux": "c1k-td-inc",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx-tokendrop1024-b64-80k-inc.log",
+          "done_line": "HF_VERIFY=PASS"
+        },
+        {
+          "tmux": "c1k-fs-inc",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx-framesamp1024-b64-80k-inc.log",
+          "done_line": "HF_VERIFY=PASS"
+        }
+      ],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-11-06",
+          "quote": "同意开始，然后你开始训练了之后，你要看一下 GPU 占有率是不是有问题",
+          "scope": "计划 P0–P5，eval 除外"
+        },
+        {
+          "kind": "gpu_resume",
+          "date": "2026-11-06",
+          "quote": "可以继续做了GPU 也继续",
+          "scope": "撤销此前「GPU 的都不做」"
+        }
+      ],
+      "pending_decisions": [],
+      "next_steps": [
+        {
+          "what": "训练结束后 EMA 恢复校验、上传校验、写 result.md；eval 需用户另行确认",
+          "command": "",
+          "verdict_line": "CTX1024_TRAIN=PASS"
+        }
+      ]
     }
   }
 }
