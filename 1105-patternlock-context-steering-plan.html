@@ -23,11 +23,12 @@
 <main>
 <h1 class="title">PatternLock 示范段 context steering 计划</h1>
 <div class="note">
-<b>状态：</b>只规划，未实施；须用户对本计划不改而直接认可后才开工。实现在 sled-aspen 的策略仓库 <code>robomme_policy_learning_MotionJEPA</code>（分支 <code>v4.1-interpretMotion</code>）。<br>
+<b>状态：</b>只规划，未实施；须用户对本计划不改而直接认可后才开工。待用户裁决的四项见第九节，裁决后修订并重新呈现。实现在 sled-aspen 的策略仓库（本仓库，分支 <code>v4.1-interpretMotion</code>）。<br>
 <b>范围：</b>只做 PatternLock，medium 档的 4×4 盘，路径自己指定；只从 context（示范段的 frames + motion）做 steering，不改网络内部激活。<br>
-<b>与其他文件的关系：</b>与 <code>probe/1105-stopcube-hover-probe-plan.html</code> 并列，沿用它的两个模型与离线查询方式；不改该文件。<br>
-<b>环境源码锚点：</b><code>RoboMME/robomme_benchmark@856bc3a189d4172f3f47dbee4424d585f8d78db3</code>（策略仓库 <code>third_party/robomme_benchmark</code> 的 gitlink，2026-11-05 美东经 GitHub 读取）。<br>
-<b>数据：</b>不跑策略 rollout；假 episode 由仿真器的专家规划器按指定路径录制。
+<b>与其他文件的关系：</b>与 <code>1105-stopcube-hover-probe-plan.html</code> 并列，沿用它的两个模型与离线查询方式；不改该文件。<br>
+<b>代码锚点：</b>计划基线 <code>c0c7c4e</code>；环境源码 <code>third_party/robomme_benchmark</code> gitlink <code>856bc3a189d4172f3f47dbee4424d585f8d78db3</code>，本轮不改。<br>
+<b>数据：</b>不跑策略 rollout；假 episode 由仿真器的专家规划器按指定路径录制。<br>
+<b>2026-11-05 美东细化：</b>只读核实了环境源码、记忆适配器、回放脚本，并在 <code>/data/hongzefu/data_0226/record_dataset_PatternLock.h5</code> 的 25 局 medium 上实测（均未运行仿真或模型）。数字见 B3；相对 <code>c0c7c4e</code> 的变更清单见 B8。四层定义和 36 组规模未动。
 </div>
 
 <h1>第一部分（给人看）</h1>
@@ -44,87 +45,103 @@
 <tr><td>Liao 与 Cao，arXiv 2607.03372</td><td>离线、不 rollout；逐层把历史 token 的激活换成另一局的；用「自己换自己」的差作噪声底</td><td>取：全程离线；自己换自己作噪声底。不取：逐层换激活（本轮只从 context 换）</td></tr>
 <tr><td>Bhardwaj 等，arXiv 2608.13474</td><td>第 0 层沿探针方向注入，结论是不可操控</td><td>不取：沿探针方向加向量</td></tr>
 </table></div>
-<p>核实情况：Zhang 与 Liao 两篇的方法段落由主会话读过原文；Bhardwaj 的逐字引用经脚本核对全部命中。</p>
+<p>核实情况：Zhang 与 Liao 两篇的方法段落由主会话读过原文；Bhardwaj 的逐字引用经脚本核对全部命中（细化时未重新核对论文）。</p>
 
-<h2>三、环境源码给的约束</h2>
+<h2>三、环境源码与实测给的约束</h2>
 <div class="tbl"><table>
-<tr><th>项目</th><th>源码内容（<code>src/robomme/robomme_env/PatternLock.py</code>）</th><th>对设计的含义</th></tr>
-<tr><td>盘面与路径长度</td><td>medium：4×4 盘，路径 3–5 格（<code>config_medium</code>）</td><td>自定义路径取 3–5 格，即 2–4 次移动，是模型训练时见过的长度</td></tr>
-<tr><td>路径怎么来</td><td><code>_load_scene</code> 里用 <code>torch.Generator(seed)</code> 抽起点终点，<code>find_path_0_to_8(..., diagonals=True)</code> 找路，可走 8 个方向</td><td>要指定路径就得改这里（见第五节）</td></tr>
-<tr><td>一局的结构</td><td>示范一遍（<code>demonstration: True</code>）→ 复位 → 复位到起点格的关节位姿 <code>swing_qpos</code> → 逐步重走</td><td>起点由复位给出；模型要回忆的是每一步的方向</td></tr>
-<tr><td>文字指令</td><td>固定两句「watch the video carefully, then … retrace the same pattern」（<code>utils/task_goal.py</code>）</td><td>文字不含路径</td></tr>
-<tr><td>每步对不对</td><td>碰到既非目标也非上一格的按钮即失败（<code>_wrong_button_touch</code>）</td><td>「正确」= 朝示范的下一格走</td></tr>
-<tr><td>画面泄漏</td><td>碰过的按钮变红 40 步（<code>highlight_obj</code>）；杆尖留白色轨迹点 40 步（<code>highlight_position</code>，杆尖高度低于 0.1 时才画）</td><td>当前画面会露出刚走过的一两格，不露出下一格；配对要求最近的执行段相同，所以两局露出的内容一样</td></tr>
+<tr><th>项目</th><th>事实</th><th>对设计的含义</th></tr>
+<tr><td>盘面与路径长度</td><td>medium：4×4 盘，路径 3–5 格（<code>config_medium</code>）。8 邻接不重复路径共 8884 条（408 / 1764 / 6712）；官方 H5 的 medium 只有 25 条，互不相同</td><td>走 2–4 步是模型见过的长度；具体路径基本没见过，结果反映的是泛化，不是背训练路径</td></tr>
+<tr><td>一局的结构</td><td>示范视频从杆尖已在起点格开始，不含走到起点的过程；执行段第 0 帧也在起点格。复位帧不进视频</td><td>「在起点提问」就查执行段第 0 帧。这一帧不含示范末尾的红点与轨迹（B3）</td></tr>
+<tr><td>每次移动的时间</td><td>到位（<code>is_obj_swing_onto</code> 首次成立）后还要停 7–14 帧才到子目标边界（<code>is_subgoal_boundary</code>），之后才动身。到位到下一次到位：直走中位 27 帧（15–43），斜走中位 37 帧（21–48）</td><td>提问的那一帧取<b>边界帧</b>，不取到位帧（下两行）</td></tr>
+<tr><td>两局何时分叉</td><td>实测 6 对共同前段至少一步的局：2 对能看到分叉，首差都在边界帧的下一帧（偏移 35 与 34，59 与 58）；3 对到较短一局结束都逐位相等；1 对（<code>episode_22</code>/<code>26</code>）在第 4 帧起有 <code>3.7e-9</code> 的抖动、1 个像素不同</td><td>边界帧是最后一个共同帧。自然录制不保证逐位相等，所以一组比较只用一份执行段（第四节第四层）</td></tr>
+<tr><td>方向读得出吗（正对照）</td><td>从边界帧往后 20 步，专家的动作块水平位移归到 8 方向，75/75 全对，最小位移 5.6 cm。从到位帧往后：20 步只有 90.7%，16 步只有 69.3%</td><td><code>c0c7c4e</code> 的「到位那一步查询」连专家都读不准；改为边界帧后，读数方法本身不丢分</td></tr>
+<tr><td>可走方向</td><td>编号 5 周围 8 个方向都有按钮。但路径不走回头路：在起点提问时有 8 个出口，重走完第 1 步后 7 个，第 2 步后 5–7 个，第 3 步后 5–7 个</td><td>机会水平 1/8 只对「在 8 个方向里瞎猜」成立；改用与组内对方比较的零假设（第七节）</td></tr>
+<tr><td>文字指令</td><td><code>utils/task_goal.py</code> 固定两句，不含路径；评测取第一句</td><td>全部查询用同一句</td></tr>
+<tr><td>评测输入与 H5 不同</td><td>评测的 <code>DemonstrationWrapper.reset</code> 过滤掉 <code>NO RECORD</code> 帧；H5 的 <code>RecordWrapper</code> 保留示范末尾 6–12 帧 <code>NO RECORD</code>（medium 含尾帧的示范长度 57–156 帧）</td><td>查询输入按评测口径去尾帧，冒烟核对（<code>DEMO_FORMAT</code>）</td></tr>
 </table></div>
 
 <h2>四、怎么造假 episode</h2>
 <p>下面四层从外到内，每一层固定之后再变下一层。本轮第一层只取一个格子，其余三层全部采到。</p>
 <h3>第一层：在哪个格子提问</h3>
-<p>盘面是 4×4，共 16 个按钮，位置不随任务变化（按钮位置由固定的 <code>grid_center</code> 和 <code>grid_spacing</code> 算出，相机也固定）。「提问」指：让杆停在某个格子上，问模型下一步往哪走，模型给出的动作不执行。本轮只在一个格子上提问：左上角那一块里靠中间的那个格子（源码编号 5，第 2 行第 2 列）。它周围 8 个方向都有按钮，随便猜对的概率是 1/8。用户 2026-11-05 原话：「你现在先降到只踩一个点，就踩中间的那个那个点就可以了」。</p>
+<p>盘面是 4×4，共 16 个按钮，位置不随任务变化（按钮位置由固定的 <code>grid_center</code> 和 <code>grid_spacing</code> 算出，相机也固定）。「提问」指：让杆停在某个格子上，问模型下一步往哪走，模型给出的动作不执行。本轮只在一个格子上提问：左上角那一块里靠中间的那个格子（源码编号 5，第 2 行第 2 列）。它周围 8 个方向都有按钮。用户 2026-11-05 原话：「你现在先降到只踩一个点，就踩中间的那个那个点就可以了」。</p>
 <h3>第二层：示范有多长</h3>
 <p>每次任务开始时模型先看一段示范，杆在盘面上连续划过几个按钮。示范取三种长度：走 2 步、走 3 步、走 4 步（即经过 3、4、5 个按钮，都是 medium 档训练时见过的长度）。示范越长，模型要记的东西越多。</p>
 <h3>第三层：提问的格子在示范的第几个位置</h3>
-<p>看完示范后杆回到起点，由专家规划器照着重走，走到提问的格子就停下。停下的时机有四种：还在起点没动、重走完第 1 步之后、重走完第 2 步之后、重走完第 3 步之后。提问的格子因此分别是示范里的第 1、2、3、4 个按钮。位置越靠后，要回忆的那一步在示范里越靠后，执行段自己积累的画面也越长。</p>
-<p>第二层和第三层合起来共 9 种情况，每一种都要采到：</p>
+<p>看完示范后杆回到起点，由专家规划器照着重走，走到提问的格子，在它动身去下一格之前的最后一帧停下。停下的时机有四种：还在起点没动、重走完第 1 步之后、重走完第 2 步之后、重走完第 3 步之后。提问的格子因此分别是示范里的第 1、2、3、4 个按钮。位置越靠后，要回忆的那一步在示范里越靠后，执行段自己积累的画面也越长。</p>
+<p>第二层和第三层合起来共 9 种情况，每一种都要采到（枚举确认 9 种在编号 5 上都可行）：</p>
 <div class="tbl"><table>
 <tr><th>示范长度</th><th>在起点提问</th><th>重走完第 1 步后</th><th>重走完第 2 步后</th><th>重走完第 3 步后</th></tr>
 <tr><td>走 2 步</td><td>采</td><td>采</td><td>无</td><td>无</td></tr>
 <tr><td>走 3 步</td><td>采</td><td>采</td><td>采</td><td>无</td></tr>
 <tr><td>走 4 步</td><td>采</td><td>采</td><td>采</td><td>采</td></tr>
 </table></div>
+<p>每行都缺最后一个位置，是因为走到示范终点后已经没有「下一步」可问。这也意味着<b>位置三种和长度三种不能排成完整的 3×3</b>：走 2 步的示范没有「重走完第 2 步后」这一格。见第九节 Q1。</p>
 <h3>第四层：下一步的方向</h3>
-<p>前三层固定后，只变一样东西：示范里从提问的格子出发，下一步走向哪个方向。做法是造两次任务，它们到达提问格子之前的路线完全相同，示范在这之后一次往甲方向走、一次往乙方向走。提问时两次任务的当前画面、执行段历史、文字、本体状态都相同，只有示范段的 frames + motion 不同，正确答案也不同。这样的两次任务合称「一组比较」。模型在两次任务里各自答对，说明示范段的 context 决定了动作。</p>
-<p>例子（示范走 3 步、重走完第 1 步后提问）：第一次任务的示范是 0 → 5 → 6 → 7，第二次是 0 → 5 → 9 → 13。两次都让杆从 0 重走到 5 后停下提问，第一次该答「往 6」，第二次该答「往 9」。</p>
+<p>前三层固定后，只变一样东西：示范里从提问的格子出发，下一步走向哪个方向。做法是造两次任务，它们到达提问格子之前的路线完全相同，示范在这之后一次往甲方向走、一次往乙方向走，两次的示范总步数相同。这样的两次任务合称「一组比较」。</p>
+<p>提问时两次任务的输入这样拼：第一次 = 甲示范 + 甲的执行段；第二次 = 乙示范 + <b>同一份</b>甲的执行段。这就是用户说的「拼凑出一样的段落」。当前画面、腕部画面、本体状态、文字、执行段帧因此逐位相等，只有示范段的 frames + motion 不同，正确答案也不同。乙自己也录一遍执行段，只用来量拼接前的自然差距（<code>EXEC_GAP</code>）。模型在两次任务里各自答对，说明示范段的 context 决定了动作。</p>
+<p>例子（示范走 3 步、重走完第 1 步后提问）：第一次任务的示范是 0 → 5 → 6 → 7，第二次是 0 → 5 → 9 → 13。两次都让杆从 0 重走到 5 后停下提问，第一次该答「往 6」，第二次该答「往 9」。这两个方向都是直走，符合正式抽样「两个方向同为直走或同为斜走」的要求（理由见下）。</p>
+<p><b>做不到相同的部分：</b>两条示范的帧数一般不同，所以记忆里同一帧的时间码、32 帧等距采样的落点和 motion 窗口数在两次任务之间也不同。这是「示范不同」的一部分，无法消除。斜走比直走平均多约 10 帧，所以要求两个方向同类型来压小这个差；枚举确认同类型配对在 9 种情况下都够（最少是走 2 步、重走完第 1 步后的 72 组）。每组记下两条示范的帧数，报告差值分布。</p>
 <h3>数量</h3>
 <div class="tbl"><table>
 <tr><th>层级</th><th>算法</th><th>数量</th></tr>
 <tr><td>提问的格子</td><td>只取编号 5</td><td>1 个</td></tr>
 <tr><td>长度加位置的情况</td><td>2 + 3 + 4</td><td>9 种</td></tr>
 <tr><td>一组比较</td><td>每种情况 4 组，每组用不同的前段路线和不同的两个方向</td><td>9 × 4 = 36 组</td></tr>
-<tr><td>仿真次数</td><td>每组比较 2 次任务，两个模型共用同一批录制</td><td>36 × 2 = 72 次</td></tr>
+<tr><td>仿真次数</td><td>每组比较 2 次任务，两个模型共用同一批录制；相同路径只录一次</td><td>至多 72 次</td></tr>
 <tr><td>提问次数</td><td>每次任务录下后两个模型各问一次</td><td>72 × 2 = 144 次</td></tr>
 <tr><td>动作样本</td><td>每次提问采 5 个</td><td>144 × 5 = 720 个</td></tr>
+<tr><td>合计时每类的组数</td><td>按示范长度：走 2 / 3 / 4 步。按位置：起点 / 第 1 / 2 / 3 步后</td><td>8 / 12 / 16；12 / 12 / 8 / 4</td></tr>
 </table></div>
-<p>在起点提问的情况没有前段路线，4 组比较靠换不同的两个方向和不同的后段路线来区分。</p>
+<p>在起点提问的情况没有前段路线，4 组比较靠换不同的两个方向和不同的后段路线来区分：8 个方向正好拆成 2 组直走、2 组斜走，每个方向恰好用一次。</p>
 <p>不做的：其余 15 个格子（含角格、边格和离机械臂远的一侧）、错配组（区分按位置查还是按步数查）。都放待办。</p>
 
-<h2>五、要改的源码</h2>
-<div class="tbl"><table>
-<tr><th>文件与锚点</th><th>改什么</th><th>不传参数时</th><th>用户批准原话</th></tr>
-<tr><td><code>third_party/robomme_benchmark/src/robomme/robomme_env/PatternLock.py</code>：<code>__init__</code> 与 <code>_load_scene</code></td><td>加一个可选参数，传入节点编号列表时直接用作 <code>path_nodes</code>，跳过随机抽路径与长度检查</td><td>行为与现在完全相同</td><td>「可以改源代码 拼凑出一样的段落」</td></tr>
-</table></div>
-<p>只批准了这一处。难度用已有的 <code>difficulty</code> 参数传 medium，不用改。这处改动在策略仓库的受保护目录里，按该仓库第 24 条从锁定提交建专用分支。</p>
+<h2>五、环境路径怎么指定（不改源码）</h2>
+<p>用户批准过改源码（「可以改源代码 拼凑出一样的段落」），但细化后发现<b>不需要改</b>。<code>_load_scene</code> 只通过模块里的名字 <code>find_path_0_to_8</code> 取路径，录制脚本在进程内把这个名字换成「返回指定节点」的函数即可，长度检查照常通过。好处：<code>third_party</code> 零改动、不用建配套分支和换 gitlink（第 24 条）、评测副本不受影响、<code>ENV_UNCHANGED</code> 对拍也不需要。本仓库 <code>&lt;PROTECTED_DIRS&gt;</code> 为无，<code>c0c7c4e</code> 说这里是「受保护目录」不准确。</p>
+<p>录制走官方造数据同一条路（<code>RobommeRecordWrapper</code> + 按 <code>task_list</code> 调 <code>solve</code>，<code>joint_vel_limits=0.3</code>），产物与官方 H5 同格式，自带 <code>is_subgoal_boundary</code>。用官方某一局的 seed 不替换路径录一遍，与官方 H5 比路径、帧数和关节（<code>REC_PARITY</code>）。</p>
 
 <h2>六、每一步做什么</h2>
 <div class="tbl"><table>
 <tr><th>步骤</th><th>做什么</th><th>得到什么</th><th>判据</th></tr>
-<tr><td>0</td><td>开工前确认四件事（B3）</td><td>四项的书面结论</td><td>四项都有结论</td></tr>
-<tr><td>1</td><td>加路径参数；不传参数时与原版逐局对拍</td><td>可指定路径的环境</td><td><code>PATH_OVERRIDE</code>、<code>ENV_UNCHANGED</code></td></tr>
-<tr><td>2</td><td>生成比较清单：枚举 4×4 上 3–5 格的不重复路径，提问的格子限编号 5，9 种情况各 4 组比较</td><td>比较清单与每种情况的组数</td><td><code>PAIRS</code></td></tr>
-<tr><td>3</td><td>冒烟 1 对：专家录两局到查询点，过记忆适配器，各查询一次</td><td>单对耗时；当前输入是否逐位相等</td><td><code>PRESENT_EQUAL</code>、<code>SELF_SWAP</code></td></tr>
-<tr><td>4</td><td>全量：两个模型各跑全部配对，放 detached tmux</td><td>每次查询的预测动作块</td><td>查询数与清单一致，日志 <code>EXIT_CODE=0</code></td></tr>
-<tr><td>5</td><td>把动作块归到方向，算正确率、机会水平、配对翻转率</td><td>9 格主表 × 2 模型</td><td><code>STEER</code></td></tr>
+<tr><td>0</td><td>开工审查；写三个新脚本（子代理，合并前后各审一次）</td><td>锚定的执行版本</td><td><code>PLAN_CONSISTENCY_REVIEW</code>、<code>PRE_MERGE_REVIEW</code>、<code>POST_MERGE_REVIEW</code></td></tr>
+<tr><td>1</td><td>生成比较清单：编号 5，9 种情况各 4 组</td><td>36 组与每种情况的组数</td><td><code>PAIRS</code></td></tr>
+<tr><td>2</td><td>录制冒烟：1 局官方路径 + 1 组自定义路径</td><td>单局录制耗时；格式与评测口径确认</td><td><code>PATH_OVERRIDE</code>、<code>REC_PARITY</code>、<code>DEMO_FORMAT</code></td></tr>
+<tr><td>3</td><td>查询冒烟：这 1 组过两个模型</td><td>单次查询耗时；全量耗时估算</td><td><code>PRESENT_EQUAL</code>、<code>MEM_DIFF</code>、<code>SELF_SWAP</code>、<code>VISION_CHUNK</code></td></tr>
+<tr><td>4</td><td>全量录制（detached tmux），再两个模型各跑全部比较</td><td>每次查询的预测动作块</td><td><code>EXPERT_DIR</code>、<code>EXEC_GAP</code>、<code>QUERY_RUN</code>、日志 <code>EXIT_CODE=0</code></td></tr>
+<tr><td>5</td><td>把动作块经仿真正运动学归到方向，算表</td><td>9 格主表 × 2 模型 + 合计</td><td><code>STEER</code></td></tr>
 <tr><td>6</td><td>出图、留档</td><td>图表与 <code>result.md</code></td><td>图目视复查无重叠溢出</td></tr>
 </table></div>
 
 <h2>七、怎么报</h2>
 <div class="tbl"><table>
-<tr><th>读数</th><th>定义</th><th>对照</th></tr>
-<tr><td>单步正确率（主读数）</td><td>预测动作块的水平位移归到 8 个方向之一，等于示范下一步方向的比例；按示范长度 × 提问位置的 9 格主表报，另报按长度、按位置的合计</td><td>机会水平 1/8；无 motion 的基线模型</td></tr>
-<tr><td>配对翻转率（主读数）</td><td>一对里两局的预测方向各自等于自己示范方向的比例。这是 steering 成不成立的直接读数</td><td>自己换自己（同一局查两次、不同噪声）应不翻转</td></tr>
-<tr><td>方向偏移（副读数）</td><td>预测位移在「A 方向减 B 方向」上的投影，两局之差</td><td>同一局不同噪声种子之间的差作噪声底</td></tr>
+<tr><th>读数</th><th>定义（每个噪声算一次，再按组平均）</th><th>对照</th></tr>
+<tr><td>单步正确率（主读数）</td><td>预测方向等于自己示范下一步方向的比例；按示范长度 × 提问位置的 9 格主表报，另报按长度、按位置的合计和 36 组合并值</td><td>错配率：预测方向等于<b>组内另一次</b>示范方向的比例。示范不起作用时两者期望相等，所以「正确率 − 错配率」的零假设就是 0，不依赖机会水平假设。机会水平 1/8 和按已走路线算的出口数倒数只作参考；再对比无 motion 的基线</td></tr>
+<tr><td>配对翻转率（主读数）</td><td>同一个噪声下，第一次预测甲方向且第二次预测乙方向的比例。这是 steering 成不成立的直接读数</td><td>反向翻转率：第一次预测乙方向且第二次预测甲方向。示范不起作用时两者期望相等</td></tr>
+<tr><td>方向偏移（副读数，探索性）</td><td>预测位移在「甲方向减乙方向」上的投影，两次之差</td><td>同一查询 5 个噪声之间的差作噪声底，不增加查询</td></tr>
+<tr><td>同时列出的计数</td><td>未动（水平位移 &lt; 1 cm）比例、方向既非甲也非乙的比例、同一查询 5 个噪声的方向一致率</td><td>专家位移最小 5.6 cm，所以 1 cm 现在就定死</td></tr>
 </table></div>
-<p>统计单位是配对；区间用配对级重采样。预先写死的主读数只有前两个，其余标探索性。</p>
+<p>统计单位是一组比较，区间用组级重采样 2000 次。规模决定精度：翻转率 0.5 时，36 组合并的 95% 半宽约 0.16；16 组约 0.25；8 组约 0.35；单格 4 组约 0.49。所以单格只列数，结论落在合计与合并值上；「重走完第 3 步后」只有 4 组，也只列数。预先写死的主读数只有前两个，其余标探索性；跨模型只作描述（两个模型训练数据和步数都不同）。</p>
+
 <h2>八、2 小时预算</h2>
 <div class="tbl"><table>
 <tr><th>环节</th><th>上限</th><th>说明</th></tr>
-<tr><td>核实四件事（B3）</td><td>15 分钟</td><td>只读</td></tr>
-<tr><td>加路径参数并对拍</td><td>20 分钟</td><td>一处改动</td></tr>
-<tr><td>冒烟 1 对</td><td>10 分钟</td><td>量出单局录制与单次查询耗时</td></tr>
-<tr><td>全量</td><td>45 分钟</td><td>72 次仿真录一次，两个模型共用；两张卡各跑一个模型</td></tr>
-<tr><td>统计、出图、留档</td><td>30 分钟</td><td></td></tr>
+<tr><td>开工审查与脚本开发</td><td>50 分钟</td><td>三个新脚本并行写，合并前后审查。<code>c0c7c4e</code> 的预算只给了 20 分钟改环境，没算录制、查询、分析脚本</td></tr>
+<tr><td>冒烟（步骤 1–3）</td><td>15 分钟</td><td>模型加载含 motion 侧车；量单局耗时</td></tr>
+<tr><td>全量（步骤 4）</td><td>40 分钟</td><td>录制后两张卡各跑一个模型。查询部分按悬停探针的量级估每模型 10–15 分钟，录制未实测</td></tr>
+<tr><td>统计、出图、留档（步骤 5–6）</td><td>15 分钟</td><td>正运动学在 <code>official-sim</code> 环境里算</td></tr>
 </table></div>
-<p>单局录制和单次查询的耗时都没有实测。每种情况 4 组比较不变；冒烟后按实测估算全量耗时，超过 45 分钟时停下问用户，不自行减组数、不自行延长。</p>
+<p>合计 120 分钟，<b>没有余量</b>。每种情况 4 组不变；冒烟后按实测估算全量耗时，超过 40 分钟时停下问用户，不自行减组数、不自行延长。</p>
+
+<h2>九、待用户裁决</h2>
+<div class="tbl"><table>
+<tr><th>编号</th><th>问题</th><th>为什么要问</th><th>建议</th></tr>
+<tr><td>Q1</td><td>提问位置到底几种：按 <code>c0c7c4e</code> 的四列（9 种情况、36 组），还是只留起点、第 1 步后、第 2 步后三列（8 种情况、32 组）</td><td>用户口头说「位置有三种」，文件写的是四列。完整 3×3 做不到：走 2 步的示范没有「重走完第 2 步后」</td><td>按文件的四列。多出的一列只有 4 组，只列数，不影响其他格</td></tr>
+<tr><td>Q2</td><td>要不要加正对照模型：官方 <code>perceptual-framesamp-modul</code> 第 79999 步</td><td>基线（官方 context 79999）在 medium PatternLock 是 0/24（test + val，<code>docs/training-doc/eval-medium-patternlock-routestick</code>）。motion 模型（context concat 1×1024，59999 步）只知道全档 32.67 ± 1.15%，medium 成绩未核实。两个模型都读不出 steering 时，分不清是「它们确实不跟示范」还是「方法没灵敏度」。官方 modul 同档 13/24，已知会跟示范</td><td>加。多 72 次查询，全量约多 10 分钟，总预算约 2 小时 10 分钟</td></tr>
+<tr><td>Q3</td><td>2 小时含不含写代码和审查</td><td>第八节按「含」排，没有余量；只算运行则很宽松</td><td>按「含」执行，超时停下问</td></tr>
+<tr><td>Q4</td><td>是否登记进状态机 <code>docs/handoff/current.json</code>（第 27 条必问）</td><td>悬停探针选了不登记</td><td>不登记，人工交接；无上下游依赖</td></tr>
+</table></div>
+
+<h2>十、子代理分工与合并（简述）</h2>
+<p>写三个互不重叠的新文件，各一个写入型子代理（独立 worktree）：第一个管比较清单和录制，第二个管查询，第三个管分析和出图。它们之间只靠第二部分写定的文件格式衔接，可以并行。按这个顺序合回 <code>v4.1-interpretMotion</code>。每次合并前审范围和接口是否守住、跑各自的短测，合并后再跑一次全部短测并确认 <code>src/</code> 与 <code>third_party/</code> 零改动。运行由主会话从干净的分离工作树起 tmux。</p>
 <p>验收判定行、红线、风险与盲区在第二部分。</p>
 
 <h1>第二部分（技术细节，供 agent 追踪）</h1>
@@ -136,112 +153,163 @@
 <tr><td>K2</td><td>构造假任务，只从 context（frames + motion）steer，不改内部激活</td><td>「构建假任务 frames+motion 我只要从context这里来steer」</td></tr>
 <tr><td>K3</td><td>按位置 × 历史长度 × 第几步报正确率</td><td>「然后看 在不同位置下 几个历史+做第几步 的正确率」</td></tr>
 <tr><td>K4</td><td>离线跑，不做策略 rollout</td><td>「我这个还是要离线的来跑」「直接构造假episode 看steering的 response」</td></tr>
-<tr><td>K5</td><td>允许改环境源码以指定路径</td><td>「可以改源代码 拼凑出一样的段落」</td></tr>
+<tr><td>K5</td><td>允许改环境源码以指定路径（本轮未用到，见第五节）；允许拼凑相同段落</td><td>「可以改源代码 拼凑出一样的段落」</td></tr>
 <tr><td>K6</td><td>用 medium 的盘，路径自定义</td><td>「算了还是用hard的盘 自定义」，随后改为「改为用medium来做」</td></tr>
-<tr><td>K7</td><td>位置不全采；本轮只在编号 5 一个格子上提问（此前口径为一个象限 4 个点，已被取代）</td><td>「位置不要都采样了？现在是不是太多了」「4*4是不是完全不动的盘 对称来看 只取4个点行不行」，随后「你现在先降到只踩一个点，就踩中间的那个那个点就可以了」</td></tr>
+<tr><td>K7</td><td>位置不全采；本轮只在编号 5 一个格子上提问（此前口径为一个象限 4 个点，已被取代）</td><td>「位置不要都采样了？现在是不是太多了」「4*4是不是完全不动的盘 对称来看 只取4个点行不行」，随后「你现在先降到只踩一个点，就踩中间的那个那个点就可以了」「就是我的定义改变了，然后提问的格子只有一个。」</td></tr>
 <tr><td>K8</td><td>每次查询采 5 个动作样本；整件事 2 小时内完成</td><td>「下一步动作是什么 采5次 我要控制在2小时内搞完」</td></tr>
-<tr><td>K9</td><td>示范长度、提问的格子在示范里的位置这两层都要分开采到，最后再变下一步方向</td><td>「你需要同时区分 任务长度 和点位于任务的长度位置 这个会影响memory！」「这个格子是处……多长的任务的第几个位置，这些都要采采样采到，然后最后再这个呃方向的变化」</td></tr>
+<tr><td>K9</td><td>示范长度、提问的格子在示范里的位置这两层都要分开采到，最后再变下一步方向</td><td>「你需要同时区分 任务长度 和点位于任务的长度位置 这个会影响memory！」「这个格子是处……多长的任务的第几个位置，这些都要采采样采到，然后最后再这个呃方向的变化」；另有待裁决的口头说法「示范长度要有三种，然后提问的格子在示范里的位置也是有三种，然后下一步的方向有……这么两个」（见 Q1）</td></tr>
 <tr><td>K10</td><td>各层概念用一小段文字定义，不用单字代称</td><td>「你把概念定义清楚了，不要用这种……单个的这个字来判断，就所有的这个层级都用一小段文字来……叙述」</td></tr>
 </table></div>
-<p>「同意 写计划」「同意 就这样 写计划」是写本文件的指令，不是开工令。</p>
+<p>「同意 写计划」「同意 就这样 写计划」「细化方案 检查还有什么问题」都不是开工令。</p>
 
-<h2>A2 路径与配对</h2>
+<h2>A2 路径与配对（<code>scripts/interpret/patternlock_pairs.py</code>）</h2>
 <div class="tbl"><table>
 <tr><th>项目</th><th>做法</th></tr>
-<tr><td>格子编号</td><td>沿用源码：<code>button_index</code> 按行优先，4×4 为 0–15</td></tr>
-<tr><td>候选路径</td><td>8 邻接下的不重复路径，3–5 格；起点终点不同</td></tr>
-<tr><td>符号</td><td>第二部分里 k 指提问前已重走的步数（0 即在起点提问），p 指提问的格子；A、B 指一组比较里的两次任务</td></tr>
-<tr><td>主配对条件</td><td>A、B 的前 k + 1 个节点相同，第 k + 2 个节点不同；两条路径总移动次数相同（同属一个「历史长度」格）</td></tr>
-<tr><td>查询格</td><td>提问的格子只取编号 5；路径其余节点可以在任意格</td></tr>
-<tr><td>抽样</td><td>固定随机种子，9 种（示范长度，提问位置）情况各抽 4 组比较，共 36 组（定死不调）；同一情况的 4 组用不同的前段路线（在起点提问时没有前段，改用不同的后段路线）；一组的两个出口方向在未走过的邻格方向里均匀抽</td></tr>
-<tr><td>去掉的对</td><td>当前输入逐位不等的对（见 A4 <code>PRESENT_EQUAL</code>）；去掉后不补</td></tr>
+<tr><td>格子编号</td><td>沿用源码：<code>button_index</code> 按行优先，4×4 为 0–15；行增加是 <code>+x</code>，列增加是 <code>+y</code></td></tr>
+<tr><td>候选路径</td><td>8 邻接下的不重复路径，3–5 格</td></tr>
+<tr><td>符号</td><td>第二部分里 m 指示范总步数，k 指提问前已重走的步数（0 即在起点提问），p 指提问的格子；A、B 指一组比较里的两次任务</td></tr>
+<tr><td>主配对条件</td><td>A、B 的前 k + 1 个节点相同且第 k + 1 个节点是 p = 5，第 k + 2 个节点不同；两条路径总步数都是 m；两个出口同为直走或同为斜走</td></tr>
+<tr><td>抽样</td><td>种子 <code>20261105</code>。每个（m，k）抽 4 组（定死不调）：k = 0 时 8 个方向拆成 2 组直走、2 组斜走，每方向用一次；k ≥ 1 时 4 组的前段路线互不相同，出口优先选全局用得少的方向。后段路线在可续满 m 步的路线里均匀抽</td></tr>
+<tr><td>产物</td><td><code>pairs.json</code>：每组 <code>pair_id, m, k, path_a, path_b, exit_a, exit_b, legal_exits</code>；另记路径与官方 H5 medium 25 条路径的重合数和全局方向计数</td></tr>
 </table></div>
+<p>枚举（配对总数 / 同类型配对数 / 前段路线数，脚本实测）：(2,0) 653 / 279 / 1；(2,1) 168 / 72 / 8；(3,0) 9306 / 3894 / 1；(3,1) 3254 / 1364 / 8；(3,2) 675 / 287 / 39；(4,0) 101241 / 42481 / 1；(4,1) 39150 / 15934 / 8；(4,2) 10918 / 4476 / 39；(4,3) 2120 / 898 / 148。</p>
 
 <h2>A3 录制与查询</h2>
 <div class="tbl"><table>
 <tr><th>项目</th><th>做法</th></tr>
-<tr><td>录制</td><td>专家规划器（各任务条目的 <code>solve</code>）走完示范段、两次复位、执行段前 k 步；到 <code>is_obj_swing_onto</code> 对 p 成立的那一步停</td></tr>
-<tr><td>记忆</td><td>帧逐步喂给评测时用的同一个记忆适配器；motion token 由 motion 编码器在这些帧上重新算，不拼接已有 token</td></tr>
-<tr><td>查询</td><td>在停下的那一步做一次完整推理，存预测动作块；不执行</td></tr>
-<tr><td>噪声</td><td>每次查询采 5 个动作样本（5 个去噪噪声）；一对内两局用同一组 5 个噪声</td></tr>
-<tr><td>方向归类</td><td>动作块累计的杆尖水平位移，取与 8 个方向单位向量余弦最大的一个；位移过小（阈值冒烟后定）记为「未动」，单独计数</td></tr>
+<tr><td>录制（<code>patternlock_record.py</code>）</td><td><code>v1-store/envs/official-sim/bin/python</code>。进程内替换 <code>robomme.robomme_env.PatternLock.find_path_0_to_8</code>；<code>gym.make("PatternLock", obs_mode="rgb+depth+segmentation", control_mode="pd_joint_pos", render_mode="rgb_array", reward_mode="dense", seed=固定值, difficulty="medium")</code> 外包 <code>RobommeRecordWrapper</code>；规划器 <code>FailAwarePandaStickMotionPlanningSolver(joint_vel_limits=0.3)</code>，循环同 <code>tests/_shared/dataset_generation.py::_run_one_episode</code>。不传 <code>robomme_failure_recovery</code>（该辅助函数对 <code>episode ≤ 5</code> 会打开，不能照抄）。全部路径用同一 seed，seed 除路径外不影响场景。每条路径录完整一局</td></tr>
+<tr><td>提问帧 <code>t_q</code></td><td>k = 0 取执行段第 0 帧；k ≥ 1 取执行段第 k 次到位之后的第一个 <code>is_subgoal_boundary</code> 帧（B3）</td></tr>
+<tr><td>示范段口径</td><td>按评测：示范帧去掉 <code>simple_subgoal_online == "NO RECORD"</code> 的尾帧，得帧数 <code>D</code>；两次任务分别记 <code>D_a</code>、<code>D_b</code></td></tr>
+<tr><td>输入拼接（<code>patternlock_query.py</code>）</td><td>主环境 + motion 侧车。A 帧序列 = A 示范 + A 执行段 <code>[0, t_q]</code>；B 帧序列 = B 示范 + A 执行段 <code>[0, t_q]</code>。当前帧、腕部帧、状态都取 A 执行段的 <code>t_q</code></td></tr>
+<tr><td>记忆喂法</td><td><code>policy.reset()</code> 后首包恰好 <code>D+1</code> 帧、<code>exec_start_idx=D</code>（<code>FrameSampMemory.add_buffer</code> 硬性要求），其后执行段分批。<code>hover_replay.py</code> 写死 <code>exec_start_idx=0</code> 且首包 1 帧，只适用于无示范的 StopCube，<b>不能直接复用</b>；可复用其 <code>pack_state</code>、<code>build_observation</code>、<code>memory_times</code></td></tr>
+<tr><td>视觉编码批量</td><td><code>_vision_encode</code> 是 <code>module_jit</code>，每个新批量形状重新编译；首包 <code>D+1</code> 因路径而异，逐局编译会吃掉预算。查询脚本把注入的 <code>vision_enc</code> 包一层：按 16 帧切块、尾块补零后切回。不改 <code>src/</code>；由 <code>VISION_CHUNK</code> 对拍</td></tr>
+<tr><td>采样</td><td><code>offline_query.sample_predictions</code>，批量 5，<code>num_steps=10</code>，bf16 原路径。噪声 <code>query_noise(seed=42, episode_key=pair_id, query_seq=0, count=5, horizon=20, action_dim=模型值)</code>，不含模型身份，一组内、两模型间共用。<code>c0c7c4e</code> 写的「5 个样本共用一次前缀前向」不准确，实际是 batch = 5 一次前向</td></tr>
+<tr><td>文字</td><td><code>task_goal</code> 的第一句，全部相同</td></tr>
+<tr><td>确定性与显存</td><td>沿用悬停探针 <code>env.sh</code>：<code>XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'</code>；基线 GPU0 配额 0.45，motion 与侧车 GPU1 配额 0.55</td></tr>
+<tr><td>模型</td><td>基线 <code>ctx</code>：<code>v1-store/models/official-mme-vla/perceptual-framesamp-context/79999</code>，配置 <code>mme_vla_suite_b128</code>。motion <code>mot</code>：<code>v1-store/assets/vla-o16cc-59999/59999</code>，配置 <code>mme_vla_suite_orig16_b128_60k</code>，运行契约 <code>v1-store/evaluation/interpret-1103/contracts/runtime-mot.json</code>，解释器 <code>v1-store/envs/stage2/bin/python</code>。motion 模型记忆：32 帧（budget 512 / 16 token）；motion 窗 33 帧、步长 32、<code>demo_min_real_frames=17</code>。基线的记忆配置开工时读 <code>history_config.txt</code> 记入 <code>launch.md</code></td></tr>
+<tr><td>查询产物</td><td><code>query/&lt;model&gt;/&lt;pair_id&gt;_&lt;a|b&gt;.npz</code>：<code>pair_id, side, model, t_q, D, frame_times, motion_times, state, actions(5,20,8)</code></td></tr>
+<tr><td>方向归类（<code>analysis/patternlock_steer.py</code>）</td><td>动作是绝对关节目标。在 <code>official-sim</code> 里用 <code>scripts/interpret/read_sim_eef_pose.py::TcpReader.set_arm</code> 读 <code>state[:7]</code> 与第 20 行动作的杆尖位置（环境任务名改为 PatternLock），取水平位移，与 8 个方向单位向量余弦最大者。方向名与 <code>direction()</code> 一致。水平位移 &lt; 1 cm 记「未动」</td></tr>
 </table></div>
 
 <h2>A4 验收</h2>
 <div class="tbl"><table>
-<tr><th>查什么</th><th>怎么查</th><th>判定行</th></tr>
-<tr><td>路径参数生效</td><td>传入 10 条路径，读回 <code>selected_buttons</code> 的编号</td><td><code>PATH_OVERRIDE=PASS|FAIL paths=10 mismatches=&lt;n&gt;</code></td></tr>
-<tr><td>不传参数时不变</td><td>10 个种子，改动前后的路径与首帧逐位比较</td><td><code>ENV_UNCHANGED=PASS|FAIL seeds=10 mismatches=&lt;n&gt;</code></td></tr>
-<tr><td>配对清单</td><td>每种情况的组数、每组满足 A2 条件</td><td><code>PAIRS=PASS|FAIL cell=5 cases=9 pairs=&lt;n&gt; min_per_case=&lt;n&gt;</code></td></tr>
-<tr><td>当前输入相等</td><td>一对里两局在查询步的图像、本体状态、执行段帧逐位差的最大值</td><td><code>PRESENT_EQUAL=PASS|FAIL pairs=&lt;n&gt; dropped=&lt;n&gt; maxabs=&lt;值&gt;</code></td></tr>
-<tr><td>自己换自己</td><td>同一局同一噪声查两次，动作差应为 0</td><td><code>SELF_SWAP=PASS|FAIL maxabs=&lt;值&gt;</code></td></tr>
-<tr><td>主读数</td><td>9 格主表及按长度、按位置合计的正确率、翻转率与区间</td><td><code>STEER=PASS|FAIL model=&lt;模型&gt; len=&lt;2|3|4|all&gt; pos=&lt;0|1|2|3|all&gt; acc=&lt;值&gt; chance=&lt;值&gt; flip=&lt;值&gt; ci=[&lt;下&gt;,&lt;上&gt;] pairs=&lt;n&gt;</code></td></tr>
+<tr><th>查什么</th><th>怎么查、为什么成立</th><th>判定行</th></tr>
+<tr><td>比较清单</td><td>每组满足 A2 条件，每种情况恰好 4 组</td><td><code>PAIRS=PASS|FAIL cell=5 cases=9 pairs=36 violations=&lt;n&gt;</code></td></tr>
+<tr><td>路径生效</td><td>冒烟录 3 条、全量录全部，读回 H5 的到位位置换算成格子，与指定路径比</td><td><code>PATH_OVERRIDE=PASS|FAIL paths=&lt;n&gt; mismatches=&lt;n&gt;</code></td></tr>
+<tr><td>录制路径可信</td><td>取官方 medium 一局的 seed，不替换路径录一遍；路径与帧数相等，关节差 ≤ 1e-3（跨机器渲染不要求像素相等，像素差只记录）</td><td><code>REC_PARITY=PASS|FAIL episode=&lt;k&gt; frames_equal=&lt;0|1&gt; joint_maxabs=&lt;值&gt; px_diff=&lt;n&gt;</code></td></tr>
+<tr><td>评测口径</td><td>同一 seed 建评测用的 <code>BenchmarkEnvBuilder</code> 环境，<code>reset</code> 返回的帧数应为 <code>D+1</code>，帧与录制去尾帧后对比</td><td><code>DEMO_FORMAT=PASS|FAIL d_eval=&lt;n&gt; d_rec=&lt;n&gt; joint_maxabs=&lt;值&gt;</code></td></tr>
+<tr><td>当前输入相等</td><td>两次送进模型的图像、腕部图像、状态、文字 token 比较。按拼接构造应为 0，防的是拼接写错</td><td><code>PRESENT_EQUAL=PASS|FAIL pairs=&lt;n&gt; maxabs=&lt;值&gt;</code></td></tr>
+<tr><td>示范确实送进去了</td><td>同一组的 motion_emb（基线为帧 token）确有差异。防的是两次喂成同一段示范，那样翻转率会假性为 0</td><td><code>MEM_DIFF=PASS|FAIL pairs=&lt;n&gt; min_maxabs=&lt;值&gt;</code></td></tr>
+<tr><td>拼接前的自然差距</td><td>A、B 各自执行段 <code>[0, t_q]</code> 比较；关节差 ≤ 1e-6 且前视差异像素 ≤ 16 算通过（H5 上首差 3.7e-9、1 像素，最大差未量）。超过的组如实扣除、不补</td><td><code>EXEC_GAP=PASS|FAIL pairs=36 identical=&lt;n&gt; dropped=&lt;n&gt; max_joint=&lt;值&gt; max_px=&lt;n&gt;</code></td></tr>
+<tr><td>读数方法正对照</td><td>每次从 <code>t_q</code> 起专家 20 步的动作，经同一套归类，应等于自己的下一步方向（官方 H5 上 75/75）。不是 100% 说明读数方法或提问帧选错，停下查</td><td><code>EXPERT_DIR=PASS|FAIL queries=&lt;n&gt; acc=&lt;值&gt; min_mag=&lt;值&gt;</code></td></tr>
+<tr><td>自己换自己</td><td>冒烟时同一次任务、同一噪声查两次，动作差应 ≤ 1e-6（同 <code>offline_query</code> 容差）</td><td><code>SELF_SWAP=PASS|FAIL model=&lt;模型&gt; maxabs=&lt;值&gt;</code></td></tr>
+<tr><td>切块不改数</td><td>冒烟时同一次任务的记忆 token，切块路径与不切块路径比较（容差同 <code>hover_replay.PARITY_TOL = 1e-3</code>）</td><td><code>VISION_CHUNK=PASS|FAIL frames=&lt;n&gt; maxabs=&lt;值&gt;</code></td></tr>
+<tr><td>全量完成</td><td>查询数、日志退出码</td><td><code>QUERY_RUN=PASS|FAIL model=&lt;模型&gt; queries=&lt;n&gt; expected=72</code></td></tr>
+<tr><td>主读数</td><td>PASS 只表示流程完整（对照齐全、结果非空、无 NaN），不表示 steering 成立；科学结论写 <code>result.md</code>。不设事后阈值</td><td><code>STEER=PASS|FAIL model=&lt;模型&gt; len=&lt;2|3|4|all&gt; pos=&lt;0|1|2|3|all&gt; acc=&lt;值&gt; mismatch=&lt;值&gt; flip=&lt;值&gt; flip_rev=&lt;值&gt; ci=[&lt;下&gt;,&lt;上&gt;] pairs=&lt;n&gt;</code></td></tr>
 </table></div>
-<p>阈值在冒烟后定。FAIL 如实记录，不改判据。</p>
+<p>FAIL 如实记录，不改判据。上述判据和阈值都在开工前定死，不留「冒烟后定」。</p>
 
 <h2>A5 出图</h2>
 <div class="tbl"><table>
 <tr><th>图</th><th>版式</th></tr>
-<tr><td>正确率主表图</td><td>行为示范长度、列为提问位置的 9 格表，每格并排两个模型的正确率，标机会水平 1/8；另附按长度、按位置的合计</td></tr>
-<tr><td>翻转率</td><td>同一版式，纵轴换成配对翻转率</td></tr>
+<tr><td>正确率主表图</td><td>行为示范长度、列为提问位置的 9 格表，每格并排两个模型的正确率与错配率；另附按长度、按位置的合计，误差棒为组级重采样区间，短横线标机会水平 1/8</td></tr>
+<tr><td>翻转率</td><td>同一版式，纵轴换成翻转率与反向翻转率</td></tr>
 </table></div>
 
-<h2>A6 耗时</h2>
-<p>没有实测。规模为 36 组比较 × 2 次任务 = 72 次仿真录制（两个模型共用），144 次查询，每次 5 个动作样本（共 720 个）共用一次前缀前向。旁证：悬停期探针上一轮每次推理约 3.1–3.3 秒（bf16、10 个噪声样本、同时捕获注意力），本轮 5 个样本、不捕获，应更短。单局录制时间在冒烟后回填；估算全量超过 45 分钟时按第一部分第八节停下问用户。全量超过 5 分钟，放 detached tmux 并挂监听。</p>
+<h2>A6 耗时依据</h2>
+<p>录制单局未实测，冒烟后回填。查询：悬停探针全量回放，基线 21 分钟、motion 38 分钟（约 2.4 万帧，2344 个点，含 float32 隐状态捕获）。本轮约 72 × 约 100 帧 ≈ 7 千帧、每模型 72 次查询、不捕获，估每模型 10–15 分钟；两卡并行。悬停探针第一局 <code>vision_seconds</code> 25–30 秒，含一次编译，这是切块的依据（确切编译耗时未单独量）。全量超过 5 分钟，放 detached tmux 并挂 Monitor，缺陷词加 <code>nan|NaN|CUDA|out of memory|Killed|Traceback</code>。</p>
+
 <h2>A7 待办（不在本轮）</h2>
-<ul><li>其余 15 个格子：角格、边格，以及离机械臂远的一侧。</li><li>错配组：执行段与另一条示范错配，区分按位置查还是按步数查。</li><li>逐层换激活。</li></ul>
+<ul><li>其余 15 个格子：角格、边格，以及离机械臂远的一侧。</li><li>错配组：执行段与另一条示范错配，区分按位置查还是按步数查。</li><li>逐层换激活。</li><li>训练见过的路径上的旁证（<code>c0c7c4e</code> 写在风险处置里，属范围扩张，移到这里）。</li></ul>
 
 <h2>B1 红线</h2>
 <ol>
-<li>稿件仓库不跑模型；全部运行在 sled-aspen 策略仓库。</li>
 <li>不做策略 rollout；预测动作不执行。</li>
-<li>环境源码只改第一部分第五节列出的一处；不传参数时行为不变。</li>
-<li>主读数只有 A 部分写死的两个，其余标探索性。</li>
-<li>FAIL 不改判据。</li>
+<li><code>src/</code>、<code>third_party/</code>、<code>scripts/training/</code>、<code>scripts/evaluation/</code> 零改动；只新增 B4 列出的文件。路径替换只在录制进程内生效。</li>
+<li>主读数只有第七节写死的两个，其余标探索性。</li>
+<li>FAIL 不改判据；每种情况 4 组不自行减。</li>
+<li>产物只落 <code>v1-store/evaluation/patternlock-steer-1105/</code>，档案 <code>docs/evaluation-doc/patternlock-steer-1105/</code>；tmux 前缀 <code>cc-pl-</code>。</li>
+<li>从干净分离工作树 <code>v1-store/worktrees/patternlock-steer-run</code> 起跑（第 17 条要求 clean HEAD；主检出当前有用户的未跟踪文件 <code>TODO_RoboMME_Qwen3VL_FrameSamp_Context.en (1).html</code>，不动）。</li>
 </ol>
 
-<h2>B2 可复用的现有实现（策略仓库）</h2>
+<h2>B2 可复用的现有实现</h2>
 <div class="tbl"><table>
-<tr><th>用途</th><th>锚点</th></tr>
-<tr><td>示教回放进记忆适配器、单次离线查询</td><td><code>scripts/interpret/hover_replay.py</code>、<code>scripts/interpret/offline_query.py</code></td></tr>
-<tr><td>配对级重采样区间</td><td><code>scripts/interpret/analysis/rollout_probe.py</code> 的局级重采样（改为按配对）</td></tr>
-</table></div>
-<p>这两个文件只在文件列表里见到，内容未读，能否直接复用未核实。</p>
-
-<h2>B3 开工前要确认的四件事</h2>
-<div class="tbl"><table>
-<tr><th>事项</th><th>为什么要紧</th></tr>
-<tr><td>示范段的高亮在执行开始时是否已消失</td><td>两次复位若不足 40 步，k = 0 的当前画面会露出示范最后一格，两局的当前画面就不相等</td></tr>
-<tr><td>每步移动占多少帧</td><td>决定执行到第 k 步时，示范段在帧 token 与 motion 窗口（步长 32）里还剩多少</td></tr>
-<tr><td>策略侧怎么把示范视频喂进记忆</td><td>决定「只换示范段」在输入上具体是换哪些 token</td></tr>
-<tr><td>动作空间是关节还是末端</td><td>决定方向归类要不要先做正运动学</td></tr>
+<tr><th>用途</th><th>锚点</th><th>核实结论</th></tr>
+<tr><td>噪声、批量采样</td><td><code>scripts/interpret/offline_query.py</code>：<code>query_noise</code>、<code>sample_predictions</code></td><td>可直接用</td></tr>
+<tr><td>模型构建、状态打包、记忆时刻</td><td><code>scripts/interpret/hover_replay.py</code>：<code>build_models</code>、<code>pack_state</code>、<code>build_observation</code>、<code>memory_times</code></td><td>函数可用；<code>replay_episode</code> 不适用（A3）。<code>build_models</code> 里的 float32 模型本轮不需要，只取 policy</td></tr>
+<tr><td>正运动学</td><td><code>scripts/interpret/read_sim_eef_pose.py</code>：<code>TcpReader</code></td><td><code>build_env</code> 需传 <code>PatternLock</code></td></tr>
+<tr><td>组级重采样</td><td><code>scripts/interpret/analysis/rollout_probe.py</code> 的局级重采样</td><td>内容未读，W3 看后决定复用或新写十行</td></tr>
+<tr><td>录制循环</td><td><code>third_party/robomme_benchmark/tests/_shared/dataset_generation.py::_run_one_episode</code></td><td>照抄，去掉 failure recovery；不从测试目录 import（第 24 条）</td></tr>
 </table></div>
 
-<h2>B4 子代理分配</h2>
-<p>在策略仓库开工时按该仓库规则另写分配表；稿件仓库这边不派子代理。</p>
+<h2>B3 只读实测（官方 H5，25 局 medium）</h2>
+<div class="tbl"><table>
+<tr><th>原待确认项</th><th>结论</th><th>证据</th></tr>
+<tr><td>示范高亮在执行开始时是否消失</td><td>消失。在起点提问时当前画面不泄漏示范</td><td>同起点不同路径打印的 25 对，执行段第 0 帧的前视、腕部、关节差全为 0；另导出 <code>episode_10</code> 的 5 帧目视：示范最后一帧有末尾红点和轨迹，执行段第 0 帧只有起点红点</td></tr>
+<tr><td>每步移动占多少帧</td><td>直走中位 27（15–43），斜走中位 37（21–48）；到位到边界 7–14 帧；含尾帧的 <code>D</code> 57–156</td><td>75 次移动</td></tr>
+<tr><td>策略侧怎么喂示范</td><td>首包 <code>D+1</code> 帧 + <code>exec_start_idx</code>；帧记忆 32 帧在 <code>[0, t]</code> 上等距采样（<code>even_sampling_indices</code>），分叉段不会被截掉；motion 窗按段网格，<code>D = 57</code> 时示范 2 窗，<code>D = 156</code> 时 5 窗。执行段要满 33 帧才有第一窗，所以在起点提问和多数「重走完第 1 步后」没有执行段 motion</td><td><code>FrameSampMemory</code> 源码</td></tr>
+<tr><td>动作空间</td><td>绝对关节目标，8 维，<code>action_horizon=20</code>；需要正运动学</td><td><code>env_runner.py</code> 的 <code>action_space="joint_angle"</code>、配置与 <code>read_sim_eef_pose.py</code></td></tr>
+<tr><td>提问帧选哪</td><td>边界帧</td><td>专家方向：边界帧 75/75（20 步、16 步都是）；到位帧 20 步 90.7%、16 步 69.3%</td></tr>
+</table></div>
+<p>H5 行为不等于自定义路径的行为：录制后要确认同样成立，见 <code>EXPERT_DIR</code>、<code>EXEC_GAP</code>。H5 的统计覆盖全部起点，不只编号 5。</p>
+
+<h2>B4 子代理分配表</h2>
+<div class="tbl"><table>
+<tr><th>编号</th><th>目标</th><th>可写文件（均新增）</th><th>禁触</th><th>接口与依赖</th><th>合并序</th><th>验收（worktree 内，CPU）</th><th>资源</th></tr>
+<tr><td>W1</td><td>比较清单、录制</td><td><code>scripts/interpret/patternlock_pairs.py</code>、<code>patternlock_record.py</code>、<code>test_patternlock_pairs.py</code></td><td>B1 第 2 条目录</td><td>产出 <code>pairs.json</code>（A2）与官方同格式 H5</td><td>1</td><td><code>uv run python -m pytest scripts/interpret/test_patternlock_pairs.py -q</code>；<code>PAIRS=PASS</code></td><td>无 GPU</td></tr>
+<tr><td>W2</td><td>查询</td><td><code>scripts/interpret/patternlock_query.py</code>、<code>test_patternlock_query.py</code></td><td>同上</td><td>读 <code>pairs.json</code> 与 H5；写 A3 的 npz；拼接与切块用假编码器测</td><td>2</td><td><code>uv run python -m pytest scripts/interpret/test_patternlock_query.py -q</code></td><td>无 GPU</td></tr>
+<tr><td>W3</td><td>归类、统计、出图</td><td><code>scripts/interpret/analysis/patternlock_steer.py</code>、<code>scripts/interpret/test_patternlock_steer.py</code></td><td>同上</td><td>读 npz；构造数据测「完全跟示范 flip = 1、完全不跟 flip = 反向 flip」</td><td>3</td><td><code>uv run python -m pytest scripts/interpret/test_patternlock_steer.py -q</code></td><td>无 GPU</td></tr>
+<tr><td>主会话</td><td>起跑、监听、留档</td><td><code>docs/evaluation-doc/patternlock-steer-1105/</code></td><td>—</td><td>运行不改代码；代码问题另派修复</td><td>—</td><td>A4 全部判定行</td><td>GPU0、GPU1；tmux <code>cc-pl-*</code></td></tr>
+</table></div>
+<p>写入型 <code>opus</code> + worktree，审查 <code>sonnet</code> 钉死 sha，commit 前缀 <code>sub/W&lt;n&gt;: </code>。环境取法：<code>UV_PROJECT_ENVIRONMENT=&lt;主 .venv&gt; PYTHONPATH=&lt;worktree&gt;/src uv run --no-sync …</code>。</p>
 
 <h2>B5 风险</h2>
 <div class="tbl"><table>
 <tr><th>风险</th><th>处置</th></tr>
-<tr><td>单步正确率接近机会水平</td><td>仍报翻转率与方向偏移；如实写「示范段未能决定方向」</td></tr>
-<tr><td>专家两局的执行段有数值抖动，当前输入不逐位相等</td><td>按 <code>PRESENT_EQUAL</code> 丢弃；丢得多就改为容差并记录</td></tr>
-<tr><td>主表每格只有 4 组比较，区间会宽</td><td>如实报区间；单格只列数不下结论，结论落在按长度、按位置的合计（每类 8–16 组）与 36 组合并的总翻转率上</td></tr>
+<tr><td>正确率接近错配率</td><td>如实写「示范段未能决定方向」；能否区分模型与方法取决于 Q2</td></tr>
+<tr><td>基线 medium 0/24，地板效应</td><td>跨模型差异不能解释为 motion 的贡献，只作描述</td></tr>
+<tr><td>模型只预测「未动」或与甲、乙都无关的方向</td><td>单列计数；不算支持或反对 steering</td></tr>
+<tr><td>规划器在某条自定义路径上失败（<code>ScrewPlanFailure</code>）</td><td>走官方同一回退（<code>_patch_planner_screw_to_rrt</code>）；仍失败则换该组的下一条候选并记录。这是基础设施失败，不是挑结果（第 22 条）</td></tr>
+<tr><td>H5 上观察到的逐位相等在自定义路径上不成立</td><td>查询输入不受影响（拼接）；<code>EXEC_GAP</code> 如实记，超阈值的组扣除</td></tr>
+<tr><td>主表每格只有 4 组，「重走完第 3 步后」合计也只有 4 组</td><td>单格和这一列只列数不下结论；结论落在其余合计（8–16 组）与 36 组合并值上（<code>c0c7c4e</code> 写「每类 8–16 组」漏了这一列）</td></tr>
+<tr><td>只测一个格子，提问位置与方向可能混在一起</td><td>全局方向计数写进结果；每个方向的正确率作探索性列出，不下结论</td></tr>
+<tr><td>提问帧在 16 步评测网格之外</td><td>评测只在 <code>D + 16j</code> 查询，边界帧一般不在网格上。训练按帧取样，模型见过这类时刻；结果不能等同于闭环表现</td></tr>
 <tr><td>冒烟后发现 2 小时放不下</td><td>停下问用户，不自行减组数</td></tr>
-<tr><td>自定义路径的分布与训练时 DFS 抽出的路径不同</td><td>结果里写明；另从训练种子的路径里挑满足配对条件的作旁证</td></tr>
+<tr><td>自定义路径的分布与训练时 DFS 抽出的路径不同</td><td>结果里写明；不额外加样本</td></tr>
 </table></div>
 
 <h2>B6 盲区</h2>
 <ul>
 <li>只测编号 5 一个格子（内部格，靠近机械臂）；角格、边格与远侧格子的可走方向数、可达性和画面大小都不同，结果不能直接推过去。</li>
-<li><code>dfs_path</code> 没有逐行读；「路径不重复经过同一格」是按 DFS 的定义推断的。</li>
-<li><code>solve_swingonto</code> 只读了开头，每步移动的帧数未知。</li>
-<li>策略仓库的记忆适配器与离线查询脚本没有读。</li>
-<li>两个模型在 medium 档 PatternLock 的成功率没有留档。已知：全部 50 局上 motion（context + concat，59999 步）32.67 ± 1.15%，无 motion 的 context（59999 步）32.00 ± 4.00%（<code>docs/evaluation-doc/o16-3seed-1031</code>）；官方 context 在 medium 档 0/24，官方 modul 13/24（<code>docs/training-doc/eval-medium-patternlock-routestick</code>）。</li>
-<li>悬停期探针用的基线是官方 ctx512 第 79999 步，它在 PatternLock 上的逐局记录没有找到。</li>
+<li>motion 模型（<code>vla-o16cc-59999</code>）在 medium 档 PatternLock 的成功率没有核实。<code>docs/evaluation-doc/o16-3seed-1031</code> 只留了全档 32.67 ± 1.15% 和总数，逐局记录没有找到。</li>
+<li><code>c0c7c4e</code> 把 32.00 ± 4.00% 写成「无 motion 的 context」不对：那一列是 <b>context split（含 motion）</b>。按 <code>orig100</code> 训练的无 motion 模型目前没有找到，基线只能用官方 79999（<code>eval-medium-patternlock-routestick</code> 的 context 0/24 就是这份权重，所以 <code>c0c7c4e</code> 说它的逐局记录没有找到也不对）。</li>
+<li>共同前段的逐位比较只有 6 对，且 3 对只比到较短一局结束；<code>episode_22</code>/<code>26</code> 只记了首差的量，没有量这一对的最大差。</li>
+<li>录制单局耗时、视觉编码单次编译耗时都没有实测。</li>
+<li>评测去尾帧的口径是读源码推断，H5 与评测的 <code>D</code> 没有逐局对过，由 <code>DEMO_FORMAT</code> 冒烟确认。</li>
+<li>细化未运行仿真和模型；所有实测都来自官方 H5，且只有 medium 的 25 局。</li>
 </ul>
 
-<h2>B7 留档</h2>
-<p>本文件在稿件仓库 <code>probe/</code>；开工时复制到策略仓库根目录，运行留档按策略仓库规则写入 <code>docs/evaluation-doc/</code>。</p>
+<h2>B7 留档与交接</h2>
+<p>运行档案 <code>docs/evaluation-doc/patternlock-steer-1105/</code>（<code>launch.md</code>、<code>result.md</code>、<code>records/</code>），按第 12、17 条两段式写；总索引同步。状态机是否登记待 Q4。若登记，任务 id <code>patternlock-context-steering</code>，无依赖与下游；交接前必须完成：A4 全部判定行与 <code>result.md</code> 提交；无长尾。评测产物不上传。</p>
+
+<h2>B8 本次细化的变更清单（相对 <code>c0c7c4e</code>）</h2>
+<div class="tbl"><table>
+<tr><th>类别</th><th>旧</th><th>新</th><th>依据</th></tr>
+<tr><td>机制</td><td>查询帧为到位那一步</td><td>边界帧</td><td>专家可读性 75/75 对 90.7%；边界帧也是最后共同帧</td></tr>
+<tr><td>机制</td><td>两次任务各用自己的执行段，不等就丢</td><td>一组共用甲的执行段，自然差距单独记</td><td><code>episode_22</code>/<code>26</code> 有抖动；K5「拼凑出一样的段落」</td></tr>
+<tr><td>机制</td><td>改 <code>PatternLock.py</code> 加参数，建配套分支</td><td>进程内替换，第三方零改动</td><td>不需要改就不改；省去 <code>ENV_UNCHANGED</code></td></tr>
+<tr><td>抽样</td><td>两个出口方向任意</td><td>同为直走或同为斜走；起点情况 8 个方向各用一次</td><td>斜走比直走多约 10 帧；压小示范帧数差</td></tr>
+<tr><td>输入</td><td>未提示评测与 H5 的差异</td><td>按评测去尾帧，<code>DEMO_FORMAT</code> 核对</td><td><code>_filter_no_record_from_step_batch</code></td></tr>
+<tr><td>实现</td><td>复用 <code>hover_replay</code></td><td>新写查询入口；视觉编码切块</td><td>首包约束、<code>module_jit</code> 按形状编译</td></tr>
+<tr><td>读数</td><td>机会水平 1/8 作对照</td><td>错配率、反向翻转率作零假设参照；1/8 只作参考</td><td>走过的方向不可选，实际出口 5–8 个</td></tr>
+<tr><td>读数</td><td>第七节「不同噪声」与 A4「同一噪声」矛盾</td><td><code>SELF_SWAP</code> 同噪声求 0；噪声间差异用 5 个样本内部算</td><td>不增加查询</td></tr>
+<tr><td>读数</td><td>阈值、未动门限「冒烟后定」</td><td>全部开工前定死；<code>STEER</code> 只表流程完整</td><td>避免看数定判据</td></tr>
+<tr><td>验收</td><td>—</td><td>新增 <code>EXPERT_DIR</code>、<code>MEM_DIFF</code>、<code>EXEC_GAP</code>、<code>REC_PARITY</code>、<code>DEMO_FORMAT</code>、<code>VISION_CHUNK</code>、<code>QUERY_RUN</code>；删除 <code>ENV_UNCHANGED</code></td><td>每项对应一个已发现的失败方式，不增加查询规模</td></tr>
+<tr><td>预算</td><td>未算写脚本；全量 45 分钟</td><td>开发 50、冒烟 15、全量 40、统计 15</td><td>合计 120，无余量</td></tr>
+<tr><td>矛盾</td><td>风险处置「另挑训练路径旁证」「丢得多就改为容差」；A1 表 K7 之类结构问题已由 <code>c0c7c4e</code> 修复</td><td>前者移到待办，后者由拼接取代</td><td>与范围和「FAIL 不改判据」冲突</td></tr>
+<tr><td>事实</td><td>「32.00 是无 motion」；「基线逐局记录没有找到」；「受保护目录」；「稿件仓库」路径；「每类 8–16 组」</td><td>更正</td><td>B6、第五节、B5；本文件就在策略仓库根目录</td></tr>
+<tr><td>格式</td><td>缺子代理分工、分配表、状态机询问</td><td>补齐</td><td>第 2、27 条</td></tr>
+</table></div>
 </main>
 </body>
 </html>
