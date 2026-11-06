@@ -32,7 +32,11 @@ motion 内容替换（S8；只换 motion 编码内容，motion token 个数、�
   motion_swap:<DIR>      换成供体局同起点窗口的编码；供体 = DIR/<task>_ep<id>.npz（--record-motion 录下），
                          供体局由 --swap-donor task:ep 指定（run_local 按 spec.swap_map 逐局成块并传入）；
                          供体缺该起点时取起点 ≤ 它的最大窗口，再没有就取供体第一个窗口（donor_lookup）。
-  两种替换都先照常调用原 motion client（sidecar 侧调用序列与计时与主线一致），再丢弃其输出换成替换值；
+  motion_swap_exact:<DIR> 供体与 --swap-donor 同 motion_swap，但只有起点在供体 start_frames 中精确存在才替换，
+                         否则返回原编码且不计入替换数（供体只含部分窗口时，其余窗口保留本局原值）。
+  motion_shift           不需要供体：第一个窗口保留原编码，之后每个新窗口换成上一个窗口（起点次大）的真实原编码；
+                         同一起点重复调用结果不变，换局清状态。
+  各种替换都先照常调用原 motion client（sidecar 侧调用序列与计时与主线一致），再丢弃其输出换成替换值；
   可与 key 遮挡 / 头遮挡用 + 组合。替换时每份 infer npz 另附 n_motion_replaced（本局截至本次推理累计替换窗数，int64）；
   episode.json 的 motion_content 记 mode、donor、n_windows、n_replaced 与逐窗 replace_log [start, donor_start]。
 --record-motion <DIR>：原样返回原编码，同时把本局每个窗口 (start_frame, emb) 写 DIR/<episode_nonce>.npz
@@ -70,7 +74,7 @@ NPZ_KEYS = ("P", "MEM", "step_idx", "exec_start_idx", "infer_seq", "mem_order", 
 PREFIX_NPZ_KEYS = ("probs_prefix", "P", "MEM", "infer_seq", "step_idx")
 # S7 附加键（每份 infer npz 都写；§1.3 原 16 键不变）
 ABLATE_NPZ_KEYS = ("ablate", "n_masked_keys")
-# S8 motion 内容替换时另附的键（只在 motion_zero / motion_swap 时写）
+# S8 motion 内容替换时另附的键（只在 motion_zero / motion_swap / motion_swap_exact / motion_shift 时写）
 MOTION_REPLACE_NPZ_KEYS = ("n_motion_replaced",)
 # 带 motion token 的 VLA 每次推理的实际输入；不带 motion token 的 VLA 不写这两键
 MOTION_INPUT_NPZ_KEYS = ("motion_emb", "motion_pos")
@@ -95,7 +99,8 @@ def _pad_times(times, budget: int) -> np.ndarray:
 
 def parse_ablate(name) -> dict:
     """--ablate 字符串 → {"name", "masks": frozenset(MASK_KINDS 子集), "heads": ((layer, head), ...),
-    "motion": None | {"kind": "zero"} | {"kind": "swap", "dir": <供体目录>}}；非法即 ValueError。"""
+    "motion": None | {"kind": "zero"} | {"kind": "swap", "dir": <供体目录>} | {"kind": "swap_exact", "dir": <供体目录>}
+    | {"kind": "shift"}}；非法即 ValueError。"""
     import re
     text = (name or "none").strip()
     masks, heads, motion = set(), set(), None
@@ -104,11 +109,18 @@ def parse_ablate(name) -> dict:
             part = part.strip()
             if part in MASK_KINDS:
                 masks.add(part)
-            elif part == "motion_zero" or part.startswith("motion_swap:"):
+            elif part in ("motion_zero", "motion_shift") or part.startswith(("motion_swap:", "motion_swap_exact:")):
                 if motion is not None:
-                    raise ValueError(f"--ablate {text!r}: motion_zero / motion_swap 只能出现一次")
+                    raise ValueError(f"--ablate {text!r}: motion_zero / motion_swap / motion_swap_exact / motion_shift 只能出现一次")
                 if part == "motion_zero":
                     motion = {"kind": "zero"}
+                elif part == "motion_shift":
+                    motion = {"kind": "shift"}
+                elif part.startswith("motion_swap_exact:"):
+                    donor_dir = part[len("motion_swap_exact:"):].strip()
+                    if not donor_dir:
+                        raise ValueError(f"--ablate {text!r}: motion_swap_exact: 后须给供体目录")
+                    motion = {"kind": "swap_exact", "dir": donor_dir}
                 else:
                     donor_dir = part[len("motion_swap:"):].strip()
                     if not donor_dir:
@@ -128,7 +140,7 @@ def parse_ablate(name) -> dict:
                     heads.add((layer, head))
             else:
                 raise ValueError(f"--ablate {text!r}: 未知项 {part!r}（可选 none / {' / '.join(MASK_KINDS)} / "
-                                 f"heads:L<i>H<j>,... / motion_zero / motion_swap:<DIR>）")
+                                 f"heads:L<i>H<j>,... / motion_zero / motion_swap:<DIR> / motion_swap_exact:<DIR> / motion_shift）")
     return {"name": text, "masks": frozenset(masks), "heads": tuple(sorted(heads)), "motion": motion}
 
 
@@ -159,6 +171,12 @@ def donor_lookup(donor_starts, start_frame: int) -> int:
     return 0
 
 
+def donor_exact_index(donor_starts, start_frame: int) -> int | None:
+    """供体中与 start_frame 精确相等的窗口下标；没有就 None（motion_swap_exact 不做就近回退）。"""
+    exact = np.flatnonzero(np.asarray(donor_starts, np.int64).reshape(-1) == start_frame)
+    return int(exact[0]) if exact.size else None
+
+
 def _accepts_start(fn) -> bool:
     """与 framesamp_memory._accepts_start 同判据：接受第二个位置参数才传起点帧号。"""
     import inspect
@@ -174,14 +192,15 @@ class MotionContentClient:
     """替换 policy._motion_client 的包装句柄，签名 (frames, start_frame) -> (dim,) f32。
 
     每次先照常调用原 client（sidecar 侧行为与计时不变），再按 mode 处理返回值：none 原样、zero 置零、
-    swap 换成供体同起点窗口（donor_lookup）。record_dir 给出时同时记录原编码的完整调用轨迹；
+    swap 换成供体同起点窗口（donor_lookup）、swap_exact 只换供体中起点精确存在的窗口、
+    shift 换成上一个窗口的原编码。record_dir 给出时同时记录原编码的完整调用轨迹；
     旧字段同起点只留首次，counts 计次，以保持供体替换接口兼容。
     其余属性（provenance、close 等）透传原 client。"""
 
     def __init__(self, inner, *, mode: str = "none", donor: dict | None = None, record_dir=None):
-        if mode not in ("none", "zero", "swap"):
+        if mode not in ("none", "zero", "swap", "swap_exact", "shift"):
             raise ValueError(f"未知 motion 替换模式 {mode!r}")
-        if mode == "swap" and donor is None:
+        if mode in ("swap", "swap_exact") and donor is None:
             raise ValueError("swap 模式须给供体")
         self.inner, self.mode, self.donor = inner, mode, donor
         self.record_dir = Path(record_dir) if record_dir is not None else None
@@ -200,16 +219,47 @@ class MotionContentClient:
         self.index: dict[int, int] = {}
         self.replace_log: list[list[int]] = []   # 每次替换 [start_frame, donor_start_frame]；zero 时 donor 记 -1
         self.replaced = 0
+        self.shift_last: tuple[int, np.ndarray] | None = None   # shift：上一个新窗口的 (起点, 原编码)
+        self.shift_out: dict[int, tuple[np.ndarray, int]] = {}  # shift：起点 → (返回值, 来源起点；-1 为未替换)
         self.dirty = False
+
+    def _shift_window(self, emb, start: int) -> tuple[np.ndarray, int]:
+        """framesamp_memory 按起点严格递增、每起点只编一次调用，故「上一个新窗口」就是起点次大的窗口；
+        同起点再次调用直接返回首次结果。"""
+        if start not in self.shift_out:
+            if self.shift_last is None:
+                self.shift_out[start] = (emb.copy(), -1)
+            else:
+                self.shift_out[start] = (self.shift_last[1], self.shift_last[0])
+            self.shift_last = (start, emb.copy())
+        out, source = self.shift_out[start]
+        return out.copy(), source
 
     def __call__(self, frames, start_frame=None):
         emb = self.inner(frames, start_frame) if self._inner_accepts_start else self.inner(frames)
         emb = np.asarray(emb, dtype=np.float32)
         donor_start = -1
+        replaced_now = self.mode in ("zero", "swap")
         if self.mode == "none":
             out = emb
         elif self.mode == "zero":
             out = np.zeros_like(emb)
+        elif self.mode == "swap_exact":
+            if start_frame is None:
+                raise RuntimeError("motion_swap_exact 需要起点帧号，但 motion_enc_fn 调用未传 start_frame")
+            i = donor_exact_index(self.donor["start_frames"], int(start_frame))
+            out = emb
+            if i is not None:
+                out = np.asarray(self.donor["embs"][i], dtype=np.float32).copy()
+                if out.shape != emb.shape:
+                    raise RuntimeError(f"供体编码形状 {out.shape} 与原编码 {emb.shape} 不符")
+                donor_start = int(self.donor["start_frames"][i])
+                replaced_now = True
+        elif self.mode == "shift":
+            if start_frame is None:
+                raise RuntimeError("motion_shift 需要起点帧号，但 motion_enc_fn 调用未传 start_frame")
+            out, donor_start = self._shift_window(emb, int(start_frame))
+            replaced_now = donor_start != -1
         else:
             if start_frame is None:
                 raise RuntimeError("motion_swap 需要起点帧号，但 motion_enc_fn 调用未传 start_frame")
@@ -218,7 +268,7 @@ class MotionContentClient:
             if out.shape != emb.shape:
                 raise RuntimeError(f"供体编码形状 {out.shape} 与原编码 {emb.shape} 不符")
             donor_start = int(self.donor["start_frames"][i])
-        if self.mode != "none":
+        if replaced_now:
             self.replaced += 1
             self.replace_log.append([int(start_frame) if start_frame is not None else -1, donor_start])
         key = int(start_frame) if start_frame is not None else len(self.starts)
@@ -254,7 +304,7 @@ class MotionContentClient:
                   "call_start_frames": np.asarray(self.call_starts, np.int32),
                   "call_embs": np.stack(self.call_embs),
                   "call_seq": np.arange(len(self.call_starts), dtype=np.int64)}
-        if self.mode == "swap":
+        if self.mode in ("swap", "swap_exact"):
             record["donor_start_frames"] = np.asarray(self.donor_starts, np.int32)
             record["donor"] = np.str_(self.donor.get("name", ""))
         np.savez(tmp, **record)
@@ -582,9 +632,10 @@ class AttnRecorder:
             raise SystemExit(f"错误: --ablate {self.ablate['name']} 含 mask_motion，但本模型无 motion token（基线）")
         motion = self.ablate["motion"]
         if (motion is not None or record_motion is not None) and not self.motion_enabled:
-            raise SystemExit("错误: motion_zero / motion_swap / --record-motion 需要 motion 模型，本模型无 motion token（基线）")
-        if (motion is not None and motion["kind"] == "swap") != (swap_donor is not None):
-            raise SystemExit("错误: --ablate motion_swap:<DIR> 与 --swap-donor task:ep 必须同时给出")
+            raise SystemExit("错误: motion_zero / motion_swap / motion_swap_exact / motion_shift / --record-motion "
+                             "需要 motion 模型，本模型无 motion token（基线）")
+        if (motion is not None and motion["kind"] in ("swap", "swap_exact")) != (swap_donor is not None):
+            raise SystemExit("错误: --ablate motion_swap:<DIR> 或 motion_swap_exact:<DIR> 与 --swap-donor task:ep 必须同时给出")
         self.record_motion = Path(record_motion) if record_motion is not None else None
         self.donor = load_donor(motion["dir"], swap_donor) if swap_donor is not None else None
         self.motion_client: MotionContentClient | None = None
@@ -926,11 +977,11 @@ def _make_args_class():
         # 另写 prefix_<seq>.npz：prefill 每层完整 prefix 自注意力 (18, 8, P, P) f16；默认关
         save_prefix: bool = False
         # 因果遮挡 / motion 内容替换：none | mask_motion | mask_vis | heads:L3H0,L16H0 | motion_zero |
-        # motion_swap:<供体目录>，可用 + 组合；默认 none
+        # motion_swap:<供体目录> | motion_swap_exact:<供体目录> | motion_shift，可用 + 组合；默认 none
         ablate: str = "none"
         # 记录每局每个 motion 窗口的原编码到 <目录>/<episode_nonce>.npz（run_local 收尾改名 <task>_ep<id>.npz）
         record_motion: Path | None = None
-        # motion_swap 的供体局 task:ep（供体文件 <供体目录>/<task>_ep<id>.npz）
+        # motion_swap / motion_swap_exact 的供体局 task:ep（供体文件 <供体目录>/<task>_ep<id>.npz）
         swap_donor: str | None = None
         # 每个询问点记录 N 个原路径预测；0 保持原注意力路径
         query_record: int = 0
