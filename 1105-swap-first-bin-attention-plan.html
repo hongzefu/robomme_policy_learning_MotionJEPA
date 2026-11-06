@@ -25,7 +25,7 @@
 <main>
 <h1 class="title">两个 Swap 任务第一次取 bin 的注意力计划</h1>
 <div class="note">
-<b>状态：</b>只规划、未实施。用户对这份计划不改而明确同意后才算开工（第 2 条）；每次开工前另派一个独立审查子代理。<br>
+<b>状态：</b>已获开工令（2026-11-05 美东），用户原话：「这次用户批准可以直接开始，不需要再来问用户。但是呢，你需要看一下有什么问题，有问题的尽可能继续做下去，不要阻塞，然后再扫一遍有没有什么问题，尽可能在今天晚上十二点之前告诉我还有什么，还有些什么问题，然后之后的话就尽可能不要再阻塞。」开工前由独立对抗验证审查一次。<br>
 <b>代码锚点：</b>分支 <code>v4.1-interpretMotion</code>，commit <code>2a8b445</code>；第三方 <code>third_party/robomme_benchmark</code> gitlink <code>856bc3a</code>，本计划不改它。<br>
 <b>工作副本：</b>sled-aspen <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code>，环境 A，产物全部落 <code>v1-store/</code>。<br>
 <b>commit 体例：</b>功能合并 <code>commitV4.1.&lt;n&gt;:</code>（从 <code>git log</code> 最近编号接续），子代理 <code>sub/W&lt;n&gt;:</code>，文档 <code>docs:</code>。<br>
@@ -59,6 +59,8 @@
 <tr><td>K9</td><td>模型 seed 42，环境 seed 与难度逐局取官方元数据；正常失败不重试，只有基础设施故障才重试</td><td>第 22 条</td></tr>
 <tr><td>K10</td><td>一次只跑一个模型，占满两张卡，跑完再换另一个模型；不两模型各占一卡</td><td>用户：「不应该并行两个模型，而是应该一个模型分在两张卡跑，否则的话你会有浪费」</td></tr>
 <tr><td>K11</td><td>两卡用静态交替分片（奇偶局号），不做动态分配</td><td>用户：「静态的交替的分片就可以了，不要做动态的分配机制，这样太复杂了」</td></tr>
+<tr><td>K13</td><td>不只看上一轮的头，全部 144 个头都搜峰值，比较两个任务的峰值是否改变</td><td>用户：「注意一下有没有其他的这个注意力头的这么一个峰值。在测试我们现在两个任务的时候，这个峰值可能会改变。」（P7）</td></tr>
+<tr><td>K14</td><td>实施和运行中有问题尽量最小改法继续，不阻塞；美东 11-05 24:00 前汇报问题清单，之后尽量不再等用户</td><td>用户开工原话（文首）</td></tr>
 <tr><td>K12</td><td>分析函数和公式沿用上一轮，但只有窗口数据，部分结论不再等同；差异逐项列出并用上一轮 22 局实测对照</td><td>用户：「分析的机制和之前是一样的吗？」（第六节）</td></tr>
 </table></div>
 
@@ -121,6 +123,7 @@
 <tr><td>P4</td><td>上一轮的头和 motion 窗口偏好在决策窗口内是否重现</td><td><code>L3H0</code>、<code>L16H0</code> 的开局偏好；窗口内最大 motion 窗是否为 <code>[160,193)</code>、是否由 <code>L17H1</code> 承担（不是整局固定峰，见上表）</td></tr>
 <tr><td>P5</td><td>选对和选错差在哪</td><td>P2～P4 在同模型内 correct 减 wrong 的局级差值</td></tr>
 <tr><td>P6</td><td>记忆区内部的通路</td><td>motion token 汇聚比例、R4 一跳间接读取（探索性）</td></tr>
+<tr><td>P7</td><td>其他头有没有峰值，换任务后是否改变</td><td>全部 18 层 × 8 头：逐次找 motion 流、帧流质量最大的头及其最关注的 motion 窗或帧；按 模型 × 任务 × 选对/选错 × 相对推理统计峰值头分布；两任务前 10 头重合数。motion 窗同时按绝对步和相对演示结束的步报告。事后挑最大值，一律探索性</td></tr>
 </table></div>
 <p><b>怎样才算 pattern，事先定死。</b>局级重采样 2000 次（种子 42），统计单位是局。</p>
 <div class="tbl"><table>
@@ -185,7 +188,7 @@
 
 <h2>十二、交接顺序与状态机登记</h2>
 <ul>
-<li><b>任务 id：</b><code>swap-first-bin-attn</code>；是否登记进 <code>current.json</code> 待用户答复。不登记就按人工交接。</li>
+<li><b>任务 id：</b><code>swap-first-bin-attn</code>；用户未答复是否登记，且要求不阻塞，所以不登记 <code>current.json</code>，按人工交接。</li>
 <li><b>交接前必须完成：</b>第九节全部判定行，<code>launch.md</code> 和 <code>result.md</code> 已提交。</li>
 <li><b>长尾：</b>无。</li>
 <li><b>上游依赖：</b>无。<code>gl-abl-encoders-train</code> 在 GreatLakes，不占本机卡。</li>
@@ -241,7 +244,7 @@
 <li>敏感性：<code>G</code> 那次另算只取第 0 到 <code>close_row_in_chunk</code> 行动作 query 的流质量。排除抓空重试局的结果同样另列。</li>
 <li>对照入口 <code>--bridge-old22 &lt;上一轮产物根&gt;</code>：读上一轮 <code>analysis-manifest.json</code> 的“抓取”标注定 <code>G</code>，只读；输出第九节 <code>BRIDGE_OLD22</code>。</li>
 <li>4 个 CPU 进程按局并行，每进程 BLAS/OMP/MKL 单线程。</li>
-<li>输出 <code>pattern-summary.json</code>（P1～P6 每项：点估计、局数、区间、判定）与图：选对率；富集随相对推理变化（模型 × 任务 × 选对选错）；144 头差值矩阵；motion 窗口峰位置；共同 pattern 表。</li>
+<li>输出 <code>pattern-summary.json</code>（P1～P7 每项：点估计、局数、区间、判定）与图：选对率；富集随相对推理变化（模型 × 任务 × 选对选错）；144 头差值矩阵；motion 窗口峰位置；两任务峰值头对比；共同 pattern 表。</li>
 <li>重采样复用 <code>oracle_press_prob.bootstrap</code>，2000 次，种子 42，单位局。</li>
 <li>patch 级热力图放大只用 <code>cv2.INTER_NEAREST</code>（第 5 条）。</li>
 </ul>
