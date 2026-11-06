@@ -16,8 +16,10 @@ StopCube 可选键：stopcube_mode（normal、hold_extended、oracle_query、ora
 Oracle 另用 query_interval=4（节奏诊断可16）、query_record=10；校准另需 calibration_plan、calibration_kind，
 多模型选点文件由 model_id（默认 model_kind）选择。校准选点文件内容也并入身份。
 query_batch_size 可显式指定1、2、5、10，缺省实际批量10；该批量进入身份，不做自动回退。
-rollout_record（bool，只允许与 stopcube_mode=normal 同用）：开启时服务端加 --rollout-record，走原采样路径，
+rollout_record（bool，只允许与 stopcube_mode=normal 或 bin_trace=true 同用）：开启时服务端加 --rollout-record，走原采样路径，
 每次推理写 rollout_<seq>.npz；开启时并入身份，逐局 npz 计数改数 rollout_*.npz；缺键时身份与命令不变。
+bin_trace（bool，与 stopcube_mode 互斥，清单只能含 ButtonUnmaskSwap、VideoUnmaskSwap）：开启时改用 bin_trace_runner 客户端写逐步轨迹，
+并入身份；缺键或为假时身份与命令不变。
 S8 motion 内容替换的可选键：
   record_motion   目录；服务端加 --record-motion，每局写 <目录>/<nonce>.npz，本脚本收尾按 terminal 局身份改名为
                   <目录>/<task>_ep<id>.npz（与 motion_swap 供体文件同名规则）；局的 episode.json 记 motion_record。
@@ -63,6 +65,8 @@ MOTION_MODEL_KIND = "stage2_pool4_concat"
 XLA_FLAGS = "--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0"
 REQUIRED_KEYS = ("repo", "policy_python", "sim_python", "stage2_python", "checkpoint", "policy_config", "model_kind",
                  "cuda", "attn_out", "run_root", "manifest", "xla_mem_fraction")
+# 与 bin_trace_runner.TASKS 同值（测试盯住）；驱动端不导入客户端模块，它依赖仿真侧环境。
+BIN_TRACE_TASKS = ("ButtonUnmaskSwap", "VideoUnmaskSwap")
 
 
 def read_json(path):
@@ -114,11 +118,20 @@ def load_spec(path):
             spec["calibration_plan"] = str(Path(spec["calibration_plan"]).resolve())
     elif spec.get("stopcube_config") is not None:
         raise SystemExit("spec: stopcube_config 需要 stopcube_mode")
+    if "bin_trace" in spec:
+        if type(spec["bin_trace"]) is not bool:
+            raise SystemExit("spec: bin_trace 必须为 bool")
+        if spec["bin_trace"]:
+            if spec.get("stopcube_mode") is not None:
+                raise SystemExit("spec: bin_trace 与 stopcube_mode 互斥")
+            others = sorted({e["task_name"] for e in read_json(spec["manifest"])["episodes"]} - set(BIN_TRACE_TASKS))
+            if others:
+                raise SystemExit(f"spec: bin_trace 的清单只能含 {BIN_TRACE_TASKS}，得到 {others}")
     if "rollout_record" in spec:
         if type(spec["rollout_record"]) is not bool:
             raise SystemExit("spec: rollout_record 必须为 bool")
-        if spec["rollout_record"] and spec.get("stopcube_mode") != "normal":
-            raise SystemExit("spec: rollout_record 只允许与 stopcube_mode=normal 同用")
+        if spec["rollout_record"] and spec.get("stopcube_mode") != "normal" and not spec.get("bin_trace"):
+            raise SystemExit("spec: rollout_record 只允许与 stopcube_mode=normal 或 bin_trace=true 同用")
     return spec
 
 
@@ -171,6 +184,8 @@ def run_identity(spec, manifest):
                          calibration_kind=spec["calibration_kind"], model_id=spec.get("model_id", spec["model_kind"]))
     if spec.get("rollout_record"):
         ident["rollout_record"] = True
+    if spec.get("bin_trace"):
+        ident["bin_trace"] = True
     return M.digest(ident)
 
 
@@ -271,8 +286,10 @@ def build_environment(spec):
 
 
 def build_client_command(spec, grant_path, output, nonce, port, drain_file):
-    """默认命令逐字保留；仅显式 StopCube 模式替换 interpret 客户端。"""
+    """默认命令逐字保留；仅显式 StopCube 模式或 bin_trace 替换 interpret 客户端。"""
     command = RW.client_command(spec, grant_path, output, nonce, port, drain_file)
+    if spec.get("bin_trace"):
+        command[1] = str(Path(spec["repo"]) / "scripts/interpret/bin_trace_runner.py")
     if spec.get("stopcube_mode") is not None:
         command[1] = str(Path(spec["repo"]) / "scripts/interpret/stopcube_runner.py")
         command += ["--stopcube-mode", spec["stopcube_mode"], "--stopcube-config", str(spec["stopcube_config"])]
