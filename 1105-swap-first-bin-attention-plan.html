@@ -39,10 +39,10 @@
 <p>前面的推理不能跳过，因为记忆靠开局以来的帧积累。所以全程只记录输入和噪声，注意力只离线算决策段。</p>
 <div class="tbl"><table>
 <tr><th>批次</th><th>模型 / 卡</th><th>任务</th><th>局数</th><th>存什么</th></tr>
-<tr><td>R1</td><td>motion 59999 / GPU1</td><td>ButtonUnmaskSwap、VideoUnmaskSwap</td><td>各 50</td><td>全部推理的输入与噪声；逐步轨迹；每个 bin 的位置</td></tr>
-<tr><td>R2</td><td>基线 ctx512 79999 / GPU0</td><td>同上</td><td>各 50</td><td>同上</td></tr>
-<tr><td>O1</td><td>同上两卡</td><td>两任务</td><td>每局最多 4 次推理</td><td>完整 attention 与 prefix</td></tr>
-<tr><td>A1</td><td>CPU</td><td>两任务</td><td>全部窗口</td><td>标签表、指标、图、pattern 汇总</td></tr>
+<tr><td>R1（先跑）</td><td>motion 59999 / GPU0 + GPU1</td><td>ButtonUnmaskSwap、VideoUnmaskSwap</td><td>各 50，偶数局 GPU0、奇数局 GPU1</td><td>全部推理的输入与噪声；逐步轨迹；每个 bin 的位置</td></tr>
+<tr><td>R2（R1 结束后）</td><td>基线 ctx512 79999 / GPU0 + GPU1</td><td>同上</td><td>同上</td><td>同上</td></tr>
+<tr><td>O1、O2（各自 rollout 后）</td><td>motion，再基线；每个模型占两卡</td><td>两任务</td><td>每局最多 4 次推理，同样按奇偶分卡</td><td>完整 attention 与 prefix</td></tr>
+<tr><td>A1</td><td>CPU</td><td>两任务，另含上一轮 22 局的对照</td><td>全部窗口</td><td>标签表、指标、图、pattern 汇总、与上一轮的差异</td></tr>
 </table></div>
 
 <h2>二、已定口径</h2>
@@ -57,6 +57,9 @@
 <tr><td>K7</td><td>两模型 × 两任务 200 局全部重跑，走原采样路径；上一轮 22 局只作对照，不混入</td><td>上一轮动作来自注意力展开路径，bf16 下与原路径不逐位相同（第五节）</td></tr>
 <tr><td>K8</td><td>跑到官方终局，但终局前的后段不算注意力</td><td>要拿官方结局；后段只多存少量输入</td></tr>
 <tr><td>K9</td><td>模型 seed 42，环境 seed 与难度逐局取官方元数据；正常失败不重试，只有基础设施故障才重试</td><td>第 22 条</td></tr>
+<tr><td>K10</td><td>一次只跑一个模型，占满两张卡，跑完再换另一个模型；不两模型各占一卡</td><td>用户：「不应该并行两个模型，而是应该一个模型分在两张卡跑，否则的话你会有浪费」</td></tr>
+<tr><td>K11</td><td>两卡用静态交替分片（奇偶局号），不做动态分配</td><td>用户：「静态的交替的分片就可以了，不要做动态的分配机制，这样太复杂了」</td></tr>
+<tr><td>K12</td><td>分析函数和公式沿用上一轮，但只有窗口数据，部分结论不再等同；差异逐项列出并用上一轮 22 局实测对照</td><td>用户：「分析的机制和之前是一样的吗？」（第六节）</td></tr>
 </table></div>
 
 <h2>三、决策窗口怎么定</h2>
@@ -69,7 +72,7 @@
 </table></div>
 <p><b>为什么取 4 次。</b>上一轮 ButtonUnmaskSwap 22 局（当时以“交换后第一次闭合”定位）实测：<code>G</code> 的推理起点在 step 272～320；<code>G−3</code> 时夹爪开度都不低于 0.035，TCP 高度 0.148～0.201 米；<code>G</code> 时高度 0.059～0.192 米。所以往前 3 次已覆盖张开、移动和开始下探。上一轮的“靠近”只取 <code>G−1</code>，会漏掉选择方向的那段。</p>
 <p><b>为什么锚在“抬起前最后一次闭合”。</b>交换期间和按按钮时都会有闭合：实测 ButtonUnmaskSwap 第 53 步前后就有一次按钮闭合，第 20 局 motion 还在第 157 步多闭合过一次。旧脚本 <code>prepare_phases.py</code> 取的是“最后 N 次闭合”，换成抓空重试或双目标时会选错。</p>
-<div class="warn"><b>⚠ 边界情况，全部如实保留：</b>整局没有抬起任何 bin 的局没有窗口，记 <code>no_pick</code>，不补点；<code>G&lt;3</code> 的局只取现有推理，记 <code>incomplete</code>；抓空后再抓的局用最终抬起 bin 的那次闭合，同时在标签表里记下之前的闭合次数。</div>
+<div class="warn"><b>⚠ 边界情况，全部如实保留：</b>整局没有抬起任何 bin 的局没有窗口，记 <code>no_pick</code>，不补点；<code>G&lt;3</code> 的局只取现有推理，记 <code>incomplete</code>；抓空后再抓的局用最终抬起 bin 的那次闭合，同时在标签表里记下之前每次闭合的步数和最近的 bin。这类局的窗口可能晚于第一次尝试：上一轮第 20 局 motion 的抓取在 step 416，第 37 局在 step 352，都晚于多数局的 step 288；分析时单列一次“排除抓空重试局”的结果。</div>
 
 <h2>四、第一个 bin 选对还是选错</h2>
 <p>不靠人工判断，直接用环境里的官方定义。两个任务的第一目标都是 <code>selected_bins[0]</code>，官方判败函数 <code>is_any_bin_pickup</code> 检查其他 bin 是否被抬起。</p>
@@ -80,6 +83,7 @@
 <tr><td><code>no_pick</code></td><td>整局没有 bin 被抬起</td><td>否，只报局数</td></tr>
 </table></div>
 <p>双目标局只看第一个目标，所以 <code>correct</code> 不等于官方成功，官方结局单独报告。标签用逐步轨迹里写的 bin 位姿计算，再用两条交叉核对：闭合时距 TCP 最近的 bin 应该就是后来抬起的 bin；<code>wrong</code> 的局官方结局不能是成功。</p>
+<p>⚠ ButtonUnmaskSwap 的判败函数只在按完两个按钮之后才生效。模型如果按钮没按完就抬起 bin，官方当时不判败，但本计划仍按“第一次抬起”打标签，并记 <code>before_buttons=true</code>，这类局单独列出。</p>
 
 <h2>五、两个任务的差异</h2>
 <div class="tbl"><table>
@@ -94,13 +98,27 @@
 <p>因为注意力采集链从没跑过 Video 任务，冒烟必须确认 <code>frame_times</code>、motion 窗口与演示段的时间关系，不能直接套 Button 的结论。</p>
 
 <h2>六、怎么找 pattern</h2>
-<p>沿用上一轮的指标定义（<code>success_attention.py</code>、<code>x1</code>、<code>r2</code>、<code>r3</code>、<code>r4</code>），只是把分析单位改成决策窗口。每个读数都按 模型 × 任务 × 选对/选错 × 相对推理（−3、−2、−1、0）展开。</p>
+<p>单次推理的指标公式沿用上一轮（<code>success_attention.py</code>、<code>x1</code>、<code>r2</code>、<code>r3</code>、<code>r4</code>），但<b>分析机制和上一轮不完全一样</b>：上一轮每局有全部推理，这轮只有窗口。下表逐项写明。每个读数都按 模型 × 任务 × 选对/选错 × 相对推理（−3、−2、−1、0）展开。</p>
+<div class="tbl"><table>
+<tr><th>项目</th><th>上一轮</th><th>这一轮</th><th>是否等同</th></tr>
+<tr><td>单次推理的流质量、富集、头矩阵、R2、R4</td><td><code>x1.infer_metrics</code>、<code>memory_metrics</code>、<code>r4.analyse_infer</code></td><td>同一批函数</td><td>公式相同，由对照闸门逐值验证</td></tr>
+<tr><td>动作 query</td><td>20 个 query 取平均</td><td>相同；另加一列只平均到闭合命令之前的 query（<code>G</code> 的后段 query 已在规划闭合之后）</td><td>主读数相同；敏感性列是新增</td></tr>
+<tr><td>注意力来源</td><td>动作也由展开路径产生，注意力和动作同路径</td><td>动作走原路径，注意力用记录的噪声在展开路径上重算</td><td><b>不同</b>，差值逐条记录</td></tr>
+<tr><td>去汇聚点（RB、RC）</td><td><code>confirm_sinks</code> 用整局：位置在可见推理中至少 50% 被判为汇聚点</td><td>只有窗口 4 次，门槛变成 4 次中至少 2 次</td><td><b>不同</b>，同时报原始值和窗口版 RB，对照见下</td></tr>
+<tr><td><code>[160,193)</code> 固定峰</td><td>在整局时间线上搜最大值</td><td>只能回答窗口内最大的是哪个 motion 窗</td><td><b>不同</b>。实测上一轮 12 局的整局峰只有 8 局落在窗口内，另 4 局（第 17、20、34、37 局）峰更早</td></tr>
+<tr><td>阶段</td><td>靠近、抓取、抬起各 1 次代表推理</td><td>−3、−2、−1、0；−1 对应旧靠近，0 对应旧抓取</td><td>抓取和靠近可比；<b>抬起没有了</b>，上一轮 <code>L16H0</code> 在抬起最一致（11/11）的结论这轮无法复核</td></tr>
+<tr><td>整局描述</td><td>整局时间线、整局 R2 加权</td><td>不做</td><td>不做，不能据此说整局如何</td></tr>
+<tr><td>选局与分组</td><td>各模型的历史成功局，两组局不同</td><td>同样的 50 局，按选对选错分组，可跨模型配对</td><td><b>不同</b>，也是这轮的主要改进</td></tr>
+<tr><td>统计方式</td><td>描述：支持局数与反例</td><td>保留支持局数与反例，另加局级区间和第六节判定规则</td><td>新增</td></tr>
+<tr><td>双目标局的文字 query</td><td>两个目标色等权平均</td><td>只取第一目标色</td><td><b>不同</b>，只影响文字族</td></tr>
+</table></div>
+<p><b>对照闸门 <code>BRIDGE_OLD22</code>。</b>新代码先在上一轮已有的 22 局 Button 数据上跑（CPU，只读，不新增推理），窗口取 <code>G−3…G</code>，<code>G</code> 用上一轮已目视的“抓取”标注。两项输出：① 同一推理的单次指标必须和上一轮 <code>episode_analysis.json</code> 逐值相同，证明公式真的没变；② 窗口版 RB 与整局版 RB 的差值、窗口内最大 motion 窗是否仍是 <code>[160,193)</code>，只报告不设阈值，用来判断窗口结果能不能和上一轮结论对读。</p>
 <div class="tbl"><table>
 <tr><th>编号</th><th>问题</th><th>主读数</th></tr>
 <tr><td>P1</td><td>谁更会选</td><td>第一个 bin 选对率、官方成功率，按交换次数和 bin 数分层</td></tr>
 <tr><td>P2</td><td>是否回看开局</td><td>帧流 <code>[0,32)</code> 去汇聚点富集（RB）及是否高于 1</td></tr>
 <tr><td>P3</td><td>是否读交换过程</td><td>motion 流、帧流在交换区间的重叠计权富集</td></tr>
-<tr><td>P4</td><td>上一轮的头和固定峰是否重现</td><td><code>L3H0</code>、<code>L16H0</code> 的开局偏好；motion 最大窗口是否仍是 <code>[160,193)</code>、是否仍由 <code>L17H1</code> 承担</td></tr>
+<tr><td>P4</td><td>上一轮的头和 motion 窗口偏好在决策窗口内是否重现</td><td><code>L3H0</code>、<code>L16H0</code> 的开局偏好；窗口内最大 motion 窗是否为 <code>[160,193)</code>、是否由 <code>L17H1</code> 承担（不是整局固定峰，见上表）</td></tr>
 <tr><td>P5</td><td>选对和选错差在哪</td><td>P2～P4 在同模型内 correct 减 wrong 的局级差值</td></tr>
 <tr><td>P6</td><td>记忆区内部的通路</td><td>motion token 汇聚比例、R4 一跳间接读取（探索性）</td></tr>
 </table></div>
@@ -132,8 +150,8 @@
 <tr><td>rollout 记录</td><td>24～78 GiB</td><td>StopCube 实测 4.9 MiB/次</td></tr>
 <tr><td>注意力</td><td>最多 800 次，约 345 GiB</td><td>上一轮实测 84 + 358 MiB/次</td></tr>
 <tr><td>总存储</td><td>约 370～425 GiB，硬上限 600 GiB</td><td><code>/data</code> 剩 5.1 T</td></tr>
-<tr><td>rollout 时间</td><td>motion 1.5～5 小时，基线 1～3.2 小时，两卡并行</td><td>StopCube 实测 motion 约 2.2 秒/次、基线约 1.4 秒/次</td></tr>
-<tr><td>离线与分析</td><td>各约 1 小时量级</td><td>StopCube 离线约 3 秒/条，但未含 prefix；上一轮分析约 16 CPU·秒/次；冒烟后修正</td></tr>
+<tr><td>rollout 时间</td><td>先 motion 0.75～2.5 小时，再基线 0.5～1.6 小时，合计约 1.3～4.1 小时</td><td>StopCube 单卡实测 motion 约 2.2 秒/次、基线约 1.4 秒/次，两卡折半；静态分片时先完成的卡要等另一张，实际会略长</td></tr>
+<tr><td>离线与分析</td><td>离线每个模型约半小时量级，分析约 1 小时量级</td><td>StopCube 离线约 3 秒/条，但未含 prefix；上一轮分析约 16 CPU·秒/次；冒烟后修正</td></tr>
 </table></div>
 
 <h2>九、验收</h2>
@@ -145,6 +163,7 @@
 <tr><td>窗口正确</td><td>每个窗口核对 <code>G</code> 含闭合、无窗口局有原因</td><td>确实截断在闭合</td><td><code>FIRST_BIN_WINDOW=PASS windows=&lt;n&gt; complete=&lt;n&gt; incomplete=&lt;n&gt;</code></td></tr>
 <tr><td>注意力有效</td><td>行和、padding、有限性、展开路径动作差</td><td>注意力数组可用；展开路径差如实报告，不算逐位等价</td><td><code>ATTN_WINDOW=PASS records=&lt;n&gt; rowsum_err=&lt;x&gt; attn_path_maxabs=&lt;x&gt;</code></td></tr>
 <tr><td>主会话目视</td><td>全部窗口拼图：闭合帧、抬起帧；Video 裸露窗</td><td>几何判定与画面一致</td><td><code>WINDOW_VISUAL=PASS reviewed=&lt;n&gt; mismatches=&lt;n&gt;</code></td></tr>
+<tr><td>和上一轮对照</td><td>22 局上单次指标逐值比较；窗口版 RB 和固定峰差异写入报告</td><td>分析公式真的没变，并知道窗口结论能对读到什么程度</td><td><code>BRIDGE_OLD22=PASS episodes=22 records=&lt;n&gt; metric_maxabs=&lt;x&gt; rb_window_delta=&lt;x&gt; peak160_in_window=&lt;n&gt;/12</code></td></tr>
 <tr><td>pattern 汇总</td><td>按第六节规则写出每项判定</td><td>结论是预定规则得出的</td><td><code>PATTERN_SUMMARY=PASS tasks=2 models=2 readouts=&lt;n&gt;</code></td></tr>
 </table></div>
 <p>验收 FAIL 只记证据，不改判据，交用户裁决。<code>correct</code> 或 <code>wrong</code> 在某一格太少时照实报告，不凑样本。</p>
@@ -153,16 +172,16 @@
 <div class="tbl"><table>
 <tr><th>阶段</th><th>内容</th><th>判据</th></tr>
 <tr><td>S0</td><td>开工审查计划；固定基线 sha</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS</code></td></tr>
-<tr><td>S1</td><td>四个子任务实现、审查、合并</td><td>各 <code>PRE_MERGE_REVIEW</code>、<code>POST_MERGE_REVIEW=PASS</code></td></tr>
+<tr><td>S1</td><td>四个子任务实现、审查、合并；在上一轮 22 局上跑对照</td><td>各 <code>PRE_MERGE_REVIEW</code>、<code>POST_MERGE_REVIEW=PASS</code>；<code>BRIDGE_OLD22</code></td></tr>
 <tr><td>S2</td><td>四格各冒烟 1 局，含离线和窗口；目视 Video 裸露窗；修正时间和存储估算</td><td>全部判定行 PASS，规模不超硬上限</td></tr>
-<tr><td>S3</td><td>正式 200 局 rollout</td><td><code>ROLLOUT_COVERAGE</code></td></tr>
+<tr><td>S3</td><td>正式 200 局 rollout：先 motion 占两卡，全部退出后再基线占两卡</td><td><code>ROLLOUT_COVERAGE</code></td></tr>
 <tr><td>S4</td><td>定窗口、打标签、目视</td><td><code>FIRST_BIN_LABEL</code>、<code>FIRST_BIN_WINDOW</code>、<code>WINDOW_VISUAL</code></td></tr>
 <tr><td>S5</td><td>离线算窗口注意力</td><td><code>ROLLOUT_REPLAY</code>、<code>ATTN_WINDOW</code></td></tr>
 <tr><td>S6</td><td>pattern 分析与报告，图目视复查</td><td><code>PATTERN_SUMMARY</code>；<code>REPORT_CONTENT_REVIEW=PASS</code></td></tr>
 </table></div>
 
 <h2>十一、子代理分工与合并（简述）</h2>
-<p>拆成四块，每块一个独立 worktree、只写自己的文件：W1 管轨迹客户端和 <code>run_local.py</code>，W2 管窗口与标签，W3 管离线注意力，W4 管分析与出图。按 W1、W2、W3、W4 的顺序合回工作分支。每次合并前审范围、接口和测试，合并后跑定向短测，再 push。运行由 opus 运行代理起跑后交回句柄，监听和清理归主会话；报告由主会话写。</p>
+<p>拆成四块，每块一个独立 worktree、只写自己的文件：W1 管轨迹客户端和 <code>run_local.py</code>，W2 管窗口与标签，W3 管离线注意力，W4 管分析与出图。按 W1、W2、W3、W4 的顺序合回工作分支。每次合并前审范围、接口和测试，合并后跑定向短测，再 push。运行由 opus 运行代理起跑后交回句柄，监听和清理归主会话；两卡按奇偶局静态分片，不新增调度代码；报告由主会话写。</p>
 
 <h2>十二、交接顺序与状态机登记</h2>
 <ul>
@@ -184,6 +203,7 @@
 <li>不操作其他用户或任务的进程与 tmux；tmux 前缀 <code>sfb-</code>；每次清理只针对清单内确切名称。</li>
 <li>总存储超过 600 GiB 立即停止，报告用户。</li>
 <li>主检出现有未跟踪文件 <code>TODO_RoboMME_Qwen3VL_FrameSamp_Context.en (1).html</code> 不读不动；运行放在干净执行树。</li>
+<li>同一时间只跑一个模型；不写动态分配、领取队列或空闲检测代码（K10、K11）。上一轮产物只读，只用于对照。</li>
 </ol>
 <p>现有能力与拟新增要分清：<code>--rollout-record</code>、<code>RolloutRecorder</code>、<code>AttnAdapter.run(save_prefix=True)</code>、<code>offline_query.replay_query</code>、<code>rollout_offline.load_trace</code>、<code>load_accepted</code> 是现有能力；第一节清单内的新文件与 <code>bin_trace</code> 是拟新增；下面的存储和时间未在 Swap 任务上实测，待 S2 修正。</p>
 
@@ -201,23 +221,25 @@
 </ul>
 <h3>1.3 <code>scripts/interpret/first_bin_windows.py</code>（新）</h3>
 <ul>
-<li>输入 <code>--run-root</code>、<code>--output</code>。对每份 accepted 终局读轨迹与回执。</li>
+<li>输入 <code>--run-root</code>（可重复，传 <code>g0</code>、<code>g1</code> 两个分片）、<code>--output</code>。对每份 accepted 终局读轨迹与回执，局号去重后必须正好 100 局（每模型）。</li>
 <li><code>L</code>：<code>env_step_after ≥ swap_end</code> 中，第一个有 bin 的 z &gt; 0.15 的行；用常量 <code>BIN_PICKUP_Z = 0.15</code>，并由测试核对与 <code>subgoal_evaluate_func.is_bin_pickup</code> 同值。</li>
 <li><code>C</code>：<code>L</code> 之前最后一行满足上一行 <code>executed_action[7]&gt;0</code> 且本行 <code>≤0</code>；没有则 <code>no_close_before_pick</code>，计入判定行。</li>
-<li><code>G=该行 infer_seq</code>；<code>window=[max(0,G-3)…G]</code>；输出 <code>windows.json</code>：<code>episode_key、model、label、picked_bin、first_target_bin、G、window、C、L、earlier_closes、nearest_bin_at_C、outcome、difficulty、swap_times、pick_times、bin_count</code>。</li>
+<li><code>G=该行 infer_seq</code>；<code>window=[max(0,G-3)…G]</code>；输出 <code>windows.json</code>：<code>episode_key、model、shard、label、picked_bin、first_target_bin、G、window、C、close_row_in_chunk、L、earlier_closes（每项含步数与最近 bin）、nearest_bin_at_C、before_buttons、outcome、difficulty、swap_times、pick_times、bin_count</code>。</li>
 <li>末行打印 <code>FIRST_BIN_LABEL</code>、<code>FIRST_BIN_WINDOW</code>；<code>wrong_but_success&gt;0</code> 或 <code>geom_mismatch&gt;0</code> 打印 FAIL 与局号，不改判据。</li>
 <li>生成拼图：每局 <code>C</code> 帧与 <code>L</code> 帧，每张 20 局。视频路径从 <code>attempts/*/client/videos</code> 取。</li>
 </ul>
 <h3>1.4 <code>scripts/interpret/first_bin_offline.py</code>（新）</h3>
 <ul>
-<li>从 <code>rollout_offline</code> 导入 <code>load_accepted</code>、<code>load_trace</code>，从 <code>offline_query</code> 导入 <code>replay_query</code>、<code>unpack_observation</code>。只处理 <code>windows.json</code> 内的 <code>rollout_&lt;seq&gt;.npz</code>。</li>
+<li>从 <code>rollout_offline</code> 导入 <code>load_accepted</code>、<code>load_trace</code>，从 <code>offline_query</code> 导入 <code>replay_query</code>、<code>unpack_observation</code>。只处理 <code>windows.json</code> 内的 <code>rollout_&lt;seq&gt;.npz</code>。参数 <code>--shard g0|g1</code> 只算本分片的局，两卡各一个进程。</li>
 <li>每条先走原路径重放，超 1e-6 立即非零退出；再用记录里的 <code>sample_rng</code> 和 <code>noise</code> 调 <code>AttnAdapter.run(..., out_f16=True, save_prefix=True)</code>。</li>
-<li>输出 <code>&lt;output&gt;/&lt;nonce&gt;/infer_&lt;seq&gt;.npz</code>、<code>prefix_&lt;seq&gt;.npz</code>，键沿用 <code>serve_policy_attn.NPZ_KEYS</code> 与 <code>PREFIX_NPZ_KEYS</code>，额外存 <code>same_path_maxabs</code>、<code>attn_path_maxabs</code>、<code>input_sha256</code>；断点续跑按 <code>input_sha256</code> 跳过。</li>
+<li>输出 <code>&lt;output&gt;/&lt;nonce&gt;/infer_&lt;seq&gt;.npz</code>、<code>prefix_&lt;seq&gt;.npz</code>，键沿用 <code>serve_policy_attn.NPZ_KEYS</code> 与 <code>PREFIX_NPZ_KEYS</code>，额外存 <code>same_path_maxabs</code>、<code>attn_path_maxabs</code>、<code>input_sha256</code>；断点续跑按 <code>input_sha256</code> 跳过。<code>RolloutRecorder</code> 记录的键和 <code>AttnRecorder</code> 不完全相同（如 <code>mem_order</code>、<code>frame_times</code>、<code>txt_len</code>、<code>top_frames</code>），W3 须从观测重建并由测试核对键表与 dtype，缺项如实报告，不填假值。</li>
 <li>末行 <code>ROLLOUT_REPLAY</code>、<code>ATTN_WINDOW</code>。</li>
 </ul>
 <h3>1.5 <code>scripts/interpret/analysis/first_bin_attention.py</code>（新）</h3>
 <ul>
-<li>导入复用：<code>success_attention.memory_metrics</code>、<code>stream_metrics</code>、<code>sink_observation</code>、<code>robust_infer</code>、<code>target_color_family</code> 与 <code>x1.infer_metrics</code>，公式不改。文字族只用第一目标颜色。</li>
+<li>导入复用：<code>success_attention.memory_metrics</code>、<code>stream_metrics</code>、<code>sink_observation</code>、<code>confirm_sinks</code>、<code>robust_infer</code>、<code>target_color_family</code> 与 <code>x1.infer_metrics</code>、<code>r4.analyse_infer</code>，公式不改。不直接调用 <code>episode_analysis</code>，因为它遍历整局并要求整局完整。<code>confirm_sinks</code> 的计数只来自窗口内推理。文字族只用第一目标颜色。</li>
+<li>敏感性：<code>G</code> 那次另算只取第 0 到 <code>close_row_in_chunk</code> 行动作 query 的流质量。排除抓空重试局的结果同样另列。</li>
+<li>对照入口 <code>--bridge-old22 &lt;上一轮产物根&gt;</code>：读上一轮 <code>analysis-manifest.json</code> 的“抓取”标注定 <code>G</code>，只读；输出第九节 <code>BRIDGE_OLD22</code>。</li>
 <li>4 个 CPU 进程按局并行，每进程 BLAS/OMP/MKL 单线程。</li>
 <li>输出 <code>pattern-summary.json</code>（P1～P6 每项：点估计、局数、区间、判定）与图：选对率；富集随相对推理变化（模型 × 任务 × 选对选错）；144 头差值矩阵；motion 窗口峰位置；共同 pattern 表。</li>
 <li>重采样复用 <code>oracle_press_prob.bootstrap</code>，2000 次，种子 42，单位局。</li>
@@ -230,16 +252,16 @@
 <tr><td>W1 <code>opus</code></td><td>轨迹客户端与开关</td><td><code>bin_trace_runner.py</code>、<code>run_local.py</code>、<code>test_bin_trace_runner.py</code></td><td>其余全部</td><td>输出 1.1 键表</td><td>1</td><td><code>test_bin_trace_runner.py</code>、<code>test_rollout_record.py</code>；<code>W1_CPU=PASS</code></td><td>无 GPU</td></tr>
 <tr><td>W2 <code>opus</code></td><td>窗口与标签</td><td><code>first_bin_windows.py</code>、<code>test_first_bin_windows.py</code></td><td>其余全部</td><td>读 1.1，写 1.3 <code>windows.json</code></td><td>2</td><td>合成轨迹覆盖抓空、双目标、无抬起、交换期抬高；<code>W2_CPU=PASS</code></td><td>无 GPU</td></tr>
 <tr><td>W3 <code>opus</code></td><td>离线注意力</td><td><code>first_bin_offline.py</code>、<code>test_first_bin_offline.py</code></td><td>其余全部</td><td>读 <code>windows.json</code></td><td>3</td><td>假策略测试选取、续跑、重放失败退出；<code>W3_CPU=PASS</code></td><td>无 GPU</td></tr>
-<tr><td>W4 <code>opus</code></td><td>分析与出图</td><td><code>analysis/first_bin_attention.py</code>、<code>test_first_bin_attention.py</code></td><td>其余全部</td><td>读 <code>windows.json</code> 与 1.4 输出</td><td>4</td><td>合成数据核对判定规则；<code>W4_CPU=PASS</code></td><td>无 GPU</td></tr>
+<tr><td>W4 <code>opus</code></td><td>分析与出图</td><td><code>analysis/first_bin_attention.py</code>、<code>test_first_bin_attention.py</code></td><td>其余全部</td><td>读 <code>windows.json</code> 与 1.4 输出</td><td>4</td><td>合成数据核对判定规则；<code>W4_CPU=PASS</code>。<code>BRIDGE_OLD22</code> 需要 <code>v1-store</code>，由主会话合并后跑</td><td>无 GPU</td></tr>
 <tr><td>主会话</td><td>报告、留档、提交</td><td><code>docs/evaluation-doc/swap-first-bin-attn-seed42-1105/</code>、总索引</td><td>代码</td><td>依赖全部</td><td>末尾</td><td>第九节判定行</td><td>无</td></tr>
 </table></div>
 <p>共享文件只有 <code>run_local.py</code>，归 W1。worktree 环境按 <code>CLAUDE.md</code> 取法：<code>UV_PROJECT_ENVIRONMENT=&lt;主 .venv&gt; PYTHONPATH=&lt;worktree&gt;/src uv run --no-sync …</code>，先打印模块 <code>__file__</code> 核实。</p>
 <p><b>运行型委派</b>（<code>opus</code>，主检出的干净执行树 <code>v1-store/worktrees/swap-first-bin-run</code>，不改代码）：</p>
 <div class="tbl"><table>
 <tr><th>tmux</th><th>命令</th><th>卡 / 显存比例</th><th>日志</th><th>起跑判据</th><th>最长等待</th><th>失败处置</th></tr>
-<tr><td><code>sfb-roll-mot</code></td><td><code>run_local --spec $O/spec-mot.json</code>（S2 后写定）</td><td>GPU1 / 0.55</td><td><code>$O/logs/roll-mot.log</code></td><td>首个 <code>ATTN_INFER</code> 或首份 <code>rollout_0000.npz</code></td><td>15 分钟</td><td>交回证据，不改配置</td></tr>
-<tr><td><code>sfb-roll-ctx</code></td><td><code>run_local --spec $O/spec-ctx.json</code></td><td>GPU0 / 0.40</td><td><code>$O/logs/roll-ctx.log</code></td><td>同上</td><td>15 分钟</td><td>同上</td></tr>
-<tr><td><code>sfb-off-mot</code>、<code>sfb-off-ctx</code></td><td><code>first_bin_offline</code></td><td>同上</td><td><code>$O/logs/off-*.log</code></td><td>首条 <code>ROLLOUT_REPLAY</code> 记录</td><td>15 分钟</td><td>同上</td></tr>
+<tr><td><code>sfb-roll-mot-g0</code>、<code>sfb-roll-mot-g1</code>（先）</td><td><code>run_local --spec $O/spec-mot-g&lt;n&gt;.json</code>（S2 后写定）</td><td>GPU0、GPU1 / 各 0.55</td><td><code>$O/logs/roll-mot-g&lt;n&gt;.log</code></td><td>首份 <code>rollout_0000.npz</code></td><td>15 分钟</td><td>交回证据，不改配置</td></tr>
+<tr><td><code>sfb-roll-ctx-g0</code>、<code>sfb-roll-ctx-g1</code>（motion 两片退出后）</td><td><code>run_local --spec $O/spec-ctx-g&lt;n&gt;.json</code></td><td>GPU0、GPU1 / 各 0.40</td><td><code>$O/logs/roll-ctx-g&lt;n&gt;.log</code></td><td>同上</td><td>15 分钟</td><td>同上</td></tr>
+<tr><td><code>sfb-off-mot-g0/g1</code>，之后 <code>sfb-off-ctx-g0/g1</code></td><td><code>first_bin_offline --shard g&lt;n&gt;</code></td><td>同上比例；同一时间一个模型</td><td><code>$O/logs/off-*.log</code></td><td>首条 <code>ROLLOUT_REPLAY</code> 记录</td><td>15 分钟</td><td>同上</td></tr>
 <tr><td><code>sfb-analysis</code></td><td><code>first_bin_attention</code></td><td>CPU</td><td><code>$O/logs/analysis.log</code></td><td>首局完成</td><td>30 分钟</td><td>同上</td></tr>
 </table></div>
 
@@ -255,12 +277,17 @@
 <h2>四、Runbook</h2>
 <pre>TZ=America/New_York date
 git worktree add --detach v1-store/worktrees/swap-first-bin-run &lt;合并后 sha&gt;
-python -m scripts.interpret.build_manifest --episodes ButtonUnmaskSwap:0,…,VideoUnmaskSwap:49 --chunk-size 5 --out $O/manifest-all.json
+# 静态分片：偶数局一份，奇数局一份；每份两任务各 25 局，每任务 5 块×5 局，块内不混任务
+python -m scripts.interpret.build_manifest --episodes ButtonUnmaskSwap:0,ButtonUnmaskSwap:2,…,VideoUnmaskSwap:48 --chunk-size 5 --out $O/manifest-g0.json
+python -m scripts.interpret.build_manifest --episodes ButtonUnmaskSwap:1,ButtonUnmaskSwap:3,…,VideoUnmaskSwap:49 --chunk-size 5 --out $O/manifest-g1.json
 # 冒烟：每格 1 局，规格键 bin_trace=true、rollout_record=true、model_seed=42、purpose=validation
-# 正式 rollout（S2 后写定完整命令进 launch.md）
-tmux new-session -d -s sfb-roll-mot "bash $O/run_rollout.sh mot"
-python -m scripts.interpret.first_bin_windows --run-root $O/&lt;模型&gt;/run --output $O/&lt;模型&gt;/windows
-tmux new-session -d -s sfb-off-mot "bash $O/run_offline.sh mot"
+# 正式 rollout（S2 后写定完整命令进 launch.md）：先 motion 两片
+tmux new-session -d -s sfb-roll-mot-g0 "bash $O/run_rollout.sh mot g0"
+tmux new-session -d -s sfb-roll-mot-g1 "bash $O/run_rollout.sh mot g1"
+# 两片的 EXIT_CODE 都到后，同样方式起 ctx 两片
+python -m scripts.interpret.first_bin_windows --run-root $O/&lt;模型&gt;/g0/run --run-root $O/&lt;模型&gt;/g1/run --output $O/&lt;模型&gt;/windows
+tmux new-session -d -s sfb-off-mot-g0 "bash $O/run_offline.sh mot g0"
+tmux new-session -d -s sfb-off-mot-g1 "bash $O/run_offline.sh mot g1"
 tmux new-session -d -s sfb-analysis "bash $O/run_analysis.sh"</pre>
 <p>每份日志挂一个 Monitor，过滤 <code>EXIT_CODE=|RUN_LOCAL=|OFFLINE|Traceback|Error|out of memory|Killed</code>。运行命令按第 7 条日志三件套。第 16 条：不额外高频查询 GPU。</p>
 
@@ -273,6 +300,10 @@ tmux new-session -d -s sfb-analysis "bash $O/run_analysis.sh"</pre>
 <tr><td>展开路径注意力和实际动作不完全一致（StopCube 实测最大 0.0615）</td><td>每条记录 <code>attn_path_maxabs</code>，单头差小于 0.01 不解读</td></tr>
 <tr><td>显存被其他进程占用</td><td>沿用 0.55 / 0.40；不足则 OOM 停止，不操作他人进程，改期交用户</td></tr>
 <tr><td>人工拼图工作量大</td><td>每张 20 局、约 10 张，主会话全部目视</td></tr>
+<tr><td>窗口只有 4 次，汇聚点判定不稳</td><td>同时报原始值和窗口版 RB；<code>BRIDGE_OLD22</code> 实测差异，差异大时 RB 只作描述</td></tr>
+<tr><td>静态分片两卡结束时间不同</td><td>接受少量空等，不加调度（K11）；两卡都退出后才换模型</td></tr>
+<tr><td>单次重放通过但记录键与旧 NPZ 不同，旧函数报错或静默算错</td><td>W3 键表测试；<code>BRIDGE_OLD22</code> 只能验证旧 NPZ，所以冒烟时另查 1 局新 NPZ 的行和、质量分组</td></tr>
+<tr><td>块内多局共用一个策略服务，采样随机数可能随块内顺序变化（未核实）</td><td>不和 10-31 官方结果逐局对比；分片在开工前固定，不中途改</td></tr>
 </table></div>
 
 <h2>六、盲区</h2>
@@ -283,6 +314,8 @@ tmux new-session -d -s sfb-analysis "bash $O/run_analysis.sh"</pre>
 <li>选对可能出于运气（基线上一轮接近随机），选对组不等于模型记住了位置。</li>
 <li>attention 只是概率，不含 value 范数；一跳间接是线性近似。</li>
 <li>VideoUnmaskSwap 的裸露窗和交换帧未目视核实前，P2、P3 的 Video 列不能解读。</li>
+<li>只有窗口数据：整局固定峰、整局 R2、抬起阶段都不能复核；上一轮这些结论这轮既不证实也不推翻。</li>
+<li>注意力由展开路径重算，和实际执行的原路径有数值差；展开路径动作最大差只是上限线索，不能说明注意力差多少。</li>
 </ul>
 
 <h2>七、留档与 commit 纪律</h2>
