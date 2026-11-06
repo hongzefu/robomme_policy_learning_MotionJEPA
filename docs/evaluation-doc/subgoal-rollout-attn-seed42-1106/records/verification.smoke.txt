@@ -1,0 +1,16 @@
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=0 npz=5
+ROLLOUT_REPLAY=PASS points=7 same_path_maxabs=0 tol=1e-6
+ATTN_GROUPS=PASS points=7 sum_err=7.19373929e-08 tol=1e-3 attn_path_maxabs=0.0029296875
+ROLLOUT_REPLAY=PASS points=6 same_path_maxabs=0 tol=1e-6
+ATTN_GROUPS=PASS points=6 sum_err=7.56917871e-08 tol=1e-3 attn_path_maxabs=0.01171875
+RUN_LOCAL=PASS model=history episodes=1 success=0 npz=7
+RUN_LOCAL=PASS model=history episodes=1 success=0 npz=6
+RESET_HOOK_PARITY=PASS episodes=6 frames=963 diff=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=0 npz=3
+ROLLOUT_REPLAY=PASS points=5 same_path_maxabs=0 tol=1e-6
+ATTN_GROUPS=PASS points=5 sum_err=7.40183168e-08 tol=1e-3 attn_path_maxabs=0.0029296875
+ROLLOUT_REPLAY=PASS points=3 same_path_maxabs=0 tol=1e-6
+ATTN_GROUPS=PASS points=3 sum_err=7.91042112e-08 tol=1e-3 attn_path_maxabs=0.0029296875
+ROLLOUT_RUN=PASS models=2 valid_ctx=2 valid_mot=2 invalid_ctx=0 invalid_mot=0 infra_retries=0
+SUBGOAL_LABEL=PASS models=2 episodes=4 mismatches=0
+SUBGOAL_ALIGN=PASS models=2 tasks=2 sanity_diag=4 sanity_uniform=1
