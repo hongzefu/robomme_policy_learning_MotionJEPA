@@ -236,7 +236,7 @@
 <li><code>C</code>：<code>L</code> 之前最后一行满足上一行 <code>executed_action[7]&gt;0</code> 且本行 <code>≤0</code>；没有则 <code>no_close_before_pick</code>，计入判定行。</li>
 <li><code>G=该行 infer_seq</code>；<code>window=[max(0,G-3)…G]</code>；输出 <code>windows.json</code>：<code>episode_key、model、shard、label、picked_bin、first_target_bin、G、window、C、close_row_in_chunk、L、earlier_closes（每项含步数与最近 bin）、nearest_bin_at_C、before_buttons、outcome、difficulty、swap_times、pick_times、bin_count</code>。</li>
 <li>末行打印 <code>FIRST_BIN_LABEL</code>、<code>FIRST_BIN_WINDOW</code>；<code>wrong_but_success&gt;0</code> 或 <code>geom_mismatch&gt;0</code> 打印 FAIL 与局号，不改判据。</li>
-<li>生成拼图：每局 <code>C</code> 帧与 <code>L</code> 帧，每张 20 局。视频路径从 <code>attempts/*/client/videos</code> 取，视频帧号 = <code>env_step_after − 1</code>，冒烟时目视核对。</li>
+<li>生成拼图：每局 <code>C</code> 帧与 <code>L</code> 帧，每张 20 局。视频路径从 <code>attempts/*/client/videos</code> 取，视频帧号 = <code>exec_start_idx + action_index + 1</code>（写入 <code>C_frame</code>、<code>L_frame</code>，与 <code>eval.py::init_episode</code>、<code>decision_points.py</code> 同口径），冒烟时目视核对。</li>
 </ul>
 <h3>1.4 <code>scripts/interpret/first_bin_offline.py</code>（新）</h3>
 <ul>
@@ -345,6 +345,7 @@ tmux new-session -d -s sfb-analysis "bash $O/run_analysis.sh"</pre>
 <tr><td>F4 对照闸门无算法</td><td>写明比较键、容差 1e-5、<code>peak160_in_window</code> 定义</td></tr>
 <tr><td>F5 重建键和形状</td><td>列出缺失键来源、去 batch 轴、回执写 prompt</td></tr>
 <tr><td>F6、F7、F8、F9、F10</td><td>冒烟记录启动开销；删除错误的随机数风险；Z 常量按文本核对；写明视频帧号映射；算术与判定行小修</td></tr>
+<tr><td>W2 合并前审查：F9 的帧号写法有误</td><td><code>env_step_after − 1</code> → <code>exec_start_idx + action_index + 1</code>，只影响拼图目视</td></tr>
 </table></div>
 </main>
 </body>
