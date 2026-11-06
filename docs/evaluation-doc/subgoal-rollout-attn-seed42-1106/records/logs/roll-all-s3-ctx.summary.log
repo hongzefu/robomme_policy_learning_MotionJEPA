@@ -1,0 +1,27 @@
+RUN_LOCAL_BEGIN model=history run_identity=51a228f92c95e13435174e07aed852cb8470508f638392c585e967e1c029847a manifest_seal=fd05d342f5235d629db0ec2a5cced850eb0c6549f04d8761c26e596e96dfe389 chunks=5 cuda=1 ablate=none
+EPISODE_RESULT task=PatternLock ep=12 success=0 npz=3
+EPISODE_RESULT task=PatternLock ep=13 success=0 npz=5
+EPISODE_RESULT task=PatternLock ep=14 success=0 npz=1
+EPISODE_RESULT task=PatternLock ep=15 success=0 npz=3
+EPISODE_RESULT task=PatternLock ep=28 success=1 npz=2
+EPISODE_RESULT task=PatternLock ep=29 success=1 npz=2
+EPISODE_RESULT task=PatternLock ep=30 success=0 npz=4
+EPISODE_RESULT task=PatternLock ep=31 success=0 npz=3
+EPISODE_RESULT task=PatternLock ep=44 success=1 npz=2
+EPISODE_RESULT task=PatternLock ep=45 success=0 npz=2
+EPISODE_RESULT task=PatternLock ep=46 success=1 npz=10
+EPISODE_RESULT task=PatternLock ep=47 success=0 npz=4
+EPISODE_RESULT task=RouteStick ep=12 success=0 npz=7
+EPISODE_RESULT task=RouteStick ep=13 success=0 npz=3
+EPISODE_RESULT task=RouteStick ep=14 success=0 npz=3
+EPISODE_RESULT task=RouteStick ep=15 success=0 npz=13
+EPISODE_RESULT task=RouteStick ep=28 success=0 npz=3
+EPISODE_RESULT task=RouteStick ep=29 success=0 npz=6
+EPISODE_RESULT task=RouteStick ep=30 success=0 npz=6
+EPISODE_RESULT task=RouteStick ep=31 success=0 npz=4
+EPISODE_RESULT task=RouteStick ep=44 success=0 npz=3
+EPISODE_RESULT task=RouteStick ep=45 success=1 npz=10
+EPISODE_RESULT task=RouteStick ep=46 success=0 npz=10
+EPISODE_RESULT task=RouteStick ep=47 success=0 npz=7
+RUN_LOCAL=PASS model=history episodes=24 success=5 npz=116
+EXIT_CODE=0

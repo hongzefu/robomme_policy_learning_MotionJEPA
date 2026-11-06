@@ -483,6 +483,14 @@ python -m scripts.interpret.analysis.subgoal_attention --root $O --out $O/analys
 <h2>九、开工审查修订记录</h2>
 <p>审查判定行 <code>PLAN_CONSISTENCY_REVIEW=FAIL base=bc4379a findings=18 blocking=6</code>。主会话逐条回原文和代码核实，全部成立。用户裁决（美东 2026-11-06）：提出的 5 项建议未作修改，并说「审查完毕之后直接开始，不用再来等我批准」；据此按建议修订：局末序号 2m+3 合法、motion 流不归一化、预算为软线、钩子比较单独跑 6 局、<code>ATTN_GROUPS</code> 容差 1e-3 与各闸门失败处置。另 13 条为文字统一，不改口径。</p>
 <p>实施中调整（用户点名）：旧为每卡 1 个 worker、按 <code>episode_id%8</code> 分 2 片；新为每卡 2 个 worker、按 <code>episode_id%16</code> 分 4 片、比例 0.30，显存不够就降 worker。对抗验证 <code>ADJUST_REVIEW=FAIL scale=same findings=3</code>：指出拟定的 0.38 在 GPU1 上几乎没有余量，且在线编码不受比例约束；据此改为 0.30、在 GPU1 上冒烟。规模不变。</p>
+<h2>十、实施中调整</h2>
+<ul>
+<li>单卡双 worker：见第九节，比例 0.30 在 GPU1 实测通过，峰值 35274 MiB。</li>
+<li>运行型子代理改由主会话按 Runbook 直接启动，脚本已固定，范围未变。</li>
+<li>事后补做描述性拆解 <code>decompose_first_last.py</code>，未改判据。</li>
+</ul>
+<h2>十一、实测结果</h2>
+<p>全部闸门通过：<code>ROLLOUT_RUN=PASS valid_ctx=100 valid_mot=100 invalid_ctx=0 invalid_mot=0 infra_retries=0</code>、<code>SUBGOAL_LABEL=PASS episodes=200 mismatches=0</code>、<code>ROLLOUT_REPLAY=PASS points=922 same_path_maxabs=0</code>、<code>ATTN_GROUPS=PASS points=922 sum_err=9.84e-08</code>、<code>SUBGOAL_ALIGN=PASS</code>。成功 motion 34/100、基线 18/100。12 组主读数明显 0、弱 8、未见 4。约 1.7 GPU·h、4.8 GB。结论见 <code>docs/evaluation-doc/subgoal-rollout-attn-seed42-1106/result.md</code>。</p>
 </main>
 </body>
 </html>

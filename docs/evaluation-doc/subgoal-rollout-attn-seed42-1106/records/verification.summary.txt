@@ -1,3 +1,35 @@
-# 判定行汇总
+# 判定行汇总（美东 2026-11-06）
 
-冒烟：见 verification.smoke.txt。正式判定行待全量结束后写入。
+## 钩子
+RESET_HOOK_PARITY=PASS episodes=6 frames=963 diff=0
+
+## 分析入口
+ROLLOUT_RUN=PASS models=2 valid_ctx=100 valid_mot=100 invalid_ctx=0 invalid_mot=0 infra_retries=0
+SUBGOAL_LABEL=PASS models=2 episodes=200 mismatches=0
+SUBGOAL_ALIGN=PASS models=2 tasks=2 sanity_diag=4 sanity_uniform=1
+
+## rollout
+mot s0 RUN_LOCAL=PASS model=stage2_pool4_concat episodes=28 success=10 npz=132 EXIT_CODE=0
+mot s1 RUN_LOCAL=PASS model=stage2_pool4_concat episodes=24 success=4 npz=99 EXIT_CODE=0
+mot s2 RUN_LOCAL=PASS model=stage2_pool4_concat episodes=24 success=12 npz=152 EXIT_CODE=0
+mot s3 RUN_LOCAL=PASS model=stage2_pool4_concat episodes=24 success=8 npz=112 EXIT_CODE=0
+ctx s0 RUN_LOCAL=PASS model=history episodes=28 success=7 npz=114 EXIT_CODE=0
+ctx s1 RUN_LOCAL=PASS model=history episodes=24 success=2 npz=87 EXIT_CODE=0
+ctx s2 RUN_LOCAL=PASS model=history episodes=24 success=4 npz=110 EXIT_CODE=0
+ctx s3 RUN_LOCAL=PASS model=history episodes=24 success=5 npz=116 EXIT_CODE=0
+
+## 离线
+mot s0 ROLLOUT_REPLAY=PASS points=132 same_path_maxabs=0 tol=1e-6 | ATTN_GROUPS=PASS points=132 sum_err=9.84055077e-08 tol=1e-3 attn_path_maxabs=0.005859375 | EXIT_CODE=0
+mot s1 ROLLOUT_REPLAY=PASS points=99 same_path_maxabs=0 tol=1e-6 | ATTN_GROUPS=PASS points=99 sum_err=8.67732979e-08 tol=1e-3 attn_path_maxabs=0.017578125 | EXIT_CODE=0
+mot s2 ROLLOUT_REPLAY=PASS points=152 same_path_maxabs=0 tol=1e-6 | ATTN_GROUPS=PASS points=152 sum_err=9.71595e-08 tol=1e-3 attn_path_maxabs=0.0197753906 | EXIT_CODE=0
+mot s3 ROLLOUT_REPLAY=PASS points=112 same_path_maxabs=0 tol=1e-6 | ATTN_GROUPS=PASS points=112 sum_err=9.07748472e-08 tol=1e-3 attn_path_maxabs=0.009765625 | EXIT_CODE=0
+ctx s0 ROLLOUT_REPLAY=PASS points=114 same_path_maxabs=0 tol=1e-6 | ATTN_GROUPS=PASS points=114 sum_err=8.72237109e-08 tol=1e-3 attn_path_maxabs=0.013671875 | EXIT_CODE=0
+ctx s1 ROLLOUT_REPLAY=PASS points=87 same_path_maxabs=0 tol=1e-6 | ATTN_GROUPS=PASS points=87 sum_err=8.95579433e-08 tol=1e-3 attn_path_maxabs=0.242271423 | EXIT_CODE=0
+ctx s2 ROLLOUT_REPLAY=PASS points=110 same_path_maxabs=0 tol=1e-6 | ATTN_GROUPS=PASS points=110 sum_err=9.73523129e-08 tol=1e-3 attn_path_maxabs=0.454235554 | EXIT_CODE=0
+ctx s3 ROLLOUT_REPLAY=PASS points=116 same_path_maxabs=0 tol=1e-6 | ATTN_GROUPS=PASS points=116 sum_err=9.4587449e-08 tol=1e-3 attn_path_maxabs=0.0700683594 | EXIT_CODE=0
+
+## 汇总
+ROLLOUT_RECORD=PASS models=2 valid_episodes=200 inferences=922 missing=0 readback=1
+ROLLOUT_REPLAY=PASS models=2 points=922 same_path_maxabs=0 tol=1e-6
+ATTN_GROUPS=PASS models=2 points=922 sum_err=9.84055077e-08 tol=1e-3 attn_path_maxabs=0.454235554
+SUBGOAL_REPORT=PASS figures=5 visual_review=pass

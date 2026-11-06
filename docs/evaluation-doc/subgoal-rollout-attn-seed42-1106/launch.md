@@ -67,10 +67,15 @@ python -m scripts.interpret.analysis.subgoal_attention --root $O --out $O/analys
 | 17:29 | 钩子比较起跑 |
 | 17:30 | 冒烟起跑：GPU1 同时 2 个 motion worker |
 | 约 17:36 | 冒烟与分析全部通过 |
+| 17:36 | motion 4 片正式 rollout 起跑，18:12 结束 |
+| 18:12 | 基线 4 片起跑，18:21 结束 |
+| 18:22 | motion 离线起跑，18:25 结束 |
+| 18:25 | 基线离线起跑，18:28 结束 |
+| 18:28 | 全量分析 |
 
 ## tmux 会话清单
 
-`sra-hook`、`sra-mem`、`sra-smoke-mot-s0`、`sra-smoke-mot-s1`、`sra-smoke-ctx-s0`、`sra-smoke-ctx-s1`、`sra-smoff-mot-s0`、`sra-smoff-mot-s1`、`sra-smoff-ctx-s0`、`sra-smoff-ctx-s1`（冒烟）；正式 `sra-roll-<模型>-<片>`、`sra-off-<模型>-<片>`、`sra-analysis`。
+`sra-hook`、`sra-mem`、`sra-smoke-mot-s0`、`sra-smoke-mot-s1`、`sra-smoke-ctx-s0`、`sra-smoke-ctx-s1`、`sra-smoff-mot-s0`、`sra-smoff-mot-s1`、`sra-smoff-ctx-s0`、`sra-smoff-ctx-s1`（冒烟）；正式 `sra-roll-<模型>-<片>`、`sra-off-<模型>-<片>`、`sra-analysis`。全部自然退出；`sra-mem` 由主会话在冒烟后按名精确结束。
 
 ## 产物路径
 
