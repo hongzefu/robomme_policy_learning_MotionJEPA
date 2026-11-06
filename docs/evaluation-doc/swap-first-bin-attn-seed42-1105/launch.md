@@ -92,3 +92,20 @@ python scripts/interpret/analysis/first_bin_attention.py --bridge-old22 v1-store
 计划外事件：第一次冒烟时 `HF_HOME` 写错，停掉 tmux 后基线策略服务（PID 2113726）成为孤儿并占 18 GB，导致重跑的基线冒烟 SAPIEN 报 `CUDA ... out of memory`（`client_exit=-11`）。核实归属后只结束该 PID，修正环境变量后重跑通过。失败的第一次产物已删除，日志未保留。
 
 正式 motion 两片于美东 23:42 起跑。
+
+## 替换实验（第二阶段）
+
+用户原话：「做完了之后，可以尝试像上一次一样，就是做一些 masking 和替换的工作……只能接受把 motion token 换成别的相邻的 token 这种形式。」
+
+版本 `81c7c674076a1a547248516034db5811ca6d5016`，干净执行树 `v1-store/worktrees/swap-first-bin-exp`。只跑 motion 模型，显存比例 0.55。供体由 `records/derive_motion_donors.py` 从正式 rollout 提取，映射为同任务、同交换次数、同 bin 数组内循环的下一局。
+
+| 条件 | `ablate` | 规格 |
+| --- | --- | --- |
+| E0 | 不设 | `exp/spec-e0-g<n>.json` |
+| E1 | `motion_swap:exp/donors/full` + `swap_map` | `exp/spec-e1-g<n>.json` |
+| E3 | `motion_shift` | `exp/spec-e3-g<n>.json` |
+| E2 | `motion_swap_exact:exp/donors/swap` + `swap_map` | `exp/spec-e2-g<n>.json` |
+
+驱动 `exp/run_exp_chain.sh` 依次运行，美东 07:30 后不起新条件。tmux：`sfb-e1-smoke`、`sfb-e2-smoke`、`sfb-e3-smoke`、`sfb-exp-chain`、`sfb-off-chain`、`sfb-analysis`。
+
+计划外事件：基线和 motion 的 `.log` 被 gitignore 拦下，清洗后日志改存 `.summary.txt`；合并时一次重复使用版本号 `commitV4.1.35`，历史未改写，后续跳过 36。

@@ -1,0 +1,449 @@
+{
+ "bootstrap": {
+  "draws": 2000,
+  "seed": 42,
+  "unit": "局"
+ },
+ "conds": {
+  "e0": {
+   "episodes": 100,
+   "infra_errors": 0,
+   "replaced": 0,
+   "labels": {
+    "ButtonUnmaskSwap": {
+     "correct": 18,
+     "wrong": 32,
+     "no_pick": 0
+    },
+    "VideoUnmaskSwap": {
+     "correct": 21,
+     "wrong": 29,
+     "no_pick": 0
+    }
+   },
+   "success": {
+    "ButtonUnmaskSwap": 17,
+    "VideoUnmaskSwap": 19
+   }
+  },
+  "e1": {
+   "episodes": 100,
+   "infra_errors": 0,
+   "replaced": 1039,
+   "labels": {
+    "ButtonUnmaskSwap": {
+     "correct": 10,
+     "wrong": 39,
+     "no_pick": 1
+    },
+    "VideoUnmaskSwap": {
+     "correct": 22,
+     "wrong": 28,
+     "no_pick": 0
+    }
+   },
+   "success": {
+    "ButtonUnmaskSwap": 7,
+    "VideoUnmaskSwap": 16
+   },
+   "vs_e0": {
+    "ButtonUnmaskSwap": {
+     "success": {
+      "episodes": 50,
+      "reference": 0.34,
+      "condition": 0.14,
+      "diff": -0.2,
+      "ci95": [
+       -0.34,
+       -0.06
+      ],
+      "losses": 12,
+      "gains": 2,
+      "sign_p": 0.012939453125
+     },
+     "first_bin_correct": {
+      "episodes": 50,
+      "reference": 0.36,
+      "condition": 0.2,
+      "diff": -0.16,
+      "ci95": [
+       -0.3,
+       -0.02
+      ],
+      "losses": 11,
+      "gains": 3,
+      "sign_p": 0.057373046875
+     }
+    },
+    "VideoUnmaskSwap": {
+     "success": {
+      "episodes": 50,
+      "reference": 0.38,
+      "condition": 0.32,
+      "diff": -0.06,
+      "ci95": [
+       -0.2,
+       0.06
+      ],
+      "losses": 7,
+      "gains": 4,
+      "sign_p": 0.548828125
+     },
+     "first_bin_correct": {
+      "episodes": 50,
+      "reference": 0.42,
+      "condition": 0.44,
+      "diff": 0.02,
+      "ci95": [
+       -0.1,
+       0.14
+      ],
+      "losses": 4,
+      "gains": 5,
+      "sign_p": 1.0
+     }
+    }
+   },
+   "fallback_episodes": {
+    "ButtonUnmaskSwap": 15,
+    "VideoUnmaskSwap": 7
+   },
+   "vs_e0_no_fallback": {
+    "ButtonUnmaskSwap": {
+     "success": {
+      "episodes": 35,
+      "reference": 0.3142857142857143,
+      "condition": 0.14285714285714285,
+      "diff": -0.17142857142857143,
+      "ci95": [
+       -0.34285714285714286,
+       0.0
+      ],
+      "losses": 8,
+      "gains": 2,
+      "sign_p": 0.109375
+     },
+     "first_bin_correct": {
+      "episodes": 35,
+      "reference": 0.34285714285714286,
+      "condition": 0.2,
+      "diff": -0.14285714285714285,
+      "ci95": [
+       -0.3142857142857143,
+       0.02857142857142857
+      ],
+      "losses": 8,
+      "gains": 3,
+      "sign_p": 0.2265625
+     }
+    },
+    "VideoUnmaskSwap": {
+     "success": {
+      "episodes": 43,
+      "reference": 0.37209302325581395,
+      "condition": 0.3023255813953488,
+      "diff": -0.06976744186046512,
+      "ci95": [
+       -0.18604651162790697,
+       0.046511627906976744
+      ],
+      "losses": 5,
+      "gains": 2,
+      "sign_p": 0.453125
+     },
+     "first_bin_correct": {
+      "episodes": 43,
+      "reference": 0.3953488372093023,
+      "condition": 0.3488372093023256,
+      "diff": -0.046511627906976744,
+      "ci95": [
+       -0.16279069767441862,
+       0.06976744186046512
+      ],
+      "losses": 4,
+      "gains": 2,
+      "sign_p": 0.6875
+     }
+    }
+   }
+  },
+  "e3": {
+   "episodes": 100,
+   "infra_errors": 0,
+   "replaced": 1016,
+   "labels": {
+    "ButtonUnmaskSwap": {
+     "correct": 9,
+     "wrong": 41,
+     "no_pick": 0
+    },
+    "VideoUnmaskSwap": {
+     "correct": 19,
+     "wrong": 31,
+     "no_pick": 0
+    }
+   },
+   "success": {
+    "ButtonUnmaskSwap": 7,
+    "VideoUnmaskSwap": 16
+   },
+   "vs_e0": {
+    "ButtonUnmaskSwap": {
+     "success": {
+      "episodes": 50,
+      "reference": 0.34,
+      "condition": 0.14,
+      "diff": -0.2,
+      "ci95": [
+       -0.34,
+       -0.06
+      ],
+      "losses": 12,
+      "gains": 2,
+      "sign_p": 0.012939453125
+     },
+     "first_bin_correct": {
+      "episodes": 50,
+      "reference": 0.36,
+      "condition": 0.18,
+      "diff": -0.18,
+      "ci95": [
+       -0.32,
+       -0.04
+      ],
+      "losses": 12,
+      "gains": 3,
+      "sign_p": 0.03515625
+     }
+    },
+    "VideoUnmaskSwap": {
+     "success": {
+      "episodes": 50,
+      "reference": 0.38,
+      "condition": 0.32,
+      "diff": -0.06,
+      "ci95": [
+       -0.16,
+       0.04
+      ],
+      "losses": 5,
+      "gains": 2,
+      "sign_p": 0.453125
+     },
+     "first_bin_correct": {
+      "episodes": 50,
+      "reference": 0.42,
+      "condition": 0.38,
+      "diff": -0.04,
+      "ci95": [
+       -0.14,
+       0.06
+      ],
+      "losses": 4,
+      "gains": 2,
+      "sign_p": 0.6875
+     }
+    }
+   }
+  },
+  "e2": {
+   "episodes": 100,
+   "infra_errors": 0,
+   "replaced": 408,
+   "labels": {
+    "ButtonUnmaskSwap": {
+     "correct": 14,
+     "wrong": 36,
+     "no_pick": 0
+    },
+    "VideoUnmaskSwap": {
+     "correct": 24,
+     "wrong": 26,
+     "no_pick": 0
+    }
+   },
+   "success": {
+    "ButtonUnmaskSwap": 11,
+    "VideoUnmaskSwap": 20
+   },
+   "vs_e0": {
+    "ButtonUnmaskSwap": {
+     "success": {
+      "episodes": 50,
+      "reference": 0.34,
+      "condition": 0.22,
+      "diff": -0.12,
+      "ci95": [
+       -0.26,
+       0.02
+      ],
+      "losses": 9,
+      "gains": 3,
+      "sign_p": 0.14599609375
+     },
+     "first_bin_correct": {
+      "episodes": 50,
+      "reference": 0.36,
+      "condition": 0.28,
+      "diff": -0.08,
+      "ci95": [
+       -0.22,
+       0.06
+      ],
+      "losses": 9,
+      "gains": 5,
+      "sign_p": 0.4239501953125
+     }
+    },
+    "VideoUnmaskSwap": {
+     "success": {
+      "episodes": 50,
+      "reference": 0.38,
+      "condition": 0.4,
+      "diff": 0.02,
+      "ci95": [
+       -0.08,
+       0.12
+      ],
+      "losses": 3,
+      "gains": 4,
+      "sign_p": 1.0
+     },
+     "first_bin_correct": {
+      "episodes": 50,
+      "reference": 0.42,
+      "condition": 0.48,
+      "diff": 0.06,
+      "ci95": [
+       -0.02,
+       0.16
+      ],
+      "losses": 1,
+      "gains": 4,
+      "sign_p": 0.375
+     }
+    }
+   },
+   "fallback_episodes": {
+    "ButtonUnmaskSwap": 0,
+    "VideoUnmaskSwap": 0
+   },
+   "vs_e0_no_fallback": {
+    "ButtonUnmaskSwap": {
+     "success": {
+      "episodes": 50,
+      "reference": 0.34,
+      "condition": 0.22,
+      "diff": -0.12,
+      "ci95": [
+       -0.26,
+       0.02
+      ],
+      "losses": 9,
+      "gains": 3,
+      "sign_p": 0.14599609375
+     },
+     "first_bin_correct": {
+      "episodes": 50,
+      "reference": 0.36,
+      "condition": 0.28,
+      "diff": -0.08,
+      "ci95": [
+       -0.22,
+       0.06
+      ],
+      "losses": 9,
+      "gains": 5,
+      "sign_p": 0.4239501953125
+     }
+    },
+    "VideoUnmaskSwap": {
+     "success": {
+      "episodes": 50,
+      "reference": 0.38,
+      "condition": 0.4,
+      "diff": 0.02,
+      "ci95": [
+       -0.08,
+       0.12
+      ],
+      "losses": 3,
+      "gains": 4,
+      "sign_p": 1.0
+     },
+     "first_bin_correct": {
+      "episodes": 50,
+      "reference": 0.42,
+      "condition": 0.48,
+      "diff": 0.06,
+      "ci95": [
+       -0.02,
+       0.16
+      ],
+      "losses": 1,
+      "gains": 4,
+      "sign_p": 0.375
+     }
+    }
+   }
+  }
+ },
+ "path_reference": {
+  "ButtonUnmaskSwap": {
+   "success": {
+    "episodes": 50,
+    "reference": 0.26,
+    "condition": 0.34,
+    "diff": 0.08,
+    "ci95": [
+     0.02,
+     0.16
+    ],
+    "losses": 0,
+    "gains": 4,
+    "sign_p": 0.125
+   },
+   "first_bin_correct": {
+    "episodes": 50,
+    "reference": 0.26,
+    "condition": 0.36,
+    "diff": 0.1,
+    "ci95": [
+     0.02,
+     0.2
+    ],
+    "losses": 0,
+    "gains": 5,
+    "sign_p": 0.0625
+   }
+  },
+  "VideoUnmaskSwap": {
+   "success": {
+    "episodes": 50,
+    "reference": 0.32,
+    "condition": 0.38,
+    "diff": 0.06,
+    "ci95": [
+     -0.02,
+     0.14
+    ],
+    "losses": 1,
+    "gains": 4,
+    "sign_p": 0.375
+   },
+   "first_bin_correct": {
+    "episodes": 50,
+    "reference": 0.42,
+    "condition": 0.42,
+    "diff": 0.0,
+    "ci95": [
+     -0.08,
+     0.08
+    ],
+    "losses": 2,
+    "gains": 2,
+    "sign_p": 1.0
+   }
+  }
+ }
+}

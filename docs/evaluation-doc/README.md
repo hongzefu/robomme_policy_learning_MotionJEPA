@@ -4,6 +4,7 @@
 
 | 档案 | 范围 | 状态 |
 | --- | --- | --- |
+| [两个 Swap 任务第一次取 bin](swap-first-bin-attn-seed42-1105/result.md) | ButtonUnmaskSwap、VideoUnmaskSwap 各 50 局；官方 ctx512 79999 与 motion 59999；靠近到闭合的注意力，motion 模型 4 个替换条件 | 成功 motion 29/100、基线 20/100；motion 回看开局是两任务共同 pattern，与选对选错无可见关系；Button 换 motion 后相对 E0 下降（17→7），Video 无显著变化；E4 未跑 |
 | [StopCube 真实 rollout](stopcube-rollout-1105/result.md) | 官方 ctx512 79999 与 motion 59999；官方 50 局全程模型控制，触发分布、注意力与进度探针 | 基线 7/50、motion 22/50；1527 次推理重放误差 0；资源已释放 |
 | [StopCube Oracle 下压与机制分析](stopcube-oracle-1104/result.md) | motion 59999 与官方 ctx512 79999；50局原历史询问、真实校准及同输入分析 | 7460询问点、74次校准、100次固定放手和16输入160原噪声机制分析完成；基线18/50、motion29/50；35图已逐张目视，非官方标准整局成绩 |
 | [StopCube 关键时间与动作第一阶段](stopcube-decision-1104/result.md) | motion 59999、seed42；原计划正常50局及悬停延长 | 用户已中止；28局终局、13成功15失败，accepted25局；父程序143退出，全部本轮进程已停，第一阶段未完成 |
