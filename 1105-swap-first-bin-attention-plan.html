@@ -114,24 +114,31 @@
 <tr><td>统计方式</td><td>描述：支持局数与反例</td><td>保留支持局数与反例，另加局级区间和第六节判定规则</td><td>新增</td></tr>
 <tr><td>双目标局的文字 query</td><td>两个目标色等权平均</td><td>只取第一目标色</td><td><b>不同</b>，只影响文字族</td></tr>
 </table></div>
-<p><b>对照闸门 <code>BRIDGE_OLD22</code>。</b>新代码先在上一轮已有的 22 局 Button 数据上跑（CPU，只读，不新增推理），窗口取 <code>G−3…G</code>，<code>G</code> 用上一轮已目视的“抓取”标注。两项输出：① 同一推理的单次指标必须和上一轮 <code>episode_analysis.json</code> 逐值相同，证明公式真的没变；② 窗口版 RB 与整局版 RB 的差值、窗口内最大 motion 窗是否仍是 <code>[160,193)</code>，只报告不设阈值，用来判断窗口结果能不能和上一轮结论对读。</p>
+<p><b>对照闸门 <code>BRIDGE_OLD22</code>。</b>新代码先在上一轮已有的 22 局 Button 数据上跑（CPU，只读，不新增推理），窗口取 <code>G−3…G</code>，<code>G</code> 用上一轮已目视的“抓取”标注。两项输出：① 同一推理的 <code>heads</code>、<code>streams</code>、<code>metrics</code>、<code>R2</code> 的 M/qw/U、<code>R4</code>（不含依赖整局的 R3 稳健列）逐元素和上一轮 <code>episode_analysis.json</code> 比较，<code>metric_maxabs</code> 取最大绝对差，容差 1e-5，证明公式真的没变；② 窗口版 RB 与整局版 RB 的差值、整局峰推理是否落在 <code>[G−3,G]</code>（<code>peak160_in_window</code>，手算应为 8/12），只报告不设阈值。这个闸门用旧 NPZ，验证不了从 rollout 记录重建 NPZ 那一段；重建由 S2 冒烟的新 NPZ 行和与质量分组负责。</p>
 <div class="tbl"><table>
 <tr><th>编号</th><th>问题</th><th>主读数</th></tr>
 <tr><td>P1</td><td>谁更会选</td><td>第一个 bin 选对率、官方成功率，按交换次数和 bin 数分层</td></tr>
 <tr><td>P2</td><td>是否回看开局</td><td>帧流 <code>[0,32)</code> 去汇聚点富集（RB）及是否高于 1</td></tr>
 <tr><td>P3</td><td>是否读交换过程</td><td>motion 流、帧流在交换区间的重叠计权富集</td></tr>
-<tr><td>P4</td><td>上一轮的头和 motion 窗口偏好在决策窗口内是否重现</td><td><code>L3H0</code>、<code>L16H0</code> 的开局偏好；窗口内最大 motion 窗是否为 <code>[160,193)</code>、是否由 <code>L17H1</code> 承担（不是整局固定峰，见上表）</td></tr>
+<tr><td>P4</td><td>上一轮的头和 motion 窗口偏好在决策窗口内是否重现</td><td><code>L3H0</code>、<code>L16H0</code> 的开局偏好；Button 看窗口内最大 motion 窗是否为 <code>[160,193)</code>、是否由 <code>L17H1</code> 承担（不是整局固定峰，见上表）。Video 的执行段窗口起点是 <code>D+32u</code>，通常不含 160，不与 160 比，改报最大窗起点及其与交换区间的重叠</td></tr>
 <tr><td>P5</td><td>选对和选错差在哪</td><td>P2～P4 在同模型内 correct 减 wrong 的局级差值</td></tr>
 <tr><td>P6</td><td>记忆区内部的通路</td><td>motion token 汇聚比例、R4 一跳间接读取（探索性）</td></tr>
 <tr><td>P7</td><td>其他头有没有峰值，换任务后是否改变</td><td>全部 18 层 × 8 头：逐次找 motion 流、帧流质量最大的头及其最关注的 motion 窗或帧；按 模型 × 任务 × 选对/选错 × 相对推理统计峰值头分布；两任务前 10 头重合数。motion 窗同时按绝对步和相对演示结束的步报告。事后挑最大值，一律探索性</td></tr>
 </table></div>
-<p><b>怎样才算 pattern，事先定死。</b>局级重采样 2000 次（种子 42），统计单位是局。</p>
+<p><b>怎样才算 pattern，事先定死。</b>局级重采样 2000 次（种子 42），统计单位是局。主读数只有下面 12 个区间，其余读数（按相对推理、按选对选错、头级、P6、P7）都是描述性或探索性，不进判定。每局先把窗口内 4 次推理取平均，一局只算一个值，避免伪重复。任一分组少于 10 局直接判“未见”。</p>
+<div class="tbl"><table>
+<tr><th>主读数</th><th>范围</th><th>区间数</th></tr>
+<tr><td>M1 帧流 <code>[0,32)</code> 窗口版 RB 富集（参照 1）</td><td>全部有窗口的局，模型 × 任务</td><td>4</td></tr>
+<tr><td>M2 motion 流交换区间重叠计权富集（参照 1）</td><td>同上，只有 motion 模型</td><td>2</td></tr>
+<tr><td>M3 M1 的 correct 减 wrong（参照 0）</td><td>模型 × 任务</td><td>4</td></tr>
+<tr><td>M4 M2 的 correct 减 wrong（参照 0）</td><td>只有 motion 模型</td><td>2</td></tr>
+</table></div>
 <div class="tbl"><table>
 <tr><th>结论</th><th>判定</th></tr>
 <tr><td>共同 pattern</td><td>同模型下两个任务方向相同，且两个任务的区间都不含参照值（富集看 1，差值看 0）</td></tr>
 <tr><td>任务特有</td><td>只有一个任务的区间不含参照值</td></tr>
 <tr><td>未见</td><td>两个任务都含参照值</td></tr>
-<tr><td>与选择相关</td><td>P5 的差值区间不含 0；头级结果未校正多重比较，一律标探索性</td></tr>
+<tr><td>与选择相关</td><td>M3 或 M4 的区间不含 0；12 个区间未校正多重比较，单个结果按线索读；头级结果一律标探索性</td></tr>
 </table></div>
 <p>注意力只说明“看哪里”，这些 pattern 不能证明因果。需要因果结论时，再用同一批局另外立计划做遮挡或替换。</p>
 
@@ -150,7 +157,7 @@
 <div class="tbl"><table>
 <tr><th>项目</th><th>估算</th><th>依据</th></tr>
 <tr><td>rollout 推理</td><td>每格 1250～4000 次，共 5000～16000 次</td><td>上一轮每局约 23 次；上限 80 次取自遮挡实验，正常失败局未实测</td></tr>
-<tr><td>rollout 记录</td><td>24～78 GiB</td><td>StopCube 实测 4.9 MiB/次</td></tr>
+<tr><td>rollout 记录</td><td>24～77 GiB</td><td>StopCube 实测 4.9 MiB/次</td></tr>
 <tr><td>注意力</td><td>最多 800 次，约 345 GiB</td><td>上一轮实测 84 + 358 MiB/次</td></tr>
 <tr><td>总存储</td><td>约 370～425 GiB，硬上限 600 GiB</td><td><code>/data</code> 剩 5.1 T</td></tr>
 <tr><td>rollout 时间</td><td>先 motion 0.75～2.5 小时，再基线 0.5～1.6 小时，合计约 1.3～4.1 小时</td><td>StopCube 单卡实测 motion 约 2.2 秒/次、基线约 1.4 秒/次，两卡折半；静态分片时先完成的卡要等另一张，实际会略长</td></tr>
@@ -162,7 +169,7 @@
 <tr><th>查什么</th><th>怎么查</th><th>过了说明什么</th><th>判定行</th></tr>
 <tr><td>200 局齐全</td><td>对清单封签逐局核终局</td><td>没有漏局、没有替换</td><td><code>ROLLOUT_COVERAGE=PASS cells=4 episodes=200 infra_errors=&lt;n&gt;</code></td></tr>
 <tr><td>记录能还原动作</td><td>窗口内每次推理走原路径重放，容差 1e-6</td><td>分析的输入就是实际决策的输入</td><td><code>ROLLOUT_REPLAY=PASS points=&lt;n&gt; same_path_maxabs=&lt;x&gt; tol=1e-6</code></td></tr>
-<tr><td>标签可信</td><td>最近 bin 与抬起 bin 比较；wrong 局官方不成功</td><td>选对选错不是算错的</td><td><code>FIRST_BIN_LABEL=PASS episodes=200 correct=&lt;n&gt; wrong=&lt;n&gt; no_pick=&lt;n&gt; geom_mismatch=&lt;n&gt; wrong_but_success=0</code></td></tr>
+<tr><td>标签可信</td><td>最近 bin 与抬起 bin 比较；wrong 局官方不成功</td><td>选对选错不是算错的</td><td><code>FIRST_BIN_LABEL=PASS episodes=200 correct=&lt;n&gt; wrong=&lt;n&gt; no_pick=&lt;n&gt; before_buttons=&lt;n&gt; geom_mismatch=&lt;n&gt; wrong_but_success=0</code>（<code>wrong_but_success</code> 只统计 <code>before_buttons=false</code> 的局；<code>geom_mismatch</code> 只报告并逐局目视，不单独判 FAIL）</td></tr>
 <tr><td>窗口正确</td><td>每个窗口核对 <code>G</code> 含闭合、无窗口局有原因</td><td>确实截断在闭合</td><td><code>FIRST_BIN_WINDOW=PASS windows=&lt;n&gt; complete=&lt;n&gt; incomplete=&lt;n&gt;</code></td></tr>
 <tr><td>注意力有效</td><td>行和、padding、有限性、展开路径动作差</td><td>注意力数组可用；展开路径差如实报告，不算逐位等价</td><td><code>ATTN_WINDOW=PASS records=&lt;n&gt; rowsum_err=&lt;x&gt; attn_path_maxabs=&lt;x&gt;</code></td></tr>
 <tr><td>主会话目视</td><td>全部窗口拼图：闭合帧、抬起帧；Video 裸露窗</td><td>几何判定与画面一致</td><td><code>WINDOW_VISUAL=PASS reviewed=&lt;n&gt; mismatches=&lt;n&gt;</code></td></tr>
@@ -180,7 +187,7 @@
 <tr><td>S3</td><td>正式 200 局 rollout：先 motion 占两卡，全部退出后再基线占两卡</td><td><code>ROLLOUT_COVERAGE</code></td></tr>
 <tr><td>S4</td><td>定窗口、打标签、目视</td><td><code>FIRST_BIN_LABEL</code>、<code>FIRST_BIN_WINDOW</code>、<code>WINDOW_VISUAL</code></td></tr>
 <tr><td>S5</td><td>离线算窗口注意力</td><td><code>ROLLOUT_REPLAY</code>、<code>ATTN_WINDOW</code></td></tr>
-<tr><td>S6</td><td>pattern 分析与报告，图目视复查</td><td><code>PATTERN_SUMMARY</code>；<code>REPORT_CONTENT_REVIEW=PASS</code></td></tr>
+<tr><td>S6</td><td>pattern 分析与报告，图目视复查</td><td><code>PATTERN_SUMMARY</code>；<code>REPORT_CONTENT_REVIEW=PASS findings=&lt;n&gt;</code>（一个 <code>sonnet</code> 只读审查报告与数值是否一致）</td></tr>
 </table></div>
 
 <h2>十一、子代理分工与合并（简述）</h2>
@@ -201,7 +208,7 @@
 <h2>〇、前置声明与红线</h2>
 <ol>
 <li>不改 <code>third_party/robomme_benchmark</code>、<code>rollout_offline.py</code>、<code>stopcube_runner.py</code> 与模型代码；<code>run_local.py</code> 不带 <code>bin_trace</code> 时命令必须逐字不变。</li>
-<li>不换模型、不换 seed、不为成功重试。基础设施故障才重试，每局至多 1 次并记录原因。</li>
+<li>不换模型、不换 seed、不为成功重试。基础设施故障才重试，每局至多 1 次并记录原因，做法是 <code>run_local --episodes &lt;局&gt; --spec &lt;原 spec&gt;</code>。策略 <code>reset</code> 每局把随机数重置为 seed，结果与块内顺序无关（<code>policy.py::reset</code>）。</li>
 <li>新 run 名 <code>swap-first-bin-attn-seed42-1105</code>，产物根 <code>O=v1-store/evaluation/swap-first-bin-attn-seed42-1105</code>；不写上一轮目录。</li>
 <li>不操作其他用户或任务的进程与 tmux；tmux 前缀 <code>sfb-</code>；每次清理只针对清单内确切名称。</li>
 <li>总存储超过 600 GiB 立即停止，报告用户。</li>
@@ -214,8 +221,8 @@
 <h3>1.1 <code>scripts/interpret/bin_trace_runner.py</code>（新）</h3>
 <ul>
 <li>入口按 <code>stopcube_runner.py::evaluate</code> 的结构，<code>TraceRunner</code>、<code>TraceEvaluator</code> 对应新类；只接受 <code>ButtonUnmaskSwap</code>、<code>VideoUnmaskSwap</code>。</li>
-<li>每步写 <code>client/traces/&lt;nonce&gt;/step_trace.jsonl</code>，必含 <code>rollout_offline.load_trace</code> 要的键：<code>event</code>、<code>episode_key</code>、<code>infer_seq</code>、<code>row_in_chunk</code>、<code>chunk_start_env_step</code>、<code>state_before</code>；另含 <code>action_index</code>、<code>exec_start_idx</code>、<code>command_action</code>、<code>executed_action</code>、<code>state_after</code>、<code>env_step_before/after</code>、<code>tcp_before/after</code>、<code>bins_before/after</code>（按 <code>spawned_bins</code> 顺序的位置列表）。</li>
-<li>回执写 <code>difficulty</code>、<code>swap_times</code>、<code>pick_times</code>、<code>swap_end</code>（<code>swap_schedule[-1][3]</code>）、<code>D</code>、<code>exec_start_idx</code>、<code>color_names</code>、<code>first_target_bin_index</code>（<code>selected_bins[0]</code> 在 <code>spawned_bins</code> 中的下标）。读取只读，不改环境，不调用多余 <code>step</code>。</li>
+<li>每步写 <code>client/traces/&lt;nonce&gt;/step_trace.jsonl</code>，必含 <code>rollout_offline.load_trace</code> 要的键：<code>event</code>、<code>episode_key</code>、<code>infer_seq</code>、<code>row_in_chunk</code>、<code>chunk_start_env_step</code>、<code>state_before</code>；另含 <code>action_index</code>、<code>exec_start_idx</code>、<code>command_action</code>、<code>executed_action</code>、<code>state_after</code>、<code>env_step_before/after</code>、<code>tcp_before/after</code>、<code>bins_before/after</code>（按 <code>spawned_bins</code> 顺序的位置列表）、<code>subgoal_index</code>（环境属性 <code>timestep</code>，开跑前核实它就是 <code>sequential_task_check</code> 的子目标序号；Button 按完两个按钮后不小于 2）。</li>
+<li>回执写 <code>difficulty</code>、<code>swap_times</code>、<code>pick_times</code>、<code>swap_end</code>（<code>swap_schedule[-1][3]</code>）、<code>D</code>、<code>exec_start_idx</code>、<code>color_names</code>、<code>prompt</code>（任务目标原文，供定位目标色 token）、<code>first_target_bin_index</code>（<code>selected_bins[0]</code> 在 <code>spawned_bins</code> 中的下标）。读取只读，不改环境，不调用多余 <code>step</code>。</li>
 </ul>
 <h3>1.2 <code>scripts/interpret/run_local.py</code></h3>
 <ul>
@@ -225,17 +232,17 @@
 <h3>1.3 <code>scripts/interpret/first_bin_windows.py</code>（新）</h3>
 <ul>
 <li>输入 <code>--run-root</code>（可重复，传 <code>g0</code>、<code>g1</code> 两个分片）、<code>--output</code>。对每份 accepted 终局读轨迹与回执，局号去重后必须正好 100 局（每模型）。</li>
-<li><code>L</code>：<code>env_step_after ≥ swap_end</code> 中，第一个有 bin 的 z &gt; 0.15 的行；用常量 <code>BIN_PICKUP_Z = 0.15</code>，并由测试核对与 <code>subgoal_evaluate_func.is_bin_pickup</code> 同值。</li>
+<li><code>L</code>：<code>env_step_after ≥ swap_end</code> 中，第一个有 bin 的 z &gt; 0.15 的行；用常量 <code>BIN_PICKUP_Z = 0.15</code>，由测试按文本读主检出的 <code>subgoal_evaluate_func.py</code> 核对同值（worktree 子模块为空，不 import）。<code>before_buttons = subgoal_index(L 行) &lt; 2</code>，只对 Button 有意义，Video 记 null。</li>
 <li><code>C</code>：<code>L</code> 之前最后一行满足上一行 <code>executed_action[7]&gt;0</code> 且本行 <code>≤0</code>；没有则 <code>no_close_before_pick</code>，计入判定行。</li>
 <li><code>G=该行 infer_seq</code>；<code>window=[max(0,G-3)…G]</code>；输出 <code>windows.json</code>：<code>episode_key、model、shard、label、picked_bin、first_target_bin、G、window、C、close_row_in_chunk、L、earlier_closes（每项含步数与最近 bin）、nearest_bin_at_C、before_buttons、outcome、difficulty、swap_times、pick_times、bin_count</code>。</li>
 <li>末行打印 <code>FIRST_BIN_LABEL</code>、<code>FIRST_BIN_WINDOW</code>；<code>wrong_but_success&gt;0</code> 或 <code>geom_mismatch&gt;0</code> 打印 FAIL 与局号，不改判据。</li>
-<li>生成拼图：每局 <code>C</code> 帧与 <code>L</code> 帧，每张 20 局。视频路径从 <code>attempts/*/client/videos</code> 取。</li>
+<li>生成拼图：每局 <code>C</code> 帧与 <code>L</code> 帧，每张 20 局。视频路径从 <code>attempts/*/client/videos</code> 取，视频帧号 = <code>env_step_after − 1</code>，冒烟时目视核对。</li>
 </ul>
 <h3>1.4 <code>scripts/interpret/first_bin_offline.py</code>（新）</h3>
 <ul>
 <li>从 <code>rollout_offline</code> 导入 <code>load_accepted</code>、<code>load_trace</code>，从 <code>offline_query</code> 导入 <code>replay_query</code>、<code>unpack_observation</code>。只处理 <code>windows.json</code> 内的 <code>rollout_&lt;seq&gt;.npz</code>。参数 <code>--shard g0|g1</code> 只算本分片的局，两卡各一个进程。</li>
 <li>每条先走原路径重放，超 1e-6 立即非零退出；再用记录里的 <code>sample_rng</code> 和 <code>noise</code> 调 <code>AttnAdapter.run(..., out_f16=True, save_prefix=True)</code>。</li>
-<li>输出 <code>&lt;output&gt;/&lt;nonce&gt;/infer_&lt;seq&gt;.npz</code>、<code>prefix_&lt;seq&gt;.npz</code>，键沿用 <code>serve_policy_attn.NPZ_KEYS</code> 与 <code>PREFIX_NPZ_KEYS</code>，额外存 <code>same_path_maxabs</code>、<code>attn_path_maxabs</code>、<code>input_sha256</code>；断点续跑按 <code>input_sha256</code> 跳过。<code>RolloutRecorder</code> 记录的键和 <code>AttnRecorder</code> 不完全相同（如 <code>mem_order</code>、<code>frame_times</code>、<code>txt_len</code>、<code>top_frames</code>），W3 须从观测重建并由测试核对键表与 dtype，缺项如实报告，不填假值。</li>
+<li>输出 <code>&lt;output&gt;/&lt;nonce&gt;/infer_&lt;seq&gt;.npz</code>、<code>prefix_&lt;seq&gt;.npz</code>，键沿用 <code>serve_policy_attn.NPZ_KEYS</code> 与 <code>PREFIX_NPZ_KEYS</code>，额外存 <code>same_path_maxabs</code>、<code>attn_path_maxabs</code>、<code>input_sha256</code>；断点续跑按 <code>input_sha256</code> 跳过。<code>RolloutRecorder</code> 记录缺 <code>exec_start_idx</code>、<code>mem_mask</code>、<code>motion_mask</code>、<code>state</code>、<code>P</code>、<code>MEM</code>、<code>txt_len</code>、<code>top_frames</code>：按 <code>AttnRecorder.build_record</code> 同算法从观测重建，<code>exec_start_idx</code> 取轨迹回执。<code>AttnAdapter.run</code> 的结果带 batch 轴，须和 <code>make_sample_fn</code> 一样去掉，得到 <code>probs_action (10,18,8,20,P+20)</code>、<code>probs_text (18,8,64,P)</code>、<code>probs_prefix (18,8,P,P)</code>。测试核对键表与 dtype，缺项如实报告，不填假值。</li>
 <li>末行 <code>ROLLOUT_REPLAY</code>、<code>ATTN_WINDOW</code>。</li>
 </ul>
 <h3>1.5 <code>scripts/interpret/analysis/first_bin_attention.py</code>（新）</h3>
@@ -306,7 +313,7 @@ tmux new-session -d -s sfb-analysis "bash $O/run_analysis.sh"</pre>
 <tr><td>窗口只有 4 次，汇聚点判定不稳</td><td>同时报原始值和窗口版 RB；<code>BRIDGE_OLD22</code> 实测差异，差异大时 RB 只作描述</td></tr>
 <tr><td>静态分片两卡结束时间不同</td><td>接受少量空等，不加调度（K11）；两卡都退出后才换模型</td></tr>
 <tr><td>单次重放通过但记录键与旧 NPZ 不同，旧函数报错或静默算错</td><td>W3 键表测试；<code>BRIDGE_OLD22</code> 只能验证旧 NPZ，所以冒烟时另查 1 局新 NPZ 的行和、质量分组</td></tr>
-<tr><td>块内多局共用一个策略服务，采样随机数可能随块内顺序变化（未核实）</td><td>不和 10-31 官方结果逐局对比；分片在开工前固定，不中途改</td></tr>
+<tr><td>每块 5 局重启一次服务；Video 首包 D+1 帧的编码开销未计入估算</td><td>S2 记录起服务到首次推理的墙钟和 Video 首包耗时，修正估算；超预估 2 倍告知用户并继续</td></tr>
 </table></div>
 
 <h2>六、盲区</h2>
@@ -328,6 +335,17 @@ tmux new-session -d -s sfb-analysis "bash $O/run_analysis.sh"</pre>
 <li>只逐路径 add；子代理不 push；每次合并后 push。实施中调整按第 2 条：先对抗验证，事后写入本计划“实施中调整”小节。</li>
 <li>日志按第 12 条 (3) 清洗后归档。</li>
 </ul>
+<h2>八、实施中调整</h2>
+<p>开工前对抗验证：<code>ADJUST_REVIEW=FAIL scale=same findings=10 blocking=2</code>，锚定 <code>e9a4852</code>。主会话回源码核实 <code>policy.py::reset</code>、<code>RolloutRecorder.build_record</code>、派发前置条件后，按最小改法修订，规模不变。</p>
+<div class="tbl"><table>
+<tr><th>问题</th><th>旧 → 新</th></tr>
+<tr><td>F1 按钮前抬起算不出、闸门矛盾</td><td>轨迹加 <code>subgoal_index</code>；<code>wrong_but_success</code> 只统计 <code>before_buttons=false</code></td></tr>
+<tr><td>F2 pattern 规则没定死</td><td>主读数固定 12 个区间；每局 4 次先平均；分组少于 10 局判未见</td></tr>
+<tr><td>F3 Video 没有 160 窗</td><td><code>[160,193)</code> 只比 Button，Video 报最大窗起点与交换重叠</td></tr>
+<tr><td>F4 对照闸门无算法</td><td>写明比较键、容差 1e-5、<code>peak160_in_window</code> 定义</td></tr>
+<tr><td>F5 重建键和形状</td><td>列出缺失键来源、去 batch 轴、回执写 prompt</td></tr>
+<tr><td>F6、F7、F8、F9、F10</td><td>冒烟记录启动开销；删除错误的随机数风险；Z 常量按文本核对；写明视频帧号映射；算术与判定行小修</td></tr>
+</table></div>
 </main>
 </body>
 </html>
