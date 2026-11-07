@@ -1,5 +1,7 @@
 # 主图逻辑说明：两条通路与「不按动作调整」
 
+> 更新（美东 2026-11-06）：帧读 motion 与路径分解已在 PatternLock、RouteStick 上补测，三跳同样成立，经帧占比 58%～67%，经文字 13%～23%，见 `result.md`「三跳在 PatternLock、RouteStick 上的验证」和 `records/pathway-mot-summary.txt`。下文写「未测」的地方以这里为准；图本身还是 Swap 的数字。
+
 写给要把 `fig_pathway.pdf` 放进论文的人。全部数字来自仓库 HEAD `1983b0b` 已归档的文件，记号 `D=docs/evaluation-doc/subgoal-rollout-attn-seed42-1106`、`S=docs/evaluation-doc/swap-first-bin-attn-seed42-1105`。图由 `plot_pathway_figure.py` 从数据文件生成，面板 (a) 示意图上的标签也由脚本从同一份数据格式化，不是手抄。数字写法「a|b」在第一部分指 Button | Video 两个 Swap 任务，在第二部分指 PatternLock、RouteStick。
 
 ## 1. 核心论点（一段话）

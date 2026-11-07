@@ -179,7 +179,7 @@ motion 模型文字读 motion 流，在 RouteStick 上真对位 1.30 [1.19, 1.39
 
 用户原话（美东 2026-11-06）：「普通的 memory 它会首先先吸收这个 motion 的 memory，然后这个 language……会 attend 到这个普通的 memory token，然后最后再由 action 来吸收，这样的能力有吗？」「你先不看对应位置的叙述……纯粹是不同表征之间。」
 
-帧读 motion 需要 prefix 注意力，本轮没有存，所以这一跳的数字来自两个 Swap 任务闭合前 4 次推理（脚本 [chain_hops.py](records/chain_hops.py)，输出 [chain-hops.txt](records/chain-hops.txt)）。文字、动作的逐层读取本轮也有（[layer_flow.py](records/layer_flow.py)，[layer-flow.json](records/layer-flow.json)）。累积和路径是注意力近似，`alpha` 取 0.2～0.8 复核。
+下表数字来自两个 Swap 任务闭合前 4 次推理，PatternLock、RouteStick 的验证见下一节（脚本 [chain_hops.py](records/chain_hops.py)，输出 [chain-hops.txt](records/chain-hops.txt)）。文字、动作的逐层读取本轮也有（[layer_flow.py](records/layer_flow.py)，[layer-flow.json](records/layer-flow.json)）。累积和路径是注意力近似，`alpha` 取 0.2～0.8 复核。
 
 | 环节 | Button | Video | 判断 |
 | --- | ---: | ---: | --- |
@@ -197,6 +197,28 @@ motion 模型文字读 motion 流，在 RouteStick 上真对位 1.30 [1.19, 1.39
 本轮两任务的文字读取相同：L0 读帧 27%～31%、读 motion 24%～32%；L1 读 motion 18%～35%；L2 起都很少。动作读帧在 RouteStick 的 L16 为 11.1%（基线 3.9%）。
 
 结论：帧吸收 motion、文字读记忆、动作读文字，这三件事单独都成立；但「motion → 帧 → 文字 → 动作」这条串联很弱，因为文字读记忆发生在帧吸收 motion 之前。更大的两条是「motion → 帧 → 动作（L14～L16）」和「motion → 文字（L0、L1）→ 动作」。这些都是注意力读数，没有验证信息真的这样流动。
+
+### 三跳在 PatternLock、RouteStick 上的验证
+
+用户原话（美东 2026-11-06）：「第一部分的这个线对于我们这个 pattern lock 和 root stake 两个任务都有效果吗？你检查一下。」「这一轮也要存下来！」「不要省略这些内容！」
+
+记录的输入离线补算了完整注意力，每次推理的 `infer_*.npz`（约 92 MB）和 `prefix_*.npz`（约 404 MB）都落盘在 `v1-store/evaluation/subgoal-rollout-attn-seed42-1106/<模型>/full-attn/`（脚本 [full_attention_offline.py](records/full_attention_offline.py)）。这超过了计划的软线和 300 GB 硬停线，是用户明确要求。路径计算 [pathway_flow.py](records/pathway_flow.py)，公式同 Swap，同一次 Swap 推理上交叉核对 `PATHWAY_CROSSCHECK=PASS direct_err=1.19e-07 rollout_err=3.58e-07`。汇总 [pathway-mot-summary.txt](records/pathway-mot-summary.txt)、[pathway-mot-summary.json](records/pathway-mot-summary.json)，判定行 [pathway-checks.txt](records/pathway-checks.txt)。motion 模型两任务各 50 局、全部 495 次推理。
+
+| 环节 | PatternLock | RouteStick | Swap（Button、Video，4 次推理） |
+| --- | ---: | ---: | ---: |
+| 帧读 motion：L0、L1 | 18%、44% | 30%、58% | 50%、69%；25%、57% |
+| 帧累积 motion：L0 后 → L2 后 → 末层 | 9% → 31% → 34% | 15% → 44% → 50% | 25% → 54% → 60%；12% → 41% → 47% |
+| 文字读帧：L0、L1 | 30.5%、2.7% | 27.5%、1.4% | 26.5%、1.5%；26.2%、3.3% |
+| 文字直接读 motion：L0、L1 | 24%、18% | 32%、35% | 33%、56%；24%、33% |
+| 文字经帧拿 motion，单层最大（L16） | 1.3% | 1.6% | 2.3%；2.2% |
+| 动作读文字（范围，均值） | 11%～66%，32% | 8%～65%，30% | 8%～63%，30%；9%～64%，31% |
+| 动作读帧：L14、L15、L16 | 4.3、5.5、11.8% | 4.8、5.4、11.4% | 4.9、5.4、4.0%；3.0、3.4、5.1% |
+| 动作里来自 motion（`alpha=0.5`） | 4.79% [4.35, 5.24] | 6.83% [6.44, 7.22] | 7.7%；4.7% |
+| 经帧的占比（`alpha` 0.2～0.8） | 59%～67% | 58%～67% | 40%～56% |
+| 经文字的占比 | 15%～23% | 13%～23% | 18%～32% |
+| 经图像的占比 | 11%～14% | 8%～12% | 13%～18% |
+
+三跳在两个任务上都成立，形状和 Swap 一致，路线 A 的占比还更高；「motion → 帧 → 文字 → 动作」同样很弱，文字读帧也主要在 L0。两任务帧里的 motion 含量低于 Swap，这和 motion token 更少相容（平均约 3.5、7.0 个），未单独验证。这些是注意力读数，不证明信息真的这样流动。
 
 ### 论文主图
 
