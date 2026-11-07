@@ -18,6 +18,7 @@
 | 目录 | 内容 | 状态 |
 |---|---|---|
 | [context concat](orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k/result.md) | 32帧4×4+每窗1个1024维motion token（总608），8卡/B128/60k，首条；对照上表 split | 完成：60000步/退出0，12份上传及全量读回、G12均PASS，31小时10分47秒 |
+| [context Wan 时间池化](orig100-ctx32x4x4-wan-timepool8x8-b128-60k/launch.md) | 32帧4×4+每窗1个1024维零参数池化 token（总608），8卡/B128/60k；替换 stage2 encoder | 训练中 |
 | [modulation concat](orig100-m32x4x4-modul-motion-s2concat1x1024-b128-60k/launch.md) | 与context concat仅融合方式/宽度不同 | 用户10-31放弃，未训练 |
 
 ### 官方16×100两条完整VLA短测（2026-10-28）
