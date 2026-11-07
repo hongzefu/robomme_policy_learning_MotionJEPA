@@ -228,7 +228,9 @@ motion 模型文字读 motion 流，在 RouteStick 上真对位 1.30 [1.19, 1.39
 
 图 [fig_pathway.pdf](records/paper-figures/fig_pathway.pdf)，逻辑与英文图注 [fig_pathway-logic.md](records/paper-figures/fig_pathway-logic.md)，脚本 [plot_pathway_figure.py](records/paper-figures/plot_pathway_figure.py)。第一版由 Fable 代理起草，主会话目视复查并修正，独立核对 `PAPER_FIG_REVIEW=FAIL findings=13 errors=1`（(d) 的样本标注，已修）。
 
-**版本 2（美东 2026-11-07）**，用户原话：「我现在其实只要图 A、B 和 C 就可以了……图 B 的话我就只要留一个」「图 A 你现在这样画不对，就是你要根据这个 prefix 和 suffix 的排列顺序，然后用矩形框来表示……先看出它这个 masking 的关系。看完了 masking 关系之后，再用这个箭头和这个比例来说清楚是哪些层是有特别多的这个联系的」「我说的『图 b』是指的是这个折线图，你还是要保留的」。改动：(a) 按真实序列顺序画矩形块（记忆区 608 槽内帧与 motion 按时刻交错 → 第三人称图 256 → 手腕图 256 → 文字 28 ‖ 动作 20），上方灰色弧线是掩码（由数据判定恰为 0 的格），下方彩色正交箭头是分层强边；(b) 只留一张两任务合并的逐层折线；去掉 (d)。第一部分数字改用本轮 PatternLock | RouteStick 的 motion 模型完整注意力（`mot/pathway/*.npz`，100 局 495 次推理），不再借 Swap 的数。主会话目视复查了位图（无重叠、无溢出、箭头正交），未派独立复核。
+**版本 2（美东 2026-11-07）**，用户原话：「我现在其实只要图 A、B 和 C 就可以了……图 B 的话我就只要留一个」「图 A 你现在这样画不对，就是你要根据这个 prefix 和 suffix 的排列顺序，然后用矩形框来表示……先看出它这个 masking 的关系。看完了 masking 关系之后，再用这个箭头和这个比例来说清楚是哪些层是有特别多的这个联系的」「我说的『图 b』是指的是这个折线图，你还是要保留的」。改动：(a) 按真实序列顺序画矩形块（记忆区 608 槽内帧与 motion 按时刻交错 → 第三人称图 256 → 手腕图 256 → 文字 28 ‖ 动作 20），上方灰色弧线是掩码（由数据判定恰为 0 的格），下方彩色正交箭头是分层强边；(b) 只留一张两任务合并的逐层折线；去掉 (d)。第一部分数字改用本轮 PatternLock | RouteStick 的 motion 模型完整注意力（`mot/pathway/*.npz`，100 局 495 次推理），不再借 Swap 的数。
+
+**版本 3（美东 2026-11-07，现行）**，用户原话：「参考一下别人的 paper，这个 attention mask 应该怎么做？你现在这个太粗糙了。attention mask 应该是用矩形框来显示它是怎么 masking 的」「你这个箭头也不要直接左右指……不需要折线，就是一条水平的箭头就可以了」「总共是十几层，你这个箭头的意思就是说，每一层最重要的信息，你要能够画出来」。(a) 改为左侧 6×6 块状掩码矩阵（query 行 × key 列，实心 = 可见，由数据判定）＋右侧 18 行逐层水平箭头图（每行每个读者块一条直箭头指向其最大外部来源，动作画前两名，线宽与数字 = 占比，颜色 = 来源）；数值落在 `records/paper-figures/fig_pathway-layers.json`。主会话目视复查了四轮位图（标题、列名、图例、色条标签的碰撞逐一修掉），终版无重叠、无裁切；未派独立复核。
 
 ![论文主图](records/paper-figures/fig_pathway.png)
 

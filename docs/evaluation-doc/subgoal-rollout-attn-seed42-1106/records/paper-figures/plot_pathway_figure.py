@@ -114,134 +114,130 @@ def matrix(task, model, reader, stream):
     return E[:rows, :cols], N[:rows, :cols], c
 
 # ----------------------------------------------------------------------------- 画布
-W, H = 7.2, 8.0
+W, H = 7.2, 8.85
+YOFF = 0.15   # 所有面板统一上移的英寸数
 fig = plt.figure(figsize=(W, H))
 def ax_in(x, y, w, h, **kw):
-    return fig.add_axes([x / W, y / H, w / W, h / H], **kw)
+    return fig.add_axes([x / W, (y + YOFF) / H, w / W, h / H], **kw)
 import textwrap
 def header(y, text, bold=True, color=INK, x=0.06, width=138):
     lines = [text] if bold else textwrap.wrap(text, width)
     for i, line in enumerate(lines):
-        fig.text(x / W, (y - i * 0.105) / H, line, fontsize=7.5 if bold else 6.5, fontweight="bold" if bold else "normal",
+        fig.text(x / W, (y + YOFF - i * 0.105) / H, line, fontsize=7.5 if bold else 6.5, fontweight="bold" if bold else "normal",
                  va="bottom", ha="left", color=color)
 def panel_tag(ax, tag, dx, dy):
     ax.text(dx, dy, tag, transform=ax.transAxes, fontsize=8, fontweight="bold", va="bottom", ha="left")
 
 n_ep = sum(stat[t]["episodes"] for t in TASKS)
-header(7.84, "I.  Two attention pathways carry motion-token content into the action tokens")
-header(7.72, f"Motion model, PatternLock | RouteStick, seed 42, {n_ep} episodes / {inferences} inferences with full attention stored; "
-             "numbers are PatternLock | RouteStick, layer-mean over heads, episode-equal. (a) token layout in sequence order, the attention mask "
-             "(grey), and the strong edges by layer (colour); (b) the same edges layer by layer, both tasks pooled.",
+header(8.54, "I.  Two attention pathways carry motion-token content into the action tokens")
+header(8.42, f"Motion model, PatternLock | RouteStick, seed 42, {n_ep} episodes / {inferences} inferences, head-averaged, episode-equal. (a) the attention mask "
+             "as a block matrix and, per layer, where each block mainly reads; (b) the pathway edges per layer, both tasks pooled.",
        bold=False, color=INK2)
 
-# ============================================================================ (a) 序列布局 + 掩码 + 分层通路
-ax = ax_in(0.25, 3.75, 6.80, 3.70)
-ax.set_xlim(0, 100); ax.set_ylim(-5, 100); ax.axis("off")
-panel_tag(ax, "(a)", -0.03, 0.97)
+# ============================================================================ (a) 块状掩码矩阵 + 逐层水平箭头
+BLOCKS = [("frames", [0, 1], C1), ("motion", [2, 3], C2), ("image\n3rd", [4], C4), ("image\nwrist", [5], C4), ("language", [6], C3), ("action", [7], INK2)]
+def fold6(direct_by_layer, counts):
+    """(层, 8, 8) → (层, 6, 6)，读者组内按 token 数加权（单组读者权重为 1）。"""
+    M = np.zeros((direct_by_layer.shape[0], 6, 6))
+    for a, (_, q, _) in enumerate(BLOCKS):
+        w = counts[q] / max(counts[q].sum(), 1e-9) if len(q) > 1 else np.ones(1)
+        for b, (_, k, _) in enumerate(BLOCKS):
+            M[:, a, b] = (w[None, :, None] * direct_by_layer[:, q][:, :, k]).sum((1, 2))
+    return M
+M6 = np.mean([np.mean([fold6(i["direct"], i["counts"]) for i in episodes[t]], 0) for t in TASKS], 0) * 100   # 两任务等权
+mask6 = np.array([[all(mask_zero[q, k] for q in qs for k in ks) for _, ks, _ in BLOCKS] for _, qs, _ in BLOCKS])
+sizes = [f"{FRAME_TOKENS}", f"≈{stat['PatternLock']['motion_tokens']:.1f}|{stat['RouteStick']['motion_tokens']:.1f}", f"{N_IMG}", f"{N_IMG}", f"{TXT}", f"{HORIZON}"]
 
-def rbox(x0, y0, x1, y1, fc, ec=INK3, lw=0.6, z=2, r=1.2):
-    ax.add_patch(FancyBboxPatch((x0, y0), x1 - x0, y1 - y0, boxstyle=f"round,pad=0,rounding_size={r}", fc=fc, ec=ec, lw=lw, zorder=z))
-def orth(points, color, ls="-", lw=1.0, z=4):
-    pts = np.array(points, float)
-    if len(pts) > 2:
-        ax.plot(pts[:-1, 0], pts[:-1, 1], color=color, lw=lw, ls=ls, solid_capstyle="round", zorder=z)
-    ax.annotate("", xy=pts[-1], xytext=pts[-2], arrowprops=dict(arrowstyle="-|>", color=color, lw=lw, linestyle=ls,
-                shrinkA=0, shrinkB=0, mutation_scale=6), zorder=z)
-def label(x, y, text, color=INK, ha="left", va="center", fs=6.3, z=6):
-    ax.text(x, y, text, ha=ha, va=va, fontsize=fs, color=color, linespacing=1.1, zorder=z,
-            bbox=dict(boxstyle="square,pad=0.1", fc="#ffffff", ec="none", alpha=0.9))
+# --- (a) 左：块状注意力掩码（行 = query 块，列 = key 块，实心 = 可见）
+axm = ax_in(1.00, 5.95, 1.50, 1.50)
+panel_tag(axm, "(a)", -0.62, 1.30)
+axm.set_xlim(-0.5, 5.5); axm.set_ylim(5.5, -0.5); axm.set_aspect("equal")
+for r in range(6):
+    for c in range(6):
+        allowed = not mask6[r, c]
+        fc = "#3a3a3a" if allowed else "#ffffff"
+        if allowed and r == 5 and c == 5:
+            fc = "#9a9a9a"   # 动作内部因果
+        axm.add_patch(Rectangle((c - 0.5, r - 0.5), 1, 1, fc=fc, ec="#ffffff", lw=1.0))
+axm.text(5, 5, "causal", ha="center", va="center", fontsize=4.6, color="#ffffff")
+labels6 = [n.replace("\n", " ") for n, _, _ in BLOCKS]
+axm.set_xticks(range(6)); axm.set_xticklabels([f"{n}\n{sz}" for n, sz in zip(labels6, sizes)], fontsize=5.0, rotation=90)
+axm.set_yticks(range(6)); axm.set_yticklabels(labels6, fontsize=5.0)
+axm.tick_params(length=0, pad=2)
+axm.xaxis.set_ticks_position("top"); axm.xaxis.set_label_position("top")
+axm.set_xlabel("key (attended) block · tokens", labelpad=3, fontsize=5.8); axm.set_ylabel("query (reading) block", labelpad=2, fontsize=5.8)
+for sp in axm.spines.values():
+    sp.set_visible(False)
+axm.add_patch(Rectangle((-0.5, -0.5), 6, 6, fc="none", ec=INK3, lw=0.5))
+axm.plot([4.5, 4.5], [-0.5, 5.5], color="#ffffff", lw=2.2); axm.plot([-0.5, 5.5], [4.5, 4.5], color="#ffffff", lw=2.2)
+fig.text(0.40 / W, (5.68 + YOFF) / H, "Block attention mask (dark = may attend; verified\nas exactly 0 elsewhere in every layer, head, episode).\nprefix = memory → images → language; suffix = action.",
+         fontsize=5.6, color=INK2, va="top", ha="left", linespacing=1.2)
 
-# 序列行（prefix → suffix）
-Y0, Y1 = 55, 66
-MEMX = (1.0, 42.0); FR_SPLIT = MEMX[0] + (MEMX[1] - MEMX[0]) * 0.86
-IMB = (45.5, 57.0); IMW = (58.5, 70.0); TXTX = (72.5, 80.5); DIV = 83.2; ACT = (86.0, 99.0)
-rbox(*MEMX[:1], Y0, MEMX[1], Y1, "#eef2f8")
-ax.plot([FR_SPLIT, FR_SPLIT], [Y0, Y1], color=INK3, lw=0.5, ls=":", zorder=3)
-ax.text((MEMX[0] + FR_SPLIT) / 2, Y1 - 1.6, "Frame memory · demonstration", ha="center", va="top", fontsize=6.8, fontweight="bold", zorder=3)
-ax.text((FR_SPLIT + MEMX[1]) / 2, Y1 - 1.6, "exec.", ha="center", va="top", fontsize=6.3, fontweight="bold", zorder=3)
-# motion token：按时间交错，画成橙色细条
-motion_xs = [6.5, 13.0, 19.5, 26.0, 32.5, 39.5]
-for mx in motion_xs:
-    ax.add_patch(Rectangle((mx - 0.35, Y0 + 3.8), 0.7, Y1 - Y0 - 6.6, fc=C2, ec="none", zorder=3))
-ax.text((MEMX[0] + MEMX[1]) / 2, Y0 + 0.9, f"{FRAME_TOKENS} frame tok. + ≈{stat['PatternLock']['motion_tokens']:.1f} | "
-        f"{stat['RouteStick']['motion_tokens']:.1f} motion tok. (orange), time-interleaved", ha="center", va="bottom", fontsize=5.6, color=INK2, zorder=3)
-rbox(*IMB[:1], Y0, IMB[1], Y1, "#f5f5f3"); ax.text(sum(IMB) / 2, (Y0 + Y1) / 2 + 1.2, "Current image\n3rd person", ha="center", va="center", fontsize=6.5, fontweight="bold", zorder=3)
-ax.text(sum(IMB) / 2, Y0 + 1.0, f"{N_IMG} tokens", ha="center", va="bottom", fontsize=5.9, color=INK2, zorder=3)
-rbox(*IMW[:1], Y0, IMW[1], Y1, "#f5f5f3"); ax.text(sum(IMW) / 2, (Y0 + Y1) / 2 + 1.2, "Current image\nwrist", ha="center", va="center", fontsize=6.5, fontweight="bold", zorder=3)
-ax.text(sum(IMW) / 2, Y0 + 1.0, f"{N_IMG} tokens", ha="center", va="bottom", fontsize=5.9, color=INK2, zorder=3)
-rbox(*TXTX[:1], Y0, TXTX[1], Y1, "#fdf1ec"); ax.text(sum(TXTX) / 2, (Y0 + Y1) / 2 + 1.2, "Language", ha="center", va="center", fontsize=6.5, fontweight="bold", zorder=3)
-ax.text(sum(TXTX) / 2, Y0 + 1.0, f"{TXT} tokens", ha="center", va="bottom", fontsize=5.9, color=INK2, zorder=3)
-ax.plot([DIV, DIV], [Y0 - 3, Y1 + 3], color=INK3, lw=0.6, ls="--", zorder=3)
-ax.text(DIV - 0.8, Y1 + 3.2, "prefix", ha="right", va="bottom", fontsize=6, color=INK3)
-ax.text(DIV + 0.8, Y1 + 3.2, "suffix", ha="left", va="bottom", fontsize=6, color=INK3)
-rbox(*ACT[:1], Y0, ACT[1], Y1, "#f1f1f1"); ax.text(sum(ACT) / 2, (Y0 + Y1) / 2 + 1.2, "Action", ha="center", va="center", fontsize=6.5, fontweight="bold", zorder=3)
-ax.text(sum(ACT) / 2, Y0 + 1.0, f"{HORIZON} tokens", ha="center", va="bottom", fontsize=5.9, color=INK2, zorder=3)
-
-# 掩码（灰色，画在序列行上方）：谁可以读谁
-def mask_arc(x_from, x_to, y, text, both=False, text_x=None, color=INK3):
-    """从 x_from 顶部出发，经高度 y，到 x_to 顶部（箭头朝向被读的一方）。"""
-    pts = [(x_from, Y1), (x_from, y), (x_to, y), (x_to, Y1)]
-    if both:
-        ax.plot([x_from, x_from, x_to], [Y1, y, y], color=color, lw=0.7, zorder=4)
-        ax.annotate("", xy=(x_to, Y1), xytext=(x_to, y), arrowprops=dict(arrowstyle="-|>", color=color, lw=0.7, shrinkA=0, shrinkB=0, mutation_scale=5))
-        ax.annotate("", xy=(x_from, Y1), xytext=(x_from, y), arrowprops=dict(arrowstyle="-|>", color=color, lw=0.7, shrinkA=0, shrinkB=0, mutation_scale=5))
-    else:
-        orth(pts, color, lw=0.7)
-    ax.text(text_x if text_x is not None else (x_from + x_to) / 2, y + 0.9, text, ha="center", va="bottom", fontsize=5.9, color=INK2, zorder=5)
-mask_arc(4.0, 30.0, 72.5, "memory ↔ memory: all-to-all (frames ↔ motion, demo ↔ exec)", both=True)
-mask_arc(76.0, 36.0, 84.0, "language → memory (one way)", text_x=56)
-mask_arc(78.5, 63.0, 75.0, "images ↔ language ↔ images: all-to-all", both=True, text_x=63)
-mask_arc(92.0, 50.0, 93.0, "action → every prefix token (causal within action)", text_x=71)
-ax.text(1.0, 96.5, "Attention mask (grey arrows = allowed):", fontsize=6.3, fontweight="bold", va="bottom")
-ax.text(1.0, 86.5, "masked (exactly 0 in all layers):\nmemory ✕ images / language / action\nimages ✕ memory", fontsize=6.0, color=INK2, va="bottom", linespacing=1.15)
-
-# 分层强边（彩色，画在序列行下方）：竖直落到各自的横向通道，再上到目标
-def edge(x_from, x_to, y, color, ls="-", lw=1.1):
-    orth([(x_from, Y0), (x_from, y), (x_to, y), (x_to, Y0)], color, ls=ls, lw=lw)
-fc = stat["PatternLock"]["frame_carry_motion"], stat["RouteStick"]["frame_carry_motion"]
-# 1 motion → frames（记忆区内部）
-edge(26.0, 10.0, 44.0, C2, lw=1.1)
-label(27.5, 44.0, f"frames read motion  L0 {pair('frame_reads_motion', 0)}  L1 {pair('frame_reads_motion', 1)}\n→ frames carry "
-      f"{fc[0][3]:.0f}|{fc[1][3]:.0f}% motion content by L3 (final {fc[0][18]:.0f}|{fc[1][18]:.0f}%, α = 0.5)", color=C2)
-# 2 motion → language
-edge(32.5, 75.5, 37.0, C2)
-label(33.5, 37.0, f"language reads motion  L0 {pair('text_reads_motion', 0)}  L1 {pair('text_reads_motion', 1)}, "
-      f"≤{max(stat[t]['text_reads_motion'][2:].max() for t in TASKS):.0f}% from L2", color=C2)
-# 3 frames → language（弱，时序错开）
-edge(16.0, 73.5, 30.5, INK3, ls="--", lw=0.9)
-label(17.0, 30.5, f"language reads frames  L0 {pair('text_reads_frame', 0)}, ≤{max(stat[t]['text_reads_frame'][1:].max() for t in TASKS):.0f}% after; "
-      f"frames carry 0% motion at L0", color=INK2)
-# 4 frames → action
-arf = [stat[t]["action_reads_frame"] for t in TASKS]
-edge(6.0, 89.0, 24.0, C1)
-label(7.0, 24.0, f"action reads frames  L14 {pair('action_reads_frame', 14)}  L15 {pair('action_reads_frame', 15)}  L16 {pair('action_reads_frame', 16)}, "
-      f"other layers ≤{max(np.delete(a, [14, 15, 16]).max() for a in arf):.0f}%", color=C1)
-# 5 language → action
-art = np.concatenate([stat[t]["action_reads_text"] for t in TASKS])
-edge(78.0, 93.0, 17.0, C2)
-label(20.0, 17.0, f"action reads language  every layer {rng(art)} (mean {art.mean():.0f}%)", color=C2)
-# 6 language → images, images → action（灰）
-irt = np.concatenate([stat[t]["image_reads_text"][14:17].ravel() for t in TASKS])
-ax.annotate("", xy=(IMW[1], (Y0 + Y1) / 2), xytext=(TXTX[0], (Y0 + Y1) / 2), arrowprops=dict(arrowstyle="-|>", color=INK3, lw=0.8, shrinkA=0, shrinkB=0, mutation_scale=6), zorder=4)
-ax.text((IMW[1] + TXTX[0]) / 2, Y1 + 0.8, f"imgs read lang.\nL14–16 {rng(irt)}", ha="center", va="bottom", fontsize=5.6, color=INK2, linespacing=1.1, zorder=5)
-ari = np.concatenate([stat[t]["action_reads_image"] for t in TASKS])
-edge(60.0, 97.0, 10.0, INK3, lw=0.8)
-label(61.0, 10.0, f"action reads images  L0–17 {rng(ari)}", color=INK2)
-# 动作里 motion 含量的路径分解
-v = {t: stat[t]["via_0.5"] for t in TASKS}
-label(1.0, 13.0, f"motion content reaching action (α = 0.5)\n{v['PatternLock']['total']:.1f} | {v['RouteStick']['total']:.1f}% of its attention mass\n"
-      f"last hop via frames {v['PatternLock']['frame'] * 100:.0f} | {v['RouteStick']['frame'] * 100:.0f}%\n"
-      f"via language {v['PatternLock']['text'] * 100:.0f} | {v['RouteStick']['text'] * 100:.0f}%\n"
-      f"via images {v['PatternLock']['image'] * 100:.0f} | {v['RouteStick']['image'] * 100:.0f}%", ha="left", va="top", fs=6.0)
-ax.add_line(Line2D([1, 5], [-2.5, -2.5], color=C1, lw=1.2)); ax.text(6, -2.5, "Route A: motion → frames → action", va="center")
-ax.add_line(Line2D([33, 37], [-2.5, -2.5], color=C2, lw=1.2)); ax.text(38, -2.5, "Route B: motion → language → action", va="center")
-ax.add_line(Line2D([66, 70], [-2.5, -2.5], color=INK3, lw=0.9, ls="--")); ax.text(71, -2.5, "weak chain", va="center", color=INK2)
-ax.add_line(Line2D([82, 86], [-2.5, -2.5], color=INK3, lw=0.8)); ax.text(87, -2.5, "non-memory", va="center", color=INK2)
+# --- (a) 右：逐层，每个读者块一条水平箭头指向它的主要外部来源
+axl = ax_in(2.80, 4.00, 4.20, 3.95)
+X = {name: x for x, name in enumerate(("frames", "motion", "images", "language", "action"))}
+READERS = [("frames", 0, [1, 2, 3, 4], +0.34), ("motion", 1, [0, 2, 3, 4], +0.17), ("images", None, [0, 1, 4], 0.0), ("language", 4, [0, 1, 2, 3], -0.17), ("action", 5, [0, 1, 2, 3, 4], -0.34)]
+LABEL_X = {"frames": (-0.10, "right"), "motion": (1.10, "left"), "images": (1.90, "right"), "language": (3.10, "left"), "action": (4.10, "left")}
+SRC_OF = {0: "frames", 1: "motion", 2: "images", 3: "images", 4: "language"}
+SRC_COLOR = {"frames": C1, "motion": C2, "images": C4, "language": C3}
+cnt6 = np.mean([np.mean([i["counts"] for i in episodes[t]], 0) for t in TASKS], 0)
+def reader_row(l, idx):
+    if idx is None:   # 两路图像按 token 数合并
+        w = cnt6[[4, 5]] / cnt6[[4, 5]].sum()
+        return (w[:, None] * M6[l, 2:4]).sum(0)
+    return M6[l, idx]
+def pool_sources(row):
+    out = {"frames": row[0], "motion": row[1], "images": row[2] + row[3], "language": row[4]}
+    return out
+def lw_of(v):
+    return 0.3 + v / 100 * 2.2
+drawn = []
+for l in range(18):
+    for name, idx, allowed, off in READERS:
+        row = pool_sources(reader_row(l, idx))
+        cands = sorted(((v, src) for src, v in row.items() if src != name and SRC_OF and X[src] != X[name]), reverse=True)
+        picks = [cands[0]] if cands[0][0] >= 5 else []
+        if name == "action" and len(cands) > 1 and cands[1][0] >= 4:
+            picks.append(cands[1])
+        for k, (v, src) in enumerate(picks):
+            y = l + off + (0.0 if k == 0 else -0.17)
+            xs, xr = X[src], X[name]
+            axl.annotate("", xy=(xr - (0.06 if xr > xs else -0.06), y), xytext=(xs + (0.06 if xr > xs else -0.06), y),
+                         arrowprops=dict(arrowstyle="-|>", color=SRC_COLOR[src], lw=lw_of(v), shrinkA=0, shrinkB=0, mutation_scale=5 + v / 25), zorder=3)
+            tx, ha = LABEL_X[name]
+            if k == 1:
+                tx += 0.33
+            axl.text(tx, y, f"{v:.0f}", ha=ha, va="center", fontsize=4.6, color=SRC_COLOR[src], zorder=4)
+            drawn.append((l, name, src, round(float(v), 1)))
+for x in X.values():
+    axl.axvline(x, color=GRID, lw=0.5, zorder=1)
+for l in range(0, 18, 2):
+    axl.axhspan(l - 0.5, l + 0.5, color="#f6f6f4", lw=0, zorder=0)
+axl.set_xlim(-0.6, 4.75); axl.set_ylim(17.65, -0.85)
+axl.set_xticks(list(X.values())); axl.set_xticklabels(["frame\nmemory", "motion\ntokens", "current\nimages", "language", "action"], fontsize=6.0)
+axl.xaxis.set_ticks_position("top")
+axl.set_yticks(range(18)); axl.set_yticklabels([f"L{l}" for l in range(18)], fontsize=5.6)
+axl.tick_params(length=0, pad=2)
+for sp in axl.spines.values():
+    sp.set_visible(False)
+axl.set_ylabel("layer", labelpad=2)
+# 图例：颜色 = 来源，宽度 = 读者注意力占比
+hx, hy = 0.78, 17.55
+for k, (src, col) in enumerate(SRC_COLOR.items()):
+    pass
+fig.text(2.80 / W, (3.90 + YOFF) / H, "One row per layer. Each horizontal arrow runs from a source block to the block that reads it: the reader's largest external source "
+         "at that layer (action: top two). Width and number = % of the reader's attention, printed beside the reader's column; "
+         "colour = source. Two tasks pooled.", fontsize=5.6, color=INK2, va="top", ha="left", wrap=True)
+hdl = [Line2D([], [], color=c, lw=1.6) for c in SRC_COLOR.values()]
+fig.legend(hdl, ["source: frame memory", "source: motion tokens", "source: current images", "source: language"], loc="upper left",
+           bbox_to_anchor=(2.80 / W, (3.52 + YOFF) / H), ncol=4, frameon=False, fontsize=5.4, handlelength=1.4, handletextpad=0.5, columnspacing=1.0, borderaxespad=0)
+json.dump({"groups": [n for n, _, _ in BLOCKS], "layer_matrix_pct": M6.round(2).tolist(), "masked": mask6.tolist(), "arrows": drawn},
+          open(OUT / "fig_pathway-layers.json", "w", encoding="utf-8"), ensure_ascii=False, indent=0)
 
 # ============================================================================ (b) 逐层折线（两任务合并，按局等权）
 def pooled(key, layers):
     return np.mean([stat[t][key][:layers] for t in TASKS], 0)   # 两任务各 50 局，等权平均即合并均值
-axb = ax_in(0.70, 0.95, 2.25, 2.10)
+axb = ax_in(0.70, 0.85, 2.25, 2.10)
 panel_tag(axb, "(b)", -0.30, 1.14)
 Lx = np.arange(18)
 series_b = [("frame_carry_motion", 19, C1, "frame memory: cumulative motion content (α = 0.5)"),
@@ -265,12 +261,12 @@ axb.text(k, arf_p[k] + 2, f"{arf_p[k]:.0f}%", ha="center", va="bottom", fontsize
 trm = pooled("text_reads_motion", 18); k2 = int(np.argmax(trm))
 axb.text(k2, trm[k2] + 3.5, f"{trm[k2]:.0f}%", ha="center", va="bottom", fontsize=6.5, color=INK2)
 fig.legend([Line2D([], [], color=c, lw=1.6) for _, _, c, _ in series_b], [lab for _, _, _, lab in series_b], loc="upper left",
-           bbox_to_anchor=(0.30 / W, 0.72 / H), ncol=1, frameon=False, handlelength=1.6, handletextpad=0.6, borderaxespad=0, labelspacing=0.35)
+           bbox_to_anchor=(0.30 / W, (0.62 + YOFF) / H), ncol=1, frameon=False, handlelength=1.6, handletextpad=0.6, borderaxespad=0, labelspacing=0.35)
 
 # ============================================================================ (c) 子目标对位矩阵（RouteStick）
-header(3.50, "II.  The pathways exist, but which demo segment", x=3.55)
-header(3.38, "is read shows no sub-goal alignment", x=3.55)
-header(3.26, "RouteStick, motion model unless noted, 50 episodes per model, all inferences; rows pool episodes with different numbers of sub-goals m "
+header(3.26, "II.  The pathways exist, but which demo segment", x=3.55)
+header(3.14, "is read shows no sub-goal alignment", x=3.55)
+header(3.02, "RouteStick, motion model unless noted, 50 episodes per model, all inferences; rows pool episodes with different numbers of sub-goals m "
              "(n = episodes per row); frame stream weighted 'single', motion stream 'overlap'; D = diagonal enrichment, episode-level 95% CI.",
        bold=False, color=INK2, x=3.55, width=66)
 panels_c = [("mot", "action", "frame", "action reads frames"),
@@ -283,7 +279,7 @@ norm = TwoSlopeNorm(vcenter=1.0, vmin=0.0, vmax=vmax)
 cax_list = []
 for k, ((m, r, s, title), (E, N, c)) in enumerate(zip(panels_c, mats)):
     col, row = k % 2, k // 2
-    a = ax_in(3.85 + col * 1.70, 1.78 - row * 1.12, 1.10, 0.68)
+    a = ax_in(3.85 + col * 1.70, 1.66 - row * 1.12, 1.10, 0.68)
     cax_list.append(a)
     a.imshow(np.ma.masked_invalid(E), cmap=DIVERGE, norm=norm, interpolation="nearest", aspect="auto")
     for (j, jp), val in np.ndenumerate(E):
@@ -306,8 +302,8 @@ for k, ((m, r, s, title), (E, N, c)) in enumerate(zip(panels_c, mats)):
         a.set_xlabel("demo segment j′ read", labelpad=1)
     if col == 0:
         a.set_ylabel("executing sub-goal j", labelpad=1)
-panel_tag(cax_list[0], "(c)", -0.26, 1.50)
-cb_ax = ax_in(3.85, 0.30, 2.80, 0.07)
+panel_tag(cax_list[0], "(c)", -0.26, 1.22)
+cb_ax = ax_in(3.85, 0.20, 2.80, 0.07)
 cb = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=DIVERGE), cax=cb_ax, orientation="horizontal")
 cb.set_ticks([0, 0.5, 1, 2, 3, round(float(vmax), 1)])
 cb.ax.tick_params(length=2, pad=1.5); cb.outline.set_linewidth(0.4)
