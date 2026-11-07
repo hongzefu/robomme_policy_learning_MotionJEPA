@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-07T01:47:41.613777+00:00",
-    "america_new_york": "2026-11-06T20:47:41.613777-05:00"
+    "utc": "2026-11-07T01:53:03.273543+00:00",
+    "america_new_york": "2026-11-06T20:53:03.273543-05:00"
   },
   "repo": {
     "branch": "v4-256concat1",
-    "base_head": "72add6310f90355faecc220c57383e0a723205e1"
+    "base_head": "ed5714c389cefbae0035f0d878718f5145e04c94"
   },
   "freeze": {
     "active": false,
@@ -1406,11 +1406,11 @@
     "orig16-context-wan-timepool1024-60k": {
       "plan": {
         "file": "1106-orig16-context-wan-timepool1024-60k-plan.html",
-        "sha": "e823f4c3eb085963c35e688afb46fbd27a308048"
+        "sha": "ed5714c389cefbae0035f0d878718f5145e04c94"
       },
       "state": "running",
-      "state_changed_at": "2026-11-07T01:47:41.613777+00:00",
-      "state_reason": "用户对完整计划不改直接说开工；先做计划一致性审查，再按分配表实施。",
+      "state_changed_at": "2026-11-07T01:53:03.273543+00:00",
+      "state_reason": "修订后计划经用户再次同意；实施分支 v9-ctx-wan-timepool1024-60k，本任务状态以该分支的 current.json 为准。",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiUrxBxra275CF71Wtx",
         "host": "Claude@AWS"
@@ -1425,10 +1425,22 @@
           "evidence": "参数/训练不变量审查：修正文件SHA与canonical SHA标签后PASS；数据/缓存/时序审查PASS；两h1、锚点、自包含HTML和浏览器渲染检查通过。新模型/建库/训练闸门均未执行。",
           "where": "1106-orig16-context-wan-timepool1024-60k-plan.html",
           "status": "pass"
+        },
+        {
+          "what": "开工前计划一致性审查",
+          "evidence": "PLAN_CONSISTENCY_REVIEW=FAIL base=e823f4c findings=9 blocking=2；裁决与文字修订已落入 ed5714c，用户再次同意",
+          "where": "ed5714c commit body",
+          "status": "pass"
         }
       ],
       "long_tail": [],
-      "running_handles": [],
+      "running_handles": [
+        {
+          "tmux": "o16-tp-fetch-11062053",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig16-wan-timepool1024/fetch.log",
+          "done_line": "WAN_CACHE_FETCH=PASS 且 EXIT_CODE=0"
+        }
+      ],
       "authorizations": [
         {
           "kind": "decision",
@@ -1459,14 +1471,26 @@
           "date": "2026-11-06T20:47:41.613777-05:00",
           "quote": "robomme_policy_learning_MotionJEPA/1106-orig16-context-wan-timepool1024-60k-plan.html 开工",
           "scope": "计划全部阶段 0-5：代码实现、固定 revision 恢复下载（约 388GB）、建库、8 卡 20 步短测、8 卡 60k 正式训练、12 份 checkpoint 公开备份与读回；不含策略成功率评估。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-06T20:53:03.273543-05:00",
+          "quote": "全归 E 一个脚本；并入 smoke 句柄",
+          "scope": "PLAN_CONSISTENCY_REVIEW 两个阻塞项裁决，已修入 ed5714c。"
+        },
+        {
+          "kind": "go",
+          "date": "2026-11-06T20:53:03.273543-05:00",
+          "quote": "同意",
+          "scope": "针对 ed5714c 修订后计划及所列两处差异（16 路下载；从当前 HEAD 建分支 v9-ctx-wan-timepool1024-60k）；范围同计划阶段 0-5，不含策略评估。"
         }
       ],
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "计划一致性审查，然后按 A→B/C→D→E 派写入代理",
-          "command": "见计划第 9 节",
-          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS"
+          "what": "按 A→B/C→D→E 派写入代理；下载验收后恢复 latent",
+          "command": "见计划第 9、11 节",
+          "verdict_line": "WAN_RESTORE_EQ=PASS"
         }
       ]
     }
