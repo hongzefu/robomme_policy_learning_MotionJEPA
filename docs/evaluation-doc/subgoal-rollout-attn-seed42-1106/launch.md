@@ -73,6 +73,10 @@ python -m scripts.interpret.analysis.subgoal_attention --root $O --out $O/analys
 | 18:25 | 基线离线起跑，18:28 结束 |
 | 18:28 | 全量分析 |
 
+## 完整注意力落盘（美东 2026-11-06）
+
+用户原话：「这一轮也要存下来！」「不要省略这些内容！」motion 19:18～19:44，基线 19:44～约 20:10，每卡 2 个 worker，比例 0.30。产物 `$O/<模型>/full-attn/<nonce>/{infer,prefix}_<seq>.npz`，超过计划软线和 300 GB 硬停线，由用户明确要求放开。tmux：`sra-fullsmoke-mot`、`sra-fullsmoke-ctx`、`sra-full-<模型>-s0`～`s3`、`sra-crosscheck`、`sra-path-mot`。
+
 ## tmux 会话清单
 
 `sra-hook`、`sra-mem`、`sra-smoke-mot-s0`、`sra-smoke-mot-s1`、`sra-smoke-ctx-s0`、`sra-smoke-ctx-s1`、`sra-smoff-mot-s0`、`sra-smoff-mot-s1`、`sra-smoff-ctx-s0`、`sra-smoff-ctx-s1`（冒烟）；正式 `sra-roll-<模型>-<片>`、`sra-off-<模型>-<片>`、`sra-analysis`。全部自然退出；`sra-mem` 由主会话在冒烟后按名精确结束。
