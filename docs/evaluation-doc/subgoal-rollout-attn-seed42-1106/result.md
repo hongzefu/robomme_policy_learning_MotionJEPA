@@ -240,6 +240,8 @@ motion 模型文字读 motion 流，在 RouteStick 上真对位 1.30 [1.19, 1.39
 
 **定稿**（美东 2026-11-07）：用户原话「可以定稿」。现行主图 = 版本 6（commit `0ad34fc`）：(a) 块状掩码矩阵、(b) 层 × 通路边热图、(c) RouteStick 四张子目标对位矩阵；英文图注以 `fig_pathway-logic.md` 版本 5 的 (a)(c) 句加版本 6 的 (b) 句为准。
 
+**画图数据导出**（美东 2026-11-07）：用户原话「把 CSV 都留下来，然后打包放在一起，我要用其他的 agent、其他 repo 来画这个图」。按 StopCube 的 `paper-data/` 样式，`records/paper-figures/export_paper_data.py` 从与画图脚本相同的数据源导出 7 份 CSV 到 [records/paper-data/](records/paper-data/)（掩码块矩阵、逐层 6×6 块注意力、热图 7×18、帧累积 motion 含量、路径分解、全部子目标对位矩阵与摘要）加 README（口径、列含义、复现设置），与 `fig_pathway-layers.json`、`summary.json` 逐格比对 `PAPER_DATA_EXPORT=PASS files=7 heatmap_err=4.99e-03 matrix_err=4.99e-03 mask_match=1 a2_err=4.97e-07`。CSV、图、图注、脚本一并打包在 `v1-store/evaluation/subgoal-rollout-attn-seed42-1106/paper-data-fig_pathway.tar.gz`（604 KB，不进 git）。
+
 ![论文主图](records/paper-figures/fig_pathway.png)
 
 ## 和 Swap 的关系
