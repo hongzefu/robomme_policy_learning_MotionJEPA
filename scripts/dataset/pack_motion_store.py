@@ -19,6 +19,10 @@
 ``compare_wan.py tokens`` 已对本张 packed 表写下 ``meta/encoder_bitexact.json`` PASS，否则拒绝进入 verified。
   report   打印 meta 摘要
 
+零参数池化（``pack --layout wan-timepool``，1106 计划）：``--tokens`` 指向 export_wan_timepool.py 的输出根，
+不接受 encoder 与 stage2 专属参数；pack 只写到 status=packed、validation=null。``verify`` 不给
+``--gate-records-dir`` 时只做全表核对并保持 packed，给出后回填 5 个闸门记录才置 verified（单次原子写 meta）。
+
 事务协议照 ``pack_framesamp_store.py``（同一份 meta/pack.lock 语义：O_CREAT|O_EXCL；残锁 --resume 接管、
 异 host --force-break-lock；verify 回填后才释放）。格式常量、index 公式、MotionMeta、读 API 一律
 import 自 ``mme_vla_suite.datastore.motion_store``，绝不复制。本模块顶层不 import jax / torch。
@@ -49,8 +53,14 @@ sys.path.insert(0, str(_REPO_ROOT / "src"))
 
 from mme_vla_suite.datastore import motion_store as ms  # noqa: E402
 from mme_vla_suite.datastore.manifest import load_manifest  # noqa: E402
+from mme_vla_suite.shared import wan_timepool as tp  # noqa: E402
 
 _WAN_DIR = _HERE / "wan"
+_STAGE2_DIR = _HERE / "wan_stage2"
+TIMEPOOL_CLI_LAYOUT = "wan-timepool"
+TIMEPOOL_EXPORT_SCHEMA = "wan-timepool-export-v1"
+TIMEPOOL_EXPORT_RECORD = "export_record.json"
+TIMEPOOL_EXPORT_MAP = "window_map.json"
 
 
 # ══ 锁协议（与 pack_framesamp_store.acquire_lock 同语义）════════════════════════
@@ -138,6 +148,17 @@ def _segment_key(entry: ms.IndexEntry, seg: str) -> str:
     return ms.segment_key(entry.h5_file, entry.raw_ep_idx, seg)
 
 
+def _check_timepool_token_meta(path: pathlib.Path, meta: dict, num_grid: int, size: int) -> None:
+    """零参数池化的行合同，与 stage2 分开：schema、readout、kind 不同，stage2 token 不可能通过。"""
+    contract = {"schema": TIMEPOOL_EXPORT_SCHEMA, "layout": ms.TIMEPOOL_LAYOUT, "readout": tp.TIMEPOOL_READOUT,
+                "encoder_kind": tp.TIMEPOOL_ENCODER_KIND, "row_shape": list(tp.TIMEPOOL_SHAPE), "dtype": "float32",
+                "token_dim": 1024, "token_bytes": tp.TIMEPOOL_OUTPUT_BYTES, "bytes": size, "num_grid": num_grid,
+                "grid_stride": ms.TIMEPOOL_LAYOUT_SPEC.grid_stride, "window_frames": ms.WINDOW_FRAMES,
+                "source_grid_stride": 16, "source_grid": list(range(0, num_grid * 2, 2))}
+    if any(ms.canonical_json_bytes(meta.get(k)) != ms.canonical_json_bytes(v) for k, v in contract.items()):
+        raise ValueError(f"{path} 零参数池化行合同不符")
+
+
 def read_segment_tokens(tokens_root: pathlib.Path, key: str, num_grid: int, *,
                         spec: ms.LayoutSpec | None = None) -> tuple[bytes, dict]:
     """读一段 token 文件：核字节数 + sidecar sha256 + metadata 可解析；返回 (原始字节, metadata)。"""
@@ -173,6 +194,8 @@ def read_segment_tokens(tokens_root: pathlib.Path, key: str, num_grid: int, *,
                 or any(type(v) is not int for v in meta["source_grid"])
                 or meta["source_grid"] != list(range(0, num_grid * 2, 2))):
             raise ValueError(f"{p} source_grid 不是连续偶数格")
+    if spec.family == ms.TIMEPOOL_LAYOUT_SPEC.family:
+        _check_timepool_token_meta(p, meta, num_grid, size)
     arr = np.frombuffer(data, dtype=np.float32)
     if not np.isfinite(arr).all():
         raise ValueError(f"{p} 含非有限值")
@@ -790,6 +813,189 @@ def gather_stage2_provenance(latents_root, tokens_root, entries, manifest, index
     return provenance
 
 
+def _repo_head() -> str:
+    return subprocess.run(["git", "-C", str(_REPO_ROOT), "rev-parse", "HEAD"],
+                          capture_output=True, text=True, check=False).stdout.strip()
+
+
+def _check_timepool_pack_args(args) -> None:
+    """新 layout 只接受 --train-head 这一个专属参数；encoder 与 stage2 参数一律拒绝。"""
+    forbidden = {"--encoder-run-dir": "encoder_run_dir", "--latent-grid-subsample": "latent_grid_subsample",
+                 "--stage2-validation": "stage2_validation", "--stage2-source-pin": "stage2_source_pin",
+                 "--latents-origin": "latents_origin", "--cache-import-receipt": "cache_import_receipt",
+                 "--restore-receipt": "restore_receipt", "--expected-ckpt-sha256": "expected_ckpt_sha256",
+                 "--oracle-report": "oracle_report", "--force-break-lock": "force_break_lock"}
+    given = [flag for flag, name in forbidden.items() if getattr(args, name, None) not in (None, False)]
+    if given:
+        raise ValueError(f"{TIMEPOOL_CLI_LAYOUT} 不接受 {given}")
+    head = getattr(args, "train_head", None)
+    if not isinstance(head, str) or len(head) != 40 or head != _repo_head():
+        raise ValueError(f"--train-head={head!r} 必须是 40 位提交且等于当前 git HEAD {_repo_head()}")
+
+
+def _timepool_wan_identity(receipt: dict) -> dict:
+    """Wan 身份取恢复收据；适配件与依赖锁现场核对 SOURCE_PIN，确保 fill 确由当前锁定环境产生。"""
+    pin = _load_json(_STAGE2_DIR / "SOURCE_PIN.json")
+    adapter = ms.sha256_file(_WAN_DIR / "wan_motion_infer.py")
+    lock = ms.sha256_file(_STAGE2_DIR / "uv.lock")
+    if adapter != pin["vae_adapter_sha256"] or lock != pin["dependency_lock_sha256"]:
+        raise ValueError("当前 Wan 适配件或依赖锁与 SOURCE_PIN 不符")
+    if receipt["numeric_modes"]["fill"].get("adapter_sha256") != adapter:
+        raise ValueError("恢复收据 fill 窗的适配件 SHA 与当前代码不同")
+    return dict(vae_id=receipt["vae"]["vae_id"], latent_mode=receipt["vae"]["latent_mode"],
+                vae_state_sha256=receipt["vae"]["vae_state_sha256"], adapter_sha256=adapter,
+                dependency_lock_sha256=lock, preprocess=receipt["preprocess"])
+
+
+def _check_timepool_sources(receipt: dict, raw_dir: pathlib.Path, input_manifest_path: pathlib.Path) -> list[dict]:
+    """源 H5 现场全量 SHA，并要求与 input manifest、恢复收据三方集合相等。"""
+    declared = _load_json(input_manifest_path).get("files")
+    if not isinstance(declared, dict) or not declared:
+        raise ValueError("input_manifest 缺源 H5 文件清单")
+    files = [dict(name=item["name"], bytes=item["bytes"], sha256=item["sha256"]) for item in receipt["source_h5_files"]]
+    if {f["name"]: (f["bytes"], f["sha256"]) for f in files} != {
+            name: (item.get("size"), item.get("sha256")) for name, item in declared.items()}:
+        raise ValueError("恢复收据源 H5 集合与 input_manifest 不同")
+    for item in files:
+        path = raw_dir / item["name"]
+        if path.stat().st_size != item["bytes"] or ms.sha256_file(path) != item["sha256"]:
+            raise ValueError(f"原 H5 文件内容不同: {item['name']}")
+    return files
+
+
+def _check_timepool_window_map(window_map: dict, entries, original: dict, restored: dict) -> None:
+    """映射先过索引合同，再逐行回到两份收据；偶数窗必须一个不多一个不少。"""
+    ms.validate_timepool_window_map(window_map, {"routes": {"counts": window_map.get("counts")}}, entries)
+    old = ms.validate_wan_cache_import_receipt(original)
+    new = ms.validate_wan_cache_import_receipt(restored)
+    if set(old) != set(new) or {ident for ident in new if ident[1] % 2 == 0} != {
+            (w["key"], w["source_m"]) for w in window_map["windows"]}:
+        raise ValueError("逐窗映射与收据的偶数窗集合不同")
+    for window in window_map["windows"]:
+        ident = window["key"], window["source_m"]
+        want = dict(route=window["route"], start_global_frame=window["start_frame"],
+                    real_frames=window["real_frames"], pad_frames=window["pad_frames"],
+                    input_frames_sha256=window["input_frames_sha256"], latent_sha256=window["raw_latent_sha256"])
+        for receipt_row in (old[ident], new[ident]):
+            if any(receipt_row.get(k) != v for k, v in want.items()):
+                raise ValueError(f"逐窗映射第 {window['row']} 行与收据 {ident} 不符")
+
+
+def _check_timepool_tokens(tokens_root: pathlib.Path, entries, record: dict, windows: list[dict]) -> str:
+    """精确段集合 + 段内合同 + 逐行 pooled SHA，返回按表行序的整表 SHA。"""
+    segments = list(iter_rows_in_order(entries))
+    expected = {key for _, _, key, _, _ in segments}
+    for suffix in (".f32.bin", ".f32.bin.sha256", ".metadata.json"):
+        actual = {p.name[:-len(suffix)] for p in tokens_root.glob(f"*{suffix}")}
+        if actual != expected:
+            raise ValueError(f"池化导出段集合不符 {suffix}: 缺 {sorted(expected - actual)[:5]}，多 {sorted(actual - expected)[:5]}")
+    declared = {item["key"]: item for item in record["token_files"]}
+    if set(declared) != expected or len(declared) != len(record["token_files"]):
+        raise ValueError("export_record.token_files 未精确覆盖每段")
+    whole = hashlib.sha256()
+    row_bytes = ms.TIMEPOOL_LAYOUT_SPEC.row_bytes
+    for _, _, key, row_base, ng in segments:
+        data, meta = read_segment_tokens(tokens_root, key, ng, spec=ms.TIMEPOOL_LAYOUT_SPEC)
+        item = declared[key]
+        if (item["sha256"] != meta["sha256"] or item["num_grid"] != ng
+                or item["metadata_sha256"] != ms.sha256_file(tokens_root / f"{key}.metadata.json")):
+            raise ValueError(f"{key} token 文件与 export_record 不符")
+        for m in range(ng):
+            if ms.sha256_bytes(data[m * row_bytes:(m + 1) * row_bytes]) != windows[row_base + m]["pooled_sha256"]:
+                raise ValueError(f"{key}:{m} token 字节与逐窗映射不符")
+        whole.update(data)
+    return whole.hexdigest()
+
+
+def load_timepool_export(tokens_root: pathlib.Path) -> tuple[dict, bytes]:
+    """读 export_record 与逐窗映射原字节，核固定身份、池化源码和映射 SHA。"""
+    record = _load_json(tokens_root / TIMEPOOL_EXPORT_RECORD)
+    want = dict(schema=TIMEPOOL_EXPORT_SCHEMA, status="PASS", layout=ms.TIMEPOOL_LAYOUT, readout=tp.TIMEPOOL_READOUT,
+                encoder_kind=tp.TIMEPOOL_ENCODER_KIND, encoder_ckpt=None, grid_subsample=2)
+    if any(record.get(k) != v for k, v in want.items()):
+        raise ValueError("export_record 的 schema、状态或 layout/readout/kind 不符")
+    if (record["pool"]["version"] != tp.POOL_VERSION or record["pool"]["source_sha256"] != tp.pool_source_sha256()
+            or record["pool"]["contract"] != dict(tp.POOL_CONTRACT)):
+        raise ValueError("export_record 的池化版本、源码 SHA 或数值合同与当前代码不同")
+    map_bytes = (tokens_root / TIMEPOOL_EXPORT_MAP).read_bytes()
+    if ms.sha256_bytes(map_bytes) != record["window_map"]["sha256"]:
+        raise ValueError("逐窗映射与 export_record 记录的 SHA 不符")
+    return record, map_bytes
+
+
+def gather_timepool_provenance(tokens_root, latents_root, entries, manifest, index_sha, *, raw_dir,
+                               manifest_path, input_manifest_path, train_head) -> dict:
+    """零参数池化的来源记录（status=packed，validation=null）。写表前现场核全部输入，表 SHA 由 token 预先算出。"""
+    tokens_root, latents_root = pathlib.Path(tokens_root), pathlib.Path(latents_root)
+    record, map_bytes = load_timepool_export(tokens_root)
+    inputs = record["inputs"]
+    for name, path_ref in (("plan", inputs["plan"]), ("import_receipt", inputs["import_receipt"]),
+                           ("restored_receipt", inputs["restored_receipt"])):
+        if ms.sha256_file(path_ref["path"]) != path_ref["file_sha256"]:
+            raise ValueError(f"导出后 {name} 文件已变动: {path_ref['path']}")
+    original = _load_json(pathlib.Path(inputs["import_receipt"]["path"]))
+    restored = _load_json(pathlib.Path(inputs["restored_receipt"]["path"]))
+    file_sha, input_sha = ms.sha256_file(manifest_path), ms.sha256_file(input_manifest_path)
+    for receipt in (original, restored):
+        ms.validate_wan_cache_import_receipt(receipt, manifest_sha256=manifest["sha256"], input_manifest_sha256=input_sha)
+        if receipt["manifest_file_sha256"] != file_sha:
+            raise ValueError("缓存收据绑定的 episode manifest 文件字节不同")
+    if (pathlib.Path(restored["latents"]["root"]).resolve() != latents_root.resolve()
+            or restored["latents"]["metadata_sha256"] != ms.sha256_file(latents_root / "metadata.json")):
+        raise ValueError("恢复收据与 --latents 目录不同")
+    window_map = json.loads(map_bytes.decode("utf-8"))
+    _check_timepool_window_map(window_map, entries, original, restored)
+    table_sha = _check_timepool_tokens(tokens_root, entries, record, window_map["windows"])
+    if table_sha != record["table_sha256"]:
+        raise ValueError("token 按表行序的整表 SHA 与 export_record 不符")
+    provenance = dict(
+        schema=ms.TIMEPOOL_PROVENANCE_SCHEMA, layout=ms.TIMEPOOL_LAYOUT, readout=tp.TIMEPOOL_READOUT,
+        encoder_kind=tp.TIMEPOOL_ENCODER_KIND, encoder_ckpt=None, parameter_count=tp.TIMEPOOL_PARAMETER_COUNT,
+        output_shape=list(tp.TIMEPOOL_SHAPE),
+        pool=dict(version=tp.POOL_VERSION, source_sha256=tp.pool_source_sha256(), contract=dict(tp.POOL_CONTRACT)),
+        source_h5=_check_timepool_sources(restored, pathlib.Path(raw_dir), input_manifest_path),
+        manifests=dict(episode_manifest_sha256=manifest["sha256"], episode_manifest_file_sha256=file_sha,
+                       input_manifest_sha256=input_sha),
+        wan_cache=dict(plan_file_sha256=inputs["plan"]["file_sha256"],
+                       plan_canonical_sha256=inputs["plan"]["canonical_sha256"],
+                       import_receipt_file_sha256=inputs["import_receipt"]["file_sha256"],
+                       restored_receipt_file_sha256=inputs["restored_receipt"]["file_sha256"]),
+        published={k: restored["published"][k] for k in ("repo", "revision")},
+        routes=dict(counts=window_map["counts"], numeric_modes=restored["numeric_modes"]),
+        window_map=dict(schema=ms.TIMEPOOL_WINDOW_MAP_SCHEMA, relpath=ms.TIMEPOOL_WINDOW_MAP_RELPATH,
+                        sha256=ms.sha256_bytes(map_bytes), rows=len(window_map["windows"]),
+                        source_grid_stride=window_map["source_grid_stride"],
+                        target_grid_stride=window_map["target_grid_stride"]),
+        wan=_timepool_wan_identity(restored),
+        output=dict(motion_table_sha256=table_sha, motion_index_sha256=index_sha),
+        validation=None, train_head=train_head)
+    ms.validate_timepool_provenance(provenance, status="packed", manifest_sha256=manifest["sha256"],
+                                    table_sha256=table_sha, index_sha256=index_sha,
+                                    num_rows=ms.index_totals(entries)["rows"])
+    return provenance
+
+
+def load_timepool_gate_records(records_dir, *, table_sha256: str, index_sha256: str) -> dict:
+    """读 <ROLE>.json 回填 validation。每份记录都必须绑定当前这张表和索引，防止旧库记录被套到新表上。"""
+    validation = {}
+    for role in ms.TIMEPOOL_VALIDATION_ROLES:
+        path = pathlib.Path(records_dir) / f"{role}.json"
+        if not path.is_file():
+            raise FileNotFoundError(f"缺闸门记录: {path}")
+        data = path.read_bytes()      # SHA 与解析用同一份字节，防止读取之间被改写
+        record = json.loads(data.decode("utf-8"))
+        verdict = record.get("verdict") if isinstance(record, dict) else None
+        if not isinstance(verdict, str) or not verdict.startswith(f"{role}=PASS"):
+            raise ValueError(f"{path} 判定行不是 {role}=PASS: {verdict!r}")
+        for key, want in (("store_table_sha256", table_sha256), ("motion_index_sha256", index_sha256)):
+            if key not in record:
+                raise ValueError(f"{path} 缺绑定字段 {key}")
+            if record[key] != want:
+                raise ValueError(f"{path} 绑定的 {key} 不是当前表")
+        validation[role] = dict(path=str(path.resolve()), sha256=ms.sha256_bytes(data), verdict=verdict)
+    return validation
+
+
 def check_raw_sources(manifest_path: pathlib.Path, latents_root: pathlib.Path,
                       raw_dir: pathlib.Path, oracle_report: pathlib.Path) -> pathlib.Path:
     """在写表前核对输入清单、Wan、oracle 三方绑定，并核 oracle 所验的元数据身份。"""
@@ -819,12 +1025,17 @@ def cmd_pack(args) -> None:
     t_all = time.perf_counter()
     manifest = load_manifest(args.manifest)
     stage2 = getattr(args, "layout", "legacy") == "stage2"
+    timepool = getattr(args, "layout", "legacy") == TIMEPOOL_CLI_LAYOUT
+    if timepool:
+        _check_timepool_pack_args(args)
     cached = getattr(args, "latents_origin", None) == ms.STAGE2_CACHE_ORIGIN
     if (cached and (not stage2 or not getattr(args, "cache_import_receipt", None)
                     or getattr(args, "restore_receipt", None))) or (getattr(args, "cache_import_receipt", None) and not cached):
         raise ValueError("缓存导入收据仅用于显式 stage2 published-cache-with-local-fill，不可混用历史收据")
-    layout = ms.STAGE2_LAYOUT if stage2 else ms.LAYOUT
-    spec = ms.LAYOUT_SPECS[layout]
+    if not timepool and getattr(args, "train_head", None) is not None:
+        raise ValueError(f"--train-head 仅用于 --layout {TIMEPOOL_CLI_LAYOUT}")
+    layout = ms.TIMEPOOL_LAYOUT if timepool else ms.STAGE2_LAYOUT if stage2 else ms.LAYOUT
+    spec = ms.KNOWN_LAYOUT_SPECS[layout]
     if stage2 and (getattr(args, "latent_grid_subsample", None) != 2
                    or not getattr(args, "stage2_validation", None)
                    or not getattr(args, "stage2_source_pin", None)
@@ -837,10 +1048,10 @@ def cmd_pack(args) -> None:
     tokens_root = pathlib.Path(args.tokens).resolve()
     latents_root = pathlib.Path(args.latents).resolve()
     raw_dir = pathlib.Path(args.raw_dir).resolve()
-    encoder_run_dir = pathlib.Path(args.encoder_run_dir).resolve()
+    encoder_run_dir = None if timepool else pathlib.Path(args.encoder_run_dir).resolve()
     oracle_report = (pathlib.Path(args.oracle_report) if args.oracle_report
                      else latents_root.parent / "oracle/wan-mj/vae_report.json")
-    input_manifest_path = (pathlib.Path(args.manifest).resolve().parent / "input_manifest.json" if cached else
+    input_manifest_path = (pathlib.Path(args.manifest).resolve().parent / "input_manifest.json" if cached or timepool else
                            check_raw_sources(pathlib.Path(args.manifest).resolve(), latents_root, raw_dir, oracle_report))
     vae_compat = None
     if cached:
@@ -854,8 +1065,8 @@ def cmd_pack(args) -> None:
     elif getattr(args, "expected_ckpt_sha256", None):
         raise RuntimeError("--expected-ckpt-sha256 仅用于历史 VAE 兼容模式（须配 --restore-receipt）")
     output = pathlib.Path(args.out).absolute()
-    if stage2 and any(path.is_symlink() for path in (output, *output.parents)):
-        raise RuntimeError(f"stage2 输出路径不能穿过符号链接: {output}")
+    if (stage2 or timepool) and any(path.is_symlink() for path in (output, *output.parents)):
+        raise RuntimeError(f"{layout} 输出路径不能穿过符号链接: {output}")
     store_root = output.resolve()
     if store_root.is_symlink():
         raise RuntimeError(f"输出根是符号链接，拒绝写入: {store_root}")
@@ -866,7 +1077,9 @@ def cmd_pack(args) -> None:
     try:
         if meta_path.exists() and not args.resume:
             raise RuntimeError(f"store_meta.json 已存在: {meta_path}；重打包须显式 --resume")
-        pin = _load_json(pathlib.Path(args.stage2_source_pin) if stage2 else _WAN_DIR / "SOURCE_PIN.json")
+        # 零参数池化不依赖 MotionJEPA 代码，索引的 mj_repo_commit 如实记 null。
+        pin = {"mj_repo_commit": None} if timepool else _load_json(
+            pathlib.Path(args.stage2_source_pin) if stage2 else _WAN_DIR / "SOURCE_PIN.json")
         index = ms.index_payload(manifest, entries, spec=spec, layout=layout, mj_repo_commit=pin["mj_repo_commit"])
         index_bytes = (json.dumps(index, ensure_ascii=False, indent=1) + "\n").encode("utf-8")
         index_sha = hashlib.sha256(index_bytes).hexdigest()
@@ -874,14 +1087,19 @@ def cmd_pack(args) -> None:
               f"demo {totals['demo_rows']}) index_sha256={index_sha[:16]}…", flush=True)
         # 写表前预检全部来源（兼容模式含 VAE/encoder 分组）；旧 compare 记录作废，须对新表重做。
         (store_root / BITEXACT_RELPATH).unlink(missing_ok=True)
-        gather = gather_stage2_provenance if stage2 else gather_provenance
-        extra = {"validation_root": pathlib.Path(args.stage2_validation),
-                 "source_pin_path": pathlib.Path(args.stage2_source_pin),
-                 "manifest_file_sha256": ms.sha256_file(args.manifest)} if stage2 else {}
-        prov = gather(latents_root, tokens_root, entries, manifest, index_sha,
-                                 encoder_run_dir=encoder_run_dir, raw_dir=raw_dir,
-                                 input_manifest_path=input_manifest_path, vae_compat=vae_compat,
-                                 expected_ckpt_sha256=getattr(args, "expected_ckpt_sha256", None), **extra)
+        if timepool:
+            prov = gather_timepool_provenance(tokens_root, latents_root, entries, manifest, index_sha, raw_dir=raw_dir,
+                                              manifest_path=pathlib.Path(args.manifest).resolve(),
+                                              input_manifest_path=input_manifest_path, train_head=args.train_head)
+        else:
+            gather = gather_stage2_provenance if stage2 else gather_provenance
+            extra = {"validation_root": pathlib.Path(args.stage2_validation),
+                     "source_pin_path": pathlib.Path(args.stage2_source_pin),
+                     "manifest_file_sha256": ms.sha256_file(args.manifest)} if stage2 else {}
+            prov = gather(latents_root, tokens_root, entries, manifest, index_sha,
+                                     encoder_run_dir=encoder_run_dir, raw_dir=raw_dir,
+                                     input_manifest_path=input_manifest_path, vae_compat=vae_compat,
+                                     expected_ckpt_sha256=getattr(args, "expected_ckpt_sha256", None), **extra)
         print(f"PACK_PROVENANCE_PRECHECK=PASS mode={'vae_compat' if vae_compat else 'single_pin'} "
               f"segments={sum(1 for _ in iter_rows_in_order(entries))}", flush=True)
 
@@ -916,8 +1134,14 @@ def cmd_pack(args) -> None:
             raise RuntimeError("表落盘后 sha256 与写入流不符")
 
         atomic_write_bytes(store_root / ms.INDEX_RELPATH, index_bytes)
-        git_head = subprocess.run(["git", "-C", str(_REPO_ROOT), "rev-parse", "HEAD"],
-                                  capture_output=True, text=True, check=False).stdout.strip()
+        if timepool:
+            if table_sha != prov["output"]["motion_table_sha256"]:
+                raise RuntimeError("写入的表 SHA 与预检来源记录不同")
+            _, map_bytes = load_timepool_export(tokens_root)
+            if ms.sha256_bytes(map_bytes) != prov["window_map"]["sha256"]:
+                raise RuntimeError("逐窗映射在预检后被改动")
+            atomic_write_bytes(store_root / ms.TIMEPOOL_WINDOW_MAP_RELPATH, map_bytes)
+        git_head = _repo_head()
         import importlib.metadata as md
         meta = {
             "schema": ms.META_SCHEMA, "layout": layout, "status": "packed",
@@ -956,6 +1180,18 @@ def cmd_verify(args) -> None:
     store_root = pathlib.Path(args.store).resolve()
     meta = ms.MotionMeta.load(store_root)
     manifest_path = args.manifest or meta.manifest_path
+    timepool = meta.spec.family == ms.TIMEPOOL_LAYOUT_SPEC.family
+    records_dir = getattr(args, "gate_records_dir", None)
+    if records_dir is not None and not timepool:
+        raise ValueError("--gate-records-dir 仅用于零参数池化 layout")
+    validation = None
+    if timepool:
+        # 来源记录不含建库机器路径，token 根必须显式给出。
+        if not args.tokens or args.force_break_lock or meta.status != "packed":
+            raise ValueError("零参数池化 verify 必须显式 --tokens、禁止强制破锁，且只接受 status=packed 的表")
+        if records_dir is not None:
+            validation = load_timepool_gate_records(records_dir, table_sha256=meta.table_sha256,
+                                                    index_sha256=meta.motion_index_sha256)
     tokens_root = pathlib.Path(args.tokens or meta.provenance["tokens_root"]).resolve()
     manifest = load_manifest(manifest_path)
     if manifest["sha256"] != meta.manifest_sha256:
@@ -990,10 +1226,18 @@ def cmd_verify(args) -> None:
         for label, evidence in meta.provenance["stage2_compat"]["evidence"].items():
             if ms.sha256_file(evidence["path"]) != evidence["sha256"]:
                 raise ValueError(f"verify 来源证据已变动: {label}")
+    export_record = None
+    if timepool:
+        export_record, _ = load_timepool_export(tokens_root)
+        if (export_record["table_sha256"] != meta.table_sha256
+                or export_record["window_map"]["sha256"] != meta.provenance["window_map"]["sha256"]):
+            raise ValueError("verify: 池化导出与 packed 表不是同一次产物")
     started_at = _now()
     had_lock = (store_root / ms.LOCK_RELPATH).exists()
     if stage2 and had_lock and not args.resume:
         raise ValueError("stage2 verify 接管 pack 锁须显式 --resume")
+    if timepool and had_lock and not args.resume:
+        raise ValueError("零参数池化 verify 接管 pack 锁须显式 --resume")
     acquire_lock(store_root, resume=(args.resume if had_lock else False),
                  force_break=args.force_break_lock, phase="verify")
 
@@ -1022,9 +1266,19 @@ def cmd_verify(args) -> None:
             print(f"  失配 row={row} segment={key}")
         print("⚠ FAIL：不回填 meta、保留 pack.lock")
         raise SystemExit(1)
+    if timepool and validation is None:
+        # 闸门记录要读 packed 表才能产生，这一步只核对、不改 meta，保留 pack.lock 防止被训练消费。
+        print(f"VERIFY_MOTION=PASS scanned={scanned} mismatches=0 status=packed gate_records=0 "
+              f"（全表核对通过，等待 --gate-records-dir，未写 verified）", flush=True)
+        return
     atomic_write_bytes(store_root / ms.ROW_DIGESTS_RELPATH, bytes(digests))
     raw = dict(meta.raw)
     raw["status"] = "verified"
+    if timepool:
+        raw["provenance"] = {**raw["provenance"], "validation": validation}
+        ms.validate_timepool_provenance(raw["provenance"], status="verified", manifest_sha256=meta.manifest_sha256,
+                                        table_sha256=meta.table_sha256, index_sha256=meta.motion_index_sha256,
+                                        num_rows=meta.num_rows)
     raw["verify"] = {"scanned": scanned, "mismatches": 0, "started_at": started_at, "finished_at": _now(),
                      "conclusion": f"VERIFY_MOTION=PASS scanned={scanned} mismatches=0"}
     if stage2:
@@ -1049,12 +1303,18 @@ def cmd_verify(args) -> None:
     raw["row_digests"] = {"relpath": ms.ROW_DIGESTS_RELPATH, "algo": "blake2b-128", "covered_rows": scanned,
                           "coverage": ms.ROW_DIGEST_COVERAGE, "byte_count": len(digests),
                           "sha256": hashlib.sha256(bytes(digests)).hexdigest()}
+    if timepool:
+        raw["verify"].update({k: export_record["counts"][k] for k in ("copy", "fill", "demo_tail", "exec_fill")},
+                             nonfinite=0, segment_set_mismatch=0)
+    # 状态切换只有这一次原子改名：崩溃时 meta 要么仍是 packed，要么已是完整 verified，且锁未释放前不可被训练消费。
     atomic_write_bytes(store_root / ms.META_RELPATH, json.dumps(raw, ensure_ascii=False, indent=1).encode())
     ms.MotionMeta.load(store_root)
     release_lock(store_root)
     print(f"[verify] meta 回填（status=verified）+ row_digests 落盘, 耗时 {time.perf_counter() - t_all:.1f}s",
           flush=True)
     details = " nonfinite=0 segment_set_mismatch=0 " + " ".join(f"{k}={v}" for k, v in padding.items()) if stage2 else ""
+    if timepool:
+        details = f" nonfinite=0 segment_set_mismatch=0 status=verified gate_records={len(validation)}"
     print(f"VERIFY_MOTION=PASS scanned={scanned} mismatches=0{details}")
 
 
@@ -1133,7 +1393,11 @@ def cmd_report(args) -> None:
     print(f"layout={r['layout']} status={r['status']} num_rows={meta.num_rows} totals={r['totals']}")
     print(f"manifest={meta.manifest_path}\n  sha256={meta.manifest_sha256}")
     print(f"motion_index_sha256={meta.motion_index_sha256}")
-    print(f"encoder={r['provenance']['encoder'].get('checkpoint_sha256')} vae={r['provenance']['vae'].get('vae_state_sha256')}")
+    if meta.spec.family == ms.TIMEPOOL_LAYOUT_SPEC.family:
+        p = r["provenance"]
+        print(f"encoder_kind={p['encoder_kind']} encoder_ckpt=none readout={p['readout']} vae={p['wan']['vae_state_sha256']}")
+    else:
+        print(f"encoder={r['provenance']['encoder'].get('checkpoint_sha256')} vae={r['provenance']['vae'].get('vae_state_sha256')}")
     print(f"packer={r.get('packer')}\nverify={r.get('verify')}\nrow_digests={r.get('row_digests')}")
 
 
@@ -1141,8 +1405,9 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("pack")
-    p.add_argument("--layout", choices=("legacy", "stage2"), default="legacy")
-    p.add_argument("--latent-grid-subsample", type=int, default=1)
+    p.add_argument("--layout", choices=("legacy", "stage2", TIMEPOOL_CLI_LAYOUT), default="legacy")
+    p.add_argument("--latent-grid-subsample", type=int, default=None)
+    p.add_argument("--train-head", default=None, help="wan-timepool 专用：建库时代码 HEAD（40 位），须等于当前 git HEAD")
     p.add_argument("--stage2-validation", default=None)
     p.add_argument("--stage2-source-pin", default=None)
     p.add_argument("--latents-origin", choices=("historical-restore-receipt", ms.STAGE2_CACHE_ORIGIN), default=None)
@@ -1151,7 +1416,7 @@ def main() -> None:
     p.add_argument("--tokens", required=True, help="<lib>/motion-tokens")
     p.add_argument("--latents", required=True, help="<lib>/wan-latents（只读 metadata 取 provenance）")
     p.add_argument("--out", required=True, help="<lib>/motion")
-    p.add_argument("--encoder-run-dir", required=True)
+    p.add_argument("--encoder-run-dir", default=None, help="legacy/stage2 必填；wan-timepool 不得传入")
     p.add_argument("--raw-dir", required=True)
     p.add_argument("--oracle-report", default=None, help="默认 <lib>/oracle/wan-mj/vae_report.json")
     p.add_argument("--restore-receipt", default=None,
@@ -1165,6 +1430,8 @@ def main() -> None:
     p.add_argument("--check-padding", action="store_true")
     p.add_argument("--manifest", default=None)
     p.add_argument("--tokens", default=None)
+    p.add_argument("--gate-records-dir", default=None,
+                   help="wan-timepool 专用：含 <ROLE>.json 的目录；不给则只核对全表、保持 packed")
     p.add_argument("--resume", action="store_true")
     p.add_argument("--force-break-lock", action="store_true")
     p.set_defaults(func=cmd_verify)
@@ -1172,6 +1439,8 @@ def main() -> None:
     p.add_argument("--store", required=True)
     p.set_defaults(func=cmd_report)
     args = ap.parse_args()
+    if args.cmd == "pack" and args.layout != TIMEPOOL_CLI_LAYOUT and not args.encoder_run_dir:
+        ap.error("the following arguments are required: --encoder-run-dir")
     args.func(args)
 
 
