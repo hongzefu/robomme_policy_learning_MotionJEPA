@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MoveCube 强推恢复实验</title>
 <style>
-:root{--bg:#fff;--fg:#1f2328;--mute:#59636e;--line:#d1d9e0;--soft:#f6f8fa;--warn:#9a6700;--warnbg:#fff8c5}
-@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mute:#9198a1;--line:#3d444d;--soft:#161b22;--warn:#d29922;--warnbg:#2b2308}}
+:root{--bg:#fff;--fg:#1f2328;--mute:#59636e;--line:#d1d9e0;--soft:#f6f8fa}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mute:#9198a1;--line:#3d444d;--soft:#161b22}}
 body{background:var(--bg);color:var(--fg);font:15px/1.7 -apple-system,"PingFang SC","Noto Sans CJK SC",sans-serif;max-width:1040px;margin:0 auto;padding:24px 16px}
 h1{font-size:25px;border-bottom:2px solid var(--line);padding-bottom:6px;margin-top:44px}
 h2{font-size:19px;margin-top:30px}h3{font-size:16px;margin-top:22px}
@@ -15,191 +15,135 @@ th,td{border:1px solid var(--line);padding:5px 9px;text-align:left;vertical-alig
 code{background:var(--soft);padding:1px 4px;border-radius:4px;font-size:13px}
 pre{background:var(--soft);padding:10px;overflow-x:auto;border-radius:6px;font-size:13px}pre code{background:none;padding:0}
 blockquote{border-left:4px solid var(--line);margin:10px 0;padding:4px 14px;color:var(--mute);background:var(--soft)}
-.warn{background:var(--warnbg);border-left:4px solid var(--warn);padding:6px 12px;margin:10px 0}
 </style>
 </head>
 <body>
 <p style="font-size:24px;font-weight:700;margin-bottom:6px">MoveCube 强推恢复实验方案</p>
 <blockquote>
-<b>权威性与边界</b>：本文件只规划、未实施；用户对这份计划不改动而直接认可才算开工（第 2 条）。<br>
-<b>代码锚点</b>：分支 <code>v4.1-interpretMotion</code>，HEAD <code>7d32cf391962ded9729d4b63b0d043706971d97f</code>；benchmark 锁定 <code>856bc3a189d4172f3f47dbee4424d585f8d78db3</code>。<br>
-<b>工作副本</b>：环境 A，<code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code>，本机 2 张 RTX A6000，不用集群。<br>
-<b>commit 体例</b>：方案与留档用 <code>docs:</code>；功能代码合入用 <code>commitV</code> 体例，子任务提交用 <code>sub/&lt;编号&gt;:</code>。<br>
-<b>已核实与待验证</b>：本文标「实测」的数字来自 2026-11-07 美东下午的只读诊断（不加载模型，脚本在 scratchpad，未改仓库）；耗时是估算，要等冒烟确认。
+只规划、未实施；用户对这份计划不改动而直接认可才算开工。分支 <code>v4.1-interpretMotion</code>，本机环境 A（2×RTX A6000），不用集群。
 </blockquote>
 
 <h1>第一部分（给人看）</h1>
 
-<h2>一、要做什么与全部运行一览</h2>
-<p>MoveCube 的三种做法按第一步碰什么分成两类：<b>cube 类</b>（<code>grasp_putdown</code> 拿 cube、<code>gripper_push</code> 推 cube）和 <b>peg 类</b>（<code>peg_push</code> 拿 peg）。只在 cube 类局上做实验：开局先用一串真实关节动作把机械臂强行带向 peg，走到某个点位后放手，交还策略，看它还能不能把 cube 送到目标。两个模型都测，只看行为结果。</p>
-<p>这次<b>不测任何内部量</b>：不存注意力，不读隐状态，不改激活。所以这里的 steering 指动作层面的强推，不是对 latent 的干预。</p>
+<h2>一、方案</h2>
+<p>开局先用一串真实关节动作，把机械臂强行带到<b>错误物体的上方</b>，在路上的不同点位放手交还策略，看它能不能回到正确物体并完成任务。两个方向、两个模型都测，只看结局。</p>
 <table>
-<tr><th>维度</th><th>取值</th><th>数量</th></tr>
-<tr><td>局</td><td>官方 test 划分里全部 cube 类局（<code>grasp_putdown</code> 21 局、<code>gripper_push</code> 17 局，实测）</td><td>38</td></tr>
-<tr><td>放手点位 k</td><td>强推 0 / 16 / 32 / 48 / 64 / 80 步后放手；k=0 就是未强推的对照</td><td>6</td></tr>
-<tr><td>模型</td><td>motion（<code>v1-store/assets/vla-o16cc-59999/59999</code>）；基线（官方 <code>perceptual-framesamp-context/79999</code>）</td><td>2</td></tr>
-<tr><td>模型 seed</td><td>42；环境 seed 用官方 test 原值</td><td>1</td></tr>
-<tr><td><b>总局数</b></td><td>38 × 6 × 2</td><td><b>456</b></td></tr>
+<tr><th>方向</th><th>局（官方 test）</th><th>强推到</th><th>要回到</th></tr>
+<tr><td>A</td><td>cube 类 38 局（拿 cube 21、推 cube 17）</td><td>peg 上方</td><td>cube</td></tr>
+<tr><td>B</td><td>peg 类 12 局（拿 peg）</td><td>cube 上方</td><td>peg</td></tr>
 </table>
-<p>peg 类的 12 局不跑：它们只用于分组，不做强推。</p>
+<p>放手点位：强推 0、16、32、48、64、80 步，0 步就是未强推的对照。模型：motion（<code>vla-o16cc-59999</code>）和无 motion 基线（官方 <code>perceptual-framesamp-context/79999</code>），模型 seed 42。<b>总量 50 局 × 6 点 × 2 模型 = 600 局</b>，粗估 2～5 小时（未实测，冒烟后更新）。</p>
 
 <h2>二、已定口径</h2>
-<table>
-<tr><th>#</th><th>口径</th><th>依据</th></tr>
-<tr><td>K1</td><td>分组：<code>grasp_putdown</code>、<code>gripper_push</code> 为 cube 类，<code>peg_push</code> 为 peg 类</td><td>用户「拿/推cube和拿peg的任务二分」</td></tr>
-<tr><td>K2</td><td>强推动作用环境自带规划器在本局场景里规划到 peg，夹爪保持张开，不做闭合和抓取</td><td>选择题「本局规划到 peg」</td></tr>
-<tr><td>K3</td><td>方向是本局 peg 的实际位置，有左有右，不固定往右</td><td>选择题「走向本局 peg」</td></tr>
-<tr><td>K4</td><td>只测行为恢复，不存注意力，不做探针和激活干预</td><td>用户「这次完全不测内部的激活，就是我只看它被拉到一个方向之后还能不能恢复」「我完全不需要看内部注意力的机制，所以说你都不需要有任何的这个记录的功能」</td></tr>
-<tr><td>K5</td><td>38 局 × 6 点 × 2 模型，seed 42</td><td>选择题「38局×6点×2模型」</td></tr>
-<tr><td>K6</td><td>注意力权重不落盘；模型 checkpoint 不删不改</td><td>用户「权重都不需要保留」，随后说明指注意力（§二 K4 第二句原话）</td></tr>
-</table>
-<div class="warn">用户原话是「往右边走」。实测 peg 侧别每局随机：38 局里 y&gt;0 共 16 局、y&lt;0 共 22 局；按相机位姿推导 y&gt;0 在前视画面右侧，尚未看图核对。K3 已按裁决采用走向本局 peg。</div>
+<ol>
+<li>强推动作由环境自带规划器在本局场景里规划，夹爪张开，<b>只走到目标正上方 z=0.2</b>，不下降、不抓。依据：用户「能不能从 peg 上面走到这个 cube 上面」。两模型执行同一份动作。</li>
+<li>反方向也测。依据：用户「反过来也要测，就是如果往 cube 这边走，它反过来能不能走向走向peg」。</li>
+<li>结局只看环境判定：成功、失败、超时。依据：用户「如果被判断为失败的，就就还是判断为失败，就不用去管它」。</li>
+<li>不看内部机制，没有任何注意力记录功能。依据：用户「我完全不需要看内部注意力的机制，所以说你都不需要有任何的这个呃记录的功能」。</li>
+<li>实验任务不登记状态机，交接走人工。依据：用户「我我不需要」（按对状态机提问的回答理解）。</li>
+</ol>
 
-<h2>三、机制：强推序列和每个点位</h2>
-<p><b>动作从哪来。</b>专家抓 peg 的 <code>grasp_and_lift_peg_side</code>（<code>subgoal_planner_func.py</code>）是两段 screw 规划：先到 peg 尾部正上方 z=0.2，再下降到尾部。这里只取这两段的前半部分，不闭合夹爪、不抬起。规划器的 <code>plan_screw</code> 只算路径、不执行，输出 7 个关节目标，再拼上夹爪张开值 1.0，就是 8 维 <code>pd_joint_pos</code> 动作，和策略输出同一格式，经同一个 <code>env.step</code> 执行。</p>
-<p><b>两个模型执行同一份动作。</b>动作先离线算好存成一张表（38 局各一份），两模型读同一张表，保证强推完全相同。局内步号和场景位置不符就报错，不继续。</p>
-<p><b>每个点位走到哪（实测 38 局）。</b></p>
-<table>
-<tr><th>放手点 k</th><th>TCP 高度 z 中位数</th><th>TCP 到 peg 尾部水平距离中位数</th><th>含义</th></tr>
-<tr><td>0</td><td>0.521</td><td>0.217</td><td>未强推（home 姿态）</td></tr>
-<tr><td>16</td><td>0.460</td><td>0.177</td><td>刚开始偏向 peg</td></tr>
-<tr><td>32</td><td>0.255</td><td>0.037</td><td>已接近 peg 上方</td></tr>
-<tr><td>48</td><td>0.195</td><td>0.013</td><td>悬停在 peg 正上方，开始下降</td></tr>
-<tr><td>64</td><td>0.048</td><td>0.008</td><td>下降途中</td></tr>
-<tr><td>80</td><td>约 0.01（路径终点）</td><td>约 0.008</td><td>张开的夹爪已在 peg 尾部两侧，再闭合就抓到了</td></tr>
-</table>
-<p>路径总长中位数 73.5 步（65～84）：第一段中位数 42 步（37～55），第二段 29 步（27～36）。到 k=80 时 35 局已走完，剩下的步数保持最后一个动作；3 局路径长于 80 步，在 80 步截断。</p>
-<p><b>放手怎么接回策略。</b>评估协议固定每 16 步续一包观测，所以放手点只能在 16 的倍数上。强推期间策略照常收观测、照常推理，只是输出的动作被替换；放手那一步执行的是当前边界新推理的动作。策略的记忆里因此完整包含被强推的帧。这和已有的 <code>stopcube_runner.py</code> <code>hold_extended</code> 接管模式是同一机制。</p>
-<p><b>开环实测安全性。</b>38 局规划全部成功；开环走完全程没有一局提前终局（成功或失败）；peg 位移全为 0；cube 只有 ep45（<code>grasp_putdown</code>）被碰动 6.8 mm，其余都小于 1 mm。</p>
-<div class="warn">⚠ <code>grasp_putdown</code> 和 <code>gripper_push</code> 的 <code>failure_func</code> 规定：抓起 peg 直接判失败。k=64、80 时夹爪已靠近或套在 peg 上，放手后策略一闭合就可能判负。这本身是实验想看的「被带偏」，所以单独归类统计，不算实验故障。ep45 的 cube 位移如实标注，不剔除。</div>
+<h2>三、产出</h2>
+<p>一张表和两条曲线（每个方向一条）：每个模型、每个点位的成功率，以及放手后是否走向正确物体。方向 B 只有 12 局，只能看大趋势。</p>
 
-<h2>四、看什么</h2>
-<p>主结果是一张表和一条曲线：每个模型、每个 k 的成功率，横轴是强推深度。成功判据就是官方 <code>outcome == success</code>。</p>
+<h2>四、验收</h2>
+<p>只验实验是否按设计执行；恢复率高低是结果，不是验收条件。</p>
 <table>
-<tr><th>读数</th><th>怎么算</th><th>回答什么</th></tr>
-<tr><td>恢复率</td><td>各 k 成功局数 / 38，带 Wilson 95% 区间</td><td>被拉到这个点后还能不能完成</td></tr>
-<tr><td>对照内恢复率</td><td>只看该模型 k=0 成功的局，其中在该 k 仍成功的比例</td><td>扣掉模型本来就做不成的局</td></tr>
-<tr><td>结局分类</td><td>成功 / 抓 peg 判负 / 其他判负 / 超时</td><td>恢复不了时是被带偏还是卡住</td></tr>
-<tr><td>放手后走向</td><td>放手后 TCP 到 cube、到 peg 尾部的最小距离；放手到结束的步数</td><td>失败局有没有回头，成功局恢复多慢</td></tr>
-<tr><td>模型对比</td><td>同局同 k 配对，用精确 McNemar 检验</td><td>两个模型谁更能恢复</td></tr>
-<tr><td>按做法拆分</td><td><code>grasp_putdown</code> 与 <code>gripper_push</code> 分开列</td><td>拿和推是否不一样</td></tr>
-</table>
-<p>基线已知数：motion 模型此前 seed 42 官方 800 局里，这 38 局成功 34 局（<code>grasp_putdown</code> 21/21，<code>gripper_push</code> 13/17），起点够高。那次是另一批卡，不和本次 k=0 逐位对比。基线模型的这 38 局逐局数尚未取到，由本次 k=0 给出。样本 38 局，单点区间约 ±15 个百分点，只能看出明显差距。</p>
-
-<h2>五、我们这一侧要改什么</h2>
-<p>现有驱动 <code>run_local.py</code> 固定把服务换成带注意力录制的 <code>serve_policy_attn</code>，客户端也没有 MoveCube 接管，所以必须加一点代码。</p>
-<table>
-<tr><th>文件</th><th>锚点</th><th>改什么</th><th>关闭态</th><th>开启态</th></tr>
-<tr><td><code>scripts/interpret/movecube_force_table.py</code>（新）</td><td>整文件</td><td>生成 38 局强推动作表</td><td>不调用</td><td>产出 JSON 表</td></tr>
-<tr><td><code>scripts/interpret/movecube_force_runner.py</code>（新）</td><td>整文件，仿 <code>stopcube_runner.TraceRunner.step</code></td><td>按表替换前 k 步动作，记环境侧轨迹</td><td>不调用</td><td>强推后放手</td></tr>
-<tr><td><code>scripts/interpret/run_local.py</code></td><td><code>load_spec</code>、<code>build_server_command</code>、<code>build_client_command</code>、<code>collect</code></td><td>新键 <code>movecube_force</code>：用官方 <code>scripts.training.serve_policy</code>，换客户端，收尾不要求注意力文件</td><td>命令逐字不变</td><td>无注意力录制</td></tr>
-<tr><td><code>scripts/interpret/analysis/movecube_recovery.py</code>（新）</td><td>整文件</td><td>汇总第四节所有读数和曲线</td><td>不调用</td><td>产出表与图</td></tr>
-</table>
-<p>环境、规划器、模型和第三方子模块都不改。</p>
-
-<h2>六、验收</h2>
-<p>验收只管实验有没有按设计执行。恢复率高低是结果，不是验收条件，低了也照实汇报。</p>
-<table>
-<tr><th>查什么</th><th>怎么查</th><th>过了说明什么</th><th>判定行</th></tr>
-<tr><td>动作表完整</td><td>38 局规划成功、开环无提前终局</td><td>每局都能强推</td><td><code>FORCE_TABLE=PASS episodes=38 plan_fail=0 premature_terminal=0</code></td></tr>
-<tr><td>确实按表执行</td><td>逐步比对轨迹里的实际动作和表；两模型同局同 k 全相同</td><td>强推真的发生且两模型一致</td><td><code>FORCE_EXEC=PASS runs=456 mismatches=0</code></td></tr>
-<tr><td>放手时刻准确</td><td>实际放手步 = 起始步 + k，放手步执行新推理动作；k=0 无替换</td><td>放手后确实是策略在控制</td><td><code>FORCE_RELEASE=PASS runs=456 mismatches=0</code></td></tr>
-<tr><td>没有录制注意力</td><td>服务进程模块为 <code>scripts.training.serve_policy</code>；产物根无 attn 目录和 npz</td><td>K4 落实</td><td><code>NO_ATTN=PASS npz=0</code></td></tr>
-<tr><td>全部跑完</td><td>456 局都有终局</td><td>没有缺局</td><td><code>MFR_RUN=PASS completed=456 missing=0 errors=0 retries=&lt;n&gt;</code></td></tr>
-<tr><td>结果独立报告</td><td>模型 × k 的成功数</td><td>第四节主结果</td><td><code>MFR_RESULT model=&lt;m&gt; k=&lt;k&gt; success=&lt;n&gt;/38</code>（非判据）</td></tr>
+<tr><th>查什么</th><th>判定行</th></tr>
+<tr><td>50 局动作表都规划成功</td><td><code>FORCE_TABLE=PASS episodes=50 plan_fail=0</code></td></tr>
+<tr><td>按表强推，两模型动作相同</td><td><code>FORCE_EXEC=PASS runs=600 mismatches=0</code></td></tr>
+<tr><td>放手步准确，之后由策略控制</td><td><code>FORCE_RELEASE=PASS runs=600 mismatches=0</code></td></tr>
+<tr><td>没有录制注意力</td><td><code>NO_ATTN=PASS npz=0</code></td></tr>
+<tr><td>600 局都有终局</td><td><code>MFR_RUN=PASS completed=600 missing=0 errors=0</code></td></tr>
 </table>
 
-<h2>七、步骤</h2>
+<h2>五、步骤</h2>
 <table>
 <tr><th>阶段</th><th>内容</th><th>判据</th></tr>
-<tr><td>0</td><td>开工审查计划有无自相矛盾；记开工令</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS</code></td></tr>
-<tr><td>1</td><td>写代码和短测，审查后合入；开新 run 的 Beta 锚点</td><td>定向 pytest 通过；<code>POST_MERGE_REVIEW=PASS</code></td></tr>
+<tr><td>0</td><td>开工审查</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS</code></td></tr>
+<tr><td>1</td><td>写代码和短测，审查合入</td><td><code>POST_MERGE_REVIEW=PASS</code></td></tr>
 <tr><td>2</td><td>生成动作表</td><td><code>FORCE_TABLE=PASS</code></td></tr>
-<tr><td>3</td><td>冒烟：2 局（各一种做法）× k∈{0,48} × 2 模型，共 8 局，并看视频确认强推和放手</td><td>8 局的 <code>FORCE_EXEC</code>、<code>FORCE_RELEASE</code>、<code>NO_ATTN</code> 通过</td></tr>
-<tr><td>4</td><td>全量 456 局，双卡；先 motion，再基线</td><td><code>MFR_RUN=PASS</code></td></tr>
-<tr><td>5</td><td>分析、目视复查曲线、写 result.md、提交推送</td><td>主结果表与判定行入档</td></tr>
+<tr><td>3</td><td>冒烟：两个方向各 1 局 × 2 个点位 × 2 模型，共 8 局，看视频确认</td><td>8 局判定行通过</td></tr>
+<tr><td>4</td><td>全量 600 局</td><td><code>MFR_RUN=PASS</code></td></tr>
+<tr><td>5</td><td>分析、写结果、提交</td><td>结果入档</td></tr>
 </table>
-<p><b>耗时估算（未实测）</b>：历史 motion 单局成功约 25～35 秒、1300 步超时约 2 分钟，基线约快 4 倍。全部算上服务启动，全量约 1.5～4 小时，由恢复失败（超时）的多少决定。阶段 3 后更新这个估计。</p>
 
-<h2>八、子代理分工与合并（简述）</h2>
-<p>拆两块。S1（opus，独立 worktree）写动作表、客户端和驱动改动及其短测；S2（opus，独立 worktree）写分析脚本，只依赖 S1 约定的轨迹字段。先合 S1 再合 S2。每次合并前由一个 sonnet 审查者看固定 sha 的差异，合并后主会话跑定向测试再推送。起跑、监听和清理都由主会话负责。动作表、冒烟和全量的启动放在合并后的固定执行树上。</p>
-
-<h2>九、交接顺序与状态机登记</h2>
-<table>
-<tr><th>项</th><th>内容</th></tr>
-<tr><td>任务 id</td><td><code>movecube-force-recovery-1107</code></td></tr>
-<tr><td>交接前必须完成</td><td>第六节全部判定行；<code>result.md</code> 已提交推送；本轮 tmux 全部退出</td></tr>
-<tr><td>长尾</td><td>无</td></tr>
-<tr><td>依赖上游</td><td>无。只读使用两个已有 checkpoint；与在 GreatLakes 上跑的 <code>gl-abl-encoders-train</code> 不争资源</td></tr>
-<tr><td>解锁下游</td><td>无；若要加反方向对照或更多 seed，另出计划</td></tr>
-</table>
-<p>第二部分从下一节开始，含红线、逐文件清单、分配表、闸门、runbook、风险、盲区和留档纪律。</p>
+<h2>六、子代理分工与合并（简述）</h2>
+<p>两块代码各一个 opus 子代理、独立 worktree：S1 写动作表、客户端和驱动改动；S2 写分析脚本。先合 S1 再合 S2，每次合并前 sonnet 审查，合并后跑测试再推送。起跑、监听和清理归主会话。</p>
 
 <h1>第二部分（技术细节，供 agent 追踪）</h1>
 
 <h2>〇、前置声明与红线</h2>
 <ol>
-<li><b>R1</b> 不新增任何注意力、隐状态、激活的录制或分析；不使用 <code>serve_policy_attn</code>。</li>
-<li><b>R2</b> 不改 <code>third_party/robomme_benchmark</code>、模型代码、配置和 checkpoint；不改两份 checkpoint 所在目录。</li>
-<li><b>R3</b> 不为挑成功局重试；只有基础设施故障可重试同一块一次，并记录原因和次数（第 22 条）。任务失败、判负、超时都是有效结果。</li>
-<li><b>R4</b> 不用集群，不起占位 job。显存只用剩余容量；现场 GPU0 有约 4.8 GB、GPU1 有约 1.7 GB 属于其他进程，不停、不动。</li>
-<li><b>R5</b> 工作区里不属于本任务的改动（如未跟踪的 TODO html）不提交、不动。</li>
-<li><b>R6</b> run 名固定 <code>movecube-force-recovery-seed42-1107</code>，产物根 <code>v1-store/evaluation/movecube-force-recovery-seed42-1107/</code>，已存在即停。不带 <code>--force</code>。</li>
-<li><b>R7</b> tmux 会话前缀 <code>mfr-</code>，清单记入 <code>launch.md</code>；只按清单逐个 <code>kill-session -t '=名'</code>，前后各 <code>tmux ls</code>。</li>
+<li><b>R1</b> 不新增注意力、隐状态、激活的录制或分析；不使用 <code>serve_policy_attn</code>。</li>
+<li><b>R2</b> 不改 <code>third_party/robomme_benchmark</code>、模型代码、配置和 checkpoint。</li>
+<li><b>R3</b> 不为挑成功局重试；只有基础设施故障可重试同一块一次并记录。成功、失败、超时都是有效结果；强推途中环境判失败也按失败计，不剔除、不特判。</li>
+<li><b>R4</b> 不用集群。显存只用剩余容量，现场其他进程不停、不动。</li>
+<li><b>R5</b> 工作区里不属于本任务的文件（如未跟踪的 TODO html）不提交、不动。</li>
+<li><b>R6</b> run 名 <code>movecube-force-recovery-seed42-1107</code>，产物根 <code>v1-store/evaluation/movecube-force-recovery-seed42-1107/</code>，已存在即停。</li>
+<li><b>R7</b> tmux 前缀 <code>mfr-</code>，清单记入 <code>launch.md</code>；只按清单逐个 <code>kill-session -t '=名'</code>，前后各 <code>tmux ls</code>。</li>
 </ol>
 
-<h2>一、逐文件改动清单</h2>
-<h3>1.1 <code>scripts/interpret/movecube_force_table.py</code>（新，S1）</h3>
+<h2>一、实测依据（2026-11-07 美东，只读诊断，不加载模型）</h2>
+<table>
+<tr><th>项</th><th>方向 A：到 peg 上方（38 局）</th><th>方向 B：到 cube 上方（12 局）</th></tr>
+<tr><td>规划成功</td><td>38/38</td><td>12/12</td></tr>
+<tr><td>到达上方步数</td><td>中位数 42（37～55）</td><td>中位数 57（36～89）</td></tr>
+<tr><td>开环途中提前终局</td><td>0</td><td>0</td></tr>
+<tr><td>物体位移</td><td>整段含下降：peg 0，cube 仅 ep45 位移 6.8 mm（发生阶段未拆；本方案已不做下降）</td><td>只到上方：cube 0，peg 0</td></tr>
+<tr><td>motion 此前 seed 42 官方成绩</td><td>34/38（拿 cube 21/21，推 cube 13/17）</td><td>6/12（另 6 局超时）</td></tr>
+</table>
+<p>路径节点（方向 A，到上方后还含原下降段，只作位置参考）：16 步 z=0.46、水平距 peg 尾部 0.177 m；32 步 z=0.255、0.037 m；48 步 z=0.195、0.013 m。方向 B：16 步 z=0.472、水平距 cube 0.058 m；32 步 z=0.32、0.02 m；48 步（尚未到达的 8 局）z=0.246、0.012 m。方向 A 的 home 姿态到 peg 尾部水平距中位数 0.217 m。</p>
+<p>到上方后还没到放手点的局保持末动作原地悬停；方向 B 有 2 局（88、89 步）在 80 步时尚差最后几步，按截断处理并如实标注。方向 A 的 peg 侧别每局随机（y&gt;0 共 16 局，y&lt;0 共 22 局），方向由坐标定，不依赖左右。</p>
+<p>放手机制：评估协议每 16 步续一包观测，放手点取 16 的倍数；强推期间策略照常收观测、照常推理，动作被替换；放手步执行当前边界新推理动作。与 <code>stopcube_runner.py</code> 的 <code>hold_extended</code> 同机制。</p>
+
+<h2>二、逐文件改动清单</h2>
+<h3>2.1 <code>scripts/interpret/movecube_force_table.py</code>（新，S1）</h3>
 <ul>
-<li>入参 <code>--manifest</code>、<code>--out</code>；用 official-sim 解释器运行，不加载模型。</li>
-<li>每局 <code>BenchmarkEnvBuilder(env_id="MoveCube", dataset="test", action_space="joint_angle", gui_render=False, max_steps=1300).make_env_for_episode(ep)</code>，然后 <code>env.reset()</code>。</li>
-<li><code>u.way == "peg_push"</code> 的局不入表；cube 类集合写入 <code>episodes</code>。</li>
-<li>目标位姿沿用 <code>grasp_and_lift_peg_side</code>：<code>u.peg_tail.pose</code> 乘绕 x 轴 π 的翻转四元数；z=0.2 的悬停位姿和尾部位姿各一次 <code>FailAwarePandaArmMotionPlanningSolver(...).planner.plan_screw(np.concatenate([p,q]), qpos, time_step=u.control_timestep, use_point_cloud=False)</code>；第二段以第一段末关节为起点。</li>
-<li>动作 <code>np.hstack([position[i], [1.0]])</code>，长度不足 80 时补末行到 80，长于 80 时截断；记录 <code>n_hover</code>、<code>n_descend</code>、<code>padded</code>、<code>truncated</code>。</li>
-<li>同一进程开环执行 80 步校验：无终局；记录每 16 步的 TCP、peg/cube 位移。</li>
-<li>每局表项：<code>first_env_step</code>、<code>env_seed</code>、<code>way</code>、<code>peg_tail_xyz</code>、<code>cube_xyz</code>、<code>goal_xyz</code>、<code>actions</code>（80×8）、校验摘要。顶层 sha256 按 canonical JSON 计算。末行 <code>FORCE_TABLE=PASS|FAIL episodes=&lt;n&gt; plan_fail=&lt;n&gt; premature_terminal=&lt;n&gt;</code>。</li>
-<li>规划失败不回退 RRT，记 FAIL 并停，交主会话。诊断里 38 局 screw 全部成功。</li>
+<li>入参 <code>--manifest</code>、<code>--out</code>；official-sim 解释器，不加载模型。</li>
+<li>每局 <code>BenchmarkEnvBuilder(env_id="MoveCube", dataset="test", action_space="joint_angle", gui_render=False, max_steps=1300).make_env_for_episode(ep)</code>，<code>env.reset()</code>。读 <code>u.way</code>：<code>peg_push</code> 的目标取 <code>u.cube</code>（方向 B），其余取 <code>u.peg_tail</code>（方向 A）。</li>
+<li>目标位姿：目标 <code>pose.q</code> 乘绕 x 轴 π 的翻转四元数，<code>p</code> 的 z 改 0.2；<code>FailAwarePandaArmMotionPlanningSolver(...).planner.plan_screw(np.concatenate([p,q]), qpos, time_step=u.control_timestep, use_point_cloud=False)</code>。</li>
+<li>动作 <code>np.hstack([position[i], [1.0]])</code>，不足 80 步补末行，超过 80 步截断；记录 <code>n_path</code>、<code>padded</code>、<code>truncated</code>。</li>
+<li>同进程开环执行校验，记录每 16 步 TCP、物体位移和途中终局（仅记录，不作闸门，见 R3）。</li>
+<li>表项：<code>first_env_step</code>、<code>env_seed</code>、<code>way</code>、<code>direction</code>、<code>peg_tail_xyz</code>、<code>cube_xyz</code>、<code>goal_xyz</code>、<code>actions</code>（80×8）、校验摘要。末行 <code>FORCE_TABLE=PASS|FAIL episodes=&lt;n&gt; plan_fail=&lt;n&gt;</code>。规划失败不回退 RRT，FAIL 交主会话。</li>
 </ul>
-<h3>1.2 <code>scripts/interpret/movecube_force_runner.py</code>（新，S1）</h3>
+<h3>2.2 <code>scripts/interpret/movecube_force_runner.py</code>（新，S1）</h3>
 <ul>
-<li>入口复用 <code>examples/robomme/eval.py</code> 的 <code>EpisodeEvaluator</code>，结构仿 <code>stopcube_runner.py</code> 的 <code>TraceRunner</code>、<code>TraceEvaluator</code>，不改官方循环、RPC 与终局。</li>
-<li>新 CLI：<code>--force-table</code>、<code>--force-k</code>（0/16/32/48/64/80）。</li>
-<li><code>get_init_obs</code> 之后核对：<code>elapsed_steps == first_env_step</code>，<code>env_seed</code>、<code>way</code>、peg 尾部、cube、goal 与表一致（位置容差 1e-5），否则抛 <code>ContractError</code>。</li>
-<li><code>step</code>：<code>elapsed - origin &lt; k</code> 时执行 <code>actions[elapsed-origin]</code>，否则执行推理动作；到 <code>origin+k</code> 时断言 <code>row_in_chunk==0</code> 且 chunk 起点等于当前步，写 <code>actual_release_step</code>。</li>
-<li>每步写 <code>step_trace.jsonl</code>：<code>env_step</code>、<code>control_source</code>（<code>forced</code>/<code>policy</code>）、<code>executed_action</code>、<code>tcp</code>、<code>cube</code>、<code>peg_tail</code>、夹爪张开宽度。局末回执写 <code>outcome</code>、<code>force_k</code>、<code>way</code>、<code>actions_executed</code>、<code>peg_lifted</code>（peg z 比初值高 2 cm 以上）。</li>
-<li>每局保留官方录像；不进 git。</li>
+<li>复用 <code>examples/robomme/eval.py</code> 的 <code>EpisodeEvaluator</code>，结构仿 <code>stopcube_runner.py</code> 的 <code>TraceRunner</code>、<code>TraceEvaluator</code>，不改官方循环、RPC 与终局。</li>
+<li>CLI：<code>--force-table</code>、<code>--force-k</code>（0/16/32/48/64/80）。</li>
+<li>初始化后核对 <code>elapsed_steps == first_env_step</code>，<code>env_seed</code>、<code>way</code>、peg 尾部、cube、goal 与表一致（位置容差 1e-5），否则 <code>ContractError</code>。</li>
+<li><code>step</code>：<code>elapsed - origin &lt; k</code> 时执行表动作，否则执行推理动作；到 <code>origin+k</code> 时断言 <code>row_in_chunk==0</code> 且 chunk 起点等于当前步，写 <code>actual_release_step</code>。</li>
+<li>每步写 <code>step_trace.jsonl</code>：<code>env_step</code>、<code>control_source</code>、<code>executed_action</code>、<code>tcp</code>、<code>cube</code>、<code>peg_tail</code>。局末回执：<code>outcome</code>、<code>force_k</code>、<code>way</code>、<code>direction</code>、<code>actions_executed</code>。保留官方录像，不进 git。</li>
 </ul>
-<h3>1.3 <code>scripts/interpret/run_local.py</code>（S1）</h3>
+<h3>2.3 <code>scripts/interpret/run_local.py</code>（S1）</h3>
 <ul>
-<li><code>load_spec</code>：新键 <code>movecube_force</code>（bool），与 <code>stopcube_mode</code>、<code>bin_trace</code>、<code>subgoal_trace</code>、<code>rollout_record</code> 互斥；要求 <code>force_table</code>、<code>force_k</code>；清单只能含 <code>MoveCube</code>。</li>
-<li><code>build_server_command</code>：<code>movecube_force</code> 开启时返回 <code>RW.server_command</code> 原形，非 motion 模型按现有逻辑删除 <code>--motion-online-gpu</code>；不替换模块、不加 <code>--attn-out</code>。</li>
-<li><code>build_client_command</code>：把 <code>command[1]</code> 换成 runner，追加两个 CLI。</li>
-<li><code>collect</code>、<code>saves_attn</code>：该模式下不要求注意力文件。其他模式行为和命令逐字不变，由现有测试盯住。</li>
+<li><code>load_spec</code>：新键 <code>movecube_force</code>（bool），与 <code>stopcube_mode</code>、<code>bin_trace</code>、<code>subgoal_trace</code>、<code>rollout_record</code> 互斥；要求 <code>force_table</code>、<code>force_k</code>；清单只含 <code>MoveCube</code>。</li>
+<li><code>build_server_command</code>：开启时返回 <code>RW.server_command</code> 原形（官方 <code>scripts.training.serve_policy</code>），非 motion 模型按现有逻辑删 <code>--motion-online-gpu</code>；不换模块、不加 <code>--attn-out</code>。</li>
+<li><code>build_client_command</code>：<code>command[1]</code> 换 runner，追加两个 CLI。</li>
+<li><code>collect</code>、<code>saves_attn</code>：该模式不要求注意力文件。其他模式行为与命令逐字不变。</li>
 </ul>
-<h3>1.4 <code>scripts/interpret/analysis/movecube_recovery.py</code>（新，S2）</h3>
+<h3>2.4 <code>scripts/interpret/analysis/movecube_recovery.py</code>（新，S2）</h3>
 <ul>
-<li>读各 run 的回执与 <code>step_trace.jsonl</code>，输出第一部分第四节全部读数和判定行 <code>FORCE_EXEC</code>、<code>FORCE_RELEASE</code>、<code>MFR_RUN</code>、<code>MFR_RESULT</code>。</li>
-<li><code>NO_ATTN</code>：在产物根递归查 <code>attn</code> 目录和 <code>*.npz</code>，并核对 <code>commands.json</code> 服务模块。</li>
-<li>结局分类：<code>outcome=fail</code> 且 <code>peg_lifted</code> 为抓 peg 判负，其余 <code>fail</code> 为其他判负。</li>
-<li>产出 <code>summary.json</code>、<code>summary.txt</code>、<code>per_episode.csv</code>、恢复曲线 PNG/PDF。曲线按 <code>dataviz</code> skill 绘制，主会话目视复查。</li>
+<li>输出：按方向、模型、k 的成功/失败/超时数与成功率（Wilson 95%）；只看该模型 k=0 成功局的恢复率；放手后 TCP 到正确物体和强推目标的最小距离；放手到结束步数；方向 A 再按拿、推拆分；同局同 k 的两模型精确 McNemar。</li>
+<li>判定行：<code>FORCE_EXEC</code>、<code>FORCE_RELEASE</code>、<code>NO_ATTN</code>（产物根查 <code>attn</code> 目录和 <code>*.npz</code>，核对 <code>commands.json</code> 服务模块）、<code>MFR_RUN</code>；结果行 <code>MFR_RESULT direction=&lt;A|B&gt; model=&lt;m&gt; k=&lt;k&gt; success=&lt;n&gt;/&lt;N&gt;</code>（非判据）。</li>
+<li>产出 <code>summary.json</code>、<code>summary.txt</code>、<code>per_episode.csv</code>、两条恢复曲线（按 <code>dataviz</code> skill 绘制，主会话目视复查）。</li>
 </ul>
-<h3>1.5 测试（各子任务自带）</h3>
+<h3>2.5 测试</h3>
 <ul>
-<li><code>scripts/interpret/test_movecube_force_runner.py</code>：用替身环境测替换步、放手边界、k=0、表身份不符报错。</li>
-<li>同一测试文件另加：<code>movecube_force</code> 的服务命令不含 <code>serve_policy_attn</code> 和 <code>--attn-out</code>；其他模式命令不变。</li>
-<li><code>scripts/interpret/test_movecube_recovery.py</code>：合成回执验证分类、Wilson、McNemar、判定行。</li>
+<li><code>scripts/interpret/test_movecube_force_runner.py</code>（S1）：替身环境测替换步、放手边界、k=0、表身份不符报错；<code>movecube_force</code> 服务命令不含 <code>serve_policy_attn</code>、<code>--attn-out</code>，其他模式命令不变。</li>
+<li><code>scripts/interpret/test_movecube_recovery.py</code>（S2）：合成回执验证统计与判定行。</li>
 </ul>
 
-<h2>二、子代理分配表</h2>
+<h2>三、子代理分配表</h2>
 <table>
 <tr><th>编号</th><th>目标</th><th>可写集合</th><th>禁触</th><th>接口与依赖</th><th>合并顺序</th><th>验收（worktree，CPU）</th><th>资源</th><th>共享文件</th></tr>
-<tr><td>S1（opus，worktree）</td><td>表、runner、驱动改动</td><td>1.1、1.2、1.3、对应测试</td><td><code>third_party/</code>、<code>src/</code>、<code>examples/</code>、规则文件、在途文件</td><td>产出回执与轨迹字段（1.2）</td><td>1</td><td><code>uv run python -m pytest scripts/interpret/test_movecube_force_runner.py scripts/interpret/test_stopcube_runner.py -q</code>，全部通过</td><td>无 GPU</td><td><code>run_local.py</code> 归 S1</td></tr>
-<tr><td>S2（opus，worktree）</td><td>分析脚本</td><td>1.4、对应测试</td><td>同上及 S1 文件</td><td>只读 1.2 字段，用合成数据</td><td>2</td><td><code>uv run python -m pytest scripts/interpret/test_movecube_recovery.py -q</code>，全部通过</td><td>无 GPU</td><td>无</td></tr>
-<tr><td>主会话</td><td>建执行树、Beta、起跑、监听、写档、清理</td><td><code>docs/evaluation-doc/...</code>、产物根</td><td>—</td><td>S1、S2 合入后</td><td>—</td><td>第三节闸门</td><td>2×A6000</td><td>—</td></tr>
+<tr><td>S1（opus，worktree）</td><td>表、runner、驱动</td><td>2.1～2.3 与其测试</td><td><code>third_party/</code>、<code>src/</code>、<code>examples/</code>、规则文件</td><td>定义 2.2 回执与轨迹字段</td><td>1</td><td><code>uv run python -m pytest scripts/interpret/test_movecube_force_runner.py scripts/interpret/test_stopcube_runner.py -q</code> 全部通过</td><td>无 GPU</td><td><code>run_local.py</code> 归 S1</td></tr>
+<tr><td>S2（opus，worktree）</td><td>分析脚本</td><td>2.4 与其测试</td><td>同上及 S1 文件</td><td>只读 2.2 字段，用合成数据</td><td>2</td><td><code>uv run python -m pytest scripts/interpret/test_movecube_recovery.py -q</code> 全部通过</td><td>无 GPU</td><td>无</td></tr>
+<tr><td>主会话</td><td>Beta、执行树、起跑、监听、写档、清理</td><td><code>docs/evaluation-doc/...</code>、产物根</td><td>—</td><td>S1、S2 合入后</td><td>—</td><td>第四节闸门</td><td>2×A6000</td><td>—</td></tr>
 </table>
-<p>worktree 里按 <code>CLAUDE.md</code> 的 <code>UV_PROJECT_ENVIRONMENT=&lt;主 .venv&gt; PYTHONPATH=&lt;worktree&gt;:&lt;worktree&gt;/src uv run --no-sync ...</code> 取环境，先打印模块 <code>__file__</code> 核实指向 worktree。子代理不 push、不合并、不起超过 5 分钟的任务。审查用一个 sonnet 钉死 <code>REVIEW_BASE</code>／<code>REVIEW_TIP</code>；合并用 <code>git merge --no-ff &lt;TIP sha&gt;</code>。</p>
+<p>worktree 按 <code>CLAUDE.md</code> 的 <code>UV_PROJECT_ENVIRONMENT=&lt;主 .venv&gt; PYTHONPATH=&lt;worktree&gt;:&lt;worktree&gt;/src uv run --no-sync ...</code> 取环境，先打印模块 <code>__file__</code> 核实。子代理不 push、不合并、不起超过 5 分钟的任务。审查用一个 sonnet 钉死 BASE／TIP，合并用 <code>git merge --no-ff &lt;TIP sha&gt;</code>。</p>
 
-<h2>三、闸门总表</h2>
+<h2>四、闸门</h2>
 <table>
 <tr><th>闸门</th><th>判定行</th><th>不过怎么办</th></tr>
 <tr><td>G0 开工审查</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS|FAIL base=&lt;sha&gt; findings=&lt;n&gt; blocking=&lt;n&gt;</code></td><td>阻塞项交用户</td></tr>
@@ -209,53 +153,51 @@ blockquote{border-left:4px solid var(--line);margin:10px 0;padding:4px 14px;colo
 <tr><td>G4 全量</td><td><code>MFR_RUN=PASS</code></td><td>基础设施故障按 R3 重试一次；仍缺局如实报告</td></tr>
 </table>
 
-<h2>四、Runbook（数值在实施时填入 launch.md）</h2>
+<h2>五、Runbook（数值在实施时填入 launch.md）</h2>
 <pre><code># 执行树：S1、S2 合入并 Beta 提交后固定，脏树或 HEAD 不符即拒绝
 git worktree add --detach v1-store/worktrees/movecube-force-run &lt;BETA_SHA&gt;
 O=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107
 
-# 动作表（官方仿真解释器，GPU1，约 3 分钟）
+# 动作表（official-sim，GPU1，约 4 分钟）
 v1-store/envs/official-sim/bin/python scripts/interpret/movecube_force_table.py \
   --manifest $O/manifest-all.json --out $O/force-table.json
 
-# 每个 worker 一个 tmux：按 k 顺序跑自己的分片（s0～s3 约 10/10/9/9 局）
+# 每个 worker 一个 tmux：按 k 顺序跑自己的分片（50 局分 4 片）
 tmux new-session -d -s mfr-&lt;模型&gt;-s&lt;i&gt; \
   "set -o pipefail; PYTHONUNBUFFERED=1 bash $O/run_shard.sh &lt;模型&gt; &lt;gpu&gt; s&lt;i&gt; 2&gt;&amp;1 | tee $O/logs/&lt;模型&gt;-s&lt;i&gt;.log; echo \"EXIT_CODE=\$?\" &gt;&gt; $O/logs/&lt;模型&gt;-s&lt;i&gt;.log"</code></pre>
 <ul>
-<li>规格：每卡 2 个 worker，<code>XLA_PYTHON_CLIENT_MEM_FRACTION=0.30</code>，<code>XLA_FLAGS</code> 同 1106；若剩余显存不够，改每卡 1 个 worker，不停他人进程。</li>
-<li>一个 <code>(模型, k, 分片)</code> 对应一份 spec 和一个 <code>run_root</code>；每份 manifest 整片一个 chunk，每个 k 只起一次服务。</li>
+<li>规格：每卡 2 个 worker，<code>XLA_PYTHON_CLIENT_MEM_FRACTION=0.30</code>，<code>XLA_FLAGS</code> 同 1106；显存不够改每卡 1 个 worker。先 motion 后基线。</li>
+<li>一个 <code>(模型, k, 分片)</code> 一份 spec 和一个 <code>run_root</code>；整片一个 chunk，每个 k 起一次服务。</li>
 <li>每份日志一个 Monitor，过滤词 <code>EXIT_CODE=|Traceback|Error|nan|NaN|out of memory|Killed</code>。</li>
-<li>每个 worker <code>EXIT_CODE=0</code> 后再跑分析。</li>
+<li>耗时依据（未实测）：历史 motion 单局成功约 25～35 秒，1300 步超时约 2 分钟，基线约快 4 倍；超时比例决定总时长。</li>
 </ul>
 
-<h2>五、风险登记</h2>
+<h2>六、风险登记</h2>
 <table>
 <tr><th>风险</th><th>影响</th><th>处置</th></tr>
-<tr><td>官方 <code>serve_policy</code> 在本机直接配合两个模型未验证（1106 用的是 attn 模块）</td><td>冒烟失败</td><td>G3 暴露；按代码问题修复，不退回录制路径</td></tr>
-<tr><td>表生成与执行不在同一进程，场景不可复现</td><td>强推错位</td><td>runner 核对场景位姿，<code>ContractError</code> 即停</td></tr>
-<tr><td>同 seed 下 demo 由规划器重生成，理论上有 RRT 随机性</td><td>demo 帧差异</td><td>核对 <code>D</code> 与位姿；如不一致停下报告</td></tr>
-<tr><td>策略超时局多</td><td>耗时到上限</td><td>不改预算逻辑，等完；超 4 小时在汇报中更新</td></tr>
-<tr><td>GPU0、GPU1 其他进程增长</td><td>显存不足</td><td>降每卡 worker 数，不动他人进程</td></tr>
-<tr><td>规划器实例化对环境有副作用</td><td>只影响表生成进程</td><td>runner 不创建规划器，评估局不受影响</td></tr>
+<tr><td>官方 <code>serve_policy</code> 配合两个模型在本机未验证（1106 用 attn 模块）</td><td>冒烟失败</td><td>G3 暴露；按代码问题修复，不退回录制路径</td></tr>
+<tr><td>表生成与执行跨进程，场景不可复现</td><td>强推错位</td><td>runner 核对位姿，<code>ContractError</code> 即停</td></tr>
+<tr><td>规划器重生成 demo 时的随机性</td><td>demo 帧差异</td><td>核对 <code>D</code> 与位姿；不一致停下报告</td></tr>
+<tr><td>超时局多</td><td>耗时到上限</td><td>不改逻辑，等完；超 5 小时更新汇报</td></tr>
+<tr><td>其他进程显存增长</td><td>显存不足</td><td>降 worker 数，不动他人进程</td></tr>
 </table>
 
-<h2>六、盲区诚实清单</h2>
+<h2>七、盲区诚实清单</h2>
 <ul>
-<li>强推是开局就开始，不覆盖「策略自己走到半路再被拉偏」的情形；这个情形需要另外的设计。</li>
-<li>没有反方向对照，因此无法区分「被拉向 peg」与「任意位移」对恢复的影响；用户本轮未选，结果解读时明确写出。</li>
-<li>只有一个模型 seed，且每局一次采样，不能给出模型内部随机性的方差。</li>
-<li>38 局统计力有限，只能看出大差距。</li>
-<li>前视画面左右仅由相机位姿推导，未看图核对；不影响实验，因为方向按 peg 坐标定。</li>
-<li>环境和 h5 均不记录 way 字段；way 从 <code>u.way</code> 读，在 test 的 50 局上已实测（21/17/12）。</li>
-<li>基线 k=0 成绩尚未知道；若基线本身在这 38 局上很低，它的恢复率要结合对照内恢复率读。</li>
+<li>强推从开局开始，不覆盖策略走到半路再被拉偏的情形。</li>
+<li>方向 B 只有 12 局，且 motion 对照只有 6/12，只能看大趋势，不下精细结论。</li>
+<li>没有与目标无关的位移对照，分不清「被拉向错误物体」和「任意位移」的影响。</li>
+<li>一个模型 seed、每局一次采样，不估计模型随机性方差。</li>
+<li>k=64、80 对多数局是到达后原地悬停，方向 A 尤其如此，是否悬停时长影响恢复不单独拆。</li>
+<li>基线的 k=0 成绩由本次给出，尚未知道；对其恢复率要结合 k=0 读。</li>
 </ul>
 
-<h2>七、留档与 commit 纪律</h2>
+<h2>八、留档与 commit 纪律</h2>
 <ul>
-<li>留档根 <code>docs/evaluation-doc/movecube-force-recovery-seed42-1107/</code>，含 <code>launch.md</code>（起跑时写）、<code>result.md</code>（结束写）、<code>records/</code>（<code>force-table</code> 摘要、<code>summary.*</code>、<code>per_episode.csv</code>、曲线图、清洗后日志）。总索引 <code>docs/evaluation-doc/README.md</code> 加一行。</li>
-<li>起跑前必须 clean HEAD 对应执行树；主检出在途文件不影响执行树。</li>
-<li>只 <code>git add</code> 逐个路径；commit 后立刻裸 <code>git push</code>，确认无 <code>ahead</code>。</li>
-<li>动作表 JSON、逐步轨迹、录像留在产物根，不进 git。</li>
+<li>留档根 <code>docs/evaluation-doc/movecube-force-recovery-seed42-1107/</code>：<code>launch.md</code>、<code>result.md</code>、<code>records/</code>（表摘要、<code>summary.*</code>、<code>per_episode.csv</code>、曲线、清洗后日志）；总索引 <code>docs/evaluation-doc/README.md</code> 加一行。</li>
+<li>逐路径 <code>git add</code>；commit 后立刻裸 <code>git push</code>，确认无 <code>ahead</code>。</li>
+<li>动作表 JSON、逐步轨迹、录像留产物根，不进 git。</li>
+<li>不写入 <code>docs/handoff/current.json</code>，交接走人工；未上提状态机属用户本轮决定。</li>
 </ul>
 </body>
 </html>
