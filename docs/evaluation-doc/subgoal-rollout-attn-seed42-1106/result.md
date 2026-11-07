@@ -226,7 +226,9 @@ motion 模型文字读 motion 流，在 RouteStick 上真对位 1.30 [1.19, 1.39
 
 用户原话（美东 2026-11-06）：「总结一个完整的通路……这两条路分别是怎么去影响这个 action 部分的」「虽然它有这样的能力，但是它……对不同 memory 的 attention 并没有调整」「你分为两部分叙述……然后画图……生成一个 Fable agent 来梳理一下现在的这个逻辑以及画图」
 
-图 [fig_pathway.pdf](records/paper-figures/fig_pathway.pdf)，逻辑与英文图注 [fig_pathway-logic.md](records/paper-figures/fig_pathway-logic.md)，脚本 [plot_pathway_figure.py](records/paper-figures/plot_pathway_figure.py)。Fable 代理起草，主会话目视复查并修正。独立核对 `PAPER_FIG_REVIEW=FAIL findings=13 errors=1`：数字都能从原始 JSON 重算，错误是 (d) 的样本标注，已和措辞问题一起修正；修正后未再派审查。
+图 [fig_pathway.pdf](records/paper-figures/fig_pathway.pdf)，逻辑与英文图注 [fig_pathway-logic.md](records/paper-figures/fig_pathway-logic.md)，脚本 [plot_pathway_figure.py](records/paper-figures/plot_pathway_figure.py)。第一版由 Fable 代理起草，主会话目视复查并修正，独立核对 `PAPER_FIG_REVIEW=FAIL findings=13 errors=1`（(d) 的样本标注，已修）。
+
+**版本 2（美东 2026-11-07）**，用户原话：「我现在其实只要图 A、B 和 C 就可以了……图 B 的话我就只要留一个」「图 A 你现在这样画不对，就是你要根据这个 prefix 和 suffix 的排列顺序，然后用矩形框来表示……先看出它这个 masking 的关系。看完了 masking 关系之后，再用这个箭头和这个比例来说清楚是哪些层是有特别多的这个联系的」「我说的『图 b』是指的是这个折线图，你还是要保留的」。改动：(a) 按真实序列顺序画矩形块（记忆区 608 槽内帧与 motion 按时刻交错 → 第三人称图 256 → 手腕图 256 → 文字 28 ‖ 动作 20），上方灰色弧线是掩码（由数据判定恰为 0 的格），下方彩色正交箭头是分层强边；(b) 只留一张两任务合并的逐层折线；去掉 (d)。第一部分数字改用本轮 PatternLock | RouteStick 的 motion 模型完整注意力（`mot/pathway/*.npz`，100 局 495 次推理），不再借 Swap 的数。主会话目视复查了位图（无重叠、无溢出、箭头正交），未派独立复核。
 
 ![论文主图](records/paper-figures/fig_pathway.png)
 
