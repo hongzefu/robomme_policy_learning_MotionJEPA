@@ -26,35 +26,37 @@ blockquote{border-left:4px solid var(--line);margin:10px 0;padding:4px 14px;colo
 <h1>第一部分（给人看）</h1>
 
 <h2>一、方案</h2>
-<p>开局先用一串真实关节动作，把机械臂强行带到<b>错误物体的上方</b>，在路上的不同点位放手交还策略，看它能不能回到正确物体并完成任务。两个方向、两个模型都测，只看结局。</p>
+<p>开局先用一串真实关节动作，把机械臂强行带到<b>错误物体的上方</b>，在路上的不同点位放手交还策略，看它能不能<b>回到正确物体并抓起来</b>。抓起来就算成功，这局随即结束，不要求完成后面的任务。两个方向、两个模型都测。</p>
 <table>
 <tr><th>方向</th><th>局（官方 test）</th><th>强推到</th><th>要回到</th></tr>
-<tr><td>A</td><td>cube 类 38 局（拿 cube 21、推 cube 17）</td><td>peg 上方</td><td>cube</td></tr>
-<tr><td>B</td><td>peg 类 12 局（拿 peg）</td><td>cube 上方</td><td>peg</td></tr>
+<tr><td>A</td><td>拿 cube 的 21 局</td><td>peg 上方</td><td>抓起 cube</td></tr>
+<tr><td>B</td><td>拿 peg 的 12 局</td><td>cube 上方</td><td>抓起 peg</td></tr>
 </table>
-<p>放手点位：强推 0、16、32、48、64、80 步，0 步就是未强推的对照。模型：motion（<code>vla-o16cc-59999</code>）和无 motion 基线（官方 <code>perceptual-framesamp-context/79999</code>），模型 seed 42。<b>总量 50 局 × 6 点 × 2 模型 = 600 局</b>，粗估 2～5 小时（未实测，冒烟后更新）。</p>
+<p>放手点位：强推 0、16、32、48、64、80 步，0 步就是未强推的对照。模型：motion（<code>vla-o16cc-59999</code>）和无 motion 基线（官方 <code>perceptual-framesamp-context/79999</code>），模型 seed 42。<b>总量 33 局 × 6 点 × 2 模型 = 396 局</b>，粗估 1～3 小时（未实测，冒烟后更新）。</p>
 
 <h2>二、已定口径</h2>
 <ol>
 <li>强推动作由环境自带规划器在本局场景里规划，夹爪张开，<b>只走到目标正上方 z=0.2</b>，不下降、不抓。依据：用户「能不能从 peg 上面走到这个 cube 上面」。两模型执行同一份动作。</li>
 <li>反方向也测。依据：用户「反过来也要测，就是如果往 cube 这边走，它反过来能不能走向走向peg」。</li>
-<li>结局只看环境判定：成功、失败、超时。依据：用户「如果被判断为失败的，就就还是判断为失败，就不用去管它」。</li>
+<li>成功判据：放手后抓起正确物体，用环境自带的 <code>is_obj_pickup</code>（物体 z&gt;0.05 且确实夹住），不要求任务成功。依据：用户「它只要能够正确地回到物体并且抓取成功就可以了，不需要任务成功」。</li>
+<li>去掉推 cube 的 17 局（<code>gripper_push</code>），因为这类局全程不抓取。依据：选择题「去掉这 17 局」。</li>
+<li>抓起之前环境判失败就算失败，超时算未恢复。依据：用户「如果被判断为失败的，就就还是判断为失败，就不用去管它」。</li>
 <li>不看内部机制，没有任何注意力记录功能。依据：用户「我完全不需要看内部注意力的机制，所以说你都不需要有任何的这个呃记录的功能」。</li>
 <li>实验任务不登记状态机，交接走人工。依据：用户「我我不需要」（按对状态机提问的回答理解）。</li>
 </ol>
 
 <h2>三、产出</h2>
-<p>一张表和两条曲线（每个方向一条）：每个模型、每个点位的成功率，以及放手后是否走向正确物体。方向 B 只有 12 局，只能看大趋势。</p>
+<p>一张表和两条曲线（每个方向一条）：每个模型、每个点位的抓取成功率，以及没抓到的局结局如何。方向 B 只有 12 局，只能看大趋势。</p>
 
 <h2>四、验收</h2>
 <p>只验实验是否按设计执行；恢复率高低是结果，不是验收条件。</p>
 <table>
 <tr><th>查什么</th><th>判定行</th></tr>
-<tr><td>50 局动作表都规划成功</td><td><code>FORCE_TABLE=PASS episodes=50 plan_fail=0</code></td></tr>
-<tr><td>按表强推，两模型动作相同</td><td><code>FORCE_EXEC=PASS runs=600 mismatches=0</code></td></tr>
-<tr><td>放手步准确，之后由策略控制</td><td><code>FORCE_RELEASE=PASS runs=600 mismatches=0</code></td></tr>
+<tr><td>33 局动作表都规划成功</td><td><code>FORCE_TABLE=PASS episodes=33 plan_fail=0</code></td></tr>
+<tr><td>按表强推，两模型动作相同</td><td><code>FORCE_EXEC=PASS runs=396 mismatches=0</code></td></tr>
+<tr><td>放手步准确，之后由策略控制</td><td><code>FORCE_RELEASE=PASS runs=396 mismatches=0</code></td></tr>
 <tr><td>没有录制注意力</td><td><code>NO_ATTN=PASS npz=0</code></td></tr>
-<tr><td>600 局都有终局</td><td><code>MFR_RUN=PASS completed=600 missing=0 errors=0</code></td></tr>
+<tr><td>396 局都有结果</td><td><code>MFR_RUN=PASS completed=396 missing=0 errors=0</code></td></tr>
 </table>
 
 <h2>五、步骤</h2>
@@ -64,7 +66,7 @@ blockquote{border-left:4px solid var(--line);margin:10px 0;padding:4px 14px;colo
 <tr><td>1</td><td>写代码和短测，审查合入</td><td><code>POST_MERGE_REVIEW=PASS</code></td></tr>
 <tr><td>2</td><td>生成动作表</td><td><code>FORCE_TABLE=PASS</code></td></tr>
 <tr><td>3</td><td>冒烟：两个方向各 1 局 × 2 个点位 × 2 模型，共 8 局，看视频确认</td><td>8 局判定行通过</td></tr>
-<tr><td>4</td><td>全量 600 局</td><td><code>MFR_RUN=PASS</code></td></tr>
+<tr><td>4</td><td>全量 396 局</td><td><code>MFR_RUN=PASS</code></td></tr>
 <tr><td>5</td><td>分析、写结果、提交</td><td>结果入档</td></tr>
 </table>
 
@@ -77,7 +79,7 @@ blockquote{border-left:4px solid var(--line);margin:10px 0;padding:4px 14px;colo
 <ol>
 <li><b>R1</b> 不新增注意力、隐状态、激活的录制或分析；不使用 <code>serve_policy_attn</code>。</li>
 <li><b>R2</b> 不改 <code>third_party/robomme_benchmark</code>、模型代码、配置和 checkpoint。</li>
-<li><b>R3</b> 不为挑成功局重试；只有基础设施故障可重试同一块一次并记录。成功、失败、超时都是有效结果；强推途中环境判失败也按失败计，不剔除、不特判。</li>
+<li><b>R3</b> 不为挑成功局重试；只有基础设施故障可重试同一块一次并记录。抓取成功、失败、超时都是有效结果；抓起之前环境判失败就按失败计，不剔除、不特判。</li>
 <li><b>R4</b> 不用集群。显存只用剩余容量，现场其他进程不停、不动。</li>
 <li><b>R5</b> 工作区里不属于本任务的文件（如未跟踪的 TODO html）不提交、不动。</li>
 <li><b>R6</b> run 名 <code>movecube-force-recovery-seed42-1107</code>，产物根 <code>v1-store/evaluation/movecube-force-recovery-seed42-1107/</code>，已存在即停。</li>
@@ -86,22 +88,22 @@ blockquote{border-left:4px solid var(--line);margin:10px 0;padding:4px 14px;colo
 
 <h2>一、实测依据（2026-11-07 美东，只读诊断，不加载模型）</h2>
 <table>
-<tr><th>项</th><th>方向 A：到 peg 上方（38 局）</th><th>方向 B：到 cube 上方（12 局）</th></tr>
+<tr><th>项</th><th>方向 A：到 peg 上方（诊断时 38 局 cube 类，含本方案的 21 局）</th><th>方向 B：到 cube 上方（12 局）</th></tr>
 <tr><td>规划成功</td><td>38/38</td><td>12/12</td></tr>
 <tr><td>到达上方步数</td><td>中位数 42（37～55）</td><td>中位数 57（36～89）</td></tr>
 <tr><td>开环途中提前终局</td><td>0</td><td>0</td></tr>
 <tr><td>物体位移</td><td>整段含下降：peg 0，cube 仅 ep45 位移 6.8 mm（发生阶段未拆；本方案已不做下降）</td><td>只到上方：cube 0，peg 0</td></tr>
-<tr><td>motion 此前 seed 42 官方成绩</td><td>34/38（拿 cube 21/21，推 cube 13/17）</td><td>6/12（另 6 局超时）</td></tr>
+<tr><td>motion 此前 seed 42 官方成绩</td><td>拿 cube 21/21 任务成功（必然也都抓起过）</td><td>6/12（另 6 局超时）；抓取成功率未知，由本次 k=0 给出</td></tr>
 </table>
 <p>路径节点（方向 A，到上方后还含原下降段，只作位置参考）：16 步 z=0.46、水平距 peg 尾部 0.177 m；32 步 z=0.255、0.037 m；48 步 z=0.195、0.013 m。方向 B：16 步 z=0.472、水平距 cube 0.058 m；32 步 z=0.32、0.02 m；48 步（尚未到达的 8 局）z=0.246、0.012 m。方向 A 的 home 姿态到 peg 尾部水平距中位数 0.217 m。</p>
-<p>到上方后还没到放手点的局保持末动作原地悬停；方向 B 有 2 局（88、89 步）在 80 步时尚差最后几步，按截断处理并如实标注。方向 A 的 peg 侧别每局随机（y&gt;0 共 16 局，y&lt;0 共 22 局），方向由坐标定，不依赖左右。</p>
+<p>本节方向 A 的数字是 38 局口径，实施时动作表按 21 局重新统计。到上方后还没到放手点的局保持末动作原地悬停；方向 B 有 2 局（88、89 步）在 80 步时尚差最后几步，按截断处理并如实标注。peg 侧别每局随机，方向由坐标定，不依赖左右。</p>
 <p>放手机制：评估协议每 16 步续一包观测，放手点取 16 的倍数；强推期间策略照常收观测、照常推理，动作被替换；放手步执行当前边界新推理动作。与 <code>stopcube_runner.py</code> 的 <code>hold_extended</code> 同机制。</p>
 
 <h2>二、逐文件改动清单</h2>
 <h3>2.1 <code>scripts/interpret/movecube_force_table.py</code>（新，S1）</h3>
 <ul>
 <li>入参 <code>--manifest</code>、<code>--out</code>；official-sim 解释器，不加载模型。</li>
-<li>每局 <code>BenchmarkEnvBuilder(env_id="MoveCube", dataset="test", action_space="joint_angle", gui_render=False, max_steps=1300).make_env_for_episode(ep)</code>，<code>env.reset()</code>。读 <code>u.way</code>：<code>peg_push</code> 的目标取 <code>u.cube</code>（方向 B），其余取 <code>u.peg_tail</code>（方向 A）。</li>
+<li>每局 <code>BenchmarkEnvBuilder(env_id="MoveCube", dataset="test", action_space="joint_angle", gui_render=False, max_steps=1300).make_env_for_episode(ep)</code>，<code>env.reset()</code>。读 <code>u.way</code>：<code>grasp_putdown</code> 目标取 <code>u.peg_tail</code>（方向 A），<code>peg_push</code> 目标取 <code>u.cube</code>（方向 B），<code>gripper_push</code> 不入表。</li>
 <li>目标位姿：目标 <code>pose.q</code> 乘绕 x 轴 π 的翻转四元数，<code>p</code> 的 z 改 0.2；<code>FailAwarePandaArmMotionPlanningSolver(...).planner.plan_screw(np.concatenate([p,q]), qpos, time_step=u.control_timestep, use_point_cloud=False)</code>。</li>
 <li>动作 <code>np.hstack([position[i], [1.0]])</code>，不足 80 步补末行，超过 80 步截断；记录 <code>n_path</code>、<code>padded</code>、<code>truncated</code>。</li>
 <li>同进程开环执行校验，记录每 16 步 TCP、物体位移和途中终局（仅记录，不作闸门，见 R3）。</li>
@@ -113,7 +115,9 @@ blockquote{border-left:4px solid var(--line);margin:10px 0;padding:4px 14px;colo
 <li>CLI：<code>--force-table</code>、<code>--force-k</code>（0/16/32/48/64/80）。</li>
 <li>初始化后核对 <code>elapsed_steps == first_env_step</code>，<code>env_seed</code>、<code>way</code>、peg 尾部、cube、goal 与表一致（位置容差 1e-5），否则 <code>ContractError</code>。</li>
 <li><code>step</code>：<code>elapsed - origin &lt; k</code> 时执行表动作，否则执行推理动作；到 <code>origin+k</code> 时断言 <code>row_in_chunk==0</code> 且 chunk 起点等于当前步，写 <code>actual_release_step</code>。</li>
-<li>每步写 <code>step_trace.jsonl</code>：<code>env_step</code>、<code>control_source</code>、<code>executed_action</code>、<code>tcp</code>、<code>cube</code>、<code>peg_tail</code>。局末回执：<code>outcome</code>、<code>force_k</code>、<code>way</code>、<code>direction</code>、<code>actions_executed</code>。保留官方录像，不进 git。</li>
+<li>每步 <code>env.step</code> 后调用只读的 <code>is_obj_pickup</code>：方向 A 查 <code>u.cube</code>，方向 B 查 <code>u.peg_tail</code>、<code>u.peg_head</code>。不调用会写 <code>currentpickup</code> 的 <code>is_any_obj_pickup_flag_currentpickup</code>。任一为真即写 <code>grasp_success=1</code>、<code>grasp_step</code> 并立刻结束本局。</li>
+<li>提前结束走正常终局路径，返回给评估循环的 <code>outcome</code> 记 <code>success</code>；回执另写环境原始 <code>env_status</code>。分析只读 <code>grasp_success</code>，不把这里的 <code>success</code> 读成任务成功。</li>
+<li>每步写 <code>step_trace.jsonl</code>：<code>env_step</code>、<code>control_source</code>、<code>executed_action</code>、<code>tcp</code>、<code>cube</code>、<code>peg_tail</code>。局末回执：<code>grasp_success</code>、<code>grasp_step</code>、<code>outcome</code>、<code>env_status</code>、<code>force_k</code>、<code>way</code>、<code>direction</code>、<code>actions_executed</code>。保留官方录像，不进 git。</li>
 </ul>
 <h3>2.3 <code>scripts/interpret/run_local.py</code>（S1）</h3>
 <ul>
@@ -124,13 +128,13 @@ blockquote{border-left:4px solid var(--line);margin:10px 0;padding:4px 14px;colo
 </ul>
 <h3>2.4 <code>scripts/interpret/analysis/movecube_recovery.py</code>（新，S2）</h3>
 <ul>
-<li>输出：按方向、模型、k 的成功/失败/超时数与成功率（Wilson 95%）；只看该模型 k=0 成功局的恢复率；放手后 TCP 到正确物体和强推目标的最小距离；放手到结束步数；方向 A 再按拿、推拆分；同局同 k 的两模型精确 McNemar。</li>
-<li>判定行：<code>FORCE_EXEC</code>、<code>FORCE_RELEASE</code>、<code>NO_ATTN</code>（产物根查 <code>attn</code> 目录和 <code>*.npz</code>，核对 <code>commands.json</code> 服务模块）、<code>MFR_RUN</code>；结果行 <code>MFR_RESULT direction=&lt;A|B&gt; model=&lt;m&gt; k=&lt;k&gt; success=&lt;n&gt;/&lt;N&gt;</code>（非判据）。</li>
+<li>输出：按方向、模型、k 的抓取成功/失败/超时数与抓取成功率（Wilson 95%）；只看该模型 k=0 抓取成功局的恢复率；放手后 TCP 到正确物体和强推目标的最小距离；放手到抓起的步数；同局同 k 的两模型精确 McNemar。</li>
+<li>判定行：<code>FORCE_EXEC</code>、<code>FORCE_RELEASE</code>、<code>NO_ATTN</code>（产物根查 <code>attn</code> 目录和 <code>*.npz</code>，核对 <code>commands.json</code> 服务模块）、<code>MFR_RUN</code>；结果行 <code>MFR_RESULT direction=&lt;A|B&gt; model=&lt;m&gt; k=&lt;k&gt; grasp_success=&lt;n&gt;/&lt;N&gt;</code>（非判据）。</li>
 <li>产出 <code>summary.json</code>、<code>summary.txt</code>、<code>per_episode.csv</code>、两条恢复曲线（按 <code>dataviz</code> skill 绘制，主会话目视复查）。</li>
 </ul>
 <h3>2.5 测试</h3>
 <ul>
-<li><code>scripts/interpret/test_movecube_force_runner.py</code>（S1）：替身环境测替换步、放手边界、k=0、表身份不符报错；<code>movecube_force</code> 服务命令不含 <code>serve_policy_attn</code>、<code>--attn-out</code>，其他模式命令不变。</li>
+<li><code>scripts/interpret/test_movecube_force_runner.py</code>（S1）：替身环境测替换步、放手边界、k=0、抓取即结束、表身份不符报错；<code>movecube_force</code> 服务命令不含 <code>serve_policy_attn</code>、<code>--attn-out</code>，其他模式命令不变。</li>
 <li><code>scripts/interpret/test_movecube_recovery.py</code>（S2）：合成回执验证统计与判定行。</li>
 </ul>
 
@@ -162,14 +166,14 @@ O=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube
 v1-store/envs/official-sim/bin/python scripts/interpret/movecube_force_table.py \
   --manifest $O/manifest-all.json --out $O/force-table.json
 
-# 每个 worker 一个 tmux：按 k 顺序跑自己的分片（50 局分 4 片）
+# 每个 worker 一个 tmux：按 k 顺序跑自己的分片（33 局分 4 片）
 tmux new-session -d -s mfr-&lt;模型&gt;-s&lt;i&gt; \
   "set -o pipefail; PYTHONUNBUFFERED=1 bash $O/run_shard.sh &lt;模型&gt; &lt;gpu&gt; s&lt;i&gt; 2&gt;&amp;1 | tee $O/logs/&lt;模型&gt;-s&lt;i&gt;.log; echo \"EXIT_CODE=\$?\" &gt;&gt; $O/logs/&lt;模型&gt;-s&lt;i&gt;.log"</code></pre>
 <ul>
 <li>规格：每卡 2 个 worker，<code>XLA_PYTHON_CLIENT_MEM_FRACTION=0.30</code>，<code>XLA_FLAGS</code> 同 1106；显存不够改每卡 1 个 worker。先 motion 后基线。</li>
 <li>一个 <code>(模型, k, 分片)</code> 一份 spec 和一个 <code>run_root</code>；整片一个 chunk，每个 k 起一次服务。</li>
 <li>每份日志一个 Monitor，过滤词 <code>EXIT_CODE=|Traceback|Error|nan|NaN|out of memory|Killed</code>。</li>
-<li>耗时依据（未实测）：历史 motion 单局成功约 25～35 秒，1300 步超时约 2 分钟，基线约快 4 倍；超时比例决定总时长。</li>
+<li>耗时依据（未实测）：历史 motion 单局 1300 步超时约 2 分钟，基线约快 4 倍；抓起即结束，所以总时长主要取决于抓不起的局有多少。</li>
 </ul>
 
 <h2>六、风险登记</h2>
@@ -178,18 +182,21 @@ tmux new-session -d -s mfr-&lt;模型&gt;-s&lt;i&gt; \
 <tr><td>官方 <code>serve_policy</code> 配合两个模型在本机未验证（1106 用 attn 模块）</td><td>冒烟失败</td><td>G3 暴露；按代码问题修复，不退回录制路径</td></tr>
 <tr><td>表生成与执行跨进程，场景不可复现</td><td>强推错位</td><td>runner 核对位姿，<code>ContractError</code> 即停</td></tr>
 <tr><td>规划器重生成 demo 时的随机性</td><td>demo 帧差异</td><td>核对 <code>D</code> 与位姿；不一致停下报告</td></tr>
-<tr><td>超时局多</td><td>耗时到上限</td><td>不改逻辑，等完；超 5 小时更新汇报</td></tr>
+<tr><td>超时局多</td><td>耗时到上限</td><td>不改逻辑，等完；超 3 小时更新汇报</td></tr>
+<tr><td>抓取即结束与官方终局契约冲突（<code>collect</code>、录像收尾）</td><td>收尾报错</td><td>S1 短测和 G3 冒烟覆盖；只在 <code>movecube_force</code> 模式放行</td></tr>
 <tr><td>其他进程显存增长</td><td>显存不足</td><td>降 worker 数，不动他人进程</td></tr>
 </table>
 
 <h2>七、盲区诚实清单</h2>
 <ul>
 <li>强推从开局开始，不覆盖策略走到半路再被拉偏的情形。</li>
-<li>方向 B 只有 12 局，且 motion 对照只有 6/12，只能看大趋势，不下精细结论。</li>
+<li>方向 B 只有 12 局，只能看大趋势，不下精细结论。</li>
+<li>去掉 <code>gripper_push</code> 后不覆盖推 cube；抓起即结束，也不看抓起后能否完成任务。</li>
+<li>抓起正确物体只说明走回去并抓到了，不区分策略是看到放手后的画面才纠正，还是本来就会这样走。</li>
 <li>没有与目标无关的位移对照，分不清「被拉向错误物体」和「任意位移」的影响。</li>
 <li>一个模型 seed、每局一次采样，不估计模型随机性方差。</li>
 <li>k=64、80 对多数局是到达后原地悬停，方向 A 尤其如此，是否悬停时长影响恢复不单独拆。</li>
-<li>基线的 k=0 成绩由本次给出，尚未知道；对其恢复率要结合 k=0 读。</li>
+<li>基线和方向 B 的 k=0 抓取成绩由本次给出，尚未知道；恢复率要结合 k=0 读。</li>
 </ul>
 
 <h2>八、留档与 commit 纪律</h2>
