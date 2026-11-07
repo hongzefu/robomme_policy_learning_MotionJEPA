@@ -1224,6 +1224,8 @@ def gate_non_motion(args, ctx):
         if k:
             checked_with_windows += 1
             changed += int(emb_old[:k].tobytes() != emb_new[:k].tobytes())
+    if not checked_with_windows:
+        findings.add("no_samples_with_windows", None, 0, ">0")
     # 全相同说明新旧没换到不同的特征表，“仅 motion 内容变化”的前提不成立。
     if checked_with_windows and changed != checked_with_windows:
         findings.add("motion_content_unchanged", None, changed, checked_with_windows)
@@ -1826,6 +1828,41 @@ def gate_final(args, ctx):
 # ── 绑定与内部件 ──────────────────────────────────────────────────────────────
 
 
+def record_store_mismatch(role, record, store) -> str | None:
+    """记录实际验证的输入必须就是目标表的来源；返回不符说明，符合返回 None。结论相同不代表验的是这张表。"""
+    store = Path(store)
+    provenance = read_json(store / STORE_META)["provenance"]
+    inputs = record.get("inputs") or {}
+
+    def input_sha(label):
+        return (inputs.get(label) or {}).get("sha256")
+
+    if role in ("WINDOW_EQ", "POOL_TABLE_EQ"):
+        live = sha_file(store / STORE_WINDOW_MAP)
+        if input_sha("window_map") != live or live != provenance["window_map"]["sha256"]:
+            return f"inputs.window_map={input_sha('window_map')} 与 store 映射 {live}、provenance {provenance['window_map']['sha256']} 不符"
+    if role == "POOL_TABLE_EQ":
+        table = (record.get("outputs") or {}).get("motion_table", {}).get("sha256")
+        if table != provenance["output"]["motion_table_sha256"] or input_sha("store_index") != provenance["output"]["motion_index_sha256"]:
+            return f"outputs.motion_table={table}、inputs.store_index={input_sha('store_index')} 与 provenance.output 不符"
+    if role == "POOL_CONTRACT" and input_sha("pool_source") != provenance["pool"]["source_sha256"]:
+        return f"inputs.pool_source={input_sha('pool_source')} 与 provenance.pool.source_sha256 不符"
+    if role == "DATA_LINEAGE" and input_sha("input_manifest") != provenance["manifests"]["input_manifest_sha256"]:
+        return f"inputs.input_manifest={input_sha('input_manifest')} 与 provenance.manifests.input_manifest_sha256 不符"
+    if role == "WAN_RESTORE_EQ":
+        want = provenance["wan_cache"]["restored_receipt_file_sha256"]
+        if input_sha("restored_receipt") != want:
+            return f"inputs.restored_receipt={input_sha('restored_receipt')} 与 provenance.wan_cache 不符"
+        # provenance 不直接记 latent 身份：经 SHA 已核对的恢复收据传递到 latents.metadata_sha256。
+        path = Path((inputs.get("restored_receipt") or {}).get("path", ""))
+        if not path.is_file() or sha_file(path) != want:
+            return f"恢复收据文件缺失或已变动: {path}"
+        latent = read_json(path)["latents"]["metadata_sha256"]
+        if input_sha("latents_metadata") != latent:
+            return f"inputs.latents_metadata={input_sha('latents_metadata')} 与恢复收据 latent 身份 {latent} 不符"
+    return None
+
+
 def cmd_bind(args) -> int:
     """按原证据为先期记录追加表/索引绑定：只新增字段，verdict 与其余内容一字不改；重绑到另一张表直接拒绝。"""
     binding = store_binding(args.store)
@@ -1839,6 +1876,10 @@ def cmd_bind(args) -> int:
         record = read_json(path)
         if record.get("status") != "PASS" or not str(record.get("verdict", "")).startswith(f"{role}=PASS"):
             failed.append(f"{role}:结论不是 PASS")
+            continue
+        mismatch = record_store_mismatch(role, record, args.store)
+        if mismatch:
+            failed.append(f"{role}:验证输入与 store 不符:{mismatch}")
             continue
         present = {key: record.get(key) for key in binding if key in record}
         if present == binding:

@@ -583,6 +583,69 @@ def test_bind_refuses_failed_record_and_other_table(packed, capsys):
     assert code == 1 and "缺记录" in lines[0]
 
 
+@pytest.fixture
+def bind_ready(tree, capsys, monkeypatch):
+    """五份真实先期或带表记录，尚未 bind 的全部角色都验证自同一张 packed 表。"""
+    t = tree
+    assert run_cli(capsys, lineage_argv(t))[0] == 0
+    assert run_cli(capsys, restore_argv(t))[0] == 0
+    assert run_cli(capsys, ["pool-contract", "--out-dir", str(t.records)])[0] == 0
+    run(t)
+    cli(monkeypatch, pack_argv(t))
+    assert run_cli(capsys, window_argv(t, "--window-map", str(t.out / "window_map.json")))[0] == 0
+    assert run_cli(capsys, table_argv(t))[0] == 0
+    capsys.readouterr()
+    return t
+
+
+@pytest.mark.parametrize("role,mutate,message", [
+    ("WINDOW_EQ", lambda r: r["inputs"]["window_map"].update(sha256="a" * 64), "inputs.window_map"),
+    ("POOL_CONTRACT", lambda r: r["inputs"]["pool_source"].update(sha256="a" * 64), "inputs.pool_source"),
+    ("DATA_LINEAGE", lambda r: r["inputs"]["input_manifest"].update(sha256="a" * 64), "inputs.input_manifest"),
+    ("WAN_RESTORE_EQ", lambda r: r["inputs"]["restored_receipt"].update(sha256="a" * 64), "inputs.restored_receipt"),
+    ("WAN_RESTORE_EQ", lambda r: r["inputs"]["latents_metadata"].update(sha256="a" * 64), "inputs.latents_metadata"),
+    ("WAN_RESTORE_EQ", lambda r: r["inputs"]["restored_receipt"].update(path="/不存在/receipt.json"), "恢复收据文件缺失"),
+    ("POOL_TABLE_EQ", lambda r: r["inputs"]["window_map"].update(sha256="a" * 64), "inputs.window_map"),
+    ("POOL_TABLE_EQ", lambda r: r["outputs"]["motion_table"].update(sha256="a" * 64), "outputs.motion_table"),
+    ("POOL_TABLE_EQ", lambda r: r["inputs"]["store_index"].update(sha256="a" * 64), "inputs.store_index"),
+    ("POOL_CONTRACT", lambda r: r["inputs"].clear(), "inputs.pool_source"),
+])
+def test_bind_refuses_record_validating_other_inputs(bind_ready, capsys, role, mutate, message):
+    """记录是 PASS，但它验的不是这张表的来源：不得靠追加绑定字段过 pack verify。"""
+    t = bind_ready
+    path = t.records / f"{role}.json"
+    edit_json(path, mutate)
+    before = path.read_bytes()
+    code, lines = run_cli(capsys, ["bind", "--out-dir", str(t.records), "--store", str(t.store), "--roles", role])
+    assert code == 1 and "验证输入与 store 不符" in lines[0] and message in lines[0]
+    assert path.read_bytes() == before
+
+
+def test_bind_refuses_map_differing_from_provenance(bind_ready, capsys):
+    """记录对上了现场映射文件，但映射已与 provenance 不同。"""
+    t = bind_ready
+    path = t.store / ms.TIMEPOOL_WINDOW_MAP_RELPATH
+    path.write_bytes(path.read_bytes() + b" ")
+    edit_json(t.records / "WINDOW_EQ.json", lambda r: r["inputs"]["window_map"].update(sha256=ms.sha256_file(path)))
+    code, lines = run_cli(capsys, ["bind", "--out-dir", str(t.records), "--store", str(t.store), "--roles", "WINDOW_EQ"])
+    assert code == 1 and "inputs.window_map" in lines[0]
+
+
+def test_bind_refuses_already_bound_record_of_other_inputs(bind_ready, capsys):
+    """已带正确绑定字段不能绕过输入核对。"""
+    t = bind_ready
+    binding = chk.store_binding(t.store)
+    edit_json(t.records / "POOL_CONTRACT.json", lambda r: (r.update(binding), r["inputs"]["pool_source"].update(sha256="a" * 64)))
+    code, lines = run_cli(capsys, ["bind", "--out-dir", str(t.records), "--store", str(t.store), "--roles", "POOL_CONTRACT"])
+    assert code == 1 and "inputs.pool_source" in lines[0]
+
+
+def test_bind_accepts_all_when_inputs_match(bind_ready, capsys):
+    t = bind_ready
+    code, lines = run_cli(capsys, ["bind", "--out-dir", str(t.records), "--store", str(t.store)])
+    assert code == 0 and lines[0].startswith("GATE_BIND=PASS bound=4 already=1")
+
+
 def test_expect_head_mismatch_fails(tmp_path, capsys):
     code, lines = run_cli(capsys, ["pool-contract", "--out-dir", str(tmp_path), "--expect-head", "0" * 40])
     assert code == 1 and "code_head" in lines[0]
@@ -820,6 +883,21 @@ def test_non_motion_negative(tmp_path, capsys, monkeypatch, mutate, field):
     fake_source_pair(monkeypatch, mutate)
     assert run_cli(capsys, non_motion_argv(tmp_path))[0] == 1
     assert field in fields(tmp_path / "r", "NON_MOTION_EQ")
+
+
+def test_non_motion_requires_samples_with_windows(tmp_path, capsys, monkeypatch):
+    """全部样本 k=0 时“motion 内容已变”没被验证过，不得 PASS。"""
+    def opener(yaml_path, store_root, library, motion_root):
+        def get(idx):
+            sample = base_sample(idx)
+            for group in sample.values():
+                group["motion_mask"] = np.zeros(96, np.bool_)
+                group["motion_emb"] = np.zeros((96, 1024), np.float32)
+            return sample
+        return 10, get
+    monkeypatch.setattr(chk, "open_sample_source", opener)
+    assert run_cli(capsys, non_motion_argv(tmp_path))[0] == 1
+    assert "no_samples_with_windows" in fields(tmp_path / "r", "NON_MOTION_EQ")
 
 
 def test_sample_indices_fixed_and_boundary():
