@@ -118,7 +118,7 @@
         <tr><td>日志 / checkpoint</td><td>每 100 步日志；保存 5,000、10,000、…、55,000、59,999，共 12 份</td><td>最终 <code>state_step=60000</code>、目录 <code>59999</code></td></tr>
       </tbody>
     </table></div>
-    <p>新 YAML 拟命名 <code>perceptual-framesamp-ctx-32frame-4x4-wan-timepool1024-orig16.yaml</code>。只替换来源和身份字段；保持 <code>source_shape=[1,1024]</code>、<code>num_tokens=1</code>、<code>dim=1024</code>、<code>budget=96</code> 及所有窗口配置。新 <code>readout</code> 拟为 <code>wan_raw_timepool8_spatial8x8_v1</code>，<code>encoder_kind</code> 拟为 <code>wan_fixedpool1024</code>；不能继续自称 stage2。</p>
+    <p>新 YAML 拟命名 <code>perceptual-framesamp-ctx-32frame-4x4-wan-timepool1024-orig16.yaml</code>。只替换来源和身份字段：删除 <code>source_run</code> 与 <code>checkpoint_sha256</code>，<code>store_path</code> 改为 <code>v1-store/datasets/16task-orig100-1600ep-9e109419/motion-wan-timepool1024</code>，保留 <code>online_gpu: 1</code>；保持 <code>source_shape=[1,1024]</code>、<code>num_tokens=1</code>、<code>dim=1024</code>、<code>budget=96</code> 及所有窗口配置。新 <code>readout</code> 拟为 <code>wan_raw_timepool8_spatial8x8_v1</code>，<code>encoder_kind</code> 拟为 <code>wan_fixedpool1024</code>；不能继续自称 stage2。</p>
   </section>
 
   <section id="data">
@@ -153,7 +153,7 @@
         <tr><td>正式完成</td><td>60,000 更新、12 份 checkpoint、训练退出 0、严格恢复成功；非有限与 OOM 为零</td><td><code>TRAIN_FINAL_RECORD</code>、<code>CKPT_INVENTORY</code>、<code>RESTORE_POOL</code></td></tr>
       </tbody>
     </table></div>
-    <p class="small">上表是待执行判据，不是新模型已 PASS。完整字段、证据路径与失败处理见<a href="#gates">第二部分闸门表</a>。</p>
+    <p class="small">上表是待执行判据，不是新模型已 PASS，只列主要判定行；<code>LAUNCH_CONTRACT</code>、<code>ONLINE_NUMERICS</code>、<code>CKPT_UPLOAD</code> 属第二部分的附加判定行。完整字段、证据路径与失败处理见<a href="#gates">第二部分闸门表</a>。</p>
     <div class="table-wrap"><table>
       <thead><tr><th>阶段</th><th>工作内容</th><th>结束判据</th></tr></thead>
       <tbody>
@@ -200,13 +200,13 @@
         <tr><td><code>scripts/dataset/export_wan_timepool.py</code><br><span class="badge todo">待新增</span></td><td>读取恢复的 grid16 raw latent 与旧逐窗收据；选偶数 m、重编号 m//2；调用共享池化，生成每段 token、原/新索引映射、全量摘要与来源记录。</td><td>新 export schema；共 23,253 行；保留所有 386 demo 补尾、1,053 exec fill；不导入 MotionJEPA encoder。</td></tr>
         <tr><td><code>src/mme_vla_suite/datastore/motion_adapter.py::motion_policy_spec</code></td><td>注册新 readout <code>wan_raw_timepool8_spatial8x8_v1</code>，新 layout <code>motion-wan-timepool1024-grid32-demopad17-v1</code>；原始/策略形状均 <code>(1,1024)</code>。</td><td>沿用一窗一 token、96 窗预算；旧 stage2 concat/split 路径逐字保持，不把 pool 接到 stage2 常量。</td></tr>
         <tr><td><code>src/mme_vla_suite/datastore/motion_store.py::layout_spec / MotionMeta.load / run_full_checks</code></td><td>加入独立固定池化 layout 与 provenance 校验：raw 源 receipt、pool 版本/SHA、删除首 latent、归约轴、flatten、dtype、输出/索引 SHA。</td><td>共用可见窗口与索引算法；不得要求不存在的 encoder checkpoint，也不得用空字符串伪装 SHA。</td></tr>
-        <tr><td><code>scripts/dataset/pack_motion_store.py::read_segment_tokens / cmd_pack / cmd_verify</code></td><td>新增显式 <code>wan-timepool</code> layout 分支与 <code>gather_timepool_provenance</code>；允许复用合法缓存收据，但 pool provenance 单独封口；全表逐行核对。</td><td>新增 layout 名称是待实现 CLI，不是现有能力；旧 stage2 专属 provenance 校验保留。</td></tr>
+        <tr><td><code>scripts/dataset/pack_motion_store.py::read_segment_tokens / cmd_pack / cmd_verify</code></td><td>新增显式 <code>wan-timepool</code> layout 分支与 <code>gather_timepool_provenance</code>；允许复用合法缓存收据，但 pool provenance 单独封口；全表逐行核对。</td><td>新增 layout 名称是待实现 CLI，不是现有能力；旧 stage2 专属 provenance 校验保留。新 layout 下 <code>--encoder-run-dir</code> 不必填且不得传入；偶数窗选取由 <code>export_wan_timepool.py</code> 负责，pack 不接受 <code>--latent-grid-subsample</code>。</td></tr>
         <tr><td><code>src/mme_vla_suite/training/framesamp_dataset.py::check_motion_contract</code></td><td>识别新 readout/layout/kind 并严格核对；旧 source_shape 等结构字段仍相同。</td><td>数据采样、<code>_pad_motion</code>、可见窗口、帧表、动作与 normstats 不改。</td></tr>
-        <tr><td><code>scripts/dataset/wan_timepool/timepool_sidecar.py</code><br><span class="badge todo">待新增</span></td><td>复用现有协议与 <code>wan_motion_infer.py::load_vae / encode_chunk</code>；输入同 33 帧；每个请求独立 <code>vae.encode</code>，不让内部缓存跨窗续接；调用共享池化并返回 4,096 字节。</td><td>握手明确 <code>encoder_kind=wan_fixedpool1024</code>；提供 VAE/pool 源码与环境指纹，不提供虚构的 encoder_ckpt。</td></tr>
+        <tr><td><code>scripts/dataset/wan_timepool/timepool_sidecar.py</code><br><span class="badge todo">待新增</span></td><td>复用现有协议与 <code>wan_motion_infer.py::load_vae / encode_chunk</code>，调用前必须执行 <code>pin_numerics()</code>，来源快照记录该数值 flags；输入同 33 帧；每个请求独立 <code>vae.encode</code>，不让内部缓存跨窗续接；调用共享池化并返回 4,096 字节。</td><td>握手明确 <code>encoder_kind=wan_fixedpool1024</code>；提供 VAE/pool 源码与环境指纹，不提供虚构的 encoder_ckpt。</td></tr>
         <tr><td><code>src/mme_vla_suite/policies/motion_client.py::MotionEncoderClient.__init__ / __call__ / check_provenance</code><br><code>policy_config.py::create_trained_policy</code></td><td>独立 fixedpool 初始化、依赖解析及身份分派；拒绝配置/快照/sidecar 身份混用。保留既有安全退出、进程归属和协议长度检查。</td><td><code>FrameSampMemory::_encode_window / _encode_ready_windows</code> 继续提供原窗口；不更换历史时序机制。</td></tr>
         <tr><td><code>scripts/training/train.py::init_history_config / write_stage2_motion_snapshot / main</code></td><td>由主会话新增 pool provenance/snapshot 分派；新 <code>write_timepool_motion_snapshot</code> 写可携带来源、固定输入、池化源码/依赖 pin 和完成标记。参数摘要、20步保存参考、final-record 路径需覆盖新 readout。</td><td>保留 stage2 分支；新 pool 快照不复制 stage2 权重、不伪造 stage2 schema。训练更新函数与优化器数学不变。</td></tr>
         <tr><td>新 YAML；<code>scripts/training/run_orig16_stage2_60k.sh</code> 与 <code>check_orig16_stage2_launch.py</code></td><td>新增池化专属 runner/checker（建议 <code>run_orig16_timepool_60k.sh</code> / <code>check_orig16_timepool_launch.py</code>），沿用旧入口参数、缓存环境、无覆盖日志和真实退出码；只换合法来源身份校验。</td><td>原 runner/checker 目前只认 stage2，不可把新 YAML 直接塞给旧入口后宣称可运行。</td></tr>
-        <tr><td><code>scripts/training/check_orig16_timepool.py</code> 与相应定向测试<br><span class="badge todo">待新增</span></td><td>提供参数清单比较、固定样本非 motion 对拍、pool 全表、同 latent 两端对拍和严格恢复检查；失败必须给出具体字段与索引。</td><td>只新增必要机制验证；不改旧 gate 的阈值来“适配”新数据。</td></tr>
+        <tr><td><code>scripts/training/check_orig16_timepool.py</code> 与相应定向测试<br><span class="badge todo">待新增</span></td><td>G0–G9 全部验收判定行的唯一实现处（用户裁决 2026-11-06），按闸门分子命令：同源 <code>DATA_LINEAGE</code>、恢复对拍 <code>WAN_RESTORE_EQ</code>、窗口 <code>WINDOW_EQ</code>、池化机制 <code>POOL_CONTRACT</code>、全表 <code>POOL_TABLE_EQ</code>、参数清单 <code>VLA_PARAM_EQ</code>、配置 <code>TRAIN_CONFIG_EQ</code>、固定样本 <code>NON_MOTION_EQ</code>、同 latent <code>POOL_SHARED_EQ</code>、真实在线 <code>ONLINE_WINDOW_EQ / ONLINE_NUMERICS</code>、保存恢复 <code>SAVE_LOAD / RESTORE_POOL</code>、交付 <code>TRAIN_FINAL_RECORD / CKPT_INVENTORY</code>；失败必须给出具体字段与索引。</td><td>只新增必要机制验证；不改旧 gate 的阈值来“适配”新数据。</td></tr>
       </tbody>
     </table></div>
     <h3>来源记录的最小字段</h3>
@@ -237,12 +237,12 @@
       <thead><tr><th>子任务 / 目标</th><th>可写文件集合 / 禁触</th><th>接口、依赖与合并顺序</th><th>验收与资源</th></tr></thead>
       <tbody>
         <tr><td>A · 共享池化与表合同</td><td><code>shared/wan_timepool.py</code>、<code>datastore/motion_adapter.py</code>、<code>motion_store.py</code> 及对应 tests。禁触模型、train.py、在线文件、运行目录。</td><td>先固定 pool、layout/readout/kind 与 provenance；第 1 批合入，供 B/C/D 消费。</td><td>CPU：首 latent 哨兵、通道/轴编码、常数与脉冲输入、非有限/错dtype/错shape；<code>POOL_CONTRACT</code>。GPU=0，无端口。</td></tr>
-        <tr><td>B · 离线恢复与建库接口</td><td><code>export_wan_timepool.py</code>、<code>pack_motion_store.py</code>、<code>framesamp_dataset.py</code> 及对应 tests。禁触原缓存、旧训练表、模型和在线代码。</td><td>依赖 A；第 2 批合入。只交可审查 CLI 与产物合同；真实建库交运行代理。</td><td>CPU 小夹具覆盖 copy/fill、偶数窗、补尾和索引；<code>WINDOW_EQ / POOL_TABLE_EQ</code>。GPU=0。</td></tr>
-        <tr><td>C · 在线池化与恢复</td><td><code>wan_timepool/timepool_sidecar.py</code>、<code>policies/motion_client.py</code>、<code>policy_config.py</code> 及对应 tests。禁触 B/A 共享文件。</td><td>依赖 A；与 B 同批；必须读主会话的 pool snapshot 合同，不自造 schema。</td><td>CPU 协议/身份负例；同 latent 对拍；GPU真实在线检查交运行代理。<code>POOL_SHARED_EQ / RESTORE_POOL</code>。</td></tr>
+        <tr><td>B · 离线恢复与建库接口</td><td><code>export_wan_timepool.py</code>、<code>pack_motion_store.py</code>、<code>framesamp_dataset.py</code> 及对应 tests。禁触原缓存、旧训练表、模型和在线代码。</td><td>依赖 A；第 2 批合入。只交可审查 CLI 与产物合同；真实建库交运行代理。</td><td>CPU 小夹具覆盖 copy/fill、偶数窗、补尾和索引，供 E 的 <code>WINDOW_EQ / POOL_TABLE_EQ</code> 消费。GPU=0。</td></tr>
+        <tr><td>C · 在线池化与恢复</td><td><code>wan_timepool/timepool_sidecar.py</code>、<code>policies/motion_client.py</code>、<code>policy_config.py</code> 及对应 tests。禁触 B/A 共享文件。</td><td>依赖 A；与 B 同批；必须读主会话的 pool snapshot 合同，不自造 schema。</td><td>CPU 协议/身份负例；同 latent 对拍；提供 sidecar 供 E 的 <code>POOL_SHARED_EQ / ONLINE_WINDOW_EQ / RESTORE_POOL</code> 调用；GPU 真实在线检查由运行代理在 smoke 句柄内执行。</td></tr>
         <tr><td>D · 配置与起跑入口</td><td>新 YAML、<code>run_orig16_timepool_60k.sh</code>、<code>check_orig16_timepool_launch.py</code> 及对应 tests。禁触原 TrainConfig、优化器、模型。</td><td>依赖 A/B/C 来源与接口；第 3 批合入；与旧 runner 一致性差分由独立审查核对。</td><td>CPU dry-run；<code>TRAIN_CONFIG_EQ / LAUNCH_CONTRACT</code>。GPU=0。</td></tr>
-        <tr><td>E · 独立验证</td><td>新 <code>check_orig16_timepool.py</code>、验收 tests 与只读审查记录；不改被审生产文件。</td><td>测试输入独立构造；每批合入后检查；完成全部 gates 后向主会话交证据。</td><td><code>VLA_PARAM_EQ / NON_MOTION_EQ</code> 等；默认 CPU，GPU由主会话统一调度。</td></tr>
+        <tr><td>E · 独立验证</td><td>新 <code>check_orig16_timepool.py</code>、验收 tests 与只读审查记录；不改被审生产文件。</td><td>测试输入独立构造；每批合入后检查；完成全部 gates 后向主会话交证据。</td><td>G0–G9 全部判定行（见第 7 节该脚本行）；默认 CPU，GPU由主会话统一调度。</td></tr>
         <tr><td>主会话 · 集成、状态与运行</td><td>独占 <code>train.py</code>、最终来源快照合同、docs、current.json、上传包装；共享文件争议归主会话。运行产物仅主 v1-store。</td><td>依 A→B/C→D 顺序合并；每批合前审查、合后定向验证；固定最终 HEAD 后才交运行代理。</td><td>拥有资源账本、tmux 监听、运行启动/退出码、GPU安排与失败裁决；不并发起两条8卡训练。</td></tr>
-        <tr><td>R · 唯一运行代理</td><td>仅新任务命名空间下产物；代码只读；不修改 Git 文件与旧 run。</td><td>按<a href="#runbook">运行手册</a>使用主会话固化的绝对命令、HEAD、数据根与预算；下载→恢复→建库→20步→60k。</td><td>恢复最多使用批准的 GPU 集合；训练固定 GPU0–7。tmux 前缀 <code>o16-tp-</code>；无网络端口服务；失败自动重试上限 0，交主会话定位。</td></tr>
+        <tr><td>R · 唯一运行代理</td><td>仅新任务命名空间下产物；代码只读；不修改 Git 文件与旧 run。</td><td>按<a href="#runbook">运行手册</a>使用主会话固化的绝对命令、HEAD、数据根与预算；下载→恢复→建库→20步→真实在线检查→60k。</td><td>恢复最多使用批准的 GPU 集合；训练固定 GPU0–7。tmux 前缀 <code>o16-tp-</code>；无网络端口服务；失败自动重试上限 0，交主会话定位。</td></tr>
       </tbody>
     </table></div>
     <p>运行代理派发时，主会话必须把下列模板中的待回填项全部变为绝对值，并附真实脚本版本、执行目录、日志/产物路径、开始判据、完整命令与等待上限。恢复阶段最长等待由短测与实际下载速率固化；正式训练参考预算 36 小时，超时告警与记录，不自动杀进程或擅自续跑。监听仍由主会话负责，不能因代码代理结束就失去运行句柄。</p>
@@ -254,7 +254,7 @@
     <div class="table-wrap"><table>
       <thead><tr><th>闸门</th><th>查什么 / 怎么查</th><th>过关条件与判定行</th><th>失败处理</th></tr></thead>
       <tbody>
-        <tr><td>G0 同源</td><td>对源16 H5逐文件 SHA；与 input manifest、旧计划和旧收据完整集合比较；核帧表和动作 norm。</td><td><code>DATA_LINEAGE=PASS encoder_kind=wan_fixedpool1024 encoder_ckpt=none files=16 mismatches=0</code></td><td>阻止建库/起跑。无 learned encoder是类型事实，不是绕过同源校验。</td></tr>
+        <tr><td>G0 同源</td><td>对源16 H5逐文件 SHA；与 input manifest、旧计划和旧收据完整集合比较；核帧表和动作 norm。</td><td><code>DATA_LINEAGE=PASS encoder_kind=wan_fixedpool1024 encoder_ckpt=none files=16 mismatches=0</code></td><td>判定行写 none，来源字段值为 null，两者同义。阻止建库/起跑。无 learned encoder是类型事实，不是绕过同源校验。</td></tr>
         <tr><td>G1 原 latent 恢复</td><td>发布完整文件 SHA；恢复45,228窗；按主键逐窗对旧 receipt的 <code>input_frames_sha256 / latent_sha256</code>；核 copy/fill 分组。</td><td><code>WAN_RESTORE_EQ=PASS windows=45228 input_mismatches=0 latent_mismatches=0</code></td><td>保留失败窗、数值flags及旧新SHA；不自动全部重新编码。</td></tr>
         <tr><td>G2 窗口等同</td><td>每段偶数 m、m//2映射、起止frame、补尾frame索引、demo/exec边界、顺序与旧grid32完全对齐。</td><td><code>WINDOW_EQ=PASS windows=23253 copy=21814 fill=1439 demo_tail=386 exec_fill=1053 max_visible=44</code></td><td>任何缺行、多行、重排或 completed 裁切均失败。</td></tr>
         <tr><td>G3 池化机制</td><td>FP64独立公式参考按FP32累加误差界比较；首 latent 极值哨兵；每通道/空间坐标编码；检查归约顺序、dtype、输出字节与零参数。误差界须事先写入测试，不能看结果后放宽。</td><td><code>POOL_CONTRACT=PASS shape=1x1024 dtype=float32 params=0 raw=1 drop_first=1</code></td><td>不同实现不要求任意归约次序逐位相等；不得加入 affine 或额外层补救。</td></tr>
@@ -287,7 +287,7 @@ nvidia-smi --query-gpu=index,name,memory.used,utilization.gpu --format=csv
 ls -ld /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store</code></pre>
     <p>输出应与本文基线一致。确认主实体 store、无覆盖目标、无别的训练占用后，将完整派发命令、依赖锁、磁盘预算与 GPU 许可写入新任务运行记录。源 H5 通过现存 input manifest定位并逐文件核 SHA，不为恢复 latent 重下 H5。</p>
     <h3>11.2 现成完整文件恢复 CLI</h3>
-    <p>已核对 <code>orig16_wan_cache.py::main</code> 支持 <code>fetch</code> 和 <code>import</code>。这里 <code>POOL_PY</code> 必须是锁定 Wan 依赖环境的解释器，<code>POOL_RAW_H5</code> 是已核 SHA 的源目录，<code>POOL_GPU_SET</code> 为实际获配卡号；它们是待回填值。原脚本不支持 HTTP Range。</p>
+    <p>已核对 <code>orig16_wan_cache.py::main</code> 支持 <code>fetch</code> 和 <code>import</code>。回填值：<code>POOL_PY=v1-store/venvs/wan-stage2/bin/python</code>（旧 import 所用的锁定 Wan 依赖环境），<code>POOL_RAW_H5=/scratch/hongze/dataset-original-robomme-16x100-wan21-v1/source/h5</code>（已核 SHA 的源目录，属输入，位于 v1-store 外），<code>POOL_GPU_SET=0,1,2,3,4,5,6,7</code>。原脚本不支持 HTTP Range。</p>
     <pre><code>POOL_STORE=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store
 POOL_PLAN="$POOL_STORE/validation/orig16-stage2/wan-cache-plan.json"
 POOL_RECOVER="$POOL_STORE/cache/orig16-wan-timepool1024-recovery"
@@ -311,7 +311,7 @@ POOL_RECOVER="$POOL_STORE/cache/orig16-wan-timepool1024-recovery"
       <tbody>
         <tr><td><code>export_wan_timepool.py</code></td><td>原plan与receipt、restored latent根、新输出根；只接受grid subsample=2、固定raw池化合同</td><td>每段1×1024、m→m//2映射、23,253行、独立pool export record</td></tr>
         <tr><td><code>pack_motion_store.py pack --layout wan-timepool</code></td><td>原manifest、源H5、池化导出、新store根、全部来源与闸门证据</td><td><code>v1-store/datasets/16task-orig100-1600ep-9e109419/motion-wan-timepool1024/</code>，全量verify后才封口</td></tr>
-        <tr><td><code>check_orig16_timepool.py</code></td><td>旧/新配置、旧参数清单、新库、固定窗口与run快照</td><td>G0–G9具名记录；实现时明确子命令、参数和退出码后再写实际runbook</td></tr>
+        <tr><td><code>check_orig16_timepool.py</code></td><td>旧/新配置、旧参数清单、新库、固定窗口与run快照</td><td>G0–G9全部具名记录（G1 恢复对拍、G7 真实在线、G9 交付均在此脚本）；实现时明确子命令、参数和退出码后再写实际runbook</td></tr>
         <tr><td><code>run_orig16_timepool_60k.sh</code></td><td><code>HISTORY / RUN_NAME / FINAL_RECORD_DIR / TRAIN_HEAD</code>，与旧runner语义相同；只读dry-run验证</td><td>先独立20步smoke，再新run60k；正式命令不得有resume或指向旧60000权重</td></tr>
       </tbody>
     </table></div>
@@ -327,7 +327,7 @@ bash scripts/training/run_orig16_timepool_60k.sh</code></pre>
       <tbody>
         <tr><td><code>o16-tp-restore-&lt;美东时间&gt;</code></td><td><code>v1-store/logs/orig16-wan-timepool1024/restore.log</code><br><code>v1-store/cache/orig16-wan-timepool1024-recovery/</code></td><td>下载不占GPU；fill仅用派发明确卡集合；<code>WAN_RESTORE_EQ</code> 与真实退出码。失败不自动重试。</td></tr>
         <tr><td><code>o16-tp-build-&lt;美东时间&gt;</code></td><td><code>v1-store/logs/orig16-wan-timepool1024/build.log</code><br>新 <code>motion-wan-timepool1024</code> 表</td><td>CPU共享池化；<code>POOL_TABLE_EQ</code>，无写入中的lock才允许消费。</td></tr>
-        <tr><td><code>o16-tp-smoke-&lt;美东时间&gt;</code></td><td>独立smoke run、smoke日志与验证子目录</td><td>8卡、B128、20步；<code>SAVE_LOAD</code> 与真实退出码；退出后释放GPU。</td></tr>
+        <tr><td><code>o16-tp-smoke-&lt;美东时间&gt;</code></td><td>独立smoke run、smoke日志与验证子目录</td><td>同一脚本顺序两步（用户裁决 2026-11-06）：①8卡、B128、20步，<code>SAVE_LOAD</code>，写 <code>SMOKE_TRAIN_EXIT=</code>，训练进程退出释放 GPU；②用 GPU1（<code>online_gpu: 1</code>）跑 G7 的 64 窗，<code>ONLINE_WINDOW_EQ</code>、<code>ONLINE_NUMERICS</code>，写 <code>ONLINE_CHECK_EXIT=</code>。末行真实 <code>EXIT_CODE</code> 取两步首个非零值，失败步骤看分步退出行。</td></tr>
         <tr><td><code>o16-tp-train-&lt;美东时间&gt;</code></td><td><code>v1-store/logs/orig100-ctx32x4x4-wan-timepool8x8-b128-60k.log</code><br><code>v1-store/train-runs/mme_vla_suite_orig16_b128_60k/orig100-ctx32x4x4-wan-timepool8x8-b128-60k/</code></td><td>8卡、B128、60k；<code>TRAIN_FINAL_RECORD</code>、59999已保存、<code>EXIT_CODE=0</code>。</td></tr>
         <tr><td><code>o16-tp-backup-&lt;美东时间&gt;</code></td><td><code>v1-store/logs/orig16-wan-timepool1024/checkpoint-backup.log</code></td><td>沿旧12份备份策略；公开目标待开工确认；逐份匿名读回SHA与 <code>CKPT_UPLOAD=PASS steps=12</code>。</td></tr>
       </tbody>
@@ -375,7 +375,7 @@ bash scripts/training/run_orig16_timepool_60k.sh</code></pre>
         <tr><td>恢复下载重、旧fill不能逐位复现</td><td>主路线约388GB下载，约415GB阶段工作集；fill的GPU/库变化可能影响SHA。</td><td>起跑前核磁盘、固定权重与锁；失败窗保留，不自动重算全部raw或混用新老数值。</td></tr>
         <tr><td>stage2身份校验耦合</td><td>仅换表或YAML会在reader、policy、snapshot处失败，或错误声称仍是learned encoder。</td><td>显式新schema/readout/layout/kind，全链路测试拒绝错配；新快照可不依赖旧encoder加载。</td></tr>
         <tr><td>窗口语义悄悄变化</td><td>丢demo尾窗、裁至completed、跨窗Wan缓存会改变实验，破坏“其他一致”。</td><td>逐窗键与frame SHA、m//2映射、386补尾、1053 exec fill及独立窗口重放。</td></tr>
-        <tr><td>32～33小时估算误用</td><td>恢复/下载/编译/保存不一定重现旧耗时；共享机器负载也会变化。</td><td>短测记录环境与底层AWS NVMe RAID，正式稳态更新估计；不把计划值写成实测。</td></tr>
+        <tr><td>31～33小时估算误用</td><td>恢复/下载/编译/保存不一定重现旧耗时；共享机器负载也会变化。</td><td>短测记录环境与底层AWS NVMe RAID，正式稳态更新估计；不把计划值写成实测。</td></tr>
         <tr><td>独立工作树的store路径偏移</td><td>旧runner以repo根拼store，错误工作树可能创建第二份长期数据或读错库。</td><td>实施前固化运行根与主实体store映射；所有派生产物唯一落主v1-store，拒绝隐式新根及穿透破坏操作。</td></tr>
       </tbody>
     </table></div>
