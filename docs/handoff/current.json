@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-01T04:30:36+00:00",
-    "america_new_york": "2026-11-01T00:30:36-04:00"
+    "utc": "2026-11-07T01:43:30.183287+00:00",
+    "america_new_york": "2026-11-06T20:43:30.183287-05:00"
   },
   "repo": {
     "branch": "v4-256concat1",
-    "base_head": "8596cff"
+    "base_head": "f6b718d8f5c7662dd21d94316ffc26dc038b8aad"
   },
   "freeze": {
     "active": false,
@@ -1402,6 +1402,72 @@
         }
       ],
       "next_steps": []
+    },
+    "orig16-context-wan-timepool1024-60k": {
+      "plan": {
+        "file": "1106-orig16-context-wan-timepool1024-60k-plan.html",
+        "sha": "e823f4c3eb085963c35e688afb46fbd27a308048"
+      },
+      "state": "planned",
+      "state_changed_at": "2026-11-07T01:43:30.183287+00:00",
+      "state_reason": "HTML方案完成，用户明确同意登记planned；独立33帧Wan编码丢首latent后8个raw做时间均值和空间8×8池化，替代stage2 encoder。保留旧context/B128/60k及VLA参数结构；尚无实施go授权。",
+      "owner": {
+        "session": "",
+        "host": "ip-10-242-11-177.us-west-2.compute.internal"
+      },
+      "depends_on": [
+        "orig16-vla-build",
+        "orig16-vla-train-ctx32x4x4-concat1x1024-60k"
+      ],
+      "pre_handoff": [
+        {
+          "what": "计划参数与数据链路独立审查",
+          "evidence": "参数/训练不变量审查：修正文件SHA与canonical SHA标签后PASS；数据/缓存/时序审查PASS；两h1、锚点、自包含HTML和浏览器渲染检查通过。新模型/建库/训练闸门均未执行。",
+          "where": "1106-orig16-context-wan-timepool1024-60k-plan.html",
+          "status": "pass"
+        }
+      ],
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [
+        {
+          "kind": "decision",
+          "date": "2026-11-06T20:43:30.183287-05:00",
+          "quote": "给出重新训到方案 按照时间优先\t8→1取均值\t32×32→8×8\t[1,16,8,8]\t1024的机制 相当于替换我们的encoder 其他全部保持一致 都是context b128 60k 参数量也是完全一致的？写html",
+          "scope": "只撰写重训HTML方案；不授权代码实现、下载、建库、训练或评估。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-06T20:43:30.183287-05:00",
+          "quote": "然后输入改为和encoder一样的输入 就是完全一致33帧率  只做pooling 不要用接续的wan",
+          "scope": "相同33帧像素窗口独立Wan编码；窗口间不续接VAE缓存。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-06T20:43:30.183287-05:00",
+          "quote": "仍去掉首帧，只平均后 8 个（沿用刚才机制）",
+          "scope": "独立33帧产生9个latent，保留RGB首帧输入，排除第0号latent后对其余8个做raw固定池化。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-06T20:43:30.183287-05:00",
+          "quote": "登记为 planned，便于后续会话接手",
+          "scope": "仅登记计划状态planned，不构成实施go授权。"
+        }
+      ],
+      "pending_decisions": [
+        {
+          "what": "实施开工令尚未给出；公开备份目标在实施交付前按计划确认。",
+          "status": "pending"
+        }
+      ],
+      "next_steps": [
+        {
+          "what": "收到明确实施开工令后，按HTML从固定代码基线开展实现与验证；先恢复旧缓存身份，再生成新池化表，满足全部闸门后才启动60k。",
+          "command": "参见1106-orig16-context-wan-timepool1024-60k-plan.html的运行手册",
+          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS；后续VLA_PARAM_EQ等均待实施验证"
+        }
+      ]
     }
   }
 }
