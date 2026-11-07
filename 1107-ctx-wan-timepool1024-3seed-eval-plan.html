@@ -16,7 +16,7 @@
     <div class="eyebrow">原版 RoboMME 16×100 · context B128 60k · 美东 2026 年 11 月 7 日</div>
     <p class="title">训练一结束，立刻跑 timepool1024 三 seed 评估</p>
     <p class="subtitle">官方 800 局 × seed 42 / 7 / 0，本机 tmux 触发，每卡 4 个 worker，最小改造上次 Wan-LTM 的 <code>local_eval.py</code>。</p>
-    <div class="box amber"><strong>本文件是计划，只规划不实施。</strong>触发器未布，评估代码未写，GPU 未动。任务 <code>orig16-context-wan-timepool1024-60k</code> 的开工令明写“不含策略评估”，所以本计划必须另有用户开工令。权威基线：<code>v9-ctx-wan-timepool1024-60k@8843e40</code>（<code>commitV11.81Beta</code>，正式训练锚点，已在远端）；计划分支 <code>v10-ctx-wan-timepool-eval</code>；主检出 <code>/scratch/hongze/robomme_policy_learning_MotionJEPA</code> 有 <code>AGENTMETARULES_HOLD</code>，全程不动；benchmark 锚点 <code>856bc3a</code>。</div>
+    <div class="box amber"><strong>已获开工令（用户 11-07 美东：「同意开始」）。</strong>实际进度见第 8 节“实测结果”。任务 <code>orig16-context-wan-timepool1024-60k</code> 的开工令明写“不含策略评估”，所以本计划必须另有用户开工令。权威基线：<code>v9-ctx-wan-timepool1024-60k@8843e40</code>（<code>commitV11.81Beta</code>，正式训练锚点，已在远端）；计划分支 <code>v10-ctx-wan-timepool-eval</code>；主检出 <code>/scratch/hongze/robomme_policy_learning_MotionJEPA</code> 有 <code>AGENTMETARULES_HOLD</code>，全程不动；benchmark 锚点 <code>856bc3a</code>。</div>
     <div class="toc" aria-label="文档导航">
       <a href="#human">第一部分</a><a href="#overview">运行一览</a><a href="#model">被评模型</a><a href="#trigger">触发与时间线</a><a href="#gpu">GPU 与 G9</a><a href="#changes">要改什么</a><a href="#compare">结果怎么读</a><a href="#gates-short">验收</a><a href="#steps">步骤</a><a href="#decide">待裁决</a><a href="#technical">第二部分</a><a href="#files">逐文件</a><a href="#assign">子代理表</a><a href="#runbook">Runbook</a><a href="#risk">风险</a><a href="#blind">盲区</a>
     </div>
@@ -103,6 +103,7 @@
         <tr><td><code>scripts/evaluation/official_queue.py</code></td><td>移植 <code>--local</code> 分派到 <code>confirm_local_terminal</code></td><td>约 8 行</td></tr>
         <tr><td><code>scripts/evaluation/queue_store.py</code></td><td>移植 <code>confirm_local_terminal</code>（<code>/proc</code> 判定）</td><td>约 8 行</td></tr>
         <tr><td><code>scripts/evaluation/resident_worker.py</code></td><td>移植 <code>--local</code>、<code>--port</code>、本机 step_id；<strong>不带</strong> LTM 的 <code>--wan-online-gpu</code> 分支，<code>server_command</code> 保持原样</td><td>约 15 行</td></tr>
+        <tr><td><code>examples/robomme/eval.py</code></td><td>官方分支 <code>args.model_seed != 42</code> 改为 <code>not in OFFICIAL_SEEDS</code>，新增 <code>OFFICIAL_SEEDS = (0, 7, 42)</code>，错误文案同步；与 <code>97eac11</code> 这 3 行相同，不带 <code>wan_ltm</code> 预算分支</td><td>3 行</td></tr>
         <tr><td><code>scripts/evaluation/local_eval.py</code>（新）</td><td>复制 <code>97eac11</code> 版，只改常量、spec 加 <code>stage2_python</code>、后加入卡的判断（见 <a href="#files">第 10 节</a>）</td><td>约 200 行，逻辑差异约 10 行</td></tr>
         <tr><td><code>tests/evaluation/test_local_eval.py</code>（新）</td><td>复制并适配常量，真实控制器 + 真实 worker + 假策略，不用 GPU</td><td>约 200 行</td></tr>
       </tbody>
@@ -152,9 +153,11 @@
       </tbody>
     </table></div>
     <h3>实测结果</h3>
-    <p>尚未实施。</p>
+    <p>开工令：「同意开始」（11-07 美东）。<code>PLAN_CONSISTENCY_REVIEW=FAIL base=17dfb4c findings=1 blocking=1</code>，已按下述调整处置。</p>
+    <h3>实施中调整</h3>
+    <p>旧：不改 <code>examples/</code>。新：<code>examples/robomme/eval.py</code> 放开 seed 集合 3 行。理由：v9 官方分支只接受 seed 42，seed 7、0 启动即 <code>ContractError</code>，三 seed 无法完成。规模 3 行，走的是 R3 写明的路径。<code>ADJUST_REVIEW=PASS scale=same findings=0</code>；同一审查确认服务端、队列和 RPC 没有其他 seed 或 kind 限制。</p>
     <h3>子代理分工与合并（简述）</h3>
-    <p>代码只有一块 E1，由一个写入代理在独立 worktree 完成，因为 5 个文件紧耦合，再拆只会增加合并。主会话合并，前后各由一个 sonnet 审查。起触发器由主会话亲自做，它是唯一的句柄和清理负责人。详见 <a href="#assign">第 11 节</a>。</p>
+    <p>代码只有一块 E1，由一个写入代理在独立 worktree 完成，因为 6 个文件紧耦合，再拆只会增加合并。主会话合并，前后各由一个 sonnet 审查。起触发器由主会话亲自做，它是唯一的句柄和清理负责人。详见 <a href="#assign">第 11 节</a>。</p>
   </section>
 
   <section id="decide">
@@ -176,7 +179,7 @@
     <ul>
       <li><strong>R1</strong> 不动主检出 <code>/scratch/hongze/robomme_policy_learning_MotionJEPA</code> 的工作区、分支和 HOLD。写入都在 worktree；运行在固定 sha 的执行副本。</li>
       <li><strong>R2</strong> 不碰 <code>o16-tp-train-11062312</code>、<code>o16-tp-backup-11062345</code>，也不写入 <code>train-runs/…/orig100-ctx32x4x4-wan-timepool8x8-b128-60k/</code>。</li>
-      <li><strong>R3</strong> 不改 <code>src/</code>、<code>scripts/training/</code>、<code>scripts/dataset/</code>、<code>examples/</code>。若发现必须改才能跑，按第 2 条“执行中调整”先派对抗验证。</li>
+      <li><strong>R3</strong> 不改 <code>src/</code>、<code>scripts/training/</code>、<code>scripts/dataset/</code>、<code>examples/</code>（唯一豁免：<code>examples/robomme/eval.py</code> 的 seed 集合 3 行）。若发现必须改才能跑，按第 2 条“执行中调整”先派对抗验证。</li>
       <li><strong>R4</strong> 训练结束前不占任何 GPU；E1 只跑 CPU 测试。</li>
       <li><strong>R5</strong> tmux 只用前缀 <code>evl-tp-</code>，只按登记清单逐个清理，禁止 <code>kill-server</code>、通配和批量。</li>
       <li><strong>R6</strong> 只用 seed 42、7、0，不换。任务失败不重试。</li>
@@ -214,7 +217,7 @@ if not late_started and LATE_MARKER.exists():            # 替换 g0-ready 判�
     <div class="table-wrap"><table>
       <thead><tr><th>编号</th><th>目标</th><th>可写文件</th><th>禁触</th><th>依赖 / 合并顺序</th><th>验收（CPU）</th><th>资源</th><th>模型</th></tr></thead>
       <tbody>
-        <tr><td>E1</td><td>移植本机入口与 <code>local_eval.py</code></td><td>上表 5 个文件</td><td><code>src/</code>、<code>scripts/training/</code>、<code>scripts/dataset/</code>、<code>examples/</code>、<code>docs/handoff/</code></td><td>基线为计划提交；唯一一块</td><td><code>LOCAL_EVAL_TESTS=PASS failed=0</code>，在 worktree 内用主检出 <code>.venv/bin/python -m pytest</code>，<code>JAX_PLATFORMS=cpu</code></td><td>无 GPU；假进程 tmux 前缀 <code>evl-tp-test-</code>，端口选空闲</td><td><code>opus</code>，<code>isolation: worktree</code>，commit 前缀 <code>sub/E1: </code></td></tr>
+        <tr><td>E1</td><td>移植本机入口与 <code>local_eval.py</code></td><td>第 5 节表内 6 个文件</td><td><code>src/</code>、<code>scripts/training/</code>、<code>scripts/dataset/</code>、<code>examples/</code>（<code>eval.py</code> 除外）、<code>docs/handoff/</code></td><td>基线为计划提交；唯一一块</td><td><code>LOCAL_EVAL_TESTS=PASS failed=0</code>，在 worktree 内用主检出 <code>.venv/bin/python -m pytest</code>，<code>JAX_PLATFORMS=cpu</code></td><td>无 GPU；假进程 tmux 前缀 <code>evl-tp-test-</code>，端口选空闲</td><td><code>opus</code>，<code>isolation: worktree</code>，commit 前缀 <code>sub/E1: </code></td></tr>
         <tr><td>R0</td><td>开工前计划一致性审查</td><td>无</td><td>全部</td><td>E1 之前</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS|FAIL base=&lt;sha&gt; findings=&lt;n&gt; blocking=&lt;n&gt;</code></td><td>只读</td><td><code>sonnet</code></td></tr>
         <tr><td>R1</td><td>E1 合前、合后审查</td><td>无</td><td>全部</td><td>合入前后各一次，钉死 <code>REVIEW_BASE</code>／<code>REVIEW_TIP</code></td><td><code>PRE_MERGE_REVIEW</code>、<code>POST_MERGE_REVIEW</code></td><td>只读</td><td><code>sonnet</code></td></tr>
         <tr><td>—</td><td>起触发器、监听、收尾、写档案</td><td><code>docs/evaluation-doc/…</code>、<code>docs/handoff/current.json</code>（v10 分支）</td><td>R1–R6</td><td>E1 合入后</td><td>第一部分第 7 节判定行</td><td>全部 GPU、端口 9300–9579、<code>evl-tp-*</code></td><td>主会话自做：唯一句柄负责人</td></tr>
@@ -254,7 +257,7 @@ tmux new-session -d -s evl-tp-chain -c "$E" \
         <tr><td>G9 out-dir 与 <code>LATE_MARKER</code> 不一致</td><td><code>--out-dir</code> 由运行者指定，smoke 用过子目录</td><td>步骤 3 告知 a09701 路径；即使不一致也只是一直 6 卡，不影响成绩</td></tr>
         <tr><td>G9 FAIL 后要在 GPU 0、1 重跑</td><td>届时 eval 已占这两张卡</td><td>G9 等 eval 结束后重跑，或由用户裁决；G9 FAIL 意味 checkpoint 可疑，会一并报告，成绩须标注</td></tr>
         <tr><td>端口 TIME_WAIT</td><td>11-03 探针：服务退出后端口可能残留</td><td>每 seed 端口基址不同，跨 seed 不复用；同一 seed 内 worker 端口也互不相同</td></tr>
-        <tr><td>v9 与 LTM eval 代码版本差</td><td>差异只在上述 3 文件 + 服务端模型分支；<code>examples/robomme/eval.py</code> 用 v9 版</td><td>E1 跑 CPU 测试；真实第一局在 seed 42 里</td></tr>
+        <tr><td>v9 与 LTM eval 代码版本差</td><td>差异只在上述 3 文件 + 服务端模型分支；<code>examples/robomme/eval.py</code> 用 v9 版，只放开 seed 集合；官方预算分支已核 800 局最大 D=1135，k_demo+40=75 ≤ 96</td><td>E1 跑 CPU 测试；真实第一局在 seed 42 里</td></tr>
       </tbody>
     </table></div>
   </section>
