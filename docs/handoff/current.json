@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-07T01:53:03.273543+00:00",
-    "america_new_york": "2026-11-06T20:53:03.273543-05:00"
+    "utc": "2026-11-07T04:12:48.124325+00:00",
+    "america_new_york": "2026-11-06T23:12:48.124325-05:00"
   },
   "repo": {
-    "branch": "v4-256concat1",
-    "base_head": "ed5714c389cefbae0035f0d878718f5145e04c94"
+    "branch": "v9-ctx-wan-timepool1024-60k",
+    "base_head": "19be5e9ed247921a1f799df119470cfad755d67f"
   },
   "freeze": {
     "active": false,
@@ -1409,8 +1409,8 @@
         "sha": "ed5714c389cefbae0035f0d878718f5145e04c94"
       },
       "state": "running",
-      "state_changed_at": "2026-11-07T01:53:03.273543+00:00",
-      "state_reason": "修订后计划经用户再次同意；实施分支 v9-ctx-wan-timepool1024-60k，本任务状态以该分支的 current.json 为准。",
+      "state_changed_at": "2026-11-07T04:12:48.124325+00:00",
+      "state_reason": "建库与 G0–G8 通过，正式 60k 起跑；主检出 HOLD 冻结，训练结束前不再提交。",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiUrxBxra275CF71Wtx",
         "host": "Claude@AWS"
@@ -1431,14 +1431,38 @@
           "evidence": "PLAN_CONSISTENCY_REVIEW=FAIL base=e823f4c findings=9 blocking=2；裁决与文字修订已落入 ed5714c，用户再次同意",
           "where": "ed5714c commit body",
           "status": "pass"
+        },
+        {
+          "what": "恢复与全表闸门 G0–G4",
+          "evidence": "DATA_LINEAGE=PASS files=16 mismatches=0；WAN_RESTORE_EQ=PASS windows=45228 input_mismatches=0 latent_mismatches=0；WINDOW_EQ=PASS windows=23253；POOL_CONTRACT=PASS；POOL_TABLE_EQ=PASS rows=23253 mismatches=0 nonfinite=0 bytes=95244288；VERIFY_MOTION=PASS status=verified gate_records=5",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig16-wan-timepool1024/build.log",
+          "status": "pass"
+        },
+        {
+          "what": "训练不变量 G5、同 latent G6",
+          "evidence": "VLA_PARAM_EQ=PASS total=3363663120 trainable=2948859424 frozen=414803696 leaves=59 trainable_leaves=36；VLA_INIT_EQ=PASS；TRAIN_CONFIG_EQ=PASS；NON_MOTION_EQ=PASS mismatches=0；POOL_SHARED_EQ=PASS max_abs=0 bitwise_equal=1",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig16-wan-timepool1024/build.log",
+          "status": "pass"
+        },
+        {
+          "what": "短测 G7、G8",
+          "evidence": "SMOKE_TRAIN_EXIT=0；ONLINE_WINDOW_EQ=PASS windows=64 input_mismatches=0 cross_window_state=0；ONLINE_NUMERICS=RECORDED；首次 SAVE_LOAD=FAIL（缺编译缓存环境，max_abs=0.0195）保留；补环境后同 checkpoint SAVE_LOAD=PASS checkpoint_step=19 state_step=20",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig16-wan-timepool1024/smoke-11062246.log；/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig16-wan-timepool1024/save-load-retry-11062246.log",
+          "status": "pass"
+        },
+        {
+          "what": "正式 60k 与 G9",
+          "evidence": "TRAIN_FINAL_RECORD=PASS state_step=60000 checkpoint_step=59999；CKPT_INVENTORY=PASS steps=12；RESTORE_POOL=PASS；EXIT_CODE=0",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx32x4x4-wan-timepool8x8-b128-60k.log",
+          "status": "pending"
         }
       ],
       "long_tail": [],
       "running_handles": [
         {
-          "tmux": "o16-tp-fetch-11062053",
-          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig16-wan-timepool1024/fetch.log",
-          "done_line": "WAN_CACHE_FETCH=PASS 且 EXIT_CODE=0"
+          "tmux": "o16-tp-train-11062312",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx32x4x4-wan-timepool8x8-b128-60k.log",
+          "done_line": "EXIT_CODE=0 且 TRAIN_FINAL_RECORD=PASS"
         }
       ],
       "authorizations": [
@@ -1488,9 +1512,9 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "按 A→B/C→D→E 派写入代理；下载验收后恢复 latent",
-          "command": "见计划第 9、11 节",
-          "verdict_line": "WAN_RESTORE_EQ=PASS"
+          "what": "60k 结束后跑 G9 final（带该 run 编译缓存环境），备份 12 份 checkpoint 并读回，写 result.md",
+          "command": "check_orig16_timepool.py final；checkpoint 备份见计划 11.3",
+          "verdict_line": "RESTORE_POOL=PASS；CKPT_UPLOAD=PASS steps=12"
         }
       ]
     }
