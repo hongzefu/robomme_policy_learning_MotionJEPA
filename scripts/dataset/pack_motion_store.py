@@ -976,7 +976,7 @@ def gather_timepool_provenance(tokens_root, latents_root, entries, manifest, ind
 
 
 def load_timepool_gate_records(records_dir, *, table_sha256: str, index_sha256: str) -> dict:
-    """读 <ROLE>.json 回填 validation。记录若声明绑定的表或索引 SHA，必须是当前这张表。"""
+    """读 <ROLE>.json 回填 validation。每份记录都必须绑定当前这张表和索引，防止旧库记录被套到新表上。"""
     validation = {}
     for role in ms.TIMEPOOL_VALIDATION_ROLES:
         path = pathlib.Path(records_dir) / f"{role}.json"
@@ -988,7 +988,9 @@ def load_timepool_gate_records(records_dir, *, table_sha256: str, index_sha256: 
         if not isinstance(verdict, str) or not verdict.startswith(f"{role}=PASS"):
             raise ValueError(f"{path} 判定行不是 {role}=PASS: {verdict!r}")
         for key, want in (("store_table_sha256", table_sha256), ("motion_index_sha256", index_sha256)):
-            if key in record and record[key] != want:
+            if key not in record:
+                raise ValueError(f"{path} 缺绑定字段 {key}")
+            if record[key] != want:
                 raise ValueError(f"{path} 绑定的 {key} 不是当前表")
         validation[role] = dict(path=str(path.resolve()), sha256=ms.sha256_bytes(data), verdict=verdict)
     return validation

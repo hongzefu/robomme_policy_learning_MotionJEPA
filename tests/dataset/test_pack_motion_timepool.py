@@ -32,11 +32,14 @@ def cli(monkeypatch, argv):
 
 
 def write_records(t, *, skip=(), verdicts=None, extra=None):
+    """默认每份记录都绑定当前 packed 表；extra 可覆盖绑定字段，模拟旧库记录。"""
     t.records.mkdir(exist_ok=True)
+    meta = ms.MotionMeta.load(t.store)
+    binding = dict(store_table_sha256=meta.table_sha256, motion_index_sha256=meta.motion_index_sha256)
     for role in ms.TIMEPOOL_VALIDATION_ROLES:
         if role in skip:
             continue
-        value = {"role": role, "verdict": (verdicts or {}).get(role, f"{role}=PASS rows=8"), **(extra or {})}
+        value = {"role": role, "verdict": (verdicts or {}).get(role, f"{role}=PASS rows=8"), **binding, **(extra or {})}
         dump(t.records / f"{role}.json", value)
 
 
@@ -224,6 +227,22 @@ def test_bad_gate_records_keep_packed(packed, monkeypatch, fault):
         cli(monkeypatch, verify_argv(packed, records=True))
     assert (packed.store / ms.META_RELPATH).read_bytes() == before
     assert ms.MotionMeta.load(packed.store).status == "packed"
+
+
+@pytest.mark.parametrize("key", ["store_table_sha256", "motion_index_sha256"])
+@pytest.mark.parametrize("role", ms.TIMEPOOL_VALIDATION_ROLES)
+def test_gate_record_missing_binding_key_keeps_packed_and_lock(packed, monkeypatch, role, key):
+    write_records(packed)
+    path = packed.records / f"{role}.json"
+    record = load(path)
+    del record[key]
+    dump(path, record)
+    before = (packed.store / ms.META_RELPATH).read_bytes()
+    with pytest.raises(ValueError, match=f"缺绑定字段 {key}"):
+        cli(monkeypatch, verify_argv(packed, records=True))
+    assert (packed.store / ms.META_RELPATH).read_bytes() == before
+    assert ms.MotionMeta.load(packed.store).status == "packed"
+    assert (packed.store / ms.LOCK_RELPATH).exists()
 
 
 def test_crash_at_meta_write_leaves_packed_with_lock(packed, monkeypatch):
