@@ -41,7 +41,7 @@ blockquote{border-left:4px solid var(--line);margin:10px 0;padding:4px 14px;colo
 <li>成功判据：放手后抓起正确物体，用环境自带的 <code>is_obj_pickup</code>（物体 z&gt;0.05 且确实夹住），不要求任务成功。依据：用户「它只要能够正确地回到物体并且抓取成功就可以了，不需要任务成功」。</li>
 <li>去掉推 cube 的 17 局（<code>gripper_push</code>），因为这类局全程不抓取。依据：选择题「去掉这 17 局」。</li>
 <li>抓起之前环境判失败就算失败，超时算未恢复。依据：用户「如果被判断为失败的，就就还是判断为失败，就不用去管它」。</li>
-<li>每个 k 只起一次服务，客户端每批最多 5 局。依据：选择题「共用服务分批」。</li>
+<li>每个（模型, k, 分片）只起一次服务，客户端每批最多 5 局。依据：选择题「共用服务分批」。</li>
 <li>放手核对只针对到达放手步的局，强推途中判失败的局照样计失败。依据：选择题「只验到达放手的局」。</li>
 <li>不看内部机制，没有任何注意力记录功能。依据：用户「我完全不需要看内部注意力的机制，所以说你都不需要有任何的这个呃记录的功能」。</li>
 <li>实验任务不登记状态机，交接走人工。依据：用户「我我不需要」（按对状态机提问的回答理解）。</li>
@@ -119,14 +119,14 @@ blockquote{border-left:4px solid var(--line);margin:10px 0;padding:4px 14px;colo
 <li><code>step</code>：<code>elapsed - origin &lt; k</code> 时执行表动作，否则执行推理动作；到 <code>origin+k</code> 时断言 <code>row_in_chunk==0</code> 且 chunk 起点等于当前步，写 <code>actual_release_step</code>。</li>
 <li>每步 <code>env.step</code> 后调用只读的 <code>is_obj_pickup</code>：方向 A 查 <code>u.cube</code>，方向 B 查 <code>u.peg_tail</code>、<code>u.peg_head</code>。不调用会写 <code>currentpickup</code> 的 <code>is_any_obj_pickup_flag_currentpickup</code>。任一为真即写 <code>grasp_success=1</code>、<code>grasp_step</code> 并立刻结束本局。</li>
 <li>提前结束走正常终局路径，返回给评估循环的 <code>outcome</code> 记 <code>success</code>；回执另写环境原始 <code>env_status</code>。分析只读 <code>grasp_success</code>，不把这里的 <code>success</code> 读成任务成功。</li>
-<li>每步写 <code>step_trace.jsonl</code>：<code>env_step</code>、<code>control_source</code>、<code>executed_action</code>、<code>tcp</code>、<code>cube</code>、<code>peg_tail</code>。局末回执：<code>grasp_success</code>、<code>grasp_step</code>、<code>outcome</code>、<code>env_status</code>、<code>force_k</code>、<code>way</code>、<code>direction</code>、<code>actions_executed</code>。录像文件名用 <code>MoveCube_ep&lt;id&gt;_&lt;outcome&gt;.mp4</code>（不沿用 <code>stopcube_runner</code> 写死的前缀），不进 git。</li>
+<li>每步写 <code>step_trace.jsonl</code>：<code>env_step</code>、<code>control_source</code>、<code>executed_action</code>、<code>tcp</code>、<code>cube</code>、<code>peg_tail</code>。局末回执 <code>client/traces/&lt;nonce&gt;/meta/force_receipt.json</code>：<code>episode_key</code>、<code>episode_id</code>、<code>grasp_success</code>、<code>grasp_step</code>、<code>outcome</code>、<code>env_status</code>、<code>force_k</code>、<code>way</code>、<code>direction</code>、<code>origin_env_step</code>、<code>reached_release</code>、<code>actual_release_step</code>、<code>actions_executed</code>、<code>trace_path</code>。录像文件名用 <code>MoveCube_ep&lt;id&gt;_&lt;outcome&gt;.mp4</code>（不沿用 <code>stopcube_runner</code> 写死的前缀），不进 git。</li>
 </ul>
 <h3>2.3 <code>scripts/interpret/run_local.py</code>（S1）</h3>
 <ul>
 <li><code>load_spec</code>：新键 <code>movecube_force</code>（bool），与 <code>stopcube_mode</code>、<code>bin_trace</code>、<code>subgoal_trace</code>、<code>rollout_record</code> 互斥；要求 <code>force_table</code>、<code>force_k</code>；清单只含 <code>MoveCube</code>。</li>
 <li><code>build_server_command</code>：开启时返回 <code>RW.server_command</code> 原形（官方 <code>scripts.training.serve_policy</code>），非 motion 模型按现有逻辑删 <code>--motion-online-gpu</code>；不换模块、不加 <code>--attn-out</code>。</li>
 <li><code>build_client_command</code>：<code>command[1]</code> 换 runner，追加两个 CLI。</li>
-<li><code>collect</code>、<code>row_ok</code>、<code>saves_attn</code>：该模式不要求注意力文件，也不创建 <code>attn_out</code> 目录；单局判定改为有终局且 <code>terminal.rpc_seq</code> 推出的 <code>infers&gt;0</code>，不读 <code>episode.json</code>（官方 <code>serve_policy</code> 不写）。其他模式行为与命令逐字不变。</li>
+<li><code>collect</code>、<code>row_ok</code>、<code>saves_attn</code>：该模式不要求注意力文件，也不创建 <code>attn_out</code> 目录；单局判定改为有终局且 <code>terminal.rpc_seq</code> 推出的 <code>infers&gt;0</code>（第一个动作前必有一次推理，强推局也成立），不读 <code>episode.json</code>（官方 <code>serve_policy</code> 不写）。其他模式行为与命令逐字不变。</li>
 <li><code>main</code>：该模式下清单含非 <code>MoveCube</code> 局即退出，并走共用服务分批路径：结构同 <code>run_oracle_chunks</code>，一个 <code>(模型, k, 分片)</code> 起一个服务，客户端每批至多 5 局，不改 <code>examples/robomme/eval.py</code>。</li>
 </ul>
 <h3>2.4 <code>scripts/interpret/analysis/movecube_recovery.py</code>（新，S2）</h3>
@@ -175,7 +175,7 @@ tmux new-session -d -s mfr-&lt;模型&gt;-s&lt;i&gt; \
 <ul>
 <li><code>manifest-all.json</code> 只含这 33 局（21 局 <code>grasp_putdown</code>、12 局 <code>peg_push</code>），局号由诊断的 <code>u.way</code> 结果确定，由 <code>scripts.interpret.build_manifest --episodes</code> 生成并由动作表再次核对 way；4 份分片清单由它切出。</li>
 <li>规格：每卡 2 个 worker，<code>XLA_PYTHON_CLIENT_MEM_FRACTION=0.30</code>，<code>XLA_FLAGS</code> 同 1106；显存不够改每卡 1 个 worker。先 motion 后基线。</li>
-<li>一个 <code>(模型, k, 分片)</code> 一份 spec 和一个 <code>run_root</code>；同一服务内客户端每批至多 5 局（<code>load_chunk</code> 的上限），每个 k 起一次服务。</li>
+<li>一个 <code>(模型, k, 分片)</code> 一份 spec 和一个 <code>run_root</code>；同一服务内客户端每批至多 5 局（<code>load_chunk</code> 的上限）。</li>
 <li>每份日志一个 Monitor，过滤词 <code>EXIT_CODE=|Traceback|Error|nan|NaN|out of memory|Killed</code>。</li>
 <li>耗时依据（未实测）：历史 motion 单局 1300 步超时约 2 分钟，基线约快 4 倍；抓起即结束，所以总时长主要取决于抓不起的局有多少。</li>
 </ul>
