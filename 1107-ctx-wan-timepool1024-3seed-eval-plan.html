@@ -69,6 +69,21 @@
       </tbody>
     </table></div>
     <p>计划批准后就能布触发器，离训练结束还有约 15 小时，实施时间足够。触发器只读日志，不影响训练和备份。</p>
+    <h3>Claude agent 定时唤醒（用户要求）</h3>
+    <p>用户原话：「你需要强制隔一段时间唤醒一次 以免时间到了没被唤醒 注意我说的是claude agent 不是代码的唤醒！」。<code>evl-tp-chain</code> 是代码，跑在 tmux 里；这里说的是另一件事：让 Claude 会话自己定时醒来查状态，不依赖 Monitor 事件。这是必需的，因为 <code>Monitor</code> 最长只活 30 分钟，到期后如果没被重挂，事件就没人收。</p>
+    <p>用 <code>CronCreate</code> 布周期任务，cron <code>7,27,47 * * * *</code>，每 20 分钟一次。调度器对周期任务最多晚 50%，也就是单次最晚约 10 分钟。每次醒来按下表动作，没有变化就回一句中文然后结束本轮。</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>醒来时的状态</th><th>agent 动作</th></tr></thead>
+      <tbody>
+        <tr><td>未开工，训练未结束</td><td>只读进度。预计剩余不足 2 小时且仍未开工，提醒用户一次</td></tr>
+        <tr><td>未开工，训练已结束</td><td><strong>不起 eval</strong>（没有开工令），用 <code>PushNotification</code> 通知用户并等待</td></tr>
+        <tr><td>已开工，链在等训练</td><td>确认 <code>evl-tp-chain</code> 活着、Monitor 在挂；Monitor 到期就重挂。链意外不在就重起（此时尚未初始化任何 run）</td></tr>
+        <tr><td>已开工，训练已结束但链没起 eval</td><td>核对 <code>EXIT_CODE=0</code> 与 checkpoint 后，查明原因并立即重起链，这正是唤醒要兜住的情况</td></tr>
+        <tr><td>评估中</td><td>读最后一行 <code>PROGRESS</code>，重挂 Monitor，不打断 worker</td></tr>
+        <tr><td><code>CHAIN_STOP</code> 或 <code>THREE_SEED=FAIL</code></td><td>原样报告用户并推送，不自动重跑</td></tr>
+        <tr><td><code>THREE_SEED=PASS</code></td><td>执行步骤 5 收尾，然后 <code>CronDelete</code> 删掉唤醒任务</td></tr>
+      </tbody>
+    </table></div>
   </section>
 
   <section id="gpu">
@@ -131,8 +146,8 @@
         <tr><td>0</td><td>开工审查：一个 sonnet 审计划有无自相矛盾；登记 handoff</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS</code></td></tr>
         <tr><td>1</td><td>E1 移植与新增（独立 worktree），CPU 测试</td><td><code>LOCAL_EVAL_TESTS=PASS</code></td></tr>
         <tr><td>2</td><td>合并前审查 → <code>--no-ff</code> 合入 v10 → 合并后审查 → push</td><td><code>PRE_MERGE_REVIEW=PASS</code>、<code>POST_MERGE_REVIEW=PASS</code></td></tr>
-        <tr><td>3</td><td>建固定 sha 的执行副本，起 <code>evl-tp-chain</code>，挂 Monitor；告知 a09701 不要占 GPU 2–7</td><td>会话存在，日志未出现 <code>CHAIN_STOP</code></td></tr>
-        <tr><td>4</td><td>无人值守：等训练 → 3 个 seed</td><td><code>TRAIN_DONE=PASS</code> → <code>THREE_SEED=PASS</code></td></tr>
+        <tr><td>3</td><td>建固定 sha 的执行副本，起 <code>evl-tp-chain</code>，挂 Monitor（到期重挂）；确认 agent 定时唤醒在列；告知 a09701 不要占 GPU 2–7</td><td>会话存在，日志未出现 <code>CHAIN_STOP</code>，<code>CronList</code> 有该任务</td></tr>
+        <tr><td>4</td><td>等训练 → 3 个 seed，agent 每 20 分钟醒来按第 3 节的表核查</td><td><code>TRAIN_DONE=PASS</code> → <code>THREE_SEED=PASS</code></td></tr>
         <tr><td>5</td><td>写 <code>docs/evaluation-doc/ctx-wan-timepool1024-3seed-1107/result.md</code>，更新 handoff，提交推送，向用户报告成绩</td><td>无 <code>ahead</code></td></tr>
       </tbody>
     </table></div>
@@ -219,12 +234,13 @@ mkdir -p "$L"
 tmux new-session -d -s evl-tp-chain -c "$E" \
   "set -o pipefail; PYTHONUNBUFFERED=1 /scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/bin/python \
    $E/scripts/evaluation/local_eval.py 2&gt;&amp;1 | tee $L/simple-chain.log; echo \"EXIT_CODE=\$?\" &gt;&gt; $L/simple-chain.log"</code></pre>
-    <p>Monitor（只挂这一份日志）：</p>
+    <p>Monitor（只挂这一份日志，<code>timeout_ms</code> 取上限 1,800,000，到期或 agent 唤醒时发现已失效就重挂）：</p>
     <pre><code>tail -n +1 -F $L/simple-chain.log | stdbuf -oL tr '\r' '\n' \
   | grep --line-buffered -E "TRAIN_DONE|GPU_FREE|COMPUTE_DONE|THREE_SEED|CHAIN_STOP|RECOVER|EXIT_CODE=|Traceback"</code></pre>
     <p>会话清单（清理只依此，逐个 <code>tmux kill-session -t '=名'</code>）：<code>evl-tp-chain</code>；<code>evl-tp-ctl-s{42,7,0}</code>；<code>evl-tp-s{42,7,0}-g{0..7}k{0..3}</code>。worker 在 seed 结束后自行退出；控制器由链结束。</p>
     <p>失败重跑（只在 <code>CHAIN_STOP</code> 后、定位并报告用户后）：确认 <code>evl-tp-*</code> 无残留，移走出错 seed 的 <code>run800</code>，重起链；已完成 seed 需要改脚本跳过，这属于计划外调整，先报告。</p>
     <p>查进度：<code>grep PROGRESS $L/simple-chain.log | tail -1</code>。</p>
+    <p>agent 定时唤醒：<code>CronCreate(cron="7,27,47 * * * *", recurring=true, prompt=&lt;第 3 节动作表&gt;)</code>，用 <code>CronList</code> 核对，<code>THREE_SEED=PASS</code> 收尾后 <code>CronDelete</code>。任务 7 天自动过期，本计划总时长约 18 小时，不会碰到。</p>
   </section>
 
   <section id="risk">
@@ -233,7 +249,8 @@ tmux new-session -d -s evl-tp-chain -c "$E" \
       <thead><tr><th>风险</th><th>依据</th><th>处置</th></tr></thead>
       <tbody>
         <tr><td>每卡 4 worker 显存不足</td><td>0.18×81,920 MiB = 14,746 MiB，4 个共 59 GB，留约 23 GB 给 4 个 VAE sidecar。推理参数 bfloat16 约 6.7 GB（3.36G 参数 × 2 字节），记忆只有 608 token，应轻于 Wan-LTM 的 16384 token；上次同配置 3 个 seed 零 OOM。<strong>此模型未实测</strong></td><td>不预检。出现 OOM 则 worker 死、块被回收，全灭时 <code>CHAIN_STOP</code>，报告用户后调低 worker 或分数</td></tr>
-        <tr><td>训练异常退出且没写 <code>EXIT_CODE=</code>（如会话被强杀）</td><td>链只读末行，会一直等</td><td>这种情况由训练 owner 和用户发现；不为此加心跳。需要时手动 <code>kill-session -t '=evl-tp-chain'</code></td></tr>
+        <tr><td>训练异常退出且没写 <code>EXIT_CODE=</code>（如会话被强杀）</td><td>链只读末行，会一直等</td><td>agent 唤醒时用 <code>tmux has-session -t '=o16-tp-train-11062312'</code> 发现，报告用户，不自行开跑。需要时手动 <code>kill-session -t '=evl-tp-chain'</code></td></tr>
+        <tr><td>agent 唤醒任务随会话消失</td><td><code>CronCreate</code> 仅存于本会话内存，没有持久化；只在会话空闲时触发</td><td>已布的 <code>evl-tp-chain</code> 在 tmux 里不受影响，eval 照跑，只是没人汇报；用户重开会话后按 <code>docs/handoff/current.json</code> 接续</td></tr>
         <tr><td>G9 out-dir 与 <code>LATE_MARKER</code> 不一致</td><td><code>--out-dir</code> 由运行者指定，smoke 用过子目录</td><td>步骤 3 告知 a09701 路径；即使不一致也只是一直 6 卡，不影响成绩</td></tr>
         <tr><td>G9 FAIL 后要在 GPU 0、1 重跑</td><td>届时 eval 已占这两张卡</td><td>G9 等 eval 结束后重跑，或由用户裁决；G9 FAIL 意味 checkpoint 可疑，会一并报告，成绩须标注</td></tr>
         <tr><td>端口 TIME_WAIT</td><td>11-03 探针：服务退出后端口可能残留</td><td>每 seed 端口基址不同，跨 seed 不复用；同一 seed 内 worker 端口也互不相同</td></tr>
