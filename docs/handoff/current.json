@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-07T01:37:36+00:00",
-    "america_new_york": "2026-11-06T20:37:36-05:00"
+    "utc": "2026-11-07T01:38:30+00:00",
+    "america_new_york": "2026-11-06T20:38:30-05:00"
   },
   "repo": {
     "branch": "v8-ctx-td-fs-1024-b64-80k",
-    "base_head": "4748064"
+    "base_head": "0810b94"
   },
   "freeze": {
     "active": false,
@@ -1408,9 +1408,9 @@
         "file": "1106-ctx-tokendrop-framesample-1024-b64-80k-plan.html",
         "sha": "7893709"
       },
-      "state": "stopped",
-      "state_changed_at": "2026-11-07T01:37:36+00:00",
-      "state_reason": "用户 11-06 美东 20:37 叫停两条训练：tokendrop 约 15.3k 步，framesample 约 14.9k 步。强杀，无 EXIT_CODE；各有第 10000 步 checkpoint，已上传并回读校验。",
+      "state": "closed",
+      "state_changed_at": "2026-11-07T01:38:30+00:00",
+      "state_reason": "用户放弃：约 15k 步叫停，上传会话已停，本地第 10000 步 checkpoint 已删。HF 两个 bucket 的第 10000 步副本未删。8×8 库保留。",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiSDswMZKnEDugbjZbH",
         "host": "ip-10-242-11-177.us-west-2.compute.internal"
@@ -1443,18 +1443,7 @@
         }
       ],
       "long_tail": [],
-      "running_handles": [
-        {
-          "tmux": "c1k-td-inc",
-          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx-tokendrop1024-b64-80k-inc.log",
-          "done_line": "HF_VERIFY=PASS"
-        },
-        {
-          "tmux": "c1k-fs-inc",
-          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx-framesamp1024-b64-80k-inc.log",
-          "done_line": "HF_VERIFY=PASS"
-        }
-      ],
+      "running_handles": [],
       "authorizations": [
         {
           "kind": "go",
@@ -1473,11 +1462,15 @@
           "date": "2026-11-06",
           "quote": "停止现在的训练，两个都停",
           "scope": "c1k-td-train、c1k-fs-train"
+        },
+        {
+          "kind": "close",
+          "date": "2026-11-06",
+          "quote": "这两条线暂时不继续了，可以停了，然后 checkpoint 也可以删除了，就是我要训一个其他的模型。",
+          "scope": "停上传、删本地 checkpoint"
         }
       ],
-      "pending_decisions": [
-        "增量上传会话 c1k-td-inc、c1k-fs-inc 仍在空等后续 checkpoint，待用户决定是否停止；后续安排待用户决定"
-      ],
+      "pending_decisions": [],
       "next_steps": []
     }
   }
