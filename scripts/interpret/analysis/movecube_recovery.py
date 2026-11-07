@@ -2,10 +2,15 @@
 
 主环境 CPU，只用 numpy、标准库与 matplotlib。只读 §2.2 定义的回执与逐步轨迹，不导入 runner 或 run_local。
 
-输入目录约定：<root>/<model>/k<k>/<shard>/ 下递归有 traces/<nonce>/meta/force_receipt.json 与 commands.json。
+输入目录约定：<root>/<model>/k<k>/<shard>/ 是运行根，其下 attempts/force-service-*/*/ 有 commands.json 与
+client/traces/<nonce>/meta/force_receipt.json，force-service-*/ 有 server-command.json；这里一律递归查找。
+
+轨迹行的 env_step 是步前 elapsed，actions[env_step-origin_env_step] 对应 force 步；tcp、cube、peg_tail 是步后值。
+回执的 grasp_step 是步后 elapsed，actual_release_step 是步前 elapsed，两者相减即放手到抓起的步数。
 
 结局分类（每局恰属一类）：
-  error    outcome 为 None，或字段不属于下面三类；不进成功率分母，计入 MFR_RUN 的 errors。
+  error    outcome 为 None，或身份核对失败（way、direction、origin_env_step 有 null），或字段不属于下面三类；
+           不进成功率分母，计入 MFR_RUN 的 errors。身份核对失败的局没有可比的强推，也不进 FORCE_EXEC、FORCE_RELEASE。
   grasp    grasp_success=1。此时 outcome 的 success 只是 runner 提前结束的记号，不是任务成功。
   fail     grasp_success=0 且 outcome=fail。
   timeout  grasp_success=0 且 outcome=timeout。
@@ -69,9 +74,14 @@ def mcnemar_exact(only_a, only_b):
     return min(1.0, 2 * tail / 2 ** n)
 
 
+def identity_failed(receipt):
+    """runner 在局身份与动作表不符时把这三个字段留成 null。"""
+    return any(receipt.get(name) is None for name in ("way", "direction", "origin_env_step"))
+
+
 def classify(receipt):
     outcome = receipt.get("outcome")
-    if outcome is None:
+    if outcome is None or identity_failed(receipt):
         return "error"
     if receipt.get("grasp_success") == 1:
         return "grasp"
@@ -165,23 +175,23 @@ def check_exec(record, rows, item):
     origin = receipt.get("origin_env_step")
     if origin != item["first_env_step"]:
         issues.append(f"{label}: origin_env_step={origin} 与表 first_env_step={item['first_env_step']} 不符")
-    if receipt.get("direction") not in (None, item["direction"]) or receipt.get("way") not in (None, item["way"]):
+    if receipt.get("direction") != item["direction"] or receipt.get("way") != item["way"]:
         issues.append(f"{label}: 回执方向或 way 与表不符")
     if rows is None:
         return issues + [f"{label}: step_trace 缺失或有坏行"]
-    forced = [row for row in rows if row.get("control_source") == "forced"]
-    unknown = sum(row.get("control_source") not in ("forced", "policy") for row in rows)
+    forced = [row for row in rows if row.get("control_source") == "force"]
+    unknown = sum(row.get("control_source") not in ("force", "policy") for row in rows)
     if unknown:
-        issues.append(f"{label}: {unknown} 行 control_source 既非 forced 也非 policy")
+        issues.append(f"{label}: {unknown} 行 control_source 既非 force 也非 policy")
     expected_count = min(k, len(rows))
     if len(forced) != expected_count:
-        issues.append(f"{label}: forced 步数 {len(forced)}，应为 min(k, 实际步数)={expected_count}")
+        issues.append(f"{label}: force 步数 {len(forced)}，应为 min(k, 实际步数)={expected_count}")
     if not isinstance(origin, int):
         return issues
     for position, row in enumerate(forced):
         offset = row.get("env_step", -1) - origin
         if offset != position:
-            issues.append(f"{label}: 第 {position} 个 forced 行在偏移 {offset}，强推应从 origin 起连续")
+            issues.append(f"{label}: 第 {position} 个 force 行在偏移 {offset}，强推应从 origin 起连续")
         if not 0 <= offset < len(item["actions"]) or not _actions_equal(row.get("executed_action"), item["actions"][offset]):
             issues.append(f"{label}: env_step={row.get('env_step')} 的动作与表不符")
     return issues
@@ -199,9 +209,9 @@ def check_release(record, rows):
     if rows is None:
         return issues + [f"{label}: step_trace 缺失或有坏行，无法核对放手后控制权"]
     if release is not None:
-        late = sum(row.get("control_source") == "forced" and row.get("env_step", -1) >= release for row in rows)
+        late = sum(row.get("control_source") == "force" and row.get("env_step", -1) >= release for row in rows)
         if late:
-            issues.append(f"{label}: 放手步之后仍有 {late} 个 forced 行")
+            issues.append(f"{label}: 放手步之后仍有 {late} 个 force 行")
     return issues
 
 
@@ -228,12 +238,12 @@ def post_release_distances(receipt, rows, k, direction):
 
 
 def check_no_attn(root):
-    """产物根无 npz、无 attn 目录，且每份 commands.json 的 server 都是官方 serve_policy。"""
+    """产物根无 npz、无 attn 目录，且每份 commands.json、server-command.json 的 server 都是官方 serve_policy。"""
     root = Path(root)
     npz = sum(1 for _ in root.rglob("*.npz"))
     attn_dirs = [str(p) for p in root.rglob("attn") if p.is_dir()]
     bad, commands = [], 0
-    for path in sorted(root.rglob("commands.json")):
+    for path in sorted([*root.rglob("commands.json"), *root.rglob("server-command.json")]):
         commands += 1
         try:
             server = json.loads(path.read_text())["server"]
@@ -283,18 +293,19 @@ def analyze(root, table_path, expected_episodes=33, expected_k=ALL_K):
         rows = read_trace(record)
         item = table[record["key"]]
         receipt = record["receipt"]
-        exec_issues += check_exec(record, rows, item)
-        if receipt.get("reached_release"):
-            reached += 1
-            release_issues += check_release(record, rows)
-        forced_by_cell[(record["model"], record["k"], record["key"])] = [
-            (row.get("env_step"), row.get("executed_action")) for row in rows or [] if row.get("control_source") == "forced"]
+        if not identity_failed(receipt):
+            exec_issues += check_exec(record, rows, item)
+            if receipt.get("reached_release"):
+                reached += 1
+                release_issues += check_release(record, rows)
+            forced_by_cell[(record["model"], record["k"], record["key"])] = [
+                (row.get("env_step"), row.get("executed_action")) for row in rows or [] if row.get("control_source") == "force"]
         record["direction"] = item["direction"]
         record["class"] = classify(receipt)
         record["dist_correct"], record["dist_forced"] = post_release_distances(receipt, rows, record["k"], item["direction"])
-        origin, grasp_step = receipt.get("origin_env_step"), receipt.get("grasp_step")
-        grasped_after = record["class"] == "grasp" and receipt.get("reached_release") and None not in (origin, grasp_step)
-        record["release_to_grasp"] = grasp_step - (origin + record["k"]) if grasped_after else None
+        release, grasp_step = receipt.get("actual_release_step"), receipt.get("grasp_step")
+        grasped_after = record["class"] == "grasp" and receipt.get("reached_release") and None not in (release, grasp_step)
+        record["release_to_grasp"] = grasp_step - release if grasped_after else None
         if record["class"] == "error":
             errors.append(f"{record['path']}: 结局记为 error（outcome={receipt.get('outcome')}，grasp_success={receipt.get('grasp_success')}）")
     for k in expected_k:

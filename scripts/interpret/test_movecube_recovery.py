@@ -26,9 +26,9 @@ def table_actions(index):
 def write_table(root):
     path = Path(root) / "force-table.json"
     episodes = {key: {"actions": table_actions(i).tolist(), "first_env_step": ORIGIN,
-                      "way": "grasp_putdown" if direction == "A" else "peg_push", "direction": direction}
+                      "env_seed": 7, "way": "grasp_putdown" if direction == "A" else "peg_push", "direction": direction}
                 for i, (key, direction) in enumerate(EPISODES.items())}
-    path.write_text(json.dumps({"episodes": episodes}))
+    path.write_text(json.dumps({"schema_version": 1, "force_steps": 80, "episodes": episodes}))
     return path
 
 
@@ -46,24 +46,30 @@ def write_run(root, model, k, key, *, grasp=1, outcome="success", steps=None, re
         # 策略段 TCP 线性走向正确物体，末步正好水平距离 0.05；强推段停在强推目标旁。
         correct, wrong = (CUBE, PEG) if direction == "A" else (PEG, CUBE)
         tcp = [wrong[0] + 0.01, 0.0, 0.2] if forced else [correct[0] + 0.05 + (steps - 1 - i) * 0.01, 0.0, 0.2]
-        rows.append({"env_step": ORIGIN + i, "control_source": "forced" if forced else "policy",
-                     "executed_action": action.tolist(), "tcp": tcp, "cube": CUBE, "peg_tail": PEG})
+        # 与 S1 runner 同形：env_step 是步前值，env_step_after 与位置字段是步后值。
+        rows.append({"event": "step", "episode_key": key, "action_index": i, "env_step": ORIGIN + i, "env_step_after": ORIGIN + i + 1,
+                     "infer_seq": i // 16, "row_in_chunk": i % 16, "chunk_start_env_step": ORIGIN + i - i % 16,
+                     "control_source": "force" if forced else "policy", "command_action": np.full(8, 9.0).tolist(),
+                     "executed_action": action.tolist(), "env_status": "ongoing", "tcp": tcp, "cube": CUBE, "peg_tail": PEG,
+                     "peg_head": PEG})
     if tamper:
         tamper(rows)
     shard = Path(root) / model / f"k{k}" / "s0"
-    nonce = shard / "client" / "traces" / f"{key.replace(':', '_')}"
+    attempt = shard / "attempts" / "force-service-0" / "0"
+    nonce = attempt / "client" / "traces" / f"{key.replace(':', '_')}"
     (nonce / "meta").mkdir(parents=True)
     trace = nonce / "step_trace.jsonl"
     trace.write_text("".join(json.dumps(row) + "\n" for row in rows))
     receipt = {"episode_key": key, "episode_id": int(key.split(":")[1]), "grasp_success": grasp,
-               "grasp_step": ORIGIN + steps - 1 if grasp else None, "outcome": outcome, "env_status": "ongoing", "force_k": k,
+               "grasp_step": ORIGIN + steps if grasp else None, "grasped_object": "cube" if grasp else None, "outcome": outcome,
+               "env_status": "ongoing", "force_k": k,
                "way": "grasp_putdown" if direction == "A" else "peg_push", "direction": direction, "origin_env_step": ORIGIN,
                "reached_release": reached, "actual_release_step": (ORIGIN + k if reached else None) if release is None else release,
                "actions_executed": steps, "trace_path": "../step_trace.jsonl" if relative_trace else str(trace)}
     (nonce / "meta" / "force_receipt.json").write_text(json.dumps(receipt))
-    commands = shard / "commands.json"
-    if not commands.exists():
-        commands.write_text(json.dumps({"server": ["uv", "run", "python", "-m", "scripts.training.serve_policy", "--port", "1"]}))
+    server = {"server": ["uv", "run", "python", "-m", "scripts.training.serve_policy", "--port", "1"]}
+    (attempt / "commands.json").write_text(json.dumps(server))
+    (shard / "attempts" / "force-service-0" / "server-command.json").write_text(json.dumps(server))
 
 
 def write_all(root, overrides=None):
@@ -88,13 +94,16 @@ def group(report, direction, model, k):
 
 
 def test_classify():
-    assert mr.classify({"grasp_success": 1, "outcome": "success"}) == "grasp"
-    assert mr.classify({"grasp_success": 0, "outcome": "fail"}) == "fail"
-    assert mr.classify({"grasp_success": 0, "outcome": "timeout"}) == "timeout"
-    assert mr.classify({"grasp_success": 0, "outcome": None}) == "error"
-    assert mr.classify({"grasp_success": 1, "outcome": None}) == "error"
+    ok = {"way": "grasp_putdown", "direction": "A", "origin_env_step": ORIGIN}
+    assert mr.classify({**ok, "grasp_success": 1, "outcome": "success"}) == "grasp"
+    assert mr.classify({**ok, "grasp_success": 0, "outcome": "fail"}) == "fail"
+    assert mr.classify({**ok, "grasp_success": 0, "outcome": "timeout"}) == "timeout"
+    assert mr.classify({**ok, "grasp_success": 0, "outcome": None}) == "error"
+    assert mr.classify({**ok, "grasp_success": 1, "outcome": None}) == "error"
     # runner 的 success 只应伴随 grasp_success=1；单独出现是契约破坏，不能读成成功。
-    assert mr.classify({"grasp_success": 0, "outcome": "success"}) == "error"
+    assert mr.classify({**ok, "grasp_success": 0, "outcome": "success"}) == "error"
+    for name in ok:
+        assert mr.classify({**ok, name: None, "grasp_success": 0, "outcome": "fail"}) == "error"
 
 
 def test_wilson_known_values():
@@ -131,8 +140,8 @@ def test_all_pass_and_statistics(tmp_path):
     mot48 = group(report, "A", "mot", 48)
     assert (mot48["grasp_rate"], mot48["recovery_baseline_total"]) == (1.0, 2)
     assert (mot48["wilson_low"], mot48["wilson_high"]) == pytest.approx(mr.wilson(2, 2))
-    # 放手到抓起：共 68 步，放手在第 48 步，grasp_step 是末步，差 19。
-    assert mot48["median_release_to_grasp"] == 19
+    # 放手到抓起：grasp_step 是步后 elapsed（origin+68），actual_release_step 是步前（origin+48），差 20。
+    assert mot48["median_release_to_grasp"] == 20
     # 放手后 TCP 末步距 cube 0.05；到 peg_tail 最近在放手第一步：x=0.1+0.05+0.19=0.34，距 0.4 为 0.06。
     assert mot48["median_min_dist_correct"] == pytest.approx(0.05)
     assert mot48["median_min_dist_forced"] == pytest.approx(0.06)
@@ -171,7 +180,7 @@ def test_force_exec_within_tolerance(tmp_path):
 
 def test_force_exec_fail_when_k0_has_forced(tmp_path):
     def tamper(rows):
-        rows[0]["control_source"] = "forced"
+        rows[0]["control_source"] = "force"
     table = write_all(tmp_path, {("mot", 0, "MoveCube:1"): {"tamper": tamper}})
     assert "FORCE_EXEC=FAIL" in line(run(tmp_path, table), "FORCE_EXEC")
 
@@ -205,7 +214,7 @@ def test_force_release_applies_to_k0(tmp_path):
 
 def test_force_release_fail_on_forced_after_release(tmp_path):
     def tamper(rows):
-        rows[50]["control_source"] = "forced"
+        rows[50]["control_source"] = "force"
     table = write_all(tmp_path, {("mot", 48, "MoveCube:1"): {"tamper": tamper}})
     assert "FORCE_RELEASE=FAIL" in line(run(tmp_path, table), "FORCE_RELEASE")
 
@@ -241,20 +250,27 @@ def test_no_attn_fail_on_attn_dir(tmp_path):
 ])
 def test_no_attn_fail_on_server_command(tmp_path, server):
     table = write_all(tmp_path)
-    (tmp_path / "mot" / "k0" / "s0" / "commands.json").write_text(json.dumps({"server": server}))
+    next((tmp_path / "mot" / "k0" / "s0").rglob("commands.json")).write_text(json.dumps({"server": server}))
+    assert line(run(tmp_path, table), "NO_ATTN") == "NO_ATTN=FAIL npz=0"
+
+
+def test_no_attn_fail_on_server_command_file(tmp_path):
+    table = write_all(tmp_path)
+    next((tmp_path / "ctx" / "k48" / "s0").rglob("server-command.json")).write_text(
+        json.dumps({"server": ["python", "-m", "scripts.interpret.serve_policy_attn"]}))
     assert line(run(tmp_path, table), "NO_ATTN") == "NO_ATTN=FAIL npz=0"
 
 
 def test_no_attn_fail_without_commands(tmp_path):
     table = write_all(tmp_path)
-    for path in list(tmp_path.rglob("commands.json")):
+    for path in [*tmp_path.rglob("commands.json"), *tmp_path.rglob("server-command.json")]:
         path.unlink()
     assert "NO_ATTN=FAIL" in line(run(tmp_path, table), "NO_ATTN")
 
 
 def test_mfr_run_fail_on_missing_episode(tmp_path):
     table = write_all(tmp_path)
-    for path in (tmp_path / "ctx" / "k48" / "s0" / "client" / "traces" / "MoveCube_3").rglob("force_receipt.json"):
+    for path in (tmp_path / "ctx" / "k48" / "s0").rglob("MoveCube_3/meta/force_receipt.json"):
         path.unlink()
     report = run(tmp_path, table)
     assert line(report, "MFR_RUN") == "MFR_RUN=FAIL completed=11 missing=1 errors=0"
@@ -268,6 +284,23 @@ def test_mfr_run_error_outcome_excluded_from_denominator(tmp_path):
     b48 = group(report, "B", "mot", 48)
     assert (b48["total"], b48["errors"]) == (0, 1)
     assert "MFR_RESULT direction=B model=mot k=48 grasp_success=0/0" in mr.verdict_lines(report)
+
+
+def test_identity_failure_counts_as_error_without_exec_mismatch(tmp_path):
+    """身份核对失败：way、direction、origin 为 null，轨迹为空。记 errors，不报异常、不算动作 mismatch。"""
+    table = write_all(tmp_path)
+    path = next((tmp_path / "ctx" / "k48" / "s0").rglob("MoveCube_1/meta/force_receipt.json"))
+    receipt = json.loads(path.read_text())
+    receipt.update(way=None, direction=None, origin_env_step=None, reached_release=False, actual_release_step=None,
+                   grasp_success=0, grasp_step=None, grasped_object=None, outcome=None)
+    path.write_text(json.dumps(receipt))
+    Path(receipt["trace_path"]).unlink()
+    report = run(tmp_path, table)
+    assert line(report, "MFR_RUN") == "MFR_RUN=FAIL completed=11 missing=0 errors=1"
+    assert line(report, "FORCE_EXEC") == "FORCE_EXEC=PASS runs=12 mismatches=0"
+    assert line(report, "FORCE_RELEASE") == "FORCE_RELEASE=PASS reached_release=11 mismatches=0"
+    a48 = group(report, "A", "ctx", 48)
+    assert (a48["total"], a48["errors"]) == (1, 1)
 
 
 def test_mfr_run_fail_on_duplicate_receipt(tmp_path):
