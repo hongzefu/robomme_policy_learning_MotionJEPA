@@ -114,8 +114,8 @@ def matrix(task, model, reader, stream):
     return E[:rows, :cols], N[:rows, :cols], c
 
 # ----------------------------------------------------------------------------- 画布
-W, H = 7.2, 8.85
-YOFF = 0.15   # 所有面板统一上移的英寸数
+W, H = 7.2, 6.0
+YOFF = -0.40   # 所有面板统一上移的英寸数
 fig = plt.figure(figsize=(W, H))
 def ax_in(x, y, w, h, **kw):
     return fig.add_axes([x / W, (y + YOFF) / H, w / W, h / H], **kw)
@@ -129,9 +129,9 @@ def panel_tag(ax, tag, dx, dy):
     ax.text(dx, dy, tag, transform=ax.transAxes, fontsize=8, fontweight="bold", va="bottom", ha="left")
 
 n_ep = sum(stat[t]["episodes"] for t in TASKS)
-header(8.54, "I.  Two attention pathways carry motion-token content into the action tokens")
-header(8.42, f"Motion model, PatternLock | RouteStick, seed 42, {n_ep} episodes / {inferences} inferences, head-averaged, episode-equal. (a) the attention mask "
-             "as a block matrix and, per layer, how much each block reads from motion tokens and from frame memory; (b) the pathway edges per layer, both tasks pooled.",
+header(6.29, "I.  Two attention pathways carry motion-token content into the action tokens")
+header(6.17, f"Motion model, PatternLock | RouteStick, seed 42, {n_ep} episodes / {inferences} inferences, head-averaged, episode-equal. (a) the attention mask "
+             "as a block matrix; (b) per layer, how much language, action and frame memory read from motion tokens and frame memory (both tasks pooled).",
        bold=False, color=INK2)
 
 # ============================================================================ (a) 块状掩码矩阵 + 逐层水平箭头
@@ -149,8 +149,8 @@ mask6 = np.array([[all(mask_zero[q, k] for q in qs for k in ks) for _, ks, _ in 
 sizes = [f"{FRAME_TOKENS}", f"≈{stat['PatternLock']['motion_tokens']:.1f}|{stat['RouteStick']['motion_tokens']:.1f}", f"{N_IMG}", f"{N_IMG}", f"{TXT}", f"{HORIZON}"]
 
 # --- (a) 左：块状注意力掩码（行 = query 块，列 = key 块，实心 = 可见）
-axm = ax_in(1.00, 5.95, 1.50, 1.50)
-panel_tag(axm, "(a)", -0.62, 1.30)
+axm = ax_in(1.00, 4.00, 1.50, 1.50)
+panel_tag(axm, "(a)", -0.62, 1.20)
 axm.set_xlim(-0.5, 5.5); axm.set_ylim(5.5, -0.5); axm.set_aspect("equal")
 for r in range(6):
     for c in range(6):
@@ -170,95 +170,58 @@ for sp in axm.spines.values():
     sp.set_visible(False)
 axm.add_patch(Rectangle((-0.5, -0.5), 6, 6, fc="none", ec=INK3, lw=0.5))
 axm.plot([4.5, 4.5], [-0.5, 5.5], color="#ffffff", lw=2.2); axm.plot([-0.5, 5.5], [4.5, 4.5], color="#ffffff", lw=2.2)
-fig.text(0.40 / W, (5.68 + YOFF) / H, "Block attention mask (dark = may attend; verified\nas exactly 0 elsewhere in every layer, head, episode).\nprefix = memory → images → language; suffix = action.",
+fig.text(0.40 / W, (3.73 + YOFF) / H, "Block attention mask (dark = may attend; verified\nas exactly 0 elsewhere in every layer, head, episode).\nprefix = memory → images → language; suffix = action.",
          fontsize=5.6, color=INK2, va="top", ha="left", linespacing=1.2)
 
-# --- (a) 右：逐层，每个读者块一条水平箭头指向它的主要外部来源
-axl = ax_in(2.80, 4.00, 4.20, 3.95)
-X = {name: x for x, name in enumerate(("frames", "motion", "images", "language", "action"))}
-# 只画记忆内容流出的六条边：(读者, 来源, 车道偏移, 数字位置 x, 对齐)。读者索引按 BLOCKS：0 帧 1 motion 4 语言 5 动作。
-EDGES = [("frames", 0, "motion", [1], +0.32, 1.08, "left"),      # motion → 帧：数字在 motion 列右侧
-         ("motion", 1, "frames", [0], +0.16, -0.08, "right"),    # 帧 → motion：数字在帧列左侧
-         ("language", 4, "motion", [1], 0.00, 3.08, "left"),     # motion → 语言：语言列右侧第一位
-         ("language", 4, "frames", [0], -0.16, 3.36, "left"),    # 帧 → 语言：语言列右侧第二位
-         ("action", 5, "motion", [1], -0.32, 4.08, "left"),      # motion → 动作：动作列右侧第一位
-         ("action", 5, "frames", [0], -0.48, 4.36, "left")]      # 帧 → 动作：动作列右侧第二位
-SRC_COLOR = {"frames": C1, "motion": C2}
-def lw_of(v):
-    return 0.25 + v / 100 * 2.2
-drawn = []
-for l in range(18):
-    for name, ridx, src, sidx, off, tx, ha in EDGES:
-        v = float(M6[l, ridx, sidx].sum())
-        drawn.append((l, name, src, round(v, 2)))
-        if v < 1.0:
-            continue
-        y = l + off
-        xs, xr = X[src], X[name]
-        d = 0.06 if xr > xs else -0.06
-        axl.annotate("", xy=(xr - d, y), xytext=(xs + d, y),
-                     arrowprops=dict(arrowstyle="-|>", color=SRC_COLOR[src], lw=lw_of(v), shrinkA=0, shrinkB=0, mutation_scale=4.5 + v / 20), zorder=3)
-        axl.text(tx, y, f"{v:.0f}" if v >= 9.5 else f"{v:.1f}", ha=ha, va="center", fontsize=4.6, color=SRC_COLOR[src], zorder=4)
-for x in X.values():
-    axl.axvline(x, color=GRID, lw=0.5, zorder=1)
-for l in range(0, 18, 2):
-    axl.axhspan(l - 0.5, l + 0.5, color="#f6f6f4", lw=0, zorder=0)
-axl.set_xlim(-0.45, 4.7); axl.set_ylim(17.75, -0.85)
-axl.set_xticks(list(X.values())); axl.set_xticklabels(["frame\nmemory", "motion\ntokens", "current\nimages", "language", "action"], fontsize=6.0)
-axl.xaxis.set_ticks_position("top")
-axl.set_yticks(range(18)); axl.set_yticklabels([f"L{l}" for l in range(18)], fontsize=5.6)
-axl.tick_params(length=0, pad=2)
-for sp in axl.spines.values():
-    sp.set_visible(False)
-axl.set_ylabel("layer", labelpad=2)
-# 图例：颜色 = 来源，宽度 = 读者注意力占比
-hx, hy = 0.78, 17.55
-for k, (src, col) in enumerate(SRC_COLOR.items()):
-    pass
-fig.text(2.80 / W, (3.90 + YOFF) / H, "One row per layer. Only the six edges that carry memory content outwards are drawn: from motion tokens (orange) and from frame "
-         "memory (blue) into motion / frames, language and action. Each horizontal arrow runs from the source to the reader; width and the number "
-         "beside the reader's column = % of the reader's attention at that layer (edges below 1% not drawn). Two tasks pooled.", fontsize=5.6, color=INK2, va="top", ha="left", wrap=True)
-hdl = [Line2D([], [], color=c, lw=1.6) for c in SRC_COLOR.values()]
-fig.legend(hdl, ["source: frame memory", "source: motion tokens"], loc="upper left",
-           bbox_to_anchor=(2.80 / W, (3.52 + YOFF) / H), ncol=4, frameon=False, fontsize=5.4, handlelength=1.4, handletextpad=0.5, columnspacing=1.0, borderaxespad=0)
-json.dump({"groups": [n for n, _, _ in BLOCKS], "layer_matrix_pct": M6.round(2).tolist(), "masked": mask6.tolist(), "arrows": drawn},
-          open(OUT / "fig_pathway-layers.json", "w", encoding="utf-8"), ensure_ascii=False, indent=0)
-
-# ============================================================================ (b) 逐层折线（两任务合并，按局等权）
-def pooled(key, layers):
-    return np.mean([stat[t][key][:layers] for t in TASKS], 0)   # 两任务各 50 局，等权平均即合并均值
-axb = ax_in(0.70, 0.85, 2.25, 2.10)
-panel_tag(axb, "(b)", -0.30, 1.14)
-Lx = np.arange(18)
-series_b = [("frame_carry_motion", 19, C1, "frame memory: cumulative motion content (α = 0.5)"),
-            ("text_reads_motion", 18, C2, "language reads motion tokens (direct)"),
-            ("text_reads_frame", 18, C3, "language reads frame memory (direct)"),
-            ("action_reads_frame", 18, C4, "action reads frame memory (direct)")]
-for key, n, color, _ in series_b:
-    axb.plot(np.arange(n), pooled(key, n), color=color, lw=1.6, zorder=3)
-axb.axvline(3, color=GRID, lw=0.8, zorder=1); axb.text(3.4, 69, "L3", fontsize=6.5, color=INK3, va="top")
-axb.axvspan(13.5, 16.5, color="#f1f1f1", lw=0, zorder=0); axb.text(15, 69, "L14–16", fontsize=6.5, color=INK3, va="top", ha="center")
-axb.set_xlim(-0.5, 18.5); axb.set_ylim(0, 70); axb.set_xticks([0, 3, 6, 9, 12, 15, 18]); axb.set_yticks([0, 20, 40, 60])
+# ============================================================================ (b) 六条记忆流出边的逐层曲线（两任务合并，按局等权）
+# 读者索引按 BLOCKS：0 帧 1 motion 4 语言 5 动作；来源 1 motion、0 帧
+EDGES = [("frames read motion tokens", 0, [1], C2, "-"),
+         ("language reads motion tokens", 4, [1], C3, "-"),
+         ("language reads frame memory", 4, [0], C1, "-"),
+         ("action reads frame memory", 5, [0], C4, "-"),
+         ("action reads motion tokens", 5, [1], INK3, "-")]
+curves = {name: M6[:, r, src].sum(1) for name, r, src, _, _ in EDGES}
+carry = np.mean([stat[t]["frame_carry_motion"] for t in TASKS], 0)          # 帧的累积 motion 含量（第 l 层输入）
+axb = ax_in(3.30, 3.50, 3.60, 2.25)
+panel_tag(axb, "(b)", -0.16, 1.02)
+axb.axvspan(-0.5, 1.5, color="#fdf1ec", lw=0, zorder=0)
+axb.axvspan(12.5, 16.5, color="#eef2f8", lw=0, zorder=0)
+axb.text(0.5, 73, "memory → language\n(L0–L1 only)", ha="center", va="top", fontsize=5.8, color=INK2, linespacing=1.1)
+axb.text(14.5, 73, "frames → action\n(L13–L16)", ha="center", va="top", fontsize=5.8, color=INK2, linespacing=1.1)
+axb.plot(np.arange(19) - 0.5, carry, color=INK2, lw=1.0, ls="--", zorder=2)
+for name, r, src, color, ls in EDGES:
+    axb.plot(np.arange(18), curves[name], color=color, lw=1.6, ls=ls, zorder=3, marker="o", ms=1.8, mec="none")
+axb.text(18.3, carry[18] + 1.5, f"{carry[18]:.0f}%", ha="right", va="bottom", fontsize=5.8, color=INK2)
+fm = curves["frames read motion tokens"]; k = int(np.argmax(fm))
+axb.text(k, fm[k] + 2.5, f"{fm[k]:.0f}%", ha="center", va="bottom", fontsize=5.8, color=C2)
+af = curves["action reads frame memory"]
+axb.text(16.3, af[16] + 1.5, f"{af[16]:.0f}%", ha="left", va="bottom", fontsize=5.8, color=C4)
+lm = curves["language reads motion tokens"]
+axb.text(1.4, lm[1] + 1.0, f"{lm[0]:.0f}%, {lm[1]:.0f}%", ha="left", va="bottom", fontsize=5.8, color=C3)
+lf_ = curves["language reads frame memory"]
+axb.text(-0.4, lf_[0] + 2.5, f"{lf_[0]:.0f}%", ha="left", va="bottom", fontsize=5.8, color=C1)
+axb.set_xlim(-0.6, 18.6); axb.set_ylim(0, 75)
+axb.set_xticks(range(0, 18)); axb.set_xticklabels([f"L{l}" for l in range(18)], fontsize=5.6)
+axb.set_yticks([0, 20, 40, 60])
 axb.grid(axis="y", color=GRID, lw=0.5); axb.set_axisbelow(True)
 for sp in ("top", "right"):
     axb.spines[sp].set_visible(False)
-axb.set_xlabel("layer", labelpad=1); axb.set_ylabel("% of attention / content", labelpad=2)
-axb.set_title(f"motion model, PatternLock + RouteStick pooled\n({n_ep} episodes, {inferences} inferences, episode-equal)", fontsize=6.5, pad=3, loc="left")
-fcm = pooled("frame_carry_motion", 19)
-axb.text(18.3, fcm[18] + 1.5, f"{fcm[18]:.0f}%", ha="right", va="bottom", fontsize=6.5, color=INK2)
-arf_p = pooled("action_reads_frame", 18); k = 14 + int(np.argmax(arf_p[14:17]))
-axb.text(k, arf_p[k] + 2, f"{arf_p[k]:.0f}%", ha="center", va="bottom", fontsize=6.5, color=INK2)
-trm = pooled("text_reads_motion", 18); k2 = int(np.argmax(trm))
-axb.text(k2, trm[k2] + 3.5, f"{trm[k2]:.0f}%", ha="center", va="bottom", fontsize=6.5, color=INK2)
-fig.legend([Line2D([], [], color=c, lw=1.6) for _, _, c, _ in series_b], [lab for _, _, _, lab in series_b], loc="upper left",
-           bbox_to_anchor=(0.30 / W, (0.62 + YOFF) / H), ncol=1, frameon=False, handlelength=1.6, handletextpad=0.6, borderaxespad=0, labelspacing=0.35)
+axb.set_xlabel("layer", labelpad=1); axb.set_ylabel("% of the reader's attention", labelpad=2)
+axb.set_title(f"Where memory content leaves, layer by layer (motion model, {n_ep} episodes pooled)",
+              fontsize=6.5, pad=4, loc="left")
+hdl = [Line2D([], [], color=c, lw=1.6, marker="o", ms=1.8, mec="none") for _, _, _, c, _ in EDGES] + [Line2D([], [], color=INK2, lw=1.0, ls="--")]
+fig.legend(hdl, [n for n, *_ in EDGES] + ["frame memory: cumulative motion content (α = 0.5)"],
+           loc="upper left", bbox_to_anchor=(3.30 / W, (3.17 + YOFF) / H), ncol=2, frameon=False, fontsize=5.6, handlelength=1.6,
+           handletextpad=0.5, columnspacing=1.2, labelspacing=0.3, borderaxespad=0)
+json.dump({"groups": [n for n, _, _ in BLOCKS], "layer_matrix_pct": M6.round(2).tolist(), "masked": mask6.tolist(),
+           "curves_pct": {n: v.round(2).tolist() for n, v in curves.items()}, "frame_carry_motion_pct": carry.round(2).tolist()},
+          open(OUT / "fig_pathway-layers.json", "w", encoding="utf-8"), ensure_ascii=False, indent=0)
 
 # ============================================================================ (c) 子目标对位矩阵（RouteStick）
-header(3.26, "II.  The pathways exist, but which demo segment", x=3.55)
-header(3.14, "is read shows no sub-goal alignment", x=3.55)
-header(3.02, "RouteStick, motion model unless noted, 50 episodes per model, all inferences; rows pool episodes with different numbers of sub-goals m "
+header(2.62, "II.  The pathways exist, but which demo segment is read shows no sub-goal alignment")
+header(2.50, "RouteStick, motion model unless noted, 50 episodes per model, all inferences; rows pool episodes with different numbers of sub-goals m "
              "(n = episodes per row); frame stream weighted 'single', motion stream 'overlap'; D = diagonal enrichment, episode-level 95% CI.",
-       bold=False, color=INK2, x=3.55, width=66)
+       bold=False, color=INK2, width=138)
 panels_c = [("mot", "action", "frame", "action reads frames"),
             ("mot", "text", "frame", "language reads frames"),
             ("ctx", "text", "frame", "baseline · language reads frames"),
@@ -268,8 +231,8 @@ vmax = max(np.nanmax(E) for E, _, _ in mats)
 norm = TwoSlopeNorm(vcenter=1.0, vmin=0.0, vmax=vmax)
 cax_list = []
 for k, ((m, r, s, title), (E, N, c)) in enumerate(zip(panels_c, mats)):
-    col, row = k % 2, k // 2
-    a = ax_in(3.85 + col * 1.70, 1.66 - row * 1.12, 1.10, 0.68)
+    col, row = k, 1
+    a = ax_in(0.50 + col * 1.60, 1.33, 1.10, 0.68)
     cax_list.append(a)
     a.imshow(np.ma.masked_invalid(E), cmap=DIVERGE, norm=norm, interpolation="nearest", aspect="auto")
     for (j, jp), val in np.ndenumerate(E):
@@ -292,8 +255,8 @@ for k, ((m, r, s, title), (E, N, c)) in enumerate(zip(panels_c, mats)):
         a.set_xlabel("demo segment j′ read", labelpad=1)
     if col == 0:
         a.set_ylabel("executing sub-goal j", labelpad=1)
-panel_tag(cax_list[0], "(c)", -0.26, 1.22)
-cb_ax = ax_in(3.85, 0.20, 2.80, 0.07)
+panel_tag(cax_list[0], "(c)", -0.40, 1.30)
+cb_ax = ax_in(2.10, 0.74, 2.80, 0.07)
 cb = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=DIVERGE), cax=cb_ax, orientation="horizontal")
 cb.set_ticks([0, 0.5, 1, 2, 3, round(float(vmax), 1)])
 cb.ax.tick_params(length=2, pad=1.5); cb.outline.set_linewidth(0.4)
