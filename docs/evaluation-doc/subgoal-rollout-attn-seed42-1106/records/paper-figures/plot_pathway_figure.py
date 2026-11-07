@@ -131,7 +131,7 @@ def panel_tag(ax, tag, dx, dy):
 n_ep = sum(stat[t]["episodes"] for t in TASKS)
 header(8.54, "I.  Two attention pathways carry motion-token content into the action tokens")
 header(8.42, f"Motion model, PatternLock | RouteStick, seed 42, {n_ep} episodes / {inferences} inferences, head-averaged, episode-equal. (a) the attention mask "
-             "as a block matrix and, per layer, where each block mainly reads; (b) the pathway edges per layer, both tasks pooled.",
+             "as a block matrix and, per layer, how much each block reads from motion tokens and from frame memory; (b) the pathway edges per layer, both tasks pooled.",
        bold=False, color=INK2)
 
 # ============================================================================ (a) 块状掩码矩阵 + 逐层水平箭头
@@ -176,44 +176,34 @@ fig.text(0.40 / W, (5.68 + YOFF) / H, "Block attention mask (dark = may attend; 
 # --- (a) 右：逐层，每个读者块一条水平箭头指向它的主要外部来源
 axl = ax_in(2.80, 4.00, 4.20, 3.95)
 X = {name: x for x, name in enumerate(("frames", "motion", "images", "language", "action"))}
-READERS = [("frames", 0, [1, 2, 3, 4], +0.34), ("motion", 1, [0, 2, 3, 4], +0.17), ("images", None, [0, 1, 4], 0.0), ("language", 4, [0, 1, 2, 3], -0.17), ("action", 5, [0, 1, 2, 3, 4], -0.34)]
-LABEL_X = {"frames": (-0.10, "right"), "motion": (1.10, "left"), "images": (1.90, "right"), "language": (3.10, "left"), "action": (4.10, "left")}
-SRC_OF = {0: "frames", 1: "motion", 2: "images", 3: "images", 4: "language"}
-SRC_COLOR = {"frames": C1, "motion": C2, "images": C4, "language": C3}
-cnt6 = np.mean([np.mean([i["counts"] for i in episodes[t]], 0) for t in TASKS], 0)
-def reader_row(l, idx):
-    if idx is None:   # 两路图像按 token 数合并
-        w = cnt6[[4, 5]] / cnt6[[4, 5]].sum()
-        return (w[:, None] * M6[l, 2:4]).sum(0)
-    return M6[l, idx]
-def pool_sources(row):
-    out = {"frames": row[0], "motion": row[1], "images": row[2] + row[3], "language": row[4]}
-    return out
+# 只画记忆内容流出的六条边：(读者, 来源, 车道偏移, 数字位置 x, 对齐)。读者索引按 BLOCKS：0 帧 1 motion 4 语言 5 动作。
+EDGES = [("frames", 0, "motion", [1], +0.32, 1.08, "left"),      # motion → 帧：数字在 motion 列右侧
+         ("motion", 1, "frames", [0], +0.16, -0.08, "right"),    # 帧 → motion：数字在帧列左侧
+         ("language", 4, "motion", [1], 0.00, 3.08, "left"),     # motion → 语言：语言列右侧第一位
+         ("language", 4, "frames", [0], -0.16, 3.36, "left"),    # 帧 → 语言：语言列右侧第二位
+         ("action", 5, "motion", [1], -0.32, 4.08, "left"),      # motion → 动作：动作列右侧第一位
+         ("action", 5, "frames", [0], -0.48, 4.36, "left")]      # 帧 → 动作：动作列右侧第二位
+SRC_COLOR = {"frames": C1, "motion": C2}
 def lw_of(v):
-    return 0.3 + v / 100 * 2.2
+    return 0.25 + v / 100 * 2.2
 drawn = []
 for l in range(18):
-    for name, idx, allowed, off in READERS:
-        row = pool_sources(reader_row(l, idx))
-        cands = sorted(((v, src) for src, v in row.items() if src != name and SRC_OF and X[src] != X[name]), reverse=True)
-        picks = [cands[0]] if cands[0][0] >= 5 else []
-        if name == "action" and len(cands) > 1 and cands[1][0] >= 4:
-            picks.append(cands[1])
-        for k, (v, src) in enumerate(picks):
-            y = l + off + (0.0 if k == 0 else -0.17)
-            xs, xr = X[src], X[name]
-            axl.annotate("", xy=(xr - (0.06 if xr > xs else -0.06), y), xytext=(xs + (0.06 if xr > xs else -0.06), y),
-                         arrowprops=dict(arrowstyle="-|>", color=SRC_COLOR[src], lw=lw_of(v), shrinkA=0, shrinkB=0, mutation_scale=5 + v / 25), zorder=3)
-            tx, ha = LABEL_X[name]
-            if k == 1:
-                tx += 0.33
-            axl.text(tx, y, f"{v:.0f}", ha=ha, va="center", fontsize=4.6, color=SRC_COLOR[src], zorder=4)
-            drawn.append((l, name, src, round(float(v), 1)))
+    for name, ridx, src, sidx, off, tx, ha in EDGES:
+        v = float(M6[l, ridx, sidx].sum())
+        drawn.append((l, name, src, round(v, 2)))
+        if v < 1.0:
+            continue
+        y = l + off
+        xs, xr = X[src], X[name]
+        d = 0.06 if xr > xs else -0.06
+        axl.annotate("", xy=(xr - d, y), xytext=(xs + d, y),
+                     arrowprops=dict(arrowstyle="-|>", color=SRC_COLOR[src], lw=lw_of(v), shrinkA=0, shrinkB=0, mutation_scale=4.5 + v / 20), zorder=3)
+        axl.text(tx, y, f"{v:.0f}" if v >= 9.5 else f"{v:.1f}", ha=ha, va="center", fontsize=4.6, color=SRC_COLOR[src], zorder=4)
 for x in X.values():
     axl.axvline(x, color=GRID, lw=0.5, zorder=1)
 for l in range(0, 18, 2):
     axl.axhspan(l - 0.5, l + 0.5, color="#f6f6f4", lw=0, zorder=0)
-axl.set_xlim(-0.6, 4.75); axl.set_ylim(17.65, -0.85)
+axl.set_xlim(-0.45, 4.7); axl.set_ylim(17.75, -0.85)
 axl.set_xticks(list(X.values())); axl.set_xticklabels(["frame\nmemory", "motion\ntokens", "current\nimages", "language", "action"], fontsize=6.0)
 axl.xaxis.set_ticks_position("top")
 axl.set_yticks(range(18)); axl.set_yticklabels([f"L{l}" for l in range(18)], fontsize=5.6)
@@ -225,11 +215,11 @@ axl.set_ylabel("layer", labelpad=2)
 hx, hy = 0.78, 17.55
 for k, (src, col) in enumerate(SRC_COLOR.items()):
     pass
-fig.text(2.80 / W, (3.90 + YOFF) / H, "One row per layer. Each horizontal arrow runs from a source block to the block that reads it: the reader's largest external source "
-         "at that layer (action: top two). Width and number = % of the reader's attention, printed beside the reader's column; "
-         "colour = source. Two tasks pooled.", fontsize=5.6, color=INK2, va="top", ha="left", wrap=True)
+fig.text(2.80 / W, (3.90 + YOFF) / H, "One row per layer. Only the six edges that carry memory content outwards are drawn: from motion tokens (orange) and from frame "
+         "memory (blue) into motion / frames, language and action. Each horizontal arrow runs from the source to the reader; width and the number "
+         "beside the reader's column = % of the reader's attention at that layer (edges below 1% not drawn). Two tasks pooled.", fontsize=5.6, color=INK2, va="top", ha="left", wrap=True)
 hdl = [Line2D([], [], color=c, lw=1.6) for c in SRC_COLOR.values()]
-fig.legend(hdl, ["source: frame memory", "source: motion tokens", "source: current images", "source: language"], loc="upper left",
+fig.legend(hdl, ["source: frame memory", "source: motion tokens"], loc="upper left",
            bbox_to_anchor=(2.80 / W, (3.52 + YOFF) / H), ncol=4, frameon=False, fontsize=5.4, handlelength=1.4, handletextpad=0.5, columnspacing=1.0, borderaxespad=0)
 json.dump({"groups": [n for n, _, _ in BLOCKS], "layer_matrix_pct": M6.round(2).tolist(), "masked": mask6.tolist(), "arrows": drawn},
           open(OUT / "fig_pathway-layers.json", "w", encoding="utf-8"), ensure_ascii=False, indent=0)
