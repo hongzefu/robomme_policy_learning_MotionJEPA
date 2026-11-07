@@ -34,6 +34,7 @@ def main(argv=None):
     control.add_argument("--run-root", required=True)
     control.add_argument("--once", action="store_true")
     control.add_argument("--slurm-host", default="greatlakes")
+    control.add_argument("--local", action="store_true")
     report = sub.add_parser("aggregate")
     report.add_argument("--run-root", required=True)
     report.add_argument("--out", type=Path)
@@ -78,10 +79,11 @@ def main(argv=None):
         signal.signal(sig, lambda *_: stop.set())
     from functools import partial
     try:
-        from .queue_store import confirm_step_terminal
+        from .queue_store import confirm_local_terminal, confirm_step_terminal
     except ImportError:
-        from queue_store import confirm_step_terminal
-    with Controller(store, terminal_lookup=partial(confirm_step_terminal, slurm_host=args.slurm_host)) as controller:
+        from queue_store import confirm_local_terminal, confirm_step_terminal
+    lookup = confirm_local_terminal if args.local else partial(confirm_step_terminal, slurm_host=args.slurm_host)
+    with Controller(store, terminal_lookup=lookup) as controller:
         while not stop.is_set():
             controller.process_requests()
             result = controller.summary()

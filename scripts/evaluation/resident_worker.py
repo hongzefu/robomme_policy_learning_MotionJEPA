@@ -82,10 +82,11 @@ def stop_process_tree(process, grace_seconds=10):
 
 
 class Resident:
-    def __init__(self, root, spec, worker_id, job_id, *, popen=subprocess.Popen):
+    def __init__(self, root, spec, worker_id, job_id, *, popen=subprocess.Popen, local=False):
         self.root, self.spec = Path(root).resolve(), spec
         self.worker_id, self.job_id = worker_id, str(job_id)
-        self.step_id = os.environ.get("SLURM_STEP_ID", "")
+        self.local = local
+        self.step_id = str(os.getpid()) if local else os.environ.get("SLURM_STEP_ID", "")
         self.store = QueueStore(self.root)
         self.popen = popen
         self.server = self.sim = None
@@ -141,8 +142,8 @@ class Resident:
             return code
 
     def run(self):
-        if (not self.step_id or str(os.environ.get("SLURM_JOB_ID")) != self.job_id
-                or not os.environ.get("CUDA_VISIBLE_DEVICES")):
+        if not os.environ.get("CUDA_VISIBLE_DEVICES") or (not self.local and (
+                not self.step_id or str(os.environ.get("SLURM_JOB_ID")) != self.job_id)):
             raise ValueError("worker必须在指定JobID的GPU srun step内执行")
         self.rpc("register", {"job_id": self.job_id, "step_id": self.step_id})
         with socket.socket() as probe:
@@ -188,10 +189,18 @@ class Resident:
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ("run-root", "spec", "worker-id", "job-id"):
+    for name in ("run-root", "spec", "worker-id"):
         parser.add_argument(f"--{name}", required=True)
+    parser.add_argument("--job-id")
+    parser.add_argument("--local", action="store_true")
+    parser.add_argument("--port", type=int)
     args = parser.parse_args(argv)
-    worker = Resident(args.run_root, read_json(args.spec), args.worker_id, args.job_id)
+    if not args.local and args.job_id is None:
+        parser.error("非--local时必须给--job-id")
+    spec = read_json(args.spec)
+    if args.port is not None:
+        spec["port"] = args.port
+    worker = Resident(args.run_root, spec, args.worker_id, "local" if args.local else args.job_id, local=args.local)
     for sig in (signal.SIGTERM, signal.SIGINT):
         signal.signal(sig, lambda *_: worker.stop.set())
     return worker.run()
