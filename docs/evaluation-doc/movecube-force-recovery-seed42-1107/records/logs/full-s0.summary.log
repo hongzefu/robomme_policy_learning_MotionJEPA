@@ -1,0 +1,206 @@
+RUN_BEGIN model=mot k=0 shard=s0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=98e552d889333ac1de68f9b43c6ec25dd7b41aab2979feaa416dec5c41e69519 manifest_seal=ca97eabcf599005f810bda7939b077c979c8519d34068556190108ccc1a91cd9 chunks=2 cuda=0 ablate=none
+CHUNK_BEGIN index=0 chunk_id=6be35b7742d504518672d93cc49a3f70dbcdfc2962cb68dd45fbb2e8b0cd15c7 port=60539 nonce=d4e5e48005644e6cbed2ff69058bf9a8 attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/mot/k0/s0/attempts/force-service-d4e5e480/000-6be35b7742d5
+CHUNK_END index=0 client_exit=0
+EPISODE_RESULT task=MoveCube ep=0 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=4 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=9 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=17 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=25 success=0 npz=0
+CHUNK_BEGIN index=1 chunk_id=275e0ede8c16da2237c48cd8a292fc9a71edab134505f87d102bfbcc1139722d port=60539 nonce=d4e5e48005644e6cbed2ff69058bf9a8 attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/mot/k0/s0/attempts/force-service-d4e5e480/001-275e0ede8c16
+CHUNK_END index=1 client_exit=0
+EPISODE_RESULT task=MoveCube ep=31 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=35 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=43 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=48 success=1 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=9 success=8 npz=0
+RUN_END model=mot k=0 shard=s0
+RUN_BEGIN model=mot k=16 shard=s0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=3a8990face5b3e4b5e4a2710e53d458442c664231c2dcb93f911aa984cf90aeb manifest_seal=ca97eabcf599005f810bda7939b077c979c8519d34068556190108ccc1a91cd9 chunks=2 cuda=0 ablate=none
+CHUNK_BEGIN index=0 chunk_id=6be35b7742d504518672d93cc49a3f70dbcdfc2962cb68dd45fbb2e8b0cd15c7 port=45271 nonce=bc954738e68242868e77ccf43d146e3a attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/mot/k16/s0/attempts/force-service-bc954738/000-6be35b7742d5
+CHUNK_END index=0 client_exit=0
+EPISODE_RESULT task=MoveCube ep=0 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=4 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=9 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=17 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=25 success=1 npz=0
+CHUNK_BEGIN index=1 chunk_id=275e0ede8c16da2237c48cd8a292fc9a71edab134505f87d102bfbcc1139722d port=45271 nonce=bc954738e68242868e77ccf43d146e3a attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/mot/k16/s0/attempts/force-service-bc954738/001-275e0ede8c16
+CHUNK_END index=1 client_exit=0
+EPISODE_RESULT task=MoveCube ep=31 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=35 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=43 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=48 success=1 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=9 success=7 npz=0
+RUN_END model=mot k=16 shard=s0
+RUN_BEGIN model=mot k=32 shard=s0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=7e0f424e6958d508c7d144bfebe352a29d873d472daed5073a44b4738b56f79d manifest_seal=ca97eabcf599005f810bda7939b077c979c8519d34068556190108ccc1a91cd9 chunks=2 cuda=0 ablate=none
+CHUNK_BEGIN index=0 chunk_id=6be35b7742d504518672d93cc49a3f70dbcdfc2962cb68dd45fbb2e8b0cd15c7 port=42277 nonce=3bff82edf36d43bc9017b6a08bfd7b44 attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/mot/k32/s0/attempts/force-service-3bff82ed/000-6be35b7742d5
+CHUNK_END index=0 client_exit=0
+EPISODE_RESULT task=MoveCube ep=0 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=4 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=9 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=17 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=25 success=0 npz=0
+CHUNK_BEGIN index=1 chunk_id=275e0ede8c16da2237c48cd8a292fc9a71edab134505f87d102bfbcc1139722d port=42277 nonce=3bff82edf36d43bc9017b6a08bfd7b44 attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/mot/k32/s0/attempts/force-service-3bff82ed/001-275e0ede8c16
+CHUNK_END index=1 client_exit=0
+EPISODE_RESULT task=MoveCube ep=31 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=35 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=43 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=48 success=0 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=9 success=1 npz=0
+RUN_END model=mot k=32 shard=s0
+RUN_BEGIN model=mot k=48 shard=s0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=b750d1007d045625aff2e0a02b1fc551834b4ae892b25116c1db101e8fd4261b manifest_seal=ca97eabcf599005f810bda7939b077c979c8519d34068556190108ccc1a91cd9 chunks=2 cuda=0 ablate=none
+CHUNK_BEGIN index=0 chunk_id=6be35b7742d504518672d93cc49a3f70dbcdfc2962cb68dd45fbb2e8b0cd15c7 port=34835 nonce=ec840aa71ab24a8399c5fb6e6b90d126 attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/mot/k48/s0/attempts/force-service-ec840aa7/000-6be35b7742d5
+CHUNK_END index=0 client_exit=0
+EPISODE_RESULT task=MoveCube ep=0 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=4 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=9 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=17 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=25 success=0 npz=0
+CHUNK_BEGIN index=1 chunk_id=275e0ede8c16da2237c48cd8a292fc9a71edab134505f87d102bfbcc1139722d port=34835 nonce=ec840aa71ab24a8399c5fb6e6b90d126 attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/mot/k48/s0/attempts/force-service-ec840aa7/001-275e0ede8c16
+CHUNK_END index=1 client_exit=0
+EPISODE_RESULT task=MoveCube ep=31 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=35 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=43 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=48 success=0 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=9 success=0 npz=0
+RUN_END model=mot k=48 shard=s0
+RUN_BEGIN model=mot k=64 shard=s0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=ae60ecd46df06a0eb4bc9336fa7059375ff8dfe797135720d5b68a6ded685e02 manifest_seal=ca97eabcf599005f810bda7939b077c979c8519d34068556190108ccc1a91cd9 chunks=2 cuda=0 ablate=none
+CHUNK_BEGIN index=0 chunk_id=6be35b7742d504518672d93cc49a3f70dbcdfc2962cb68dd45fbb2e8b0cd15c7 port=40129 nonce=945bc933622140fba869c02590798217 attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/mot/k64/s0/attempts/force-service-945bc933/000-6be35b7742d5
+CHUNK_END index=0 client_exit=0
+EPISODE_RESULT task=MoveCube ep=0 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=4 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=9 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=17 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=25 success=0 npz=0
+CHUNK_BEGIN index=1 chunk_id=275e0ede8c16da2237c48cd8a292fc9a71edab134505f87d102bfbcc1139722d port=40129 nonce=945bc933622140fba869c02590798217 attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/mot/k64/s0/attempts/force-service-945bc933/001-275e0ede8c16
+CHUNK_END index=1 client_exit=0
+EPISODE_RESULT task=MoveCube ep=31 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=35 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=43 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=48 success=0 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=9 success=0 npz=0
+RUN_END model=mot k=64 shard=s0
+RUN_BEGIN model=mot k=80 shard=s0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=119e93cd39c0ea80ee169d6cb6ab018d71a6cdc2ad180efcd0b96453ddac74a6 manifest_seal=ca97eabcf599005f810bda7939b077c979c8519d34068556190108ccc1a91cd9 chunks=2 cuda=0 ablate=none
+CHUNK_BEGIN index=0 chunk_id=6be35b7742d504518672d93cc49a3f70dbcdfc2962cb68dd45fbb2e8b0cd15c7 port=33801 nonce=cf2603bba20b48b699c430851a8bc60d attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/mot/k80/s0/attempts/force-service-cf2603bb/000-6be35b7742d5
+CHUNK_END index=0 client_exit=0
+EPISODE_RESULT task=MoveCube ep=0 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=4 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=9 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=17 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=25 success=0 npz=0
+CHUNK_BEGIN index=1 chunk_id=275e0ede8c16da2237c48cd8a292fc9a71edab134505f87d102bfbcc1139722d port=33801 nonce=cf2603bba20b48b699c430851a8bc60d attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/mot/k80/s0/attempts/force-service-cf2603bb/001-275e0ede8c16
+CHUNK_END index=1 client_exit=0
+EPISODE_RESULT task=MoveCube ep=31 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=35 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=43 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=48 success=0 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=9 success=0 npz=0
+RUN_END model=mot k=80 shard=s0
+RUN_BEGIN model=ctx k=0 shard=s0
+RUN_LOCAL_BEGIN model=history run_identity=c1119153d17fd252b91c9f991fc783a894118591db1a39bee81009d5ad20f26b manifest_seal=ca97eabcf599005f810bda7939b077c979c8519d34068556190108ccc1a91cd9 chunks=2 cuda=0 ablate=none
+CHUNK_BEGIN index=0 chunk_id=6be35b7742d504518672d93cc49a3f70dbcdfc2962cb68dd45fbb2e8b0cd15c7 port=53427 nonce=d5edeffed38048a0aa22d24fbd9e244b attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/ctx/k0/s0/attempts/force-service-d5edeffe/000-6be35b7742d5
+CHUNK_END index=0 client_exit=0
+EPISODE_RESULT task=MoveCube ep=0 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=4 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=9 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=17 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=25 success=1 npz=0
+CHUNK_BEGIN index=1 chunk_id=275e0ede8c16da2237c48cd8a292fc9a71edab134505f87d102bfbcc1139722d port=53427 nonce=d5edeffed38048a0aa22d24fbd9e244b attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/ctx/k0/s0/attempts/force-service-d5edeffe/001-275e0ede8c16
+CHUNK_END index=1 client_exit=0
+EPISODE_RESULT task=MoveCube ep=31 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=35 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=43 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=48 success=1 npz=0
+RUN_LOCAL=PASS model=history episodes=9 success=9 npz=0
+RUN_END model=ctx k=0 shard=s0
+RUN_BEGIN model=ctx k=16 shard=s0
+RUN_LOCAL_BEGIN model=history run_identity=aa3599de0db0a2dedcb6f37ae97c960f1c1fabb7575804be20954e2f94e70681 manifest_seal=ca97eabcf599005f810bda7939b077c979c8519d34068556190108ccc1a91cd9 chunks=2 cuda=0 ablate=none
+CHUNK_BEGIN index=0 chunk_id=6be35b7742d504518672d93cc49a3f70dbcdfc2962cb68dd45fbb2e8b0cd15c7 port=42523 nonce=f712bca5d78e47d38a2bf8b46144f90a attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/ctx/k16/s0/attempts/force-service-f712bca5/000-6be35b7742d5
+CHUNK_END index=0 client_exit=0
+EPISODE_RESULT task=MoveCube ep=0 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=4 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=9 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=17 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=25 success=1 npz=0
+CHUNK_BEGIN index=1 chunk_id=275e0ede8c16da2237c48cd8a292fc9a71edab134505f87d102bfbcc1139722d port=42523 nonce=f712bca5d78e47d38a2bf8b46144f90a attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/ctx/k16/s0/attempts/force-service-f712bca5/001-275e0ede8c16
+CHUNK_END index=1 client_exit=0
+EPISODE_RESULT task=MoveCube ep=31 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=35 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=43 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=48 success=1 npz=0
+RUN_LOCAL=PASS model=history episodes=9 success=9 npz=0
+RUN_END model=ctx k=16 shard=s0
+RUN_BEGIN model=ctx k=32 shard=s0
+RUN_LOCAL_BEGIN model=history run_identity=7db655e06a14bc66ea7c0d773c38a0b154a969b67ad774c64803d65b253315f9 manifest_seal=ca97eabcf599005f810bda7939b077c979c8519d34068556190108ccc1a91cd9 chunks=2 cuda=0 ablate=none
+CHUNK_BEGIN index=0 chunk_id=6be35b7742d504518672d93cc49a3f70dbcdfc2962cb68dd45fbb2e8b0cd15c7 port=36767 nonce=c0b29bd64a234278a9833f70c6148a10 attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/ctx/k32/s0/attempts/force-service-c0b29bd6/000-6be35b7742d5
+CHUNK_END index=0 client_exit=0
+EPISODE_RESULT task=MoveCube ep=0 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=4 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=9 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=17 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=25 success=0 npz=0
+CHUNK_BEGIN index=1 chunk_id=275e0ede8c16da2237c48cd8a292fc9a71edab134505f87d102bfbcc1139722d port=36767 nonce=c0b29bd64a234278a9833f70c6148a10 attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/ctx/k32/s0/attempts/force-service-c0b29bd6/001-275e0ede8c16
+CHUNK_END index=1 client_exit=0
+EPISODE_RESULT task=MoveCube ep=31 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=35 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=43 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=48 success=0 npz=0
+RUN_LOCAL=PASS model=history episodes=9 success=1 npz=0
+RUN_END model=ctx k=32 shard=s0
+RUN_BEGIN model=ctx k=48 shard=s0
+RUN_LOCAL_BEGIN model=history run_identity=c9ef2dc6c821c0d259076e30e0202a0fd9c21f0ff3cafeacc548ff28d5ec48de manifest_seal=ca97eabcf599005f810bda7939b077c979c8519d34068556190108ccc1a91cd9 chunks=2 cuda=0 ablate=none
+CHUNK_BEGIN index=0 chunk_id=6be35b7742d504518672d93cc49a3f70dbcdfc2962cb68dd45fbb2e8b0cd15c7 port=43007 nonce=8821aa1d331e46b89a54bfc81857663c attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/ctx/k48/s0/attempts/force-service-8821aa1d/000-6be35b7742d5
+CHUNK_END index=0 client_exit=0
+EPISODE_RESULT task=MoveCube ep=0 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=4 success=1 npz=0
+EPISODE_RESULT task=MoveCube ep=9 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=17 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=25 success=0 npz=0
+CHUNK_BEGIN index=1 chunk_id=275e0ede8c16da2237c48cd8a292fc9a71edab134505f87d102bfbcc1139722d port=43007 nonce=8821aa1d331e46b89a54bfc81857663c attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/ctx/k48/s0/attempts/force-service-8821aa1d/001-275e0ede8c16
+CHUNK_END index=1 client_exit=0
+EPISODE_RESULT task=MoveCube ep=31 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=35 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=43 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=48 success=0 npz=0
+RUN_LOCAL=PASS model=history episodes=9 success=1 npz=0
+RUN_END model=ctx k=48 shard=s0
+RUN_BEGIN model=ctx k=64 shard=s0
+RUN_LOCAL_BEGIN model=history run_identity=f1a21ad6f356862a5d889f83dec4ff972826dcfbbcc1e6c32ba054cc20726050 manifest_seal=ca97eabcf599005f810bda7939b077c979c8519d34068556190108ccc1a91cd9 chunks=2 cuda=0 ablate=none
+CHUNK_BEGIN index=0 chunk_id=6be35b7742d504518672d93cc49a3f70dbcdfc2962cb68dd45fbb2e8b0cd15c7 port=36799 nonce=09c609e60bd948d7ab2ef35fd76fb425 attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/ctx/k64/s0/attempts/force-service-09c609e6/000-6be35b7742d5
+CHUNK_END index=0 client_exit=0
+EPISODE_RESULT task=MoveCube ep=0 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=4 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=9 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=17 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=25 success=0 npz=0
+CHUNK_BEGIN index=1 chunk_id=275e0ede8c16da2237c48cd8a292fc9a71edab134505f87d102bfbcc1139722d port=36799 nonce=09c609e60bd948d7ab2ef35fd76fb425 attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/ctx/k64/s0/attempts/force-service-09c609e6/001-275e0ede8c16
+CHUNK_END index=1 client_exit=0
+EPISODE_RESULT task=MoveCube ep=31 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=35 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=43 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=48 success=0 npz=0
+RUN_LOCAL=PASS model=history episodes=9 success=0 npz=0
+RUN_END model=ctx k=64 shard=s0
+RUN_BEGIN model=ctx k=80 shard=s0
+RUN_LOCAL_BEGIN model=history run_identity=083e3527c6a0cc0020efaf399df1a2e0b4693c290728b867be01f6429b933068 manifest_seal=ca97eabcf599005f810bda7939b077c979c8519d34068556190108ccc1a91cd9 chunks=2 cuda=0 ablate=none
+CHUNK_BEGIN index=0 chunk_id=6be35b7742d504518672d93cc49a3f70dbcdfc2962cb68dd45fbb2e8b0cd15c7 port=49509 nonce=7a2785ae58804f9daa564f00f21af333 attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/ctx/k80/s0/attempts/force-service-7a2785ae/000-6be35b7742d5
+CHUNK_END index=0 client_exit=0
+EPISODE_RESULT task=MoveCube ep=0 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=4 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=9 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=17 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=25 success=0 npz=0
+CHUNK_BEGIN index=1 chunk_id=275e0ede8c16da2237c48cd8a292fc9a71edab134505f87d102bfbcc1139722d port=49509 nonce=7a2785ae58804f9daa564f00f21af333 attempt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/ctx/k80/s0/attempts/force-service-7a2785ae/001-275e0ede8c16
+CHUNK_END index=1 client_exit=0
+EPISODE_RESULT task=MoveCube ep=31 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=35 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=43 success=0 npz=0
+EPISODE_RESULT task=MoveCube ep=48 success=0 npz=0
+RUN_LOCAL=PASS model=history episodes=9 success=0 npz=0
+RUN_END model=ctx k=80 shard=s0
+SHARD_DONE shard=s0 mot_rc=0 ctx_rc=0
+EXIT_CODE=0

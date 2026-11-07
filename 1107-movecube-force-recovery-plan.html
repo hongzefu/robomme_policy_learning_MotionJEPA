@@ -210,5 +210,13 @@ tmux new-session -d -s mfr-&lt;模型&gt;-s&lt;i&gt; \
 <li>动作表 JSON、逐步轨迹、录像留产物根，不进 git。</li>
 <li>不写入 <code>docs/handoff/current.json</code>，交接走人工；未上提状态机属用户本轮决定。</li>
 </ul>
+<h2>九、实施中调整与实测结果（2026-11-07 美东，实施后追加）</h2>
+<ul>
+<li>开工审查两轮：第一轮 5 条（2 条阻塞由用户裁决：共用服务分批、只验到达放手的局）；第二轮阻塞项经核实不成立（首个动作前必有一次推理）。</li>
+<li>S1 抓取判定只在放手后做；回执新增 <code>grasped_object</code>；动作表与 <code>force_k</code> 并入 <code>run_identity</code>。S2 首版 <code>control_source</code> 按 <code>forced</code> 读，续改为 <code>force</code>。</li>
+<li>分析首次把 <code>smoke/</code> 回执扫入，<code>MFR_RUN=FAIL errors=8</code>；改以硬链接视图 <code>full-view/</code> 为根重跑后通过。</li>
+<li>判定行：<code>FORCE_TABLE=PASS episodes=33 plan_fail=0</code>；<code>FORCE_EXEC=PASS runs=396 mismatches=0</code>；<code>FORCE_RELEASE=PASS reached_release=396 mismatches=0</code>；<code>NO_ATTN=PASS npz=0</code>；<code>MFR_RUN=PASS completed=396 missing=0 errors=0</code>。</li>
+<li>结果：方向 A 两模型 k=0/16/32 及以后为 21/16/0 of 21；方向 B motion 11/7/1/0/0/0、基线 12/8/1/1/0/0 of 12；配对精确 McNemar 全部 p=1.0。详见 <code>docs/evaluation-doc/movecube-force-recovery-seed42-1107/result.md</code>。</li>
+</ul>
 </body>
 </html>

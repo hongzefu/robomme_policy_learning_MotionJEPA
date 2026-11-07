@@ -1,0 +1,72 @@
+产物根：/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/full-view
+动作表：/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/force-table.json
+期望规模：33 局 × k=[0, 16, 32, 48, 64, 80] × 模型 ['mot', 'ctx']
+
+抓取结局（方向 模型 k：成功/失败/超时/错误，抓取成功率 [Wilson 95%]；k=0 抓取成功局的恢复率；放手后 TCP 水平最小距离中位数 正确物体/强推目标（m）；放手到抓起步数中位数）
+A mot k= 0：21/0/0/0，100.0% [84.5, 100.0]；恢复 21/21；距离 0.008/0.190；步数 96.0
+A mot k=16：16/3/2/0，76.2% [54.9, 89.4]；恢复 16/21；距离 0.011/0.119；步数 79.5
+A mot k=32：0/21/0/0，0.0% [0.0, 15.5]；恢复 0/21；距离 0.236/0.007；步数 —
+A mot k=48：0/21/0/0，0.0% [0.0, 15.5]；恢复 0/21；距离 0.273/0.006；步数 —
+A mot k=64：0/21/0/0，0.0% [0.0, 15.5]；恢复 0/21；距离 0.273/0.006；步数 —
+A mot k=80：0/21/0/0，0.0% [0.0, 15.5]；恢复 0/21；距离 0.273/0.005；步数 —
+A ctx k= 0：21/0/0/0，100.0% [84.5, 100.0]；恢复 21/21；距离 0.009/0.190；步数 96.0
+A ctx k=16：16/4/1/0，76.2% [54.9, 89.4]；恢复 16/21；距离 0.011/0.121；步数 72.0
+A ctx k=32：0/21/0/0，0.0% [0.0, 15.5]；恢复 0/21；距离 0.236/0.009；步数 —
+A ctx k=48：0/21/0/0，0.0% [0.0, 15.5]；恢复 0/21；距离 0.273/0.004；步数 —
+A ctx k=64：0/21/0/0，0.0% [0.0, 15.5]；恢复 0/21；距离 0.271/0.003；步数 —
+A ctx k=80：0/20/1/0，0.0% [0.0, 15.5]；恢复 0/21；距离 0.271/0.002；步数 —
+B mot k= 0：11/1/0/0，91.7% [64.6, 98.5]；恢复 11/11；距离 0.015/0.068；步数 102.0
+B mot k=16：7/2/3/0，58.3% [32.0, 80.7]；恢复 6/11；距离 0.014/0.049；步数 73.0
+B mot k=32：1/8/3/0，8.3% [1.5, 35.4]；恢复 1/11；距离 0.164/0.008；步数 903.0
+B mot k=48：0/9/3/0，0.0% [0.0, 24.2]；恢复 0/11；距离 0.177/0.004；步数 —
+B mot k=64：0/12/0/0，0.0% [0.0, 24.2]；恢复 0/11；距离 0.229/0.003；步数 —
+B mot k=80：0/12/0/0，0.0% [0.0, 24.2]；恢复 0/11；距离 0.234/0.003；步数 —
+B ctx k= 0：12/0/0/0，100.0% [75.8, 100.0]；恢复 12/12；距离 0.020/0.069；步数 101.0
+B ctx k=16：8/2/2/0，66.7% [39.1, 86.2]；恢复 8/12；距离 0.014/0.059；步数 73.5
+B ctx k=32：1/9/2/0，8.3% [1.5, 35.4]；恢复 1/12；距离 0.166/0.009；步数 839.0
+B ctx k=48：1/9/2/0，8.3% [1.5, 35.4]；恢复 1/12；距离 0.191/0.003；步数 675.0
+B ctx k=64：0/10/2/0，0.0% [0.0, 24.2]；恢复 0/12；距离 0.194/0.002；步数 —
+B ctx k=80：0/12/0/0，0.0% [0.0, 24.2]；恢复 0/12；距离 0.234/0.001；步数 —
+
+同局同 k 两模型配对（精确 McNemar）：
+A k= 0：配对 21，都抓起 21，仅 mot 0，仅 ctx 0，p=1.0000
+A k=16：配对 21，都抓起 14，仅 mot 2，仅 ctx 2，p=1.0000
+A k=32：配对 21，都抓起 0，仅 mot 0，仅 ctx 0，p=1.0000
+A k=48：配对 21，都抓起 0，仅 mot 0，仅 ctx 0，p=1.0000
+A k=64：配对 21，都抓起 0，仅 mot 0，仅 ctx 0，p=1.0000
+A k=80：配对 21，都抓起 0，仅 mot 0，仅 ctx 0，p=1.0000
+B k= 0：配对 12，都抓起 11，仅 mot 0，仅 ctx 1，p=1.0000
+B k=16：配对 12，都抓起 7，仅 mot 0，仅 ctx 1，p=1.0000
+B k=32：配对 12，都抓起 1，仅 mot 0，仅 ctx 0，p=1.0000
+B k=48：配对 12，都抓起 0，仅 mot 0，仅 ctx 1，p=1.0000
+B k=64：配对 12，都抓起 0，仅 mot 0，仅 ctx 0，p=1.0000
+B k=80：配对 12，都抓起 0，仅 mot 0，仅 ctx 0，p=1.0000
+
+FORCE_EXEC=PASS runs=396 mismatches=0
+FORCE_RELEASE=PASS reached_release=396 mismatches=0
+NO_ATTN=PASS npz=0
+MFR_RUN=PASS completed=396 missing=0 errors=0
+MFR_RESULT direction=A model=mot k=0 grasp_success=21/21
+MFR_RESULT direction=A model=mot k=16 grasp_success=16/21
+MFR_RESULT direction=A model=mot k=32 grasp_success=0/21
+MFR_RESULT direction=A model=mot k=48 grasp_success=0/21
+MFR_RESULT direction=A model=mot k=64 grasp_success=0/21
+MFR_RESULT direction=A model=mot k=80 grasp_success=0/21
+MFR_RESULT direction=A model=ctx k=0 grasp_success=21/21
+MFR_RESULT direction=A model=ctx k=16 grasp_success=16/21
+MFR_RESULT direction=A model=ctx k=32 grasp_success=0/21
+MFR_RESULT direction=A model=ctx k=48 grasp_success=0/21
+MFR_RESULT direction=A model=ctx k=64 grasp_success=0/21
+MFR_RESULT direction=A model=ctx k=80 grasp_success=0/21
+MFR_RESULT direction=B model=mot k=0 grasp_success=11/12
+MFR_RESULT direction=B model=mot k=16 grasp_success=7/12
+MFR_RESULT direction=B model=mot k=32 grasp_success=1/12
+MFR_RESULT direction=B model=mot k=48 grasp_success=0/12
+MFR_RESULT direction=B model=mot k=64 grasp_success=0/12
+MFR_RESULT direction=B model=mot k=80 grasp_success=0/12
+MFR_RESULT direction=B model=ctx k=0 grasp_success=12/12
+MFR_RESULT direction=B model=ctx k=16 grasp_success=8/12
+MFR_RESULT direction=B model=ctx k=32 grasp_success=1/12
+MFR_RESULT direction=B model=ctx k=48 grasp_success=1/12
+MFR_RESULT direction=B model=ctx k=64 grasp_success=0/12
+MFR_RESULT direction=B model=ctx k=80 grasp_success=0/12
