@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-07T01:43:30.183287+00:00",
-    "america_new_york": "2026-11-06T20:43:30.183287-05:00"
+    "utc": "2026-11-07T01:47:41.613777+00:00",
+    "america_new_york": "2026-11-06T20:47:41.613777-05:00"
   },
   "repo": {
     "branch": "v4-256concat1",
-    "base_head": "f6b718d8f5c7662dd21d94316ffc26dc038b8aad"
+    "base_head": "72add6310f90355faecc220c57383e0a723205e1"
   },
   "freeze": {
     "active": false,
@@ -1408,12 +1408,12 @@
         "file": "1106-orig16-context-wan-timepool1024-60k-plan.html",
         "sha": "e823f4c3eb085963c35e688afb46fbd27a308048"
       },
-      "state": "planned",
-      "state_changed_at": "2026-11-07T01:43:30.183287+00:00",
-      "state_reason": "HTML方案完成，用户明确同意登记planned；独立33帧Wan编码丢首latent后8个raw做时间均值和空间8×8池化，替代stage2 encoder。保留旧context/B128/60k及VLA参数结构；尚无实施go授权。",
+      "state": "running",
+      "state_changed_at": "2026-11-07T01:47:41.613777+00:00",
+      "state_reason": "用户对完整计划不改直接说开工；先做计划一致性审查，再按分配表实施。",
       "owner": {
-        "session": "",
-        "host": "ip-10-242-11-177.us-west-2.compute.internal"
+        "session": "https://claude.ai/code/session_01WvPQiUrxBxra275CF71Wtx",
+        "host": "Claude@AWS"
       },
       "depends_on": [
         "orig16-vla-build",
@@ -1453,19 +1453,20 @@
           "date": "2026-11-06T20:43:30.183287-05:00",
           "quote": "登记为 planned，便于后续会话接手",
           "scope": "仅登记计划状态planned，不构成实施go授权。"
-        }
-      ],
-      "pending_decisions": [
+        },
         {
-          "what": "实施开工令尚未给出；公开备份目标在实施交付前按计划确认。",
-          "status": "pending"
+          "kind": "go",
+          "date": "2026-11-06T20:47:41.613777-05:00",
+          "quote": "robomme_policy_learning_MotionJEPA/1106-orig16-context-wan-timepool1024-60k-plan.html 开工",
+          "scope": "计划全部阶段 0-5：代码实现、固定 revision 恢复下载（约 388GB）、建库、8 卡 20 步短测、8 卡 60k 正式训练、12 份 checkpoint 公开备份与读回；不含策略成功率评估。"
         }
       ],
+      "pending_decisions": [],
       "next_steps": [
         {
-          "what": "收到明确实施开工令后，按HTML从固定代码基线开展实现与验证；先恢复旧缓存身份，再生成新池化表，满足全部闸门后才启动60k。",
-          "command": "参见1106-orig16-context-wan-timepool1024-60k-plan.html的运行手册",
-          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS；后续VLA_PARAM_EQ等均待实施验证"
+          "what": "计划一致性审查，然后按 A→B/C→D→E 派写入代理",
+          "command": "见计划第 9 节",
+          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS"
         }
       ]
     }
