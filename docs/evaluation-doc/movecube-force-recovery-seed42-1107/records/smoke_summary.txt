@@ -1,0 +1,32 @@
+产物根：/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/smoke
+动作表：/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/movecube-force-recovery-seed42-1107/force-table.json
+期望规模：2 局 × k=[0, 48] × 模型 ['mot', 'ctx']
+
+抓取结局（方向 模型 k：成功/失败/超时/错误，抓取成功率 [Wilson 95%]；k=0 抓取成功局的恢复率；放手后 TCP 水平最小距离中位数 正确物体/强推目标（m）；放手到抓起步数中位数）
+A mot k= 0：1/0/0/0，100.0% [20.7, 100.0]；恢复 1/1；距离 0.007/0.140；步数 94.0
+A mot k=48：0/1/0/0，0.0% [0.0, 79.3]；恢复 0/1；距离 0.231/0.007；步数 —
+A ctx k= 0：1/0/0/0，100.0% [20.7, 100.0]；恢复 1/1；距离 0.012/0.140；步数 91.0
+A ctx k=48：0/1/0/0，0.0% [0.0, 79.3]；恢复 0/1；距离 0.229/0.004；步数 —
+B mot k= 0：1/0/0/0，100.0% [20.7, 100.0]；恢复 1/1；距离 0.026/0.074；步数 101.0
+B mot k=48：0/1/0/0，0.0% [0.0, 79.3]；恢复 0/1；距离 0.254/0.000；步数 —
+B ctx k= 0：1/0/0/0，100.0% [20.7, 100.0]；恢复 1/1；距离 0.032/0.074；步数 101.0
+B ctx k=48：0/1/0/0，0.0% [0.0, 79.3]；恢复 0/1；距离 0.255/0.002；步数 —
+
+同局同 k 两模型配对（精确 McNemar）：
+A k= 0：配对 1，都抓起 1，仅 mot 0，仅 ctx 0，p=1.0000
+A k=48：配对 1，都抓起 0，仅 mot 0，仅 ctx 0，p=1.0000
+B k= 0：配对 1，都抓起 1，仅 mot 0，仅 ctx 0，p=1.0000
+B k=48：配对 1，都抓起 0，仅 mot 0，仅 ctx 0，p=1.0000
+
+FORCE_EXEC=PASS runs=8 mismatches=0
+FORCE_RELEASE=PASS reached_release=8 mismatches=0
+NO_ATTN=PASS npz=0
+MFR_RUN=PASS completed=8 missing=0 errors=0
+MFR_RESULT direction=A model=mot k=0 grasp_success=1/1
+MFR_RESULT direction=A model=mot k=48 grasp_success=0/1
+MFR_RESULT direction=A model=ctx k=0 grasp_success=1/1
+MFR_RESULT direction=A model=ctx k=48 grasp_success=0/1
+MFR_RESULT direction=B model=mot k=0 grasp_success=1/1
+MFR_RESULT direction=B model=mot k=48 grasp_success=0/1
+MFR_RESULT direction=B model=ctx k=0 grasp_success=1/1
+MFR_RESULT direction=B model=ctx k=48 grasp_success=0/1
