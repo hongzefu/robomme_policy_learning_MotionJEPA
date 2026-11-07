@@ -22,6 +22,9 @@ bin_trace（bool，与 stopcube_mode 互斥，清单只能含 ButtonUnmaskSwap�
 并入身份；缺键或为假时身份与命令不变。
 subgoal_trace（bool，与 stopcube_mode、bin_trace 互斥，清单只能含 PatternLock、RouteStick）：开启时改用 subgoal_trace_runner 客户端
 写逐步轨迹，并入身份；缺键或为假时身份与命令不变。
+movecube_force（bool，与 stopcube_mode、bin_trace、subgoal_trace、rollout_record 互斥，清单只能含 MoveCube）：配 force_table（动作表路径）
+与 force_k（0、16、32、48、64、80）。走官方 scripts.training.serve_policy，不录注意力、不创建 attn_out（该键可省略），一个服务配
+客户端每批至多 5 局；动作表内容与 force_k 并入身份。单局判定：有终局且 terminal.rpc_seq 推出的 infers>0。缺键或为假时身份与命令不变。
 S8 motion 内容替换的可选键：
   record_motion   目录；服务端加 --record-motion，每局写 <目录>/<nonce>.npz，本脚本收尾按 terminal 局身份改名为
                   <目录>/<task>_ep<id>.npz（与 motion_swap 供体文件同名规则）；局的 episode.json 记 motion_record。
@@ -75,6 +78,8 @@ REQUIRED_KEYS = ("repo", "policy_python", "sim_python", "stage2_python", "checkp
 BIN_TRACE_TASKS = ("ButtonUnmaskSwap", "VideoUnmaskSwap")
 # 与 subgoal_trace_runner.TASKS 同值（测试盯住），不导入的理由同上。
 SUBGOAL_TRACE_TASKS = ("PatternLock", "RouteStick")
+# 与 movecube_force_runner.FORCE_KS 同值（测试盯住），不导入的理由同上。
+FORCE_KS = (0, 16, 32, 48, 64, 80)
 
 
 def read_json(path):
@@ -90,7 +95,7 @@ def write_json(path, value):
 
 def load_spec(path):
     spec = read_json(path)
-    missing = [key for key in REQUIRED_KEYS if key not in spec]
+    missing = [key for key in REQUIRED_KEYS if key not in spec and not (key == "attn_out" and spec.get("movecube_force") is True)]
     if missing:
         raise SystemExit(f"spec 缺键: {missing}")
     if spec["model_kind"] not in MODEL_KINDS:
@@ -144,6 +149,11 @@ def load_spec(path):
             others = sorted({e["task_name"] for e in read_json(spec["manifest"])["episodes"]} - set(SUBGOAL_TRACE_TASKS))
             if others:
                 raise SystemExit(f"spec: subgoal_trace 的清单只能含 {SUBGOAL_TRACE_TASKS}，得到 {others}")
+    if "movecube_force" in spec:
+        if type(spec["movecube_force"]) is not bool:
+            raise SystemExit("spec: movecube_force 必须为 bool")
+        if spec["movecube_force"]:
+            load_force_spec(spec)
     if "rollout_record" in spec:
         if type(spec["rollout_record"]) is not bool:
             raise SystemExit("spec: rollout_record 必须为 bool")
@@ -160,6 +170,21 @@ def load_spec(path):
         if spec.get("rollout_record") or str(spec.get("stopcube_mode")).startswith("oracle_"):
             raise SystemExit("spec: 不存注意力只作用于注意力记录路径，与 rollout_record、Oracle 模式互斥")
     return spec
+
+
+def load_force_spec(spec):
+    """movecube_force 模式的键检查：与其他记录模式互斥，也不接受官方服务不支持的服务端选项。"""
+    if (spec.get("stopcube_mode") is not None or spec.get("bin_trace") or spec.get("subgoal_trace") or spec.get("rollout_record")):
+        raise SystemExit("spec: movecube_force 与 stopcube_mode、bin_trace、subgoal_trace、rollout_record 互斥")
+    if (ablate_of(spec) != "none" or spec.get("record_motion") or spec.get("save_prefix") or spec.get("save_attn")
+            or spec.get("save_top_frames") is not None):
+        raise SystemExit("spec: movecube_force 走官方服务，不接受 ablate、record_motion、save_prefix、save_attn、save_top_frames")
+    if not spec.get("force_table") or type(spec.get("force_k")) is not int or spec["force_k"] not in FORCE_KS:
+        raise SystemExit(f"spec: movecube_force 要求 force_table，且 force_k 只能取 {FORCE_KS}")
+    spec["force_table"] = str(Path(spec["force_table"]).resolve())
+    others = sorted({e["task_name"] for e in read_json(spec["manifest"])["episodes"]} - {"MoveCube"})
+    if others:
+        raise SystemExit(f"spec: movecube_force 的清单只能含 MoveCube，得到 {others}")
 
 
 def _episode_key(text):
@@ -217,6 +242,9 @@ def run_identity(spec, manifest):
         ident["subgoal_trace"] = True
     if spec.get("save_attn") is False:
         ident["save_attn"] = False
+    if spec.get("movecube_force"):
+        ident.update(movecube_force=True, force_k=spec["force_k"],
+                     force_table_sha256=hashlib.sha256(Path(spec["force_table"]).read_bytes()).hexdigest())
     return M.digest(ident)
 
 
@@ -232,7 +260,7 @@ def replaces_motion(spec):
 
 
 def saves_attn(spec):
-    return spec.get("save_attn") is not False and not replaces_motion(spec)
+    return spec.get("save_attn") is not False and not replaces_motion(spec) and not spec.get("movecube_force")
 
 
 def select_chunks(manifest, episodes_arg=None, limit=None, single=False):
@@ -276,7 +304,8 @@ def pick_port(start=0, tries=64):
 
 def build_server_command(spec, nonce, port, episodes=None):
     """resident_worker.server_command 原形 → 换模块、插 --attn-out、motion 关闭去掉 --motion-online-gpu。
-    swap_map 给出时 episodes 必须恰为 1 局，按映射加 --swap-donor。"""
+    swap_map 给出时 episodes 必须恰为 1 局，按映射加 --swap-donor。
+    movecube_force 不换模块、不插 --attn-out，只按模型去掉 --motion-online-gpu。"""
     previous = os.environ.get("CUDA_VISIBLE_DEVICES")
     os.environ["CUDA_VISIBLE_DEVICES"] = spec["cuda"]   # server_command 从环境读卡号
     try:
@@ -288,10 +317,13 @@ def build_server_command(spec, nonce, port, episodes=None):
             os.environ["CUDA_VISIBLE_DEVICES"] = previous
     if command.count(SERVER_MODULE) != 1 or command.count("policy:checkpoint") != 1:
         raise RuntimeError(f"server_command 形状变化: {command}")
-    command[command.index(SERVER_MODULE)] = ATTN_MODULE
+    if not spec.get("movecube_force"):
+        command[command.index(SERVER_MODULE)] = ATTN_MODULE
     if spec["model_kind"] != MOTION_MODEL_KIND:
         index = command.index("--motion-online-gpu")
         del command[index:index + 2]
+    if spec.get("movecube_force"):
+        return command
     extra = ["--attn-out", str(spec["attn_out"])]
     if spec.get("stopcube_mode", "").startswith("oracle_"):
         extra += ["--query-record", str(spec.get("query_record", 10)), "--oracle-mode", spec["stopcube_mode"]]
@@ -329,12 +361,15 @@ def build_environment(spec):
 
 
 def build_client_command(spec, grant_path, output, nonce, port, drain_file):
-    """默认命令逐字保留；仅显式 StopCube 模式、bin_trace 或 subgoal_trace 替换 interpret 客户端。"""
+    """默认命令逐字保留；仅显式 StopCube 模式、bin_trace、subgoal_trace 或 movecube_force 替换 interpret 客户端。"""
     command = RW.client_command(spec, grant_path, output, nonce, port, drain_file)
     if spec.get("bin_trace"):
         command[1] = str(Path(spec["repo"]) / "scripts/interpret/bin_trace_runner.py")
     if spec.get("subgoal_trace"):
         command[1] = str(Path(spec["repo"]) / "scripts/interpret/subgoal_trace_runner.py")
+    if spec.get("movecube_force"):
+        command[1] = str(Path(spec["repo"]) / "scripts/interpret/movecube_force_runner.py")
+        command += ["--force-table", str(spec["force_table"]), "--force-k", str(spec["force_k"])]
     if spec.get("stopcube_mode") is not None:
         command[1] = str(Path(spec["repo"]) / "scripts/interpret/stopcube_runner.py")
         command += ["--stopcube-mode", spec["stopcube_mode"], "--stopcube-config", str(spec["stopcube_config"])]
@@ -412,11 +447,12 @@ def run_chunk(spec, index, chunk_id, episodes, popen=subprocess.Popen):
 
 
 def run_oracle_chunks(spec, chunks, popen=subprocess.Popen):
-    """Oracle 清单共用一个服务；每个客户端至多5局、独立授权与输出。"""
+    """Oracle 与 movecube_force 清单共用一个服务；每个客户端至多5局、独立授权与输出。"""
     if not chunks:
         return
     nonce = uuid.uuid4().hex
-    root = Path(spec["run_root"]) / "attempts" / f"oracle-service-{nonce[:8]}"
+    prefix = "force-service" if spec.get("movecube_force") else "oracle-service"
+    root = Path(spec["run_root"]) / "attempts" / f"{prefix}-{nonce[:8]}"
     root.mkdir(parents=True, exist_ok=False)
     port = pick_port(int(spec.get("port", 0)))
     environment = build_environment(spec)
@@ -468,8 +504,38 @@ def run_oracle_chunks(spec, chunks, popen=subprocess.Popen):
         RW.stop_process_tree(server)
 
 
+def collect_force(spec, output, episodes):
+    """movecube_force 收尾：不读 attn_out 与 episode.json（官方服务不写），推理数由 terminal.rpc_seq 推出。"""
+    accepted = Path(spec["run_root"]) / "accepted"
+    accepted.mkdir(parents=True, exist_ok=True)
+    records = {}
+    for kind in ("started", "terminal"):
+        for path in sorted(output.glob(f"*.{kind}.json")):
+            record = read_json(path)
+            records.setdefault(record["episode_key"], {})[kind] = record
+            if kind == "terminal":
+                shutil.copy2(path, accepted / f"{record['episode_key']}.{record['episode_nonce'][:8]}.terminal.json")
+    results = []
+    for episode in episodes:
+        found = records.get(episode["episode_key"], {})
+        terminal = found.get("terminal")
+        nonce = (terminal or found.get("started") or {}).get("episode_nonce")
+        receipt_path = output / "traces" / str(nonce) / "meta" / "force_receipt.json"
+        receipt = read_json(receipt_path) if receipt_path.exists() else {}
+        success = int(bool(terminal) and terminal["outcome"] == "success")
+        results.append({"task": episode["task_name"], "ep": episode["episode_id"], "success": success, "npz": 0,
+                        "infers": (int(terminal["rpc_seq"]) - 1) // 2 if terminal else None,
+                        "terminal": terminal is not None, "nonce": nonce, "attn_saved": False, "force_k": spec["force_k"],
+                        "grasp_success": receipt.get("grasp_success"), "env_status": receipt.get("env_status"),
+                        "reached_release": receipt.get("reached_release"), "receipt_path": str(receipt_path.resolve())})
+        print(f"EPISODE_RESULT task={episode['task_name']} ep={episode['episode_id']} success={success} npz=0", flush=True)
+    return results
+
+
 def collect(spec, attempt, output, episodes):
     """把 terminal 汇到 accepted/，并把局身份并入 attn_out/<nonce>/episode.json。返回逐局结果。"""
+    if spec.get("movecube_force"):
+        return collect_force(spec, output, episodes)
     accepted = Path(spec["run_root"]) / "accepted"
     accepted.mkdir(parents=True, exist_ok=True)
     attn_out = Path(spec["attn_out"])
@@ -546,9 +612,12 @@ def collect(spec, attempt, output, episodes):
 
 
 def row_ok(row):
-    """单局判定：Oracle 看节奏；不存注意力看终局与 episode.json 的 infers；其余 npz 数须等于推理数。"""
+    """单局判定：Oracle 看节奏；强推看终局与 rpc_seq 推出的 infers；不存注意力看终局与 episode.json 的 infers；
+    其余 npz 数须等于推理数。"""
     if "cadence_ok" in row:
         return row["cadence_ok"]
+    if "force_k" in row:
+        return row["terminal"] and row["infers"] > 0
     if row.get("attn_saved") is False:
         return row["terminal"] and row["episode_infers"] > 0 and row["npz"] == 0
     return row["npz"] > 0 and row["npz"] == row["infers"]
@@ -579,7 +648,8 @@ def main(argv=None, popen=subprocess.Popen):
     manifest = M.validate_episodes(read_json(spec["manifest"]), official=False)
     spec["run_identity_sha256"] = run_identity(spec, manifest)
     Path(spec["run_root"]).mkdir(parents=True, exist_ok=True)
-    Path(spec["attn_out"]).mkdir(parents=True, exist_ok=True)
+    if not spec.get("movecube_force"):
+        Path(spec["attn_out"]).mkdir(parents=True, exist_ok=True)
     if spec.get("record_motion"):
         Path(spec["record_motion"]).mkdir(parents=True, exist_ok=True)
     chunks = select_chunks(manifest, args.episodes, args.chunks, single=bool(spec.get("swap_map")))
@@ -620,7 +690,7 @@ def main(argv=None, popen=subprocess.Popen):
         signal.signal(sig, stop)
     results, codes = [], []
     oracle_mode = spec.get("stopcube_mode") in ("oracle_query", "oracle_calibrate")
-    if oracle_mode:
+    if oracle_mode or spec.get("movecube_force"):
         attempts = run_oracle_chunks(spec, chunks, popen=popen)
     else:
         attempts = ((*run_chunk(spec, index, chunk_id, episodes, popen=popen), episodes)
