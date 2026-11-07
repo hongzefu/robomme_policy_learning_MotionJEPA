@@ -198,6 +198,14 @@ motion 模型文字读 motion 流，在 RouteStick 上真对位 1.30 [1.19, 1.39
 
 结论：帧吸收 motion、文字读记忆、动作读文字，这三件事单独都成立；但「motion → 帧 → 文字 → 动作」这条串联很弱，因为文字读记忆发生在帧吸收 motion 之前。更大的两条是「motion → 帧 → 动作（L14～L16）」和「motion → 文字（L0、L1）→ 动作」。这些都是注意力读数，没有验证信息真的这样流动。
 
+### 论文主图
+
+用户原话（美东 2026-11-06）：「总结一个完整的通路……这两条路分别是怎么去影响这个 action 部分的」「虽然它有这样的能力，但是它……对不同 memory 的 attention 并没有调整」「你分为两部分叙述……然后画图……生成一个 Fable agent 来梳理一下现在的这个逻辑以及画图」
+
+图 [fig_pathway.pdf](records/paper-figures/fig_pathway.pdf)，逻辑与英文图注 [fig_pathway-logic.md](records/paper-figures/fig_pathway-logic.md)，脚本 [plot_pathway_figure.py](records/paper-figures/plot_pathway_figure.py)。Fable 代理起草，主会话目视复查并修正。独立核对 `PAPER_FIG_REVIEW=FAIL findings=13 errors=1`：数字都能从原始 JSON 重算，错误是 (d) 的样本标注，已和措辞问题一起修正；修正后未再派审查。
+
+![论文主图](records/paper-figures/fig_pathway.png)
+
 ## 和 Swap 的关系
 
 | | Swap（第一次取 bin 的 4 次推理） | 本轮（全部推理） |
