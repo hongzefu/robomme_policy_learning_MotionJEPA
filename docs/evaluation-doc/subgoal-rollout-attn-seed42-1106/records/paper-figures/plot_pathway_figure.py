@@ -149,8 +149,8 @@ mask6 = np.array([[all(mask_zero[q, k] for q in qs for k in ks) for _, ks, _ in 
 sizes = [f"{FRAME_TOKENS}", f"≈{stat['PatternLock']['motion_tokens']:.1f}|{stat['RouteStick']['motion_tokens']:.1f}", f"{N_IMG}", f"{N_IMG}", f"{TXT}", f"{HORIZON}"]
 
 # --- (a) 左：块状注意力掩码（行 = query 块，列 = key 块，实心 = 可见）
-axm = ax_in(1.00, 4.00, 1.50, 1.50)
-panel_tag(axm, "(a)", -0.62, 1.20)
+axm = ax_in(0.85, 4.00, 1.50, 1.50)
+panel_tag(axm, "(a)", -0.50, 1.20)
 axm.set_xlim(-0.5, 5.5); axm.set_ylim(5.5, -0.5); axm.set_aspect("equal")
 for r in range(6):
     for c in range(6):
@@ -170,51 +170,52 @@ for sp in axm.spines.values():
     sp.set_visible(False)
 axm.add_patch(Rectangle((-0.5, -0.5), 6, 6, fc="none", ec=INK3, lw=0.5))
 axm.plot([4.5, 4.5], [-0.5, 5.5], color="#ffffff", lw=2.2); axm.plot([-0.5, 5.5], [4.5, 4.5], color="#ffffff", lw=2.2)
-fig.text(0.40 / W, (3.73 + YOFF) / H, "Block attention mask (dark = may attend; verified\nas exactly 0 elsewhere in every layer, head, episode).\nprefix = memory → images → language; suffix = action.",
+fig.text(0.30 / W, (3.73 + YOFF) / H, "Block attention mask (dark = may attend; verified\nas exactly 0 elsewhere in every layer, head, episode).\nprefix = memory → images → language; suffix = action.",
          fontsize=5.6, color=INK2, va="top", ha="left", linespacing=1.2)
 
-# ============================================================================ (b) 六条记忆流出边的逐层曲线（两任务合并，按局等权）
-# 读者索引按 BLOCKS：0 帧 1 motion 4 语言 5 动作；来源 1 motion、0 帧
-EDGES = [("frames read motion tokens", 0, [1], C2, "-"),
-         ("language reads motion tokens", 4, [1], C3, "-"),
-         ("language reads frame memory", 4, [0], C1, "-"),
-         ("action reads frame memory", 5, [0], C4, "-"),
-         ("action reads motion tokens", 5, [1], INK3, "-")]
-curves = {name: M6[:, r, src].sum(1) for name, r, src, _, _ in EDGES}
-carry = np.mean([stat[t]["frame_carry_motion"] for t in TASKS], 0)          # 帧的累积 motion 含量（第 l 层输入）
-axb = ax_in(3.30, 3.50, 3.60, 2.25)
-panel_tag(axb, "(b)", -0.16, 1.02)
-axb.axvspan(-0.5, 1.5, color="#fdf1ec", lw=0, zorder=0)
-axb.axvspan(12.5, 16.5, color="#eef2f8", lw=0, zorder=0)
-axb.text(0.5, 73, "memory → language\n(L0–L1 only)", ha="center", va="top", fontsize=5.8, color=INK2, linespacing=1.1)
-axb.text(14.5, 73, "frames → action\n(L13–L16)", ha="center", va="top", fontsize=5.8, color=INK2, linespacing=1.1)
-axb.plot(np.arange(19) - 0.5, carry, color=INK2, lw=1.0, ls="--", zorder=2)
-for name, r, src, color, ls in EDGES:
-    axb.plot(np.arange(18), curves[name], color=color, lw=1.6, ls=ls, zorder=3, marker="o", ms=1.8, mec="none")
-axb.text(18.3, carry[18] + 1.5, f"{carry[18]:.0f}%", ha="right", va="bottom", fontsize=5.8, color=INK2)
-fm = curves["frames read motion tokens"]; k = int(np.argmax(fm))
-axb.text(k, fm[k] + 2.5, f"{fm[k]:.0f}%", ha="center", va="bottom", fontsize=5.8, color=C2)
-af = curves["action reads frame memory"]
-axb.text(16.3, af[16] + 1.5, f"{af[16]:.0f}%", ha="left", va="bottom", fontsize=5.8, color=C4)
-lm = curves["language reads motion tokens"]
-axb.text(1.4, lm[1] + 1.0, f"{lm[0]:.0f}%, {lm[1]:.0f}%", ha="left", va="bottom", fontsize=5.8, color=C3)
-lf_ = curves["language reads frame memory"]
-axb.text(-0.4, lf_[0] + 2.5, f"{lf_[0]:.0f}%", ha="left", va="bottom", fontsize=5.8, color=C1)
-axb.set_xlim(-0.6, 18.6); axb.set_ylim(0, 75)
-axb.set_xticks(range(0, 18)); axb.set_xticklabels([f"L{l}" for l in range(18)], fontsize=5.6)
-axb.set_yticks([0, 20, 40, 60])
-axb.grid(axis="y", color=GRID, lw=0.5); axb.set_axisbelow(True)
-for sp in ("top", "right"):
-    axb.spines[sp].set_visible(False)
-axb.set_xlabel("layer", labelpad=1); axb.set_ylabel("% of the reader's attention", labelpad=2)
-axb.set_title(f"Where memory content leaves, layer by layer (motion model, {n_ep} episodes pooled)",
-              fontsize=6.5, pad=4, loc="left")
-hdl = [Line2D([], [], color=c, lw=1.6, marker="o", ms=1.8, mec="none") for _, _, _, c, _ in EDGES] + [Line2D([], [], color=INK2, lw=1.0, ls="--")]
-fig.legend(hdl, [n for n, *_ in EDGES] + ["frame memory: cumulative motion content (α = 0.5)"],
-           loc="upper left", bbox_to_anchor=(3.30 / W, (3.17 + YOFF) / H), ncol=2, frameon=False, fontsize=5.6, handlelength=1.6,
-           handletextpad=0.5, columnspacing=1.2, labelspacing=0.3, borderaxespad=0)
+# ============================================================================ (b) 层 × 通路边 的二维色块图（两任务合并，按局等权）
+# 读者索引按 BLOCKS：0 帧 1 motion 4 语言 5 动作；来源 0 帧 1 motion 4 语言
+from matplotlib.colors import PowerNorm
+carry = np.mean([stat[t]["frame_carry_motion"] for t in TASKS], 0)          # 帧的累积 motion 含量（第 l 层输入；取 l+1 即该层输出）
+ROWS = [("frames ← motion", M6[:, 0, 1], C1, "A"),
+        ("frames: cum. motion content", carry[1:], C1, "A"),
+        ("action ← frames", M6[:, 5, 0], C1, "A"),
+        ("language ← motion", M6[:, 4, 1], C2, "B"),
+        ("language ← frames", M6[:, 4, 0], C2, "B"),
+        ("action ← language", M6[:, 5, 4], C2, "B"),
+        ("action ← motion", M6[:, 5, 1], INK2, "-")]
+HM = np.array([v for _, v, _, _ in ROWS])
+axb = ax_in(3.25, 3.62, 3.45, 2.00)
+panel_tag(axb, "(b)", -0.30, 1.10)
+hnorm = PowerNorm(gamma=0.5, vmin=0, vmax=70)
+axb.imshow(HM, cmap=SEQ, norm=hnorm, interpolation="nearest", aspect="auto")
+for (r, l), v in np.ndenumerate(HM):
+    txt = f"{v:.0f}" if v >= 9.5 else (f"{v:.1f}" if v >= 1 else "<1")
+    axb.text(l, r, txt, ha="center", va="center", fontsize=4.8, color="#ffffff" if v > 20 else (INK3 if v < 1 else INK), zorder=3)
+for r in (2.5, 5.5):
+    axb.axhline(r, color="#ffffff", lw=2.0, zorder=2)
+# 描边突出两个响应区间：记忆 → 语言（L0–L1）、帧 → 动作（L13–L16）
+axb.add_patch(Rectangle((-0.5, 2.5), 2, 2, fc="none", ec=C2, lw=1.1, zorder=4))
+axb.add_patch(Rectangle((12.5, 1.5), 4, 1, fc="none", ec=C1, lw=1.1, zorder=4))
+axb.set_xticks(range(18)); axb.set_xticklabels([f"L{l}" for l in range(18)], fontsize=5.4)
+axb.xaxis.set_ticks_position("top")
+axb.set_yticks(range(len(ROWS))); axb.set_yticklabels([n for n, *_ in ROWS], fontsize=5.8)
+for lab, (_, _, col, _) in zip(axb.get_yticklabels(), ROWS):
+    lab.set_color(col)
+axb.tick_params(length=0, pad=2)
+for sp in axb.spines.values():
+    sp.set_visible(False)
+axb.set_title(f"Where memory content goes, layer by layer (motion model, {n_ep} episodes pooled)", fontsize=6.5, pad=14, loc="left")
+cbh = ax_in(6.80, 3.62, 0.06, 2.00)
+cb = fig.colorbar(plt.cm.ScalarMappable(norm=hnorm, cmap=SEQ), cax=cbh)
+cb.set_ticks([0, 5, 10, 20, 40, 70]); cb.ax.tick_params(length=2, pad=1.5, labelsize=5.4); cb.outline.set_linewidth(0.4)
+cb.set_label("% of the reader's attention (sqrt scale)", labelpad=2, fontsize=5.8)
+fig.text(3.25 / W, (3.44 + YOFF) / H, "Rows: 'reader ← source' = share of the reader's attention on the source at that layer; 'cum. motion content' = "
+         "motion share of frame memory after that layer (rollout, α = 0.5). Blue labels: Route A via frame memory; orange: Route B via language. "
+         "Outlined: memory → language only at L0–L1, frames → action only at L13–L16; action never reads motion directly (<1%). Colour scale is square-root.",
+         fontsize=5.6, color=INK2, va="top", ha="left", wrap=True)
 json.dump({"groups": [n for n, _, _ in BLOCKS], "layer_matrix_pct": M6.round(2).tolist(), "masked": mask6.tolist(),
-           "curves_pct": {n: v.round(2).tolist() for n, v in curves.items()}, "frame_carry_motion_pct": carry.round(2).tolist()},
+           "heatmap_rows": [n for n, *_ in ROWS], "heatmap_pct": HM.round(2).tolist(), "frame_carry_motion_pct": carry.round(2).tolist()},
           open(OUT / "fig_pathway-layers.json", "w", encoding="utf-8"), ensure_ascii=False, indent=0)
 
 # ============================================================================ (c) 子目标对位矩阵（RouteStick）
