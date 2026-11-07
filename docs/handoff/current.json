@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-07T20:37:18.348299+00:00",
-    "america_new_york": "2026-11-07T15:37:18.348299-05:00"
+    "utc": "2026-11-07T20:45:43.587706+00:00",
+    "america_new_york": "2026-11-07T15:45:43.587706-05:00"
   },
   "repo": {
     "branch": "v10-ctx-wan-timepool-eval",
@@ -1525,7 +1525,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-11-07T20:37:18.348299+00:00",
-      "state_reason": "开工令已获；一致性审查的 eval.py seed 限制已按 ADJUST_REVIEW=PASS 调整；移植进行中，链未布。",
+      "state_reason": "E1 已合入 ffb307c（PRE/POST_MERGE_REVIEW=PASS）；evl-tp-chain 已布，等训练 EXIT_CODE=0。",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiRHq3Pxv6peBZdBWos",
         "host": "Claude@AWS"
@@ -1538,9 +1538,34 @@
           "gate": "仅等训练日志末行 EXIT_CODE=0 且 59999 存在；不等 G9、备份或任务 done。"
         }
       ],
-      "pre_handoff": [],
+      "pre_handoff": [
+        {
+          "what": "开工前计划审查与调整",
+          "evidence": "PLAN_CONSISTENCY_REVIEW=FAIL base=17dfb4c findings=1 blocking=1；ADJUST_REVIEW=PASS scale=same findings=0",
+          "where": "a7eee52 commit body",
+          "status": "pass"
+        },
+        {
+          "what": "E1 移植与审查",
+          "evidence": "LOCAL_EVAL_TESTS=PASS failed=0；PRE_MERGE_REVIEW=PASS base=bb2ade6 tip=012adb8；POST_MERGE_REVIEW=PASS base=bb2ade6 tip=ffb307c；合并后 53 passed",
+          "where": "ffb307c",
+          "status": "pass"
+        },
+        {
+          "what": "三 seed 评估",
+          "evidence": "THREE_SEED=PASS",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/ctx-wan-timepool1024-3seed-1107/simple-chain.log",
+          "status": "pending"
+        }
+      ],
       "long_tail": [],
-      "running_handles": [],
+      "running_handles": [
+        {
+          "tmux": "evl-tp-chain",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/ctx-wan-timepool1024-3seed-1107/simple-chain.log",
+          "done_line": "THREE_SEED=PASS 后 EXIT_CODE=0"
+        }
+      ],
       "authorizations": [
         {
           "kind": "go",
@@ -1558,9 +1583,9 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "E1 合入后建执行副本并起 evl-tp-chain",
-          "command": "见计划 Runbook",
-          "verdict_line": "TRAIN_DONE=PASS；THREE_SEED=PASS"
+          "what": "等链完成后写 docs/evaluation-doc/ctx-wan-timepool1024-3seed-1107/result.md 并收尾",
+          "command": "执行副本 /scratch/hongze/robomme_policy_learning_MotionJEPA-eval-ffb307c，启动脚本 chain.sh",
+          "verdict_line": "THREE_SEED=PASS"
         }
       ]
     }
