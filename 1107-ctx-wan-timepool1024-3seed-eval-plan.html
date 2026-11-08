@@ -153,6 +153,7 @@
       </tbody>
     </table></div>
     <h3>实测结果</h3>
+    <p><strong>结果（11-08 美东 09:29）：</strong><code>THREE_SEED=PASS seeds=7,42,0 overall=35.46±0.79</code>，seed 42/7/0 = 36.38 / 35.00 / 35.00%，<code>EXIT_CODE=0</code>，无 <code>RECOVER</code>。训练 06:22 结束，06:23 起跑，G9 06:24 <code>RESTORE_POOL=PASS</code> 后加入 GPU 0、1，三 seed 合计约 3 小时。档案 <code>docs/evaluation-doc/ctx-wan-timepool1024-3seed-1107/result.md</code>。</p>
     <p>开工令：「同意开始」（11-07 美东）。<code>PLAN_CONSISTENCY_REVIEW=FAIL base=17dfb4c findings=1 blocking=1</code>，已按下述调整处置。</p>
     <h3>实施中调整</h3>
     <p>旧：不改 <code>examples/</code>。新：<code>examples/robomme/eval.py</code> 放开 seed 集合 3 行。理由：v9 官方分支只接受 seed 42，seed 7、0 启动即 <code>ContractError</code>，三 seed 无法完成。规模 3 行，走的是 R3 写明的路径。<code>ADJUST_REVIEW=PASS scale=same findings=0</code>；同一审查确认服务端、队列和 RPC 没有其他 seed 或 kind 限制。</p>

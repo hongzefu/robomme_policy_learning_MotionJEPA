@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-08T13:33:01.450763+00:00",
-    "america_new_york": "2026-11-08T08:33:01.450763-05:00"
+    "utc": "2026-11-08T15:22:44.838877+00:00",
+    "america_new_york": "2026-11-08T10:22:44.838877-05:00"
   },
   "repo": {
     "branch": "v10-ctx-wan-timepool-eval",
@@ -1523,9 +1523,9 @@
         "file": "1107-ctx-wan-timepool1024-3seed-eval-plan.html",
         "sha": "17dfb4cc20fa03c1b68f9a45a18277cfef164966"
       },
-      "state": "running",
-      "state_changed_at": "2026-11-07T20:37:18.348299+00:00",
-      "state_reason": "E1 已合入 ffb307c（PRE/POST_MERGE_REVIEW=PASS）；evl-tp-chain 已布，等训练 EXIT_CODE=0。",
+      "state": "done",
+      "state_changed_at": "2026-11-08T15:22:44.838877+00:00",
+      "state_reason": "THREE_SEED=PASS seeds=7,42,0 overall=35.46±0.79；档案 docs/evaluation-doc/ctx-wan-timepool1024-3seed-1107/result.md（069ccae）。",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiRHq3Pxv6peBZdBWos",
         "host": "Claude@AWS"
@@ -1553,19 +1553,13 @@
         },
         {
           "what": "三 seed 评估",
-          "evidence": "THREE_SEED=PASS",
+          "evidence": "THREE_SEED=PASS seeds=7,42,0 overall=35.46±0.79；EXIT_CODE=0",
           "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/ctx-wan-timepool1024-3seed-1107/simple-chain.log",
-          "status": "pending"
+          "status": "pass"
         }
       ],
       "long_tail": [],
-      "running_handles": [
-        {
-          "tmux": "evl-tp-chain",
-          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/ctx-wan-timepool1024-3seed-1107/simple-chain.log",
-          "done_line": "THREE_SEED=PASS 后 EXIT_CODE=0"
-        }
-      ],
+      "running_handles": [],
       "authorizations": [
         {
           "kind": "go",
@@ -1581,22 +1575,16 @@
         }
       ],
       "pending_decisions": [],
-      "next_steps": [
-        {
-          "what": "等链完成后写 docs/evaluation-doc/ctx-wan-timepool1024-3seed-1107/result.md 并收尾",
-          "command": "执行副本 /scratch/hongze/robomme_policy_learning_MotionJEPA-eval-ffb307c，启动脚本 chain.sh",
-          "verdict_line": "THREE_SEED=PASS"
-        }
-      ]
+      "next_steps": []
     },
     "ctx-concat1x1024-3seed-eval": {
       "plan": {
         "file": "1108-ctx-concat1x1024-3seed-local-eval-plan.html",
         "sha": "83f3d2103f4db182e96057ae691ea9556ef9a8cf"
       },
-      "state": "running",
-      "state_changed_at": "2026-11-08T13:33:01.450763+00:00",
-      "state_reason": "E2 合入 dcf23da；59999 已下载校验；evl-cc-chain 等 timepool 链 EXIT_CODE=0。",
+      "state": "closed",
+      "state_changed_at": "2026-11-08T15:22:44.838877+00:00",
+      "state_reason": "用户放弃（11-08 美东 10:20）；seed 42 停在 674/800，不构成成绩；会话与残留进程已停，GPU 归零；部分产物与 59999 保留未删。",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiRHq3Pxv6peBZdBWos",
         "host": "Claude@AWS"
@@ -1625,19 +1613,13 @@
         },
         {
           "what": "三 seed 评估",
-          "evidence": "THREE_SEED=PASS",
+          "evidence": "用户放弃，未完成（seed 42 674/800）",
           "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/ctx-concat1x1024-3seed-1108/simple-chain.log",
-          "status": "pending"
+          "status": "abandoned"
         }
       ],
       "long_tail": [],
-      "running_handles": [
-        {
-          "tmux": "evl-cc-chain",
-          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/ctx-concat1x1024-3seed-1108/simple-chain.log",
-          "done_line": "THREE_SEED=PASS 后 EXIT_CODE=0"
-        }
-      ],
+      "running_handles": [],
       "authorizations": [
         {
           "kind": "go",
@@ -1650,16 +1632,16 @@
           "date": "2026-11-08T08:33:01.450763-05:00",
           "quote": "跑完了之后立刻骑我们自己的那个context No Split Motion 的那个 model，就是我在 Great Lakes 上 eval 是三十七的成功率的那那一份。 / 也是3seed",
           "scope": "被评模型 orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k 59999，三 seed。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-08T10:22:44.838877-05:00",
+          "quote": "你把你现在的这个 timepool 一零二四 context 的结果归档，然后 concat 不用再跑了，放弃。",
+          "scope": "停止 concat 评估并归档 timepool 结果；不删除已有产物。"
         }
       ],
       "pending_decisions": [],
-      "next_steps": [
-        {
-          "what": "链完成后写两份评估档案并收尾",
-          "command": "执行副本 /scratch/hongze/robomme_policy_learning_MotionJEPA-eval-dcf23da/chain-cc.sh",
-          "verdict_line": "THREE_SEED=PASS"
-        }
-      ]
+      "next_steps": []
     }
   }
 }

@@ -119,7 +119,10 @@
       </tbody>
     </table></div>
     <h3>实测结果</h3>
-    <p>尚未实施。</p>
+    <p>开工令：「同意开始」（11-08 美东）。<code>PLAN_CONSISTENCY_REVIEW=PASS base=83f3d21 findings=2 blocking=0</code>；<code>VLA_VERIFY=PASS step=59999 files=21 bytes=11587512853 sha_mismatch=0</code>；E2 合入 <code>dcf23da</code>（<code>PRE_MERGE_REVIEW=PASS</code>、<code>POST_MERGE_REVIEW=PASS tests=56passed</code>）。09:29 timepool 结束后起跑，GPU 0–7 共 32 个 worker，每卡约 72 GB、无 OOM。</p>
+    <p><strong>用户放弃（11-08 美东 10:20）：</strong>用户原话「你把你现在的这个 timepool 一零二四 context 的结果归档，然后 concat 不用再跑了，放弃。」当时 seed 42 已完成 674/800 局（成功 247），未完成，<strong>不构成成绩</strong>。按会话清单逐个停掉 34 个 <code>evl-cc-*</code> 会话（停前停后 <code>tmux ls</code> 差集恰为这 34 个），再对属于执行副本 <code>-eval-dcf23da</code> 的 93 个残留进程（服务端、stage2 sidecar、仿真客户端）发 SIGTERM，全部退出，8 卡显存归零。部分产物保留在 <code>v1-store/evaluation/ctx-concat1x1024-3seed-1108/</code>，checkpoint 保留在 run 根 <code>59999/</code>，均未删除。</p>
+    <h3>实施中调整</h3>
+    <p>下载只取 manifest 中 <code>59999/</code> 前缀的 21 个文件（原写 38 个，另 17 个是根快照文件），依据开工审查非阻塞项，口径不变。</p>
     <h3>子代理分工与合并（简述）</h3>
     <p>代码只有一块 E2（两个文件），由一个写入代理在独立 worktree 完成；下载是主会话起的运维命令，与 E2 并行。主会话合并，合前、合后各一个 sonnet 审查。起链、监听和收尾由主会话做。</p>
   </section>
