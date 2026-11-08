@@ -176,6 +176,27 @@ def test_client_provenance_sections_by_kind():
     old.check_provenance({"vae": dict(vae), "encoder": {"checkpoint_sha256": "c"}})
 
 
+def test_client_pool_provenance_ignores_encoder_src_sha256():
+    vae = {"vae_id": "v", "vae_state_sha256": "s", "encoder_src_sha256": "40d8a33b"}
+    pool = _bare_client(encoder_kind=KIND, provenance={"vae": dict(vae)})
+    pool.check_provenance({"vae": {**vae, "encoder_src_sha256": "d00267e1"}})   # 池化分支：该键不同放行
+
+
+def test_client_pool_provenance_still_checks_vae_state():
+    vae = {"vae_id": "v", "vae_state_sha256": "s", "encoder_src_sha256": "40d8a33b"}
+    pool = _bare_client(encoder_kind=KIND, provenance={"vae": dict(vae)})
+    with pytest.raises(RuntimeError, match=r"vae\.vae_state_sha256"):            # 其余 vae 键照比
+        pool.check_provenance({"vae": {**vae, "vae_state_sha256": "t"}})
+
+
+def test_client_encoder_path_still_checks_encoder_src_sha256():
+    vae = {"vae_id": "v", "vae_state_sha256": "s", "encoder_src_sha256": "40d8a33b"}
+    enc = {"checkpoint_sha256": "c"}
+    old = _bare_client(provenance={"vae": dict(vae), "encoder": dict(enc)})
+    with pytest.raises(RuntimeError, match=r"vae\.encoder_src_sha256"):          # encoder 分支逐字不变
+        old.check_provenance({"vae": {**vae, "encoder_src_sha256": "d00267e1"}, "encoder": dict(enc)})
+
+
 def _wan_venv_ready() -> bool:
     return (MAIN_V1 / "venvs/wan/bin/python").exists()
 
