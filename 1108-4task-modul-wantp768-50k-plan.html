@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4task Wan 池化 modulation 计划</title>
+<style>
+:root{--bg:#ffffff;--fg:#1f2328;--muted:#59636e;--line:#d0d7de;--card:#f6f8fa;--acc:#bc4c00;--ok:#1a7f37;--warn:#9a6700;--code:#eff1f3}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0d1117;--fg:#e6edf3;--muted:#9198a1;--line:#30363d;--card:#161b22;--acc:#f0883e;--ok:#3fb950;--warn:#d29922;--code:#1f242c}}
+:root[data-theme="dark"]{--bg:#0d1117;--fg:#e6edf3;--muted:#9198a1;--line:#30363d;--card:#161b22;--acc:#f0883e;--ok:#3fb950;--warn:#d29922;--code:#1f242c}
+body{background:var(--bg);color:var(--fg);font-family:"Noto Sans CJK SC","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.65;margin:0;padding:0 16px}
+main{max-width:1080px;margin:24px auto 64px}
+h1{border-bottom:2px solid var(--line);padding-bottom:6px;margin-top:48px}
+h2{margin-top:36px;border-left:4px solid var(--acc);padding-left:10px}
+h3{margin-top:24px}
+code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9em;background:var(--code);border-radius:4px}
+code{padding:1px 4px}
+pre{padding:10px 12px;overflow-x:auto;line-height:1.45}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:.93em;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:5px 8px;vertical-align:top;text-align:left}
+th{background:var(--card)}
+.box{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px 14px;margin:12px 0}
+.warn{border-left:4px solid var(--warn)}
+.ok{color:var(--ok);font-weight:600}
+.muted{color:var(--muted)}
+figure{margin:16px 0;overflow-x:auto}
+figure svg{max-width:100%;height:auto;background:#fff;border:1px solid var(--line);border-radius:6px}
+figcaption{color:var(--muted);font-size:.9em}
+</style>
+</head>
+<body><main>
+
+<div class="box">
+<p><b>权威性与授权边界</b>：本文件是「4task 原训练库上用 Wan 重叠窗零参数池化（768 维）替换 motion encoder、走 modulation 训 50k 并立即本机评估」的唯一计划。<b>只规划不实施</b>；开工须用户对本文件不改而明确认可（AGENTS 第 2 条开工令），开工前另派一个只读审查子代理做 <code>PLAN_CONSISTENCY_REVIEW</code>。</p>
+<p><b>分支与代码锚点</b>：按用户要求「这次的修改和评估都在单独的一个 branch 来实现」，全部改动、训练、评估、留档都在新分支 <code>v11-4task-modul-wantp768-50k</code>（从 <code>origin/v2-eval-0918-motion</code> 的 <code>ba52d79</code> 切出；该分支包含上次训练基线 <code>2f10473</code>（commitV10.2Beta），且带有上次 692 局评估链）。计划写于 worktree <code>.claude/worktrees/plan-4tp768</code>；训练和评估在主检出 <code>/scratch/hongze/robomme_policy_learning_MotionJEPA</code> 切到本分支后运行。</p>
+<p><b>commit 编号</b>：全仓最近为 <code>commitV11.83</code>；本计划实施从 <code>commitV11.84</code> 起，训练 Beta 用 <code>commitV11.8xBeta</code>（与结论 commit 同号）。tmux 前缀 <code>w768-</code>。</p>
+<p><b>外部依赖锚点</b>：训练库归档 bucket <code>HongzeFu/robomme-4task-v2-1600ep-trainset-20260920-v1</code>；源 H5 <code>HongzeFu/robomme-4task-h5-20260912-v2</code>@<code>604f16da36d6b6d175884df8fb687dc08e0a36eb</code>；canonical manifest sha256 <code>4cd5a170…bb918</code>；norm_stats sha256 <code>856c75ea…d173</code>；Wan latent 由钉版 <code>scripts/dataset/wan/wan_motion_infer.py</code>（sha256 <code>af67fdd9…1b34</code>）在建库时算出；benchmark gitlink <code>b4e97f22fe007078e297205898c07c1acbc69165</code>。</p>
+</div>
+
+<h1>第一部分（给人看）</h1>
+
+<h2>1　要做什么与全部运行一览</h2>
+<p>上次在 4task 训练库（BinFill、RouteStick、VideoRepick、VideoUnmaskSwap 各 400 局，共 1600 局）上跑的 512+motion modulation，motion 来自学习型 encoder <code>wan-full1600-filter2-b176x4-72ep-a</code>（输出 1×768）。在 692 局测试上，50000 步时成功率 <b>54.62%</b>，最终 79999 步时 <b>56.36%</b>。这次只换 motion 的来源：同一批 <b>stride 16 重叠窗</b>的 Wan VAE raw latent，经零参数池化成 <b>1×768</b>。帧记忆、motion 预算、modulation 注入、超参与评估口径全部不变。训到 50k，然后立刻在本机按上次口径评 @50000，直接对比 54.62%。</p>
+<pre>
+阶段 A  恢复训练库（HF bucket → v1-store，约 356 GB，CPU/网络）
+   │     framesamp-8x8 313.2 GB + wan-latents 42.1 GB + motion/meta/assets
+阶段 B  代码（3 个 worktree 子代理并行）→ 逐个审查合并
+   │     池化 768 + motion 表导出 ┃ 在线 sidecar + YAML ┃ 本机 692 局评估驱动
+阶段 C  建 768 池化表（CPU，约 71316 窗）＋ 闸门 G0–G5
+阶段 D  8 卡 20 步冒烟 → Beta → 正式训练 50,001 步（约 14 h，GPU 0–7）
+阶段 E  训练 done → 自动接评估：demo 前缀库本机重生成 → 692 局 @50000（GPU 0–7）
+长尾    checkpoint 上传 HF bucket + 本机读回校验
+</pre>
+<table>
+<tr><th>项</th><th>值</th><th>依据</th></tr>
+<tr><td>run_name</td><td><code>v2-1600ep-m8x8-modul-wantp768-b128-50k</code></td><td>沿用上次 <code>v2-1600ep-m8x8-modul-motion-b128-80k</code> 体例</td></tr>
+<tr><td>训练配置</td><td><code>mme_vla_suite_b128_80k</code> 全部超参，启动脚本只覆盖 <code>--num_train_steps=50001</code></td><td>§3.3</td></tr>
+<tr><td>history YAML</td><td>新 <code>perceptual-framesamp-modul-8frame-8x8-wantp768.yaml</code>（由上次 <code>…-8x8-motion.yaml</code> 只改 motion 来源字段）</td><td>§3.2</td></tr>
+<tr><td>评估</td><td>692 局、seed 7、<code>max_steps=2000</code>、BinFill 带 demo 前缀、只评 @50000</td><td>§4</td></tr>
+<tr><td>HF bucket（ckpt）</td><td><code>HongzeFu/robomme-vla-4task-modul-wantp768-50k-v1</code></td><td>bucket 名按记忆自定</td></tr>
+<tr><td>状态机</td><td>登记两个任务：<code>4task-wantp768-train</code> → <code>4task-wantp768-eval</code></td><td>§7</td></tr>
+</table>
+
+<h3>已定死口径（用户原话逐字保留）</h3>
+<ol>
+<li><b>数据集</b>：「在原先的训练库：4task-v2-1600ep-604f16da。BinFill、RouteStick、VideoRepick、VideoUnmaskSwap 各 400 局，合计 1600 局 跑modulation」（§2）。</li>
+<li><b>重叠窗</b>：「我的 motion token 是有一个重叠的窗口，就我们的这个wan 也应该是重叠窗口送进去。」→ 窗口契约照搬上次 <code>motion-768-grid16-demopad17-v1</code>：每窗 33 帧，段内 stride 16，相邻窗重叠 17 帧；demo 至少 17 个真实帧，不足 33 帧时补末帧；exec 必须是完整 33 帧；共 71316 窗。<b>不做</b> orig16 那次的 <code>--grid-subsample 2</code>（§3.1）。</li>
+<li><b>维度</b>：「如果不是一零二四的话，它这个重叠窗的池化应该和上一次的 motion 的维度应该一样」→ 768（§3.1）。</li>
+<li><b>池化读法</b>：「8帧时间均值不变 你定一下其他尺寸的然后再让我确认」→ 用户在选择题中选「高6×宽8 自适应」（§3.1）。</li>
+<li><b>步数</b>：「这次训练也只需要训五十 K」，选择题确认「50k」；为与上次评估的 <code>…/50000</code> 同名，实际 <code>num_train_steps=50001</code>，最后一份 checkpoint 是 step 50000（§3.3）。</li>
+<li><b>评估</b>：「跑完之后立刻开始呃 evaluate，在本机器做 evaluate」，选择题确认「692局 seed7 单次」（§4）。</li>
+<li><b>分支</b>：「这次的修改和评估都在单独的一个 branch 来实现。」</li>
+<li><b>状态机</b>：选择题「登记 (推荐)」（§7）。</li>
+</ol>
+
+<h2>2　数据：原库实体已不在盘上，从 HF 整库归档恢复</h2>
+<p>本机 <code>v1-store/datasets/4task-v2-1600ep-604f16da/</code> 现在只剩 <code>meta/</code>（<code>episode_manifest.json</code>、<code>input_manifest.json</code>）和 <code>logs/</code>，<code>framesamp-8x8/</code>、<code>motion/</code>、<code>wan-latents/</code> 都已删除，<code>raw-h5/</code> 为空。norm_stats 仍在 <code>v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da/robomme/norm_stats.json</code>，sha256 前 16 位 <code>856c75ea504bd104</code>，与上次相同。</p>
+<p>bucket <code>HongzeFu/robomme-4task-v2-1600ep-trainset-20260920-v1</code>（716.5 GB，295 个文件，2026-09-20）里是整库归档。用 <code>hf buckets list … -R</code> 实测各目录体积：</p>
+<table>
+<tr><th>目录</th><th>体积</th><th>本次下载？</th><th>用途</th></tr>
+<tr><td><code>framesamp-8x8/</code>（32 片 image_emb + meta + pos/state）</td><td>313.2 GB</td><td class="ok">下</td><td>VLA 帧记忆输入（与上次同一份）</td></tr>
+<tr><td><code>wan-latents_tars/</code>（20 个 tar）</td><td>42.1 GB</td><td class="ok">下</td><td>71316 个重叠窗的 raw latent，池化的唯一输入</td></tr>
+<tr><td><code>motion/</code>（上次的 encoder motion 表 + meta）</td><td>0.2 GB</td><td class="ok">下</td><td>行序、段索引的对照基准（G3），以及参数量对照</td></tr>
+<tr><td><code>meta/</code>、<code>assets/</code>、<code>checksums/</code>、<code>runner/</code>、<code>SHA256SUMS.pre.txt</code></td><td>≈0.1 GB</td><td class="ok">下</td><td>sha256 校验与 identity 对照</td></tr>
+<tr><td><code>framesamp/</code>（4×4）、<code>source/</code>、<code>oracle_tars/</code>、<code>motion-tokens_tars/</code></td><td>360.9 GB</td><td>不下</td><td>本次用不到</td></tr>
+</table>
+<p>合计下载约 356 GB，tar 解开后再删 tar。<code>/scratch</code> 现剩 1.2 TB，下载 + 解包 + demo 前缀库（约 11.2 GB）+ 11 份 checkpoint（按上次 bucket 约 12 GB/份估）后仍剩约 650 GB。<b>不需要删任何现有产物</b>，<code>cache/orig16-wan-timepool1024-recovery/published</code>（362 GB）不动。</p>
+<p><b>数据同源（P-LINEAGE）</b>：这次的「encoder」是 Wan2.1 VAE（固定公开权重，没有训练数据）加零参数池化，所以 motion 特征的数据源就是 latent 的输入帧。闸门 G0 检查：<code>wan-latents</code> 元数据记录的输入 <code>raw_dir</code> 与 manifest identity，等于 VLA 库 <code>meta/input_manifest.json</code> 的 4 个 H5 sha256 集合。G0 失败即停工，不许 WAIVE。</p>
+
+<h2>3　机制</h2>
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="520" viewBox="0 0 1100 520" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="11" fill="#222">
+  <defs>
+    <marker id="arw" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#444"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1100" height="520" fill="#fff"/>
+
+  <!-- 标题 -->
+  <text x="20" y="30" font-size="16" font-weight="bold">图 1　Wan 时间均值 + 6×8 空间池化（768 维）替换 motion encoder</text>
+  <text x="20" y="54" font-size="12" fill="#555">上行：单窗计算（离线建库与在线评估共用）　下行：VLA 内部 modulation 记忆链路</text>
+
+  <!-- ===== 上行 ===== -->
+  <!-- 1 灰 -->
+  <rect x="20" y="70" width="190" height="120" rx="6" fill="#E8E8E8" stroke="#8A8A8A" stroke-width="1.5"/>
+  <text x="115" y="94" text-anchor="middle" font-size="14" font-weight="bold">33 帧重叠窗</text>
+  <text x="115" y="124" text-anchor="middle">256×256 RGB，段内 stride 16</text>
+  <text x="115" y="140" text-anchor="middle">相邻窗共享 17 帧</text>
+  <text x="115" y="156" text-anchor="middle">demo 不足 33 帧补末帧</text>
+  <text x="115" y="172" text-anchor="middle">（≥17 真实帧）</text>
+
+  <!-- 2 灰 -->
+  <rect x="230" y="70" width="190" height="120" rx="6" fill="#E8E8E8" stroke="#8A8A8A" stroke-width="1.5"/>
+  <text x="325" y="92" text-anchor="middle" font-size="14" font-weight="bold">Wan2.1 VAE 编码</text>
+  <text x="325" y="110" text-anchor="middle" font-size="14" font-weight="bold">（fp32）</text>
+  <text x="325" y="138" text-anchor="middle">raw latent 9×16×32×32</text>
+  <text x="325" y="154" text-anchor="middle">（T×C×H×W）</text>
+  <text x="325" y="172" text-anchor="middle">沿用上次建库已算好的 latent</text>
+
+  <!-- 3 橙 -->
+  <rect x="440" y="70" width="200" height="120" rx="6" fill="#FDE3C8" stroke="#E07B1A" stroke-width="1.5"/>
+  <text x="540" y="92" text-anchor="middle" font-size="14" font-weight="bold">丢第 0 个 latent，</text>
+  <text x="540" y="110" text-anchor="middle" font-size="14" font-weight="bold">后 8 个取时间均值</text>
+  <text x="540" y="142" text-anchor="middle">16×32×32（C×H×W）</text>
+  <text x="540" y="160" text-anchor="middle">8 帧 latent 逐元素平均</text>
+
+  <!-- 4 橙 -->
+  <rect x="660" y="70" width="230" height="120" rx="6" fill="#FDE3C8" stroke="#E07B1A" stroke-width="1.5"/>
+  <text x="775" y="92" text-anchor="middle" font-size="14" font-weight="bold">自适应平均池化</text>
+  <text x="775" y="110" text-anchor="middle" font-size="14" font-weight="bold">高 32→6、宽 32→8</text>
+  <text x="775" y="134" text-anchor="middle">高箱 [0,6) [5,11) [10,16)</text>
+  <text x="775" y="149" text-anchor="middle">[16,22) [21,27) [26,32)</text>
+  <text x="775" y="164" text-anchor="middle">宽 4 列一块</text>
+  <text x="775" y="179" text-anchor="middle">每格 24 值均值</text>
+
+  <!-- 5 橙 -->
+  <rect x="910" y="70" width="170" height="120" rx="6" fill="#FDE3C8" stroke="#E07B1A" stroke-width="1.5"/>
+  <text x="995" y="94" text-anchor="middle" font-size="14" font-weight="bold">C→H→W 展平</text>
+  <text x="995" y="130" text-anchor="middle">1×768 float32</text>
+  <text x="995" y="148" text-anchor="middle">零可训练参数</text>
+
+  <!-- 上行箭头 -->
+  <line x1="210" y1="130" x2="229" y2="130" stroke="#444" stroke-width="1.5" marker-end="url(#arw)"/>
+  <line x1="420" y1="130" x2="439" y2="130" stroke="#444" stroke-width="1.5" marker-end="url(#arw)"/>
+  <line x1="640" y1="130" x2="659" y2="130" stroke="#444" stroke-width="1.5" marker-end="url(#arw)"/>
+  <line x1="890" y1="130" x2="909" y2="130" stroke="#444" stroke-width="1.5" marker-end="url(#arw)"/>
+
+  <!-- 5 → 6 竖直接入 -->
+  <line x1="995" y1="190" x2="995" y2="299" stroke="#444" stroke-width="1.5" marker-end="url(#arw)"/>
+  <text x="1003" y="250" font-size="11" fill="#555">768 维向量</text>
+
+  <!-- ===== 下行 ===== -->
+  <!-- 6 橙 -->
+  <rect x="880" y="300" width="200" height="100" rx="6" fill="#FDE3C8" stroke="#E07B1A" stroke-width="1.5"/>
+  <text x="980" y="322" text-anchor="middle" font-size="14" font-weight="bold">motion 表 / 在线 sidecar</text>
+  <text x="980" y="346" text-anchor="middle">离线 71316 行×768</text>
+  <text x="980" y="361" text-anchor="middle">（与上次 motion 表逐行同序）</text>
+  <text x="980" y="378" text-anchor="middle">在线评估逐窗实时算</text>
+
+  <!-- 8 灰 -->
+  <rect x="610" y="300" width="240" height="100" rx="6" fill="#E8E8E8" stroke="#8A8A8A" stroke-width="1.5"/>
+  <text x="730" y="322" text-anchor="middle" font-size="14" font-weight="bold">拼接 768+768</text>
+  <text x="730" y="340" text-anchor="middle" font-size="14" font-weight="bold">→ 线性 1536→1024</text>
+  <text x="730" y="366" text-anchor="middle">形状与参数量与上次逐个相同</text>
+
+  <!-- 9 灰 -->
+  <rect x="340" y="300" width="240" height="100" rx="6" fill="#E8E8E8" stroke="#8A8A8A" stroke-width="1.5"/>
+  <text x="460" y="322" text-anchor="middle" font-size="14" font-weight="bold">与 8 帧×64 token</text>
+  <text x="460" y="340" text-anchor="middle" font-size="14" font-weight="bold">帧记忆合并</text>
+  <text x="460" y="366" text-anchor="middle">512 帧 + 至多 160 motion</text>
+  <text x="460" y="382" text-anchor="middle">= 672 位，宽 1024</text>
+
+  <!-- 10 灰 -->
+  <rect x="20" y="300" width="290" height="100" rx="6" fill="#E8E8E8" stroke="#8A8A8A" stroke-width="1.5"/>
+  <text x="165" y="330" text-anchor="middle" font-size="14" font-weight="bold">modulation 注入 Gemma</text>
+  <text x="165" y="350" text-anchor="middle" font-size="13" font-weight="bold">（MemoryRMSNorm scale/shift）</text>
+  <text x="165" y="378" text-anchor="middle">记忆位逐层产生缩放与平移</text>
+
+  <!-- 下行箭头（从右向左） -->
+  <line x1="880" y1="350" x2="851" y2="350" stroke="#444" stroke-width="1.5" marker-end="url(#arw)"/>
+  <line x1="610" y1="350" x2="581" y2="350" stroke="#444" stroke-width="1.5" marker-end="url(#arw)"/>
+  <line x1="340" y1="350" x2="311" y2="350" stroke="#444" stroke-width="1.5" marker-end="url(#arw)"/>
+
+  <!-- 7 灰（在 8 下方，向上接入） -->
+  <rect x="630" y="440" width="200" height="60" rx="6" fill="#E8E8E8" stroke="#8A8A8A" stroke-width="1.5"/>
+  <text x="730" y="475" text-anchor="middle" font-size="14" font-weight="bold">pos 256→768 + SiLU</text>
+  <line x1="730" y1="440" x2="730" y2="401" stroke="#444" stroke-width="1.5" marker-end="url(#arw)"/>
+
+  <!-- 窗起点位置 标签 → 7 -->
+  <rect x="470" y="450" width="130" height="40" rx="4" fill="#fff" stroke="#8A8A8A" stroke-width="1.2" stroke-dasharray="4,3"/>
+  <text x="535" y="474" text-anchor="middle" font-size="13">窗起点位置</text>
+  <line x1="600" y1="470" x2="629" y2="470" stroke="#444" stroke-width="1.5" marker-end="url(#arw)"/>
+
+  <!-- 图例（右下角） -->
+  <rect x="880" y="440" width="200" height="60" rx="4" fill="#fff" stroke="#BBB" stroke-width="1"/>
+  <rect x="892" y="450" width="22" height="14" fill="#E8E8E8" stroke="#8A8A8A" stroke-width="1.2"/>
+  <text x="922" y="462" font-size="12">灰色：沿用上次不变</text>
+  <rect x="892" y="474" width="22" height="14" fill="#FDE3C8" stroke="#E07B1A" stroke-width="1.2"/>
+  <text x="922" y="486" font-size="12">橙色：本次新增 / 替换</text>
+</svg>
+<figcaption>图 1　单窗计算（上行，离线建表与在线评估共用同一份池化实现）与 VLA 内部链路（下行）。橙色是本次替换的部分，灰色与上次 512+motion run 逐项相同。</figcaption>
+</figure>
+
+<h3>3.1　池化：丢第 0 个 latent、8 帧时间均值、自适应 6×8 空间、展平 768</h3>
+<p><b>定义</b>：输入是单窗 raw latent <code>Z</code>，float32 (9,16,32,32)，轴 (T,C,H,W)，与 orig16 的 <code>wan_timepool.py::pool_raw_wan_latent</code> 输入相同。</p>
+<pre>
+A[c,h,w]        = (1/8)  × Σ_{t=1..8} Z[t,c,h,w]                     丢第 0 个，后 8 个取时间均值（与 orig16 逐位同式）
+H 箱 i=0..5     : [s_i, e_i) = [⌊32i/6⌋, ⌈32(i+1)/6⌉) = [0,6) [5,11) [10,16) [16,22) [21,27) [26,32)
+W 块 j=0..7     : [4j, 4j+4)
+P[c,i,j]        = (1/24) × Σ_{h∈[s_i,e_i)} Σ_{w∈[4j,4j+4)} A[c,h,w]       每格 6×4 = 24 个值
+F[0, 48c+8i+j]  = P[c,i,j]                                            C→H→W 展平，float32 (1,768)
+</pre>
+<ul>
+<li><b>锚点</b>：新模块 <code>src/mme_vla_suite/shared/wan_pool768.py::pool_raw_wan_latent_768</code>，常量 <code>POOL768_READOUT="wan_raw_timepool8_adaptive6x8_v1"</code>、<code>POOL768_ENCODER_KIND="wan_fixedpool768"</code>、<code>POOL768_SHAPE=(1,768)</code>、<code>POOL768_PARAMETER_COUNT=0</code>。时间均值那一段与 orig16 同式同序（t=1→8 逐个累加后 ÷8）；空间按「先块内 W（4 列）、再箱内 H（6 行）」逐元素顺序相加后 ÷24。不用 <code>ndarray.mean</code>，所以结果不随 NumPy 的求和策略变化。只依赖 NumPy，离线建表和在线 sidecar 共用同一份实现。</li>
+<li><b>分箱语义</b>：与 PyTorch <code>torch.nn.functional.adaptive_avg_pool2d(A, (6,8))</code> 的分箱完全相同（起点向下取整、终点向上取整）。G2 用它在 float64 下作独立参考。</li>
+<li>⚠ <b>陷阱</b>：H 方向相邻箱共用第 5、10、21、26 行，这 4 行各被计入两格。这是 48 格无法在 32 行上均匀不重叠切分的必然结果（48 含因子 3），不是 bug。W 方向不重叠。</li>
+<li>⚠ <b>不可</b>改成「先 8×8 再丢两行」或「4×4+4×8 金字塔」，用户已选定自适应 6×8。</li>
+<li><b>收益</b>：输出 768 维，与上次 encoder 输出同维，VLA 侧 <code>motion_pos_proj</code>（pos 256→768）和拼接后的线性层（1536→1024）形状、参数量与上次逐个相同（闸门 G5）。两次 run 唯一的变量就是 motion 特征的来源。</li>
+</ul>
+
+<h3>3.2　motion 表与 YAML：行序与上次 motion 表逐行相同</h3>
+<p>离线导出脚本 <code>scripts/dataset/export_wan_pool768.py</code> 按上次 motion 表 <code>motion/meta/motion_index.json</code> 的段序（episode 序，先 demo 后 exec）逐段读 <code>wan-latents/&lt;key&gt;.bin</code>，逐窗池化，写出新表 <code>v1-store/datasets/4task-v2-1600ep-604f16da/motion-wan-pool768/</code>：71316 行 × 768 float32 = 219,082,752 字节，<b>与上次 encoder 表字节数相同</b>。布局沿用 <code>LAYOUT="motion-768-grid16-demopad17-v1"</code>，读取侧的窗口、索引、补帧逻辑一行不改。provenance 改记 <code>encoder_kind=wan_fixedpool768</code>、<code>encoder_ckpt=null</code>、<code>parameter_count=0</code>、池化源码 sha256、latent 根的 identity。</p>
+<p>新 YAML 由 <code>perceptual-framesamp-modul-8frame-8x8-motion.yaml</code> 复制，只改 motion 节里的 <code>store_path</code>→上述新表、<code>source_run</code>→删除、新增 <code>encoder_kind: wan_fixedpool768</code> 与 <code>readout</code>。<code>dim: 768</code>、<code>budget: 160</code>、<code>pos_dim: 256</code>、<code>stride: 16</code>、<code>window_frames: 33</code>、<code>demo_min_real_frames: 17</code>、帧路 8 帧×8×8=512、<code>integration_type: modulation</code>、<code>memory_token_dim: 1024</code> 全部不变。</p>
+
+<h3>3.3　训练：除 motion 来源与步数外与上次逐项相同</h3>
+<table>
+<tr><th>项</th><th>上次 <code>…-motion-b128-80k</code></th><th>本次</th></tr>
+<tr><td>代码基线</td><td><code>2f10473</code>（V10.2Beta）</td><td><code>ba52d79</code> + 本计划改动（<code>2f10473..ba52d79</code> 在 <code>src</code> 下只改评估侧 <code>policy.py</code>/<code>policy_config.py</code>）</td></tr>
+<tr><td>TrainConfig</td><td><code>mme_vla_suite_b128_80k</code></td><td>同一条，启动脚本覆盖 <code>--num_train_steps=50001</code>，不改 <code>config.py</code> 默认</td></tr>
+<tr><td>batch / 卡 / FSDP / workers</td><td>128 / 8 / 8 / 16</td><td>相同</td></tr>
+<tr><td>学习率</td><td>warmup 5000，peak = decay = 5e-5（warmup 后恒定）</td><td>相同；因为 LR 恒定，前 50k 的学习率曲线与上次逐步相同</td></tr>
+<tr><td>seed / EMA / 裁剪 / 保存</td><td>42 / 0.999 / 1.0 / 每 5000</td><td>相同；保存 5000…50000 共 10 份，<code>train.py</code> 的 <code>step == num_train_steps - 1</code> 保证 50000 那份作为最终记录</td></tr>
+<tr><td>motion</td><td>encoder 768，表 sha256 <code>03fb46e1…</code></td><td>Wan 池化 768，新表</td></tr>
+<tr><td>步时 / 时长</td><td>0.99 s/步，80k 共 21 h 38 m</td><td>预计约 0.99 s/步 × 50001 ≈ 13.8 h，加保存约 14 h</td></tr>
+</table>
+
+<h2>4　本机 692 局评估（与上次 54.62% 同口径）</h2>
+<p>上次评估是在 GreatLakes 上跑的，档案在远端分支 <code>v2-eval-0918-motion</code>（主页 <code>docs/training-doc/binfilldemo-nomotion50k-gl/result.md</code>）。口径：692 局 = 三个非 BinFill 任务 550 局（不注入）+ BinFill 142 局（注入 demo 前缀）；seed 7；<code>max_steps=2000</code>；<code>EPISODE_WALL_S=2400</code>；<code>MMEVLA_MOTION_OVERFLOW=resample</code>；候选来自 benchmark <code>b4e97f2</code> 里的 <code>artifacts/injection/20260912-contract-v3-10/candidates/candidates.jsonl</code>（identity <code>3b4de03a0b46…</code>，文件 sha256 <code>32bdbdb4…</code>）。9 局 reset 卡死，计入分母按失败算，五个旧模型都是同一组 9 局。</p>
+<table>
+<tr><th>评估输入</th><th>本机</th><th>处理</th></tr>
+<tr><td>评估代码（<code>run_shard.sh</code>、<code>eval.py</code>、<code>demo_prefix.py</code>）</td><td>本分支自带</td><td><code>run_shard.sh</code> 已有本机模式（无 <code>SLURM_JOB_ID</code> 时必须显式 <code>CUDA_VISIBLE_DEVICES</code>，并输出 <code>LOCAL_GPU_IDLE=PASS</code>）</td></tr>
+<tr><td>benchmark <code>b4e97f2</code> 与候选文件</td><td>commit 对象在本地 .git，工作区是 <code>856bc3a</code></td><td>评估前在主检出把 <code>third_party/robomme_benchmark</code> 检出到 gitlink <code>b4e97f2</code>（本分支记录的就是它）</td></tr>
+<tr><td>BinFill demo 前缀库 <code>v1-store/demo-prefix/binfill-3b4de03a0b46</code>（11.2 GB）</td><td>没有，HF 也没有</td><td>本机用 <code>run_demo_shard.sh</code> 重生成（同 seed、同 spec 现跑专家轨迹）；闸门 E0 要求与旧清单逐条相同：150 条中成功 142、失败 8，成功集合与各条 D 值都一致</td></tr>
+<tr><td>在线 motion</td><td>旧 sidecar 只会 encoder</td><td><code>motion_sidecar.py</code> 新增 <code>wan_fixedpool768</code> 分支：Wan VAE 之后调 <code>pool_raw_wan_latent_768</code>，不加载 encoder</td></tr>
+</table>
+<p>本机驱动 <code>scripts/evaluation/local_692_pool.sh</code> 只是把上次的 GL 外壳（<code>gl_hold_pool.sh → gl_eval_shard.sbatch → run_shard.sh</code>）换成本机 8 卡分片调 <code>run_shard.sh</code>，分片与合并沿用 <code>make_shard_plan.py</code>、<code>merge_shards.py</code>。参考耗时：GL 上 142 局×3 个模型共 30 个单元，墙钟 1 h 45 m；本机 692 局的实际时长以实测为准。</p>
+<p><b>对比表（结果出来后填）</b>：@50000 档 512 30.49%、2048 45.09%、512+encoder motion <b>54.62%</b>、512+Wan 池化 768 <b>待测</b>。</p>
+
+<h2>5　验收判定行</h2>
+<table>
+<tr><th>闸门</th><th>查什么</th><th>怎么查</th><th>过了说明什么</th><th>判定行</th></tr>
+<tr><td>G0</td><td>数据同源</td><td>latent 元数据的 raw_dir / manifest identity 对 <code>meta/input_manifest.json</code> 的 4 个 H5 sha256</td><td>motion 与 VLA 用同一批 1600 局（P-LINEAGE）</td><td><code>DATA_LINEAGE=PASS encoder_ckpt=wanvae-&lt;sha8&gt; encoder_source_pin=&lt;sha&gt; vla_input_pin=&lt;sha&gt; files=4 mismatches=0</code></td></tr>
+<tr><td>G1</td><td>恢复字节正确</td><td>下载文件逐个对 bucket <code>checksums/sha256-*.txt</code>；framesamp-8x8 store_meta sha256 = <code>f7677e69…</code>，motion meta = <code>d3a51801…</code>，norm_stats = <code>856c75ea…</code></td><td>训练输入与上次逐字节相同</td><td><code>RESTORE_SHA=PASS files=&lt;n&gt; bytes=&lt;n&gt; mismatches=0</code></td></tr>
+<tr><td>G2</td><td>池化公式</td><td>单测：随机 latent 对 float64 <code>adaptive_avg_pool2d</code> 参考，max_abs ≤ 1e-6；分箱边界逐个断言；同输入重跑逐位相同；参数量 0</td><td>实现等于 §3.1 的定义</td><td><code>POOL768_CONTRACT=PASS cases=&lt;n&gt; max_abs=&lt;x&gt; bins=6x8</code></td></tr>
+<tr><td>G3</td><td>新表对齐</td><td>行数 71316 = demo 35913 + exec 35403，补帧窗 1600；段键、row_base、窗起点与上次 <code>motion_index.json</code> 逐项相同；全表有限；独立进程用 torch 参考重算全表，max_abs ≤ 1e-6</td><td>每个重叠窗都对到上次同一个窗，只是特征换了</td><td><code>POOL768_TABLE=PASS rows=71316 demo=35913 exec=35403 padded=1600 index_mismatch=0 max_abs=&lt;x&gt;</code></td></tr>
+<tr><td>G4</td><td>在线与离线一致</td><td>沿用上次 V-online 工具 <code>scripts/training/g0/compare_online_motion.py</code>，抽 64 个真实窗（含补帧窗），sidecar 在线算的结果对新表行</td><td>评估时模型看到的 motion 与训练一致</td><td><code>ONLINE_POOL768=PASS windows=64 max_abs=&lt;x&gt;</code>（阈值沿用上次 V-online）</td></tr>
+<tr><td>G5</td><td>参数量与配置</td><td>新 YAML 与旧 YAML 的参数树逐路径、逐形状相同；TrainConfig 差异只有 exp_name、YAML 路径、<code>num_train_steps</code></td><td>两次 run 只差 motion 来源</td><td><code>VLA_PARAM_EQ=PASS params=&lt;n&gt; shape_mismatch=0</code>；<code>TRAIN_CONFIG_EQ=PASS diffs=3</code></td></tr>
+<tr><td>G6</td><td>8 卡冒烟</td><td>20 步训练 + 保存 + 真实加载，跑完即删</td><td>正式 run 能起、能存、能读</td><td><code>SMOKE20=PASS steps=20 save_load=PASS</code></td></tr>
+<tr><td>G7</td><td>训练完成</td><td>日志尾行 <code>EXIT_CODE=0</code>，checkpoint 5000…50000 共 10 份齐全，50000 真实加载</td><td>可交给评估</td><td><code>TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10</code></td></tr>
+<tr><td>E0</td><td>demo 前缀库</td><td>本机重生成后，与 <code>records/demo-prefix-manifest.json</code> 逐条比对 ok 集合与 D 值</td><td>BinFill 142 局的注入内容与上次相同</td><td><code>DEMO_PREFIX_EQ=PASS ok=142 failed=8 d_mismatch=0</code></td></tr>
+<tr><td>E1</td><td>评估完成</td><td>692 局全部有结果，<code>merge_shards.py</code> 合并</td><td>成功率可与 54.62% 直接比</td><td><code>EVAL692=PASS episodes=692 success=&lt;k&gt; errors=&lt;n&gt; rate=&lt;x&gt;</code></td></tr>
+</table>
+<p>按用户反馈「评估不要叠加检查」，评估阶段只保留 E0、E1 两道闸门，不加心跳或多层验证。E0 不过（重生成的前缀与旧清单不同）即停，交用户裁决。</p>
+
+<h2>6　步骤表</h2>
+<table>
+<tr><th>阶段</th><th>内容</th><th>判据</th></tr>
+<tr><td>0</td><td>开工令；开工审查 <code>PLAN_CONSISTENCY_REVIEW</code>；状态机写 <code>kind: go</code>，训练任务改为 running</td><td>审查 blocking=0</td></tr>
+<tr><td>A</td><td>运行代理在 tmux <code>w768-restore</code> 里用 <code>hf buckets</code> 只下 §2 表中「下」的目录，解 tar、删 tar</td><td>G1</td></tr>
+<tr><td>B</td><td>3 个写入型子代理并行（§8）→ 每个先过合并前审查，再 <code>--no-ff</code> 合并，再过合并后审查，然后 push</td><td>G2 在 S1 内；PRE/POST_MERGE_REVIEW=PASS</td></tr>
+<tr><td>C</td><td>主检出切到本分支，<code>uv sync --frozen</code>（本分支 <code>uv.lock</code> 与 v9 不同）；导出 768 表（CPU，tmux <code>w768-export</code>）；G0、G3、G4、G5</td><td>G0 G3 G4 G5</td></tr>
+<tr><td>D</td><td>8 卡 20 步冒烟 → <code>commitV11.8xBeta</code> → tmux <code>w768-train</code> 正式训练；只读锁住主检出 <code>src</code>/<code>scripts</code>/<code>packages</code>（沿用上次做法）</td><td>G6；起跑横幅、前 300 步吞吐</td></tr>
+<tr><td>E</td><td>训练 done 后自动接评估：子模块检出 <code>b4e97f2</code> → tmux <code>w768-demo</code> 重生成前缀 → tmux <code>w768-eval</code> 跑 692 局</td><td>G7 → E0 → E1</td></tr>
+<tr><td>收尾</td><td>结论 <code>commitV11.8x</code>；训练与评估档案；长尾 <code>w768-ckptup</code> 上传 10 份 ckpt 并读回校验；状态机 done</td><td><code>HF_VERIFY=PASS</code>（长尾，本机校验，原因：本机无集群）</td></tr>
+</table>
+
+<h2>7　子代理分工与合并（简述）</h2>
+<p>代码拆成三块，各自在独立 worktree 里由 opus 写：<b>S1</b> 负责池化模块、768 表导出脚本、motion store 的 provenance 新类型和单测；<b>S2</b> 负责在线 sidecar 的 <code>wan_fixedpool768</code> 分支、新 YAML 和训练 runner；<b>S3</b> 负责本机 692 局评估驱动和 demo 前缀重生成驱动。S2 依赖 S1 的模块接口（函数名、常量名在本计划里写死），所以三块可以同时开工，按 S1 → S2 → S3 的顺序合并。每次合并前，一个 sonnet 审查代理钉死 BASE/TIP 审一遍；合并后跑定向单测和闸门，通过再 push。下载和训练、评估的启动交给 opus 运行代理，它只负责启动、确认起跑、交回句柄，监听、接续和清理都由主会话负责。</p>
+
+<h2>8　需要你确认的事项</h2>
+<table>
+<tr><th>#</th><th>事项</th><th>默认（推荐）</th></tr>
+<tr><td>Q1</td><td>主检出从 v9 分支切到本分支，主 <code>.venv</code> 按本分支 <code>uv.lock</code> 执行 <code>uv sync --frozen</code>（会换掉 v9 的包版本；v9/v10 任务都已 done/closed，GPU 现在全空）</td><td>切</td></tr>
+<tr><td>Q2</td><td>步数落点：在启动脚本里覆盖 <code>--num_train_steps=50001</code>，不改 <code>config.py</code> 的 <code>mme_vla_suite_b128_80k</code> 默认（AGENTS 第 10 条要求确认落点）</td><td>启动脚本覆盖</td></tr>
+<tr><td>Q3</td><td>BinFill demo 前缀库在本机重生成；若 E0 不过（成功集合或 D 值与上次不同）就停下交你裁决</td><td>重生成，不过即停</td></tr>
+<tr><td>Q4</td><td>新分支没有 upstream：计划 commit 后执行 <code>git push -u origin v11-4task-modul-wantp768-50k</code></td><td>push -u</td></tr>
+<tr><td>Q5</td><td>checkpoint 上传：10 份（5000…50000）全部上传到上表 bucket，作为长尾，不阻塞评估</td><td>全部上传</td></tr>
+</table>
+
+<h1>第二部分（技术细节，供 agent 追踪）</h1>
+
+<h2>〇　前置声明与红线</h2>
+<ol>
+<li>R1　全部改动只在分支 <code>v11-4task-modul-wantp768-50k</code>；不改 v9/v10 分支，不合入 main。</li>
+<li>R2　不改帧路、modulation 注入、motion 窗口/索引/补帧逻辑、TrainConfig 默认值；motion 布局常量 <code>LAYOUT</code> 不改名。</li>
+<li>R3　P-LINEAGE：G0 FAIL 即停，不 WAIVE。</li>
+<li>R4　不删除任何现有产物；下载只写 <code>v1-store/datasets/4task-v2-1600ep-604f16da/</code> 下原来缺失的目录，起跑前 <code>ls -ld</code> 确认目标不存在或为空。</li>
+<li>R5　tmux 只用 <code>w768-</code> 前缀，按名单一个个清理，禁止 kill-server。</li>
+<li>R6　训练期间主检出 HEAD 冻结在 Beta；需要写档案时在 linked worktree 里写。</li>
+<li>R7　运行代理不改代码；出问题收集证据交主会话，另派修复代理。</li>
+<li>R8　评估不叠加心跳或多层验证（用户反馈）。</li>
+</ol>
+
+<h2>一　逐文件改动清单</h2>
+<table>
+<tr><th>文件</th><th>锚点</th><th>改什么</th><th>关闭态</th><th>开启态</th></tr>
+<tr><td><code>src/mme_vla_suite/shared/wan_pool768.py</code>（新）</td><td><code>pool_raw_wan_latent_768</code>、<code>POOL768_*</code> 常量、<code>pool_source_sha256</code></td><td>§3.1 公式；只依赖 NumPy；输入检查（dtype、形状 (9,16,32,32)、有限）</td><td>不被导入时零影响</td><td>输出 (1,768) float32</td></tr>
+<tr><td><code>scripts/dataset/export_wan_pool768.py</code>（新）</td><td><code>main</code>：<code>--latents --motion-ref --out --manifest</code></td><td>按旧 motion 表段序逐窗池化，写 <code>motion_token.f32.bin</code> + <code>meta/{store_meta,motion_index}.json</code> + row_digests；输出根事先存在即拒绝</td><td>—</td><td>新表 219,082,752 字节</td></tr>
+<tr><td><code>src/mme_vla_suite/datastore/motion_store.py</code></td><td><code>MotionMeta.load</code> 的 provenance 校验</td><td>新增 <code>encoder_kind == "wan_fixedpool768"</code> 分支：<code>encoder_ckpt</code> 必须为 null，参数量 0，核池化源码 sha256；其余（布局、索引、窗口）走原路径</td><td>encoder 表行为逐位不变</td><td>接受池化表</td></tr>
+<tr><td><code>scripts/dataset/wan/motion_sidecar.py</code></td><td><code>main</code> 里 <code>encode</code> 的构造</td><td>新增 <code>--encoder-kind wan_fixedpool768</code>：不加载 encoder，<code>encode = pool(W.encode_chunk(vae, window))</code>；握手返回 kind 与池化源码 sha256</td><td>默认 encoder 分支逐字不变</td><td>输出 768</td></tr>
+<tr><td><code>src/mme_vla_suite/policies/policy_config.py</code> / 在线 motion 客户端</td><td>sidecar 启动参数拼装处</td><td>按 YAML <code>motion.encoder_kind</code> 传 <code>--encoder-kind</code>；池化分支不传 ckpt sha</td><td>未写 encoder_kind 时与原来相同</td><td>—</td></tr>
+<tr><td><code>src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-8frame-8x8-wantp768.yaml</code>（新）</td><td>motion 节</td><td>§3.2</td><td>—</td><td>—</td></tr>
+<tr><td><code>scripts/training/run_4task_wantp768_50k.sh</code>（新）</td><td>runner</td><td>照抄上次 <code>mv2-prod-runner.sh</code> 的覆盖项，另加 <code>--num_train_steps=50001</code>；内置 G0 判定行，FAIL 即退出</td><td>—</td><td>—</td></tr>
+<tr><td><code>scripts/evaluation/local_692_pool.sh</code>、<code>local_demo_pool.sh</code>（新）</td><td>本机驱动</td><td>8 卡分片调 <code>run_shard.sh</code> / <code>run_demo_shard.sh</code>，每片独立输出目录与日志、<code>SHARD_EXIT_CODE</code></td><td>—</td><td>—</td></tr>
+<tr><td><code>tests/…/test_wan_pool768.py</code>（新）</td><td>G2</td><td>参考对拍、分箱、确定性、错误输入</td><td>—</td><td>—</td></tr>
+</table>
+
+<h2>二　子代理分配表</h2>
+<table>
+<tr><th>编号</th><th>目标</th><th>可写文件集合</th><th>禁触</th><th>接口与依赖</th><th>合并顺序</th><th>验收（worktree 内，CPU ≤5 min）</th><th>资源</th></tr>
+<tr><td>S1</td><td>池化 + 导出 + store provenance + 单测</td><td><code>shared/wan_pool768.py</code>、<code>export_wan_pool768.py</code>、<code>motion_store.py</code>、<code>tests/…/test_wan_pool768.py</code></td><td>其余全部；v1-store</td><td>导出 §3.1 常量名与函数签名</td><td>1</td><td><code>uv run --no-sync python -m pytest tests/…/test_wan_pool768.py -q</code> → <code>POOL768_CONTRACT=PASS</code>；在小夹具上跑导出</td><td>CPU</td></tr>
+<tr><td>S2</td><td>sidecar + YAML + runner + policy_config</td><td><code>motion_sidecar.py</code>、<code>policy_config.py</code>（只加 kind 传参）、新 YAML、<code>run_4task_wantp768_50k.sh</code></td><td>S1、S3 的文件</td><td>import <code>wan_pool768</code>（按约定名，S1 合并后复验）</td><td>2</td><td>sidecar stub 握手单测；YAML 能被 <code>OmegaConf</code> 解析，与旧 YAML 的差异只在 motion 来源字段</td><td>CPU</td></tr>
+<tr><td>S3</td><td>本机评估与前缀驱动</td><td><code>local_692_pool.sh</code>、<code>local_demo_pool.sh</code></td><td>其余全部</td><td>调用既有 <code>run_shard.sh</code>/<code>run_demo_shard.sh</code>，不改它们</td><td>3</td><td><code>bash -n</code>；dry-run 打印 8 片计划，片数与 692 局一致</td><td>无</td></tr>
+<tr><td>主会话</td><td>恢复下载、导出、闸门、Beta、启动</td><td>档案 <code>docs/training-doc/…</code>、<code>docs/handoff/current.json</code></td><td>—</td><td>—</td><td>—</td><td>G0–G7、E0、E1</td><td>GPU 0–7</td></tr>
+</table>
+<p>环境取法：worktree 内 <code>UV_PROJECT_ENVIRONMENT=&lt;主 .venv&gt; PYTHONPATH=&lt;worktree&gt;/src uv run --no-sync …</code>，先打印 <code>mme_vla_suite.__file__</code> 确认指向 worktree。三个子代理都是 <code>model: opus</code>、<code>isolation: worktree</code>；审查用 <code>sonnet</code>，每个分支一轮只派一个审查者。</p>
+
+<h2>三　runbook</h2>
+<pre>
+# A 恢复（运行代理，tmux w768-restore）
+HF=/scratch/hongze/MotionJEPA/.venv/bin/hf; export HF_HOME=$PWD/v1-store/cache/hf
+LIB=v1-store/datasets/4task-v2-1600ep-604f16da; B=HongzeFu/robomme-4task-v2-1600ep-trainset-20260920-v1
+#   只下 framesamp-8x8/ wan-latents_tars/ motion/ meta/ assets/ checksums/ runner/ SHA256SUMS.pre.txt
+#   meta/ 下到 $LIB/meta.bucket/，与本地 meta/ 逐字节比对后再决定是否替换
+#   wan-latents tar → $LIB/wan-latents/，校验 sha256 后删 tar；末行 RESTORE_SHA=… / EXIT_CODE=
+
+# C 导出（tmux w768-export）
+uv run --no-sync python scripts/dataset/export_wan_pool768.py \
+  --latents $LIB/wan-latents --motion-ref $LIB/motion --manifest $LIB/meta/episode_manifest.json \
+  --out $LIB/motion-wan-pool768
+
+# D 训练（tmux w768-train，日志 v1-store/logs/w768-train.log）
+tmux new-session -d -s w768-train "bash scripts/training/run_4task_wantp768_50k.sh &lt;TRAIN_HEAD&gt;"
+
+# E 评估（训练 done 后）
+git -C third_party/robomme_benchmark checkout b4e97f22fe007078e297205898c07c1acbc69165
+tmux new-session -d -s w768-demo "bash scripts/evaluation/local_demo_pool.sh"
+tmux new-session -d -s w768-eval "bash scripts/evaluation/local_692_pool.sh &lt;CKPT=…/50000&gt; 7"
+</pre>
+<p>Monitor：每份日志挂一个，过滤 <code>EXIT_CODE=|Traceback|Error|nan|NaN|CUDA out of memory|Killed|SHARD_EXIT_CODE|PASS|FAIL</code>，管道每级行缓冲。</p>
+
+<h2>四　交接顺序与状态机登记</h2>
+<table>
+<tr><th>任务 id</th><th>交接前必须完成</th><th>长尾</th><th>依赖</th><th>done 后解锁</th></tr>
+<tr><td><code>4task-wantp768-train</code></td><td>G0–G7 判定行全 PASS（出处：各阶段日志），<code>w768-train</code> 已退出</td><td><code>w768-ckptup</code>：上传 10 份 ckpt + 读回，完成行 <code>HF_VERIFY=PASS</code></td><td>无</td><td>评估任务</td></tr>
+<tr><td><code>4task-wantp768-eval</code></td><td>E0、E1 PASS，结果档案 commit</td><td>无</td><td><code>4task-wantp768-train</code> done（对上游的假设：<code>TRAIN_FINAL_RECORD=PASS step=50000</code>）</td><td>—</td></tr>
+</table>
+<p>开工令同时批准评估在训练 done 后自动开工（AGENTS 第 2 条 ③ 的状态机例外）。</p>
+
+<h2>五　风险登记</h2>
+<ol>
+<li>HF 下载速度未知，阶段 A 时长按实测；中断时用 <code>hf</code> 的续传，不另写重试层。</li>
+<li>本分支 <code>uv.lock</code> 比 v9 旧，主 <code>.venv</code> 换包后再回 v9 需要重新 sync（Q1）。</li>
+<li>demo 前缀重生成用到 RRT（上次 6 条），本机重跑可能不完全相同 → E0 不过即停（Q3）。</li>
+<li>本机评估与 GL A40 的渲染、数值不逐位相同；对比旧数字时只能称「同口径」，不能称「同环境」。</li>
+<li>6×8 自适应池化 H 方向有 4 行重叠，这是已知设计，不当作缺陷修。</li>
+</ol>
+
+<h2>六　盲区诚实清单</h2>
+<ul>
+<li>bucket 中 <code>wan-latents</code> 的元数据格式（是否完整记录 raw_dir 与 manifest identity）尚未打开核实，G0 的具体取值方式由 S1 落地时确认；如果记录不全，就改用 bucket <code>checksums/sha256-source-files.txt</code> 与建库档案 <code>4task-v2-1600ep-motion-demopad17/result.md</code> 的 pin 对照，仍属同一闸门。</li>
+<li><code>motion_sidecar.py</code> 与在线客户端的具体传参位置只做了符号级定位，逐行改法由 S2 确定。</li>
+<li>本机 692 局的吞吐、每卡 worker 数尚未实测。</li>
+</ul>
+
+<h2>七　留档与 commit 纪律</h2>
+<ul>
+<li>训练档案 <code>docs/training-doc/v2-1600ep-m8x8-modul-wantp768-b128-50k/</code>，评估档案 <code>docs/training-doc/local692-wantp768-50k/</code>，各写 launch.md / result.md / records。</li>
+<li>建表档案 <code>docs/dataset-build-doc/4task-v2-1600ep-wantp768/</code>。</li>
+<li>只 <code>git add</code> 明确路径；每次 commit 后 push；子代理提交用 <code>sub/S1: …</code> 前缀，不 push。</li>
+</ul>
+
+</main></body>
+</html>
