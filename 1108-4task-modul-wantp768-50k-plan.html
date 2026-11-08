@@ -257,65 +257,74 @@ F[0, 48c+8i+j]  = P[c,i,j]                                            C→H→W 
 <tr><td>步时 / 时长</td><td>0.99 s/步，80k 共 21 h 38 m</td><td>预计约 0.99 s/步 × 50001 ≈ 13.8 h，加保存约 14 h</td></tr>
 </table>
 
-<h2>4　本机 692 局评估（与上次 54.62% 同口径）</h2>
+<h2>4　本机 692 局评估（54.62% 只作跨环境历史参考）</h2>
 <p>上次评估是在 GreatLakes 上跑的，档案在远端分支 <code>v2-eval-0918-motion</code>（主页 <code>docs/training-doc/binfilldemo-nomotion50k-gl/result.md</code>）。口径：692 局 = 三个非 BinFill 任务 550 局（不注入）+ BinFill 142 局（注入 demo 前缀）；seed 7；<code>max_steps=2000</code>；<code>EPISODE_WALL_S=2400</code>；<code>MMEVLA_MOTION_OVERFLOW=resample</code>；候选来自 benchmark <code>b4e97f2</code> 里的 <code>artifacts/injection/20260912-contract-v3-10/candidates/candidates.jsonl</code>（identity <code>3b4de03a0b46…</code>，文件 sha256 <code>32bdbdb4…</code>）。9 局 reset 卡死，计入分母按失败算，五个旧模型都是同一组 9 局。</p>
+<p><b>对照口径（U1）</b>：用户裁决「只拿 54.62% 作参考」→ 不重评旧模型。54.62% 是上次在 GreatLakes A40 上、用历史 demo 前缀库跑出的数；本次在本机 A100 上、用本机重生成的前缀库跑。两者是<b>跨环境历史参考</b>，不是严格同口径对比。本次评估局数 = 550 + 本机前缀 finalize 成功条数（上次是 550 + 142 = 692）。</p>
 <table>
 <tr><th>评估输入</th><th>本机</th><th>处理</th></tr>
 <tr><td>评估代码（<code>run_shard.sh</code>、<code>eval.py</code>、<code>demo_prefix.py</code>）</td><td>本分支自带</td><td><code>run_shard.sh</code> 已有本机模式（无 <code>SLURM_JOB_ID</code> 时必须显式 <code>CUDA_VISIBLE_DEVICES</code>，并输出 <code>LOCAL_GPU_IDLE=PASS</code>）</td></tr>
-<tr><td>benchmark <code>b4e97f2</code> 与候选文件</td><td>commit 对象在本地 .git，工作区是 <code>856bc3a</code></td><td>评估前在主检出把 <code>third_party/robomme_benchmark</code> 检出到 gitlink <code>b4e97f2</code>（本分支记录的就是它）</td></tr>
-<tr><td>BinFill demo 前缀库 <code>v1-store/demo-prefix/binfill-3b4de03a0b46</code>（11.2 GB）</td><td>没有，HF 也没有</td><td>本机用 <code>run_demo_shard.sh</code> 重生成（同 seed、同 spec 现跑专家轨迹）。用户裁决：「它这个前缀库只要你是用同样的代码去生成的就可以，它可以允许有一些呃不一样的、不一致的地方，因为不同硬件」→ E0 只要求生成代码与上次相同（本分支 <code>pregen_binfill_demo.py</code>、<code>run_demo_shard.sh</code>、<code>examples/robomme/demo_prefix.py</code> 与 benchmark <code>b4e97f2</code>），与旧清单（成功 142、失败 8、各条 D 值）的差异只记录、不停</td></tr>
-<tr><td>在线 motion</td><td>旧 sidecar 只会 encoder</td><td><code>motion_sidecar.py</code> 新增 <code>wan_fixedpool768</code> 分支：Wan VAE 之后调 <code>pool_raw_wan_latent_768</code>，不加载 encoder</td></tr>
+<tr><td>评估入口 <code>scripts/evaluation/check_checkpoint.py</code>（F4，owner S3）</td><td>白名单 <code>RUNS</code> 里没有本次 run；motion 分支写死 <code>motion_source_run</code>（上次 encoder 的 ckpt 路径）</td><td><code>RUNS</code> 加新 run：<code>steps</code> 含 50000、<code>motion=True</code>、<code>budget=512</code>、motion kind <code>wan_fixedpool768</code>、readout <code>wan_raw_timepool8_adaptive6x8_v1</code>、history YAML sha256、norm_stats sha256 <code>856c75ea…</code>。motion 校验按 kind 分支：池化分支不要求 <code>motion_source_run</code>，改核 kind 与 readout；encoder 分支原样不动。<code>check_checkpoint.py</code> 已断言 <code>policy_config</code> 从 <code>EVAL_REPO</code> 加载，沿用。新增 G6b 在正式训练前走一次这条入口（§5）</td></tr>
+<tr><td>分片（F5）</td><td>历史 <code>PLAN_OK shards=10 total=692 per_shard=69 disjoint=True groups=14</code></td><td>保留历史 10 个逻辑分片，<code>make_shard_plan.py</code> 不改。本机 8 张卡同时跑 10 片，每卡最多 2 片（历史 server <code>mem_fraction=0.4</code>，两片 server 可共卡），端口按 shard 下标（<code>run_shard.sh</code> 的 <code>PORT=18011+slot×7</code>，被占自动后移）。合并沿用 <code>merge_shards.py</code></td></tr>
+<tr><td>评估 venv（F9，owner S3）</td><td><code>scripts/evaluation/env.sh</code> 用独立 venv <code>v1-store/envs/policy-eval-server</code>、<code>v1-store/envs/policy-eval-client</code>，本机都不存在；sidecar 用的 <code>v1-store/venvs/wan</code> 已在</td><td>阶段 C 新建两套评估 venv。<code>scripts/evaluation/setup.sh</code> 把 <code>PYTHON_BIN</code> 写死为 <code>/nfs/turbo/…/python3.11</code>：改成可由环境变量覆盖（<code>PYTHON_BIN="${PYTHON_BIN:-&lt;原值&gt;}"</code>，默认值不动），本机传 <code>uv python find 3.11</code> 的路径。wan venv 复用，只核对其 <code>uv.lock</code> 与包版本。maniskill 等评估资产按 <code>env.sh</code> 的 <code>MS_ASSET_DIR=$EVAL_REPO/v1-store/cache/policy-eval/maniskill</code> 准备（体积未知，见盲区）</td></tr>
+<tr><td>benchmark <code>b4e97f2</code> 与候选文件</td><td>commit 对象在本地 .git，工作区是 <code>856bc3a</code></td><td>阶段 C 生成前缀前在主检出把 <code>third_party/robomme_benchmark</code> 检出到 gitlink <code>b4e97f2</code>（本分支记录的就是它）</td></tr>
+<tr><td>BinFill demo 前缀库 <code>v1-store/demo-prefix/binfill-3b4de03a0b46</code>（11.2 GB）</td><td>没有，HF 也没有</td><td>本机重生成（同 seed、同 spec 现跑专家轨迹）。用户裁决：「它这个前缀库只要你是用同样的代码去生成的就可以，它可以允许有一些呃不一样的、不一致的地方，因为不同硬件」。完整流程（F6，U4）：① <code>run_demo_shard.sh</code> 的 <code>gen</code> 分 16–32 片分到 8 卡（每卡 2–4 片，先 1 卡 2 片小样测吞吐，P5），全部分片 <code>SHARD_EXIT_CODE=0</code>，不得无条件忽略退出码；② <code>pregen_binfill_demo.py finalize --max-fail-rate 0.10</code>（产出 <code>index.json</code>、<code>manifest.json</code>；150 条最多 15 条失败继续，失败清单写档案，超过即停；该参数默认 0.05 保持旧行为，<code>gen</code> 路径代码不动；finalize 按排序键汇总，与片数无关）；③ E0 PASS 后才允许评估。这三步提前到阶段 C、正式训练前做（F10，GPU 空闲）</td></tr>
+<tr><td>9 局历史 error 与新 error（F8，U2）</td><td>历史 9 局：VideoRepick/easy 189；VideoRepick/medium 155/167/172；VideoRepick/xhard 168/197/201；VideoUnmaskSwap/xhard 139/164（清单 <code>docs/training-doc/finalckpt-nomotion59999-gl/records/preseeded-errors.json</code>）</td><td>用户裁决「9局预标+新error重跑一次」：起跑前在这 9 局所在分片的 <code>progress.json</code> 预标 <code>"error"</code>，并设 <code>ALLOW_RESUME=1</code>；其他 error 只重跑该局一次，记录原因与次数，仍 error 计失败并列出；正常跑完但未成功的不重试</td></tr>
+<tr><td>必要参数（F8，与历史一致）</td><td>—</td><td><code>MMEVLA_MOTION_OVERFLOW=resample</code>、<code>EXPECT_MOTION_STATS=1</code>、<code>EXPECT_DEMO_INJECT=1</code>、<code>CHUNK_EPISODES=20</code>、<code>MMEVLA_MOTION_PROV_RELAX=gpu_name,compute_cap,sm_count</code>、seed 7、<code>max_steps=2000</code>、<code>EPISODE_WALL_S=2400</code></td></tr>
+<tr><td>在线 motion</td><td>旧 sidecar 只会 encoder</td><td><code>motion_sidecar.py</code> 新增 <code>wan_fixedpool768</code> 分支：Wan VAE 之后调 <code>pool_raw_wan_latent_768</code>，不加载 encoder（调用链与字段契约见第二部分）</td></tr>
 </table>
-<p>本机驱动 <code>scripts/evaluation/local_692_pool.sh</code> 只是把上次的 GL 外壳（<code>gl_hold_pool.sh → gl_eval_shard.sbatch → run_shard.sh</code>）换成本机 8 卡分片调 <code>run_shard.sh</code>，分片与合并沿用 <code>make_shard_plan.py</code>、<code>merge_shards.py</code>。参考耗时：GL 上 142 局×3 个模型共 30 个单元，墙钟 1 h 45 m；本机 692 局的实际时长以实测为准。</p>
-<p><b>对比表（结果出来后填）</b>：@50000 档 512 30.49%、2048 45.09%、512+encoder motion <b>54.62%</b>、512+Wan 池化 768 <b>待测</b>。</p>
+<p>本机驱动 <code>scripts/evaluation/local_692_pool.sh</code> 只是把上次的 GL 外壳（<code>gl_hold_pool.sh → gl_eval_shard.sbatch → run_shard.sh</code>）换成本机 8 卡同时跑 10 个分片调 <code>run_shard.sh</code>。它开头检查 E0 判定行存在且为 PASS 才起跑，然后等待自身全部分片结束并收集每片 <code>SHARD_EXIT_CODE</code>（F10）。训练到评估的衔接由主会话 Monitor 看到 <code>TRAIN_FINAL_RECORD=PASS</code> 后启动（状态机训练任务 done）。参考耗时：GL 上 142 局×3 个模型共 30 个单元，墙钟 1 h 45 m；本机实际时长以实测为准。</p>
+<p><b>对比表（结果出来后填）</b>：@50000 档 512 30.49%、2048 45.09%、512+encoder motion <b>54.62%</b>（以上均为 GreatLakes A40 + 历史前缀的跨环境历史参考）、512+Wan 池化 768 <b>待测</b>（本机 A100 + 本机重生成前缀，局数 550 + 前缀成功条数）。</p>
 
 <h2>5　验收判定行</h2>
 <table>
 <tr><th>闸门</th><th>查什么</th><th>怎么查</th><th>过了说明什么</th><th>判定行</th></tr>
-<tr><td>G0</td><td>数据同源</td><td>latent 元数据的 raw_dir / manifest identity 对 <code>meta/input_manifest.json</code> 的 4 个 H5 sha256</td><td>motion 与 VLA 用同一批 1600 局（P-LINEAGE）</td><td><code>DATA_LINEAGE=PASS encoder_ckpt=wanvae-&lt;sha8&gt; encoder_source_pin=&lt;sha&gt; vla_input_pin=&lt;sha&gt; files=4 mismatches=0</code></td></tr>
-<tr><td>G1</td><td>恢复字节正确</td><td>下载文件逐个对 bucket <code>checksums/sha256-*.txt</code>；framesamp-8x8 store_meta sha256 = <code>f7677e69…</code>，motion meta = <code>d3a51801…</code>，norm_stats = <code>856c75ea…</code></td><td>训练输入与上次逐字节相同</td><td><code>RESTORE_SHA=PASS files=&lt;n&gt; bytes=&lt;n&gt; mismatches=0</code></td></tr>
+<tr><td>G0</td><td>数据同源</td><td>按 F11 可追踪链逐环核对，每环用实际存在的证据，缺环即 FAIL：输入 4 个 H5 sha256（本地 <code>meta/input_manifest.json</code>，与 bucket <code>meta/input_manifest.json</code> 逐字节比）→ canonical manifest sha256 <code>4cd5a170…bb918</code>（<code>meta/episode_manifest.json</code>）→ wan-latents 元数据（恢复后 latent 根的 metadata/summary 记录的 manifest identity 与 raw_dir）与 latent 文件 sha256（bucket <code>checksums/sha256-shards.txt</code>）→ 新表 provenance（记 latent 根文件摘要与 manifest sha）。建库档案证据用 <code>git show origin/v2-motionmem:docs/dataset-build-doc/4task-v2-1600ep-motion-demopad17/result.md</code></td><td>motion 与 VLA 用同一批 1600 局（P-LINEAGE）</td><td><code>DATA_LINEAGE=PASS encoder_ckpt=wanvae-&lt;sha8&gt; encoder_source_pin=&lt;sha&gt; vla_input_pin=&lt;sha&gt; files=4 mismatches=0</code></td></tr>
+<tr><td>G1</td><td>恢复字节正确（含 <code>source/</code>）</td><td>每个目录下完即哈希：按文件 <code>xargs -P48 -n16 sha256sum</code> → <code>sort -k2</code> → 与 bucket <code>checksums/sha256-*.txt</code> diff（或 <code>verify_download.py --workers 48</code>），596 GB 串行约 23 min、并行约 3 min（P1）；覆盖 framesamp-8x8、source、wan-latents、motion 与小文件；framesamp-8x8 store_meta sha256 = <code>f7677e69…</code>，motion meta = <code>d3a51801…</code>，norm_stats = <code>856c75ea…</code>；store_meta 的 <code>source_dataset_root</code> 指向 <code>v1-store/datasets/4task-v2-1600ep-604f16da/source</code></td><td>训练输入与上次逐字节相同</td><td><code>RESTORE_SHA=PASS files=&lt;n&gt; bytes=&lt;n&gt; mismatches=0</code></td></tr>
 <tr><td>G2</td><td>池化公式</td><td>单测：随机 latent 对 float64 <code>adaptive_avg_pool2d</code> 参考，max_abs ≤ 1e-6；分箱边界逐个断言；同输入重跑逐位相同；参数量 0</td><td>实现等于 §3.1 的定义</td><td><code>POOL768_CONTRACT=PASS cases=&lt;n&gt; max_abs=&lt;x&gt; bins=6x8</code></td></tr>
-<tr><td>G3</td><td>新表对齐</td><td>行数 71316 = demo 35913 + exec 35403，补帧窗 1600；段键、row_base、窗起点与上次 <code>motion_index.json</code> 逐项相同；全表有限；独立进程用 torch 参考重算全表，max_abs ≤ 1e-6</td><td>每个重叠窗都对到上次同一个窗，只是特征换了</td><td><code>POOL768_TABLE=PASS rows=71316 demo=35913 exec=35403 padded=1600 index_mismatch=0 max_abs=&lt;x&gt;</code></td></tr>
-<tr><td>G4</td><td>在线与离线一致</td><td>沿用上次 V-online 工具 <code>scripts/training/g0/compare_online_motion.py</code>，抽 64 个真实窗（含补帧窗），sidecar 在线算的结果对新表行</td><td>评估时模型看到的 motion 与训练一致</td><td><code>ONLINE_POOL768=PASS windows=64 max_abs=&lt;x&gt;</code>（阈值沿用上次 V-online）</td></tr>
+<tr><td>G3</td><td>新表对齐</td><td>行数 71316 = demo 35913 + exec 35403，补帧窗 1600；段键、row_base、窗起点与上次 <code>motion_index.json</code> 逐项相同；全表有限；独立进程用 torch 参考并行重算全表（与导出同样按旧 <code>motion_index</code> 段切连续区间，<code>multiprocessing.Pool(48)</code> 有序 <code>imap</code>，<code>OMP_NUM_THREADS=1</code>，P3），max_abs ≤ 1e-6</td><td>每个重叠窗都对到上次同一个窗，只是特征换了</td><td><code>POOL768_TABLE=PASS rows=71316 demo=35913 exec=35403 padded=1600 index_mismatch=0 max_abs=&lt;x&gt;</code></td></tr>
+<tr><td>G4</td><td>在线与离线一致（F3）</td><td>新工具 <code>scripts/training/g0/compare_online_pool768.py</code>（S2 写，参考 <code>compare_online_motion.py</code>，目标表参数化为 <code>motion-wan-pool768</code>，不构造 encoder）。真实 RGB 窗来源：先核实 <code>source/</code> pkl 是否含原始 256×256 帧；不含则从 HF bucket <code>HongzeFu/robomme-4task-h5-20260912-v2</code> 只下抽中窗所在 episode 的 H5，并与 meta 里的 h5 sha 对照。64 窗沿用建库 oracle 的确定性抽样（<code>SHA256("seed:key:m")</code> 前 8 字节大端），其中含 8 个补帧窗；sidecar 在线结果与新表行逐字节相等（<code>tobytes()</code> 相等，与上次 <code>ONLINE_ENC_BITEXACT</code> 同判据）</td><td>评估时模型看到的 motion 与训练一致</td><td><code>ONLINE_POOL768=PASS windows=64 padded=8 bitexact=64</code></td></tr>
 <tr><td>G5</td><td>参数量与配置</td><td>新 YAML 与旧 YAML 的参数树逐路径、逐形状相同；TrainConfig 差异只有 exp_name、YAML 路径、<code>num_train_steps</code></td><td>两次 run 只差 motion 来源</td><td><code>VLA_PARAM_EQ=PASS params=&lt;n&gt; shape_mismatch=0</code>；<code>TRAIN_CONFIG_EQ=PASS diffs=3</code></td></tr>
-<tr><td>G6</td><td>8 卡冒烟</td><td>20 步训练 + 保存 + 真实加载，跑完即删</td><td>正式 run 能起、能存、能读</td><td><code>SMOKE20=PASS steps=20 save_load=PASS</code></td></tr>
+<tr><td>G6</td><td>8 卡冒烟</td><td>20 步训练 + 保存 + 真实加载；checkpoint 保留到 G6b 跑完再删</td><td>正式 run 能起、能存、能读</td><td><code>SMOKE20=PASS steps=20 save_load=PASS</code></td></tr>
+<tr><td>G6b</td><td>评估加载冒烟（F4）</td><td>用 G6 的冒烟 checkpoint 走一次真实评估入口：<code>run_shard.sh</code> → <code>check_checkpoint.py</code> → <code>serve_policy.py</code> 起 server → sidecar 握手 → 跑 1 局；跑完删冒烟 checkpoint</td><td>评估侧问题在正式训练前暴露</td><td><code>EVAL_LOAD_SMOKE=PASS episodes=1 handshake=PASS</code></td></tr>
 <tr><td>G7</td><td>训练完成</td><td>日志尾行 <code>EXIT_CODE=0</code>，checkpoint 5000…50000 共 10 份齐全，50000 真实加载</td><td>可交给评估</td><td><code>TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10</code></td></tr>
-<tr><td>E0</td><td>demo 前缀库用同一份代码生成</td><td>核对生成用的三个脚本在本分支的 blob 与上次生成时（<code>ba52d79</code>）相同，benchmark 检出为 <code>b4e97f2</code>；再与 <code>records/demo-prefix-manifest.json</code> 比对成功集合与 D 值，差异只写进记录</td><td>BinFill 的注入方式与上次同代码；硬件差异造成的个别不同按用户裁决接受</td><td><code>DEMO_PREFIX_SRC=PASS code_same=1 benchmark=b4e97f2 ok=&lt;n&gt; failed=&lt;n&gt; diff_vs_old=&lt;k&gt;</code>（<code>diff_vs_old</code> 只记录，不是停止条件）</td></tr>
-<tr><td>E1</td><td>评估完成</td><td>692 局全部有结果，<code>merge_shards.py</code> 合并</td><td>成功率可与 54.62% 直接比</td><td><code>EVAL692=PASS episodes=692 success=&lt;k&gt; errors=&lt;n&gt; rate=&lt;x&gt;</code></td></tr>
+<tr><td>E0</td><td>demo 前缀库用同一份代码生成（F6、F7）</td><td>同代码核对三项：① <code>run_demo_shard.sh</code>、<code>examples/robomme/demo_prefix.py</code> 的 blob 与 <code>ba52d79</code> 相同；② <code>pregen_binfill_demo.py</code> 相对 <code>ba52d79</code> 的 diff 只落在 <code>cmd_finalize</code> 与 argparse 的 <code>--max-fail-rate</code>；③ benchmark 检出为 <code>b4e97f2</code>。另要求全部 gen 分片 <code>SHARD_EXIT_CODE=0</code> 且 finalize 成功（失败 ≤15/150）。成功集合与逐条 D 只记录：与 <code>docs/training-doc/binfilldemo-nomotion50k-gl/records/demo-prefix-index.json</code>（逐条 D；<code>demo-prefix-manifest.json</code> 只有汇总）比对，差异写进档案</td><td>BinFill 候选集合与长度的来源与上次同代码；不宣称注入内容与上次相同，硬件差异造成的不同按用户裁决接受</td><td><code>DEMO_PREFIX_SRC=PASS code_same=1 benchmark=b4e97f2 shards_ok=&lt;n&gt;/&lt;n&gt; ok=&lt;n&gt; failed=&lt;n&gt; diff_vs_old=&lt;k&gt;</code>（<code>diff_vs_old</code> 只记录，不是停止条件）</td></tr>
+<tr><td>E1</td><td>评估完成（F8）</td><td>候选集合固定为 550 + 本机前缀成功条数；9 局预标、新 error 重跑一次（U2）；必要参数与历史一致（§4）；10 片全部 <code>SHARD_EXIT_CODE=0</code>，<code>merge_shards.py</code> 合并</td><td>得到本次成功率，与 54.62% 作跨环境历史参考对比</td><td><code>EVAL692=PASS episodes=&lt;n&gt; success=&lt;k&gt; rate=&lt;x&gt; preseeded_errors=9 new_errors=&lt;n&gt; retried=&lt;n&gt; expect_motion_stats=1</code></td></tr>
 </table>
-<p>按用户反馈「评估不要叠加检查」，评估阶段只保留 E0、E1 两道闸门，不加心跳或多层验证。E0 只在「生成代码与上次不同」时不过；重生成结果与旧清单的差异只记录、照常评估。BinFill 实际评估局数等于本机重生成成功的条数，总局数为 550 + 该条数（上次是 142，合计 692）；结果按实际局数报告，并列出与上次不同的候选。</p>
+<p>按用户反馈「评估不要叠加检查」，评估阶段只保留 E0、E1 两道闸门（G6b 在训练前，只跑 1 局），不加心跳或多层验证。E0 只在「生成代码与上次不同」或「finalize 失败超过 10%（&gt;15/150）」时不通过；重生成结果与旧清单（<code>demo-prefix-index.json</code>）的成功集合与逐条 D 差异只记录、照常评估。BinFill 实际评估局数等于本机 finalize 成功的条数，总局数为 550 + 该条数（上次是 142，合计 692）；结果按实际局数报告，并列出与上次不同的候选。54.62% 只作跨环境历史参考（U1）。</p>
 
 <h3>停止项总表</h3>
 <p>开发阶段子代理写代码时单测未过属于正常修复，由子代理改到通过，不在此表内。下表是会停下交用户裁决的全部情形：</p>
 <table>
 <tr><th>时点</th><th>停止条件</th><th>为什么停</th></tr>
 <tr><td>开工前</td><td><code>PLAN_CONSISTENCY_REVIEW</code> blocking &gt; 0</td><td>AGENTS 第 2 条：涉及失败处理、接口、范围、验收的矛盾由用户裁决</td></tr>
-<tr><td>恢复数据</td><td>G1 FAIL：下载文件 sha256 与 bucket 校验和不符</td><td>训练输入不再是上次那份</td></tr>
-<tr><td>建表前</td><td>G0 FAIL：latent 来源与 VLA 库不是同一批 1600 局</td><td>P-LINEAGE 硬约束，不许 WAIVE</td></tr>
+<tr><td>恢复数据</td><td>G1 FAIL：下载文件（含 <code>source/</code>）sha256 与 bucket 校验和不符</td><td>训练输入不再是上次那份</td></tr>
+<tr><td>建表前</td><td>G0 FAIL：F11 链任一环缺失或不符</td><td>P-LINEAGE 硬约束，不许 WAIVE</td></tr>
 <tr><td>建表后</td><td>G3 FAIL：池化表行数、窗口序与上次 motion 表不对齐，或独立重算不一致</td><td>重叠窗没对齐，实验不成立</td></tr>
-<tr><td>建表后</td><td>G4 FAIL：在线 sidecar 与离线表不一致</td><td>评估时 motion 与训练时不同</td></tr>
+<tr><td>建表后</td><td>G4 FAIL：在线 sidecar 与离线表不逐字节相等</td><td>评估时 motion 与训练时不同</td></tr>
 <tr><td>训练前</td><td>G5 FAIL：参数量不同，或训练配置差异超出 exp_name、YAML 路径、步数三处</td><td>不再是「只差 motion 来源」</td></tr>
 <tr><td>训练前</td><td>G6 FAIL：8 卡 20 步冒烟失败</td><td>正式 run 不能起、存或读</td></tr>
-<tr><td>训练中</td><td>报错退出、NaN、显存溢出、进程被杀（<b>处置方式待用户定</b>：停下等裁决，或从最近 checkpoint 自动续训一次；未定前按停下）</td><td>需要决定修复重跑还是放弃</td></tr>
-<tr><td>评估前</td><td>E0 FAIL：生成前缀的代码与上次不同（结果差异不算）</td><td>不再是同一份生成代码</td></tr>
+<tr><td>训练前</td><td>G6b FAIL：评估加载冒烟（入口校验、server、sidecar 握手、1 局）失败</td><td>训完也评不了，应在训练前修</td></tr>
+<tr><td>训练前</td><td>E0 FAIL：生成前缀的代码与上次不同，或 finalize 失败超过 10%（&gt;15/150）；成功集合与 D 值差异不算</td><td>不再是同一份生成代码，或前缀缺得过多</td></tr>
+<tr><td>训练中</td><td>报错退出、OOM、进程被杀、NaN：一律停下留证，等用户（U3「停下等你」）</td><td>需要用户决定修复重跑还是放弃</td></tr>
 <tr><td>合并时</td><td>同一子任务合并前审查连续两轮 FAIL</td><td>CLAUDE.md 计划执行模式</td></tr>
 <tr><td>任何时候</td><td>AGENTS 第 2 条硬停：资源超出已批量 5 倍、删除或覆盖现有产物、放宽会影响结论的判据；git push 被拒</td><td>规则规定</td></tr>
 </table>
+<p>不停的情形：评估中出现新 error，按 U2 只重跑该局一次，仍 error 计失败并列出，评估继续；正常跑完但未成功的局不重试。</p>
 
 <h2>6　步骤表</h2>
 <table>
 <tr><th>阶段</th><th>内容</th><th>判据</th></tr>
 <tr><td>0</td><td>开工令；开工审查 <code>PLAN_CONSISTENCY_REVIEW</code>；状态机写 <code>kind: go</code>，训练任务改为 running</td><td>审查 blocking=0</td></tr>
-<tr><td>A</td><td>运行代理在 tmux <code>w768-restore</code> 里用 <code>hf buckets</code> 只下 §2 表中「下」的目录，解 tar、删 tar</td><td>G1</td></tr>
-<tr><td>B</td><td>3 个写入型子代理并行（§8）→ 每个先过合并前审查，再 <code>--no-ff</code> 合并，再过合并后审查，然后 push</td><td>G2 在 S1 内；PRE/POST_MERGE_REVIEW=PASS</td></tr>
-<tr><td>C</td><td>主检出切到本分支，<code>uv sync --frozen</code>（本分支 <code>uv.lock</code> 与 v9 不同）；导出 768 表（CPU，tmux <code>w768-export</code>）；G0、G3、G4、G5</td><td>G0 G3 G4 G5</td></tr>
-<tr><td>D</td><td>8 卡 20 步冒烟 → <code>commitV11.8xBeta</code> → tmux <code>w768-train</code> 正式训练；只读锁住主检出 <code>src</code>/<code>scripts</code>/<code>packages</code>（沿用上次做法）</td><td>G6；起跑横幅、前 300 步吞吐</td></tr>
-<tr><td>E</td><td>训练 done 后自动接评估：子模块检出 <code>b4e97f2</code> → tmux <code>w768-demo</code> 重生成前缀 → tmux <code>w768-eval</code> 跑 692 局</td><td>G7 → E0 → E1</td></tr>
-<tr><td>收尾</td><td>结论 <code>commitV11.8x</code>；训练与评估档案；长尾 <code>w768-ckptup</code> 上传 10 份 ckpt 并读回校验；状态机 done</td><td><code>HF_VERIFY=PASS</code>（长尾，本机校验，原因：本机无集群）</td></tr>
+<tr><td>A</td><td>运行代理在 tmux <code>w768-restore</code> 里按目录开 3–4 个并发 <code>hf</code> 进程（framesamp-8x8、source、wan-latents_tars、小目录），<code>HF_XET_HIGH_PERFORMANCE=1</code>，先小样实测吞吐（P2）；每个目录下完即并行哈希（P1）；wan-latents tar 用 <code>xargs -P20 tar -x</code> 并行解包到各自 key（P4），校验后删 tar</td><td>G1 <code>RESTORE_SHA=PASS</code></td></tr>
+<tr><td>B</td><td>3 个写入型子代理并行（§7）→ 每个先过合并前审查，再 <code>--no-ff</code> 合并，再过合并后审查，然后 push；与阶段 A 的 source 下载同时进行</td><td>G2 在 S1 内；<code>PRE_MERGE_REVIEW=PASS</code> / <code>POST_MERGE_REVIEW=PASS</code></td></tr>
+<tr><td>C</td><td>主检出切到本分支，<code>uv sync --frozen</code>（本分支 <code>uv.lock</code> 与 v9 不同）；wan-latents 先到先做 G0 和导出 768 表（CPU 并行，tmux <code>w768-export</code>）；G3、G4、G5 不同进程同时跑；评估环境搭建（F9：两套评估 venv、<code>PYTHON_BIN</code> 覆盖、wan venv 核对、maniskill 资产）；子模块检出 <code>b4e97f2</code> → tmux <code>w768-demo</code> 前缀 gen（16–32 片分到 8 卡，P5）→ finalize <code>--max-fail-rate 0.10</code> → E0；G6 8 卡 20 步冒烟 → G6b 评估加载冒烟</td><td><code>DATA_LINEAGE=PASS</code>、<code>POOL768_TABLE=PASS</code>、<code>ONLINE_POOL768=PASS</code>、<code>VLA_PARAM_EQ=PASS</code>/<code>TRAIN_CONFIG_EQ=PASS</code>、<code>DEMO_PREFIX_SRC=PASS</code>、<code>SMOKE20=PASS</code>、<code>EVAL_LOAD_SMOKE=PASS</code></td></tr>
+<tr><td>D</td><td><code>commitV11.8xBeta</code> → tmux <code>w768-train</code> 正式训练；只读锁住主检出 <code>src</code>/<code>scripts</code>/<code>packages</code>（沿用上次做法）；异常（报错退出、OOM、被杀、NaN）按 U3 停下等用户；tmux <code>w768-ckptup</code> 每份 ckpt 存完即上传（<code>run_ckpt_export.sh</code> 的 <code>NPROC</code> 调到 32–48，P7）</td><td>起跑横幅、前 300 步吞吐；<code>TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10</code></td></tr>
+<tr><td>E</td><td>主会话 Monitor 看到 <code>TRAIN_FINAL_RECORD=PASS</code> 后启动 tmux <code>w768-eval</code>：<code>local_692_pool.sh</code> 检查 E0 PASS → 预标 9 局 → 10 片并行（每卡 ≤2 片）→ 收集 <code>SHARD_EXIT_CODE</code> → <code>merge_shards.py</code></td><td><code>EVAL692=PASS …</code>（E1）</td></tr>
+<tr><td>收尾</td><td>结论 <code>commitV11.8x</code>；训练与评估档案；长尾 <code>w768-ckptup</code> 补完 10 份上传并在本机读回校验；状态机 done</td><td><code>HF_VERIFY=PASS</code>（长尾，本机校验，原因：本机无集群）</td></tr>
 </table>
 
 <h2>7　子代理分工与合并（简述）</h2>
-<p>代码拆成三块，各自在独立 worktree 里由 opus 写：<b>S1</b> 负责池化模块、768 表导出脚本、motion store 的 provenance 新类型和单测；<b>S2</b> 负责在线 sidecar 的 <code>wan_fixedpool768</code> 分支、新 YAML 和训练 runner；<b>S3</b> 负责本机 692 局评估驱动和 demo 前缀重生成驱动。S2 依赖 S1 的模块接口（函数名、常量名在本计划里写死），所以三块可以同时开工，按 S1 → S2 → S3 的顺序合并。每次合并前，一个 sonnet 审查代理钉死 BASE/TIP 审一遍；合并后跑定向单测和闸门，通过再 push。下载和训练、评估的启动交给 opus 运行代理，它只负责启动、确认起跑、交回句柄，监听、接续和清理都由主会话负责。</p>
+<p>代码按 F2 的 owner 划分拆成三块，各自在独立 worktree 里由 opus 写：<b>S1（离线侧）</b>负责池化模块 <code>wan_pool768.py</code>、768 表导出脚本（含 P3 并行导出）、<code>motion_store.py</code> 的 provenance 新类型、<code>training/dataloader.py::_motion_gates</code> 的 kind 分支、训练快照（<code>motion_provenance.json</code> 与资产转存）和单测；<b>S2（在线侧）</b>负责 <code>policy_config.py</code>、<code>motion_client.py::MotionEncoderClient</code> 的 <code>encoder_kind</code> 握手、<code>motion_sidecar.py</code> 的 <code>wan_fixedpool768</code> 分支、新 YAML、训练 runner，以及 G4 工具 <code>compare_online_pool768.py</code>；<b>S3（评估侧）</b>负责 <code>check_checkpoint.py</code> 的白名单与按 kind 分支、<code>pregen_binfill_demo.py</code> 的 <code>--max-fail-rate</code>、<code>setup.sh</code> 的 <code>PYTHON_BIN</code> 覆盖，以及本机评估与 demo 前缀驱动。S2 依赖 S1 的模块接口（函数名、常量名在本计划里写死），所以三块可以同时开工，按 S1 → S2 → S3 的顺序合并。每次合并前，一个 sonnet 审查代理钉死 BASE/TIP 审一遍；合并后跑定向单测和闸门，通过再 push。下载和训练、评估的启动交给 opus 运行代理，它只负责启动、确认起跑、交回句柄，监听、接续和清理都由主会话负责。</p>
 
 <h2>8　确认事项（2026-11-08 用户全部同意）</h2>
 <p>用户原话：「这五项全部同意。」下表五项均按「默认（推荐）」列执行；Q4 已于 2026-11-08 执行（<code>origin/v11-4task-modul-wantp768-50k</code>）。</p>
@@ -326,6 +335,14 @@ F[0, 48c+8i+j]  = P[c,i,j]                                            C→H→W 
 <tr><td>Q3</td><td>BinFill demo 前缀库在本机重生成（后经用户修订：只要求同一份生成代码，结果差异只记录不停，见 §4、§5）</td><td>重生成，差异只记录</td></tr>
 <tr><td>Q4</td><td>新分支没有 upstream：计划 commit 后执行 <code>git push -u origin v11-4task-modul-wantp768-50k</code></td><td>push -u</td></tr>
 <tr><td>Q5</td><td>checkpoint 上传：10 份（5000…50000）全部上传到上表 bucket，作为长尾，不阻塞评估</td><td>全部上传</td></tr>
+</table>
+<h3>第二轮裁决（2026-11-08）</h3>
+<table>
+<tr><th>#</th><th>用户原话</th><th>执行方式</th></tr>
+<tr><td>U1</td><td>「只拿 54.62% 作参考」</td><td>不重评旧模型；54.62% 一律标为跨环境历史参考（GreatLakes A40 + 历史前缀 vs 本机 A100 + 本机重生成前缀），不写成严格同口径（§4、§5）</td></tr>
+<tr><td>U2</td><td>「9局预标+新error重跑一次」</td><td>历史 9 局在各自分片 <code>progress.json</code> 预标 <code>"error"</code> 并 <code>ALLOW_RESUME=1</code>；其他 error 只重跑该局一次，记录原因与次数，仍 error 计失败并列出；正常跑完未成功的不重试（§4、E1）</td></tr>
+<tr><td>U3</td><td>「停下等你」</td><td>训练中报错退出、OOM、进程被杀、NaN 一律停下留证等用户（停止项总表、§6 阶段 D）</td></tr>
+<tr><td>U4</td><td>「门槛放到 10%」</td><td>只给 <code>pregen_binfill_demo.py::cmd_finalize</code> 加 <code>--max-fail-rate</code>（默认 0.05 保持旧行为），本次传 0.10：150 条最多 15 条失败继续，失败清单写档案，超过即停；<code>gen</code> 路径代码不动（§4、E0）</td></tr>
 </table>
 
 <h1>第二部分（技术细节，供 agent 追踪）</h1>
