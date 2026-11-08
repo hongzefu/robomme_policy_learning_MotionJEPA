@@ -32,6 +32,7 @@ figcaption{color:var(--muted);font-size:.9em}
 
 <div class="box">
 <p><b>权威性与授权边界</b>：本文件是「4task 原训练库上用 Wan 重叠窗零参数池化（768 维）替换 motion encoder、走 modulation 训 50k 并立即本机评估」的唯一计划。<b>只规划不实施</b>；开工须用户对本文件不改而明确认可（AGENTS 第 2 条开工令），开工前另派一个只读审查子代理做 <code>PLAN_CONSISTENCY_REVIEW</code>。</p>
+<p><b>修订记录</b>：本计划在 <code>36bfc06</code> 之后，按 Codex 审查（<code>AUDIT_BASE=03e8b14</code>，11 条，主会话逐条回代码核实成立）与并行化审查（<code>REVIEW_BASE=36bfc06</code>）修订，并写入用户对四项新问题的裁决（U1–U4，见 §1「已定死口径」）。</p>
 <p><b>分支与代码锚点</b>：按用户要求「这次的修改和评估都在单独的一个 branch 来实现」，全部改动、训练、评估、留档都在新分支 <code>v11-4task-modul-wantp768-50k</code>（从 <code>origin/v2-eval-0918-motion</code> 的 <code>ba52d79</code> 切出；该分支包含上次训练基线 <code>2f10473</code>（commitV10.2Beta），且带有上次 692 局评估链）。计划写于 worktree <code>.claude/worktrees/plan-4tp768</code>；训练和评估在主检出 <code>/scratch/hongze/robomme_policy_learning_MotionJEPA</code> 切到本分支后运行。</p>
 <p><b>commit 编号</b>：全仓最近为 <code>commitV11.83</code>；本计划实施从 <code>commitV11.84</code> 起，训练 Beta 用 <code>commitV11.8xBeta</code>（与结论 commit 同号）。tmux 前缀 <code>w768-</code>。</p>
 <p><b>外部依赖锚点</b>：训练库归档 bucket <code>HongzeFu/robomme-4task-v2-1600ep-trainset-20260920-v1</code>；源 H5 <code>HongzeFu/robomme-4task-h5-20260912-v2</code>@<code>604f16da36d6b6d175884df8fb687dc08e0a36eb</code>；canonical manifest sha256 <code>4cd5a170…bb918</code>；norm_stats sha256 <code>856c75ea…d173</code>；Wan latent 由钉版 <code>scripts/dataset/wan/wan_motion_infer.py</code>（sha256 <code>af67fdd9…1b34</code>）在建库时算出；benchmark gitlink <code>b4e97f22fe007078e297205898c07c1acbc69165</code>。</p>
@@ -40,23 +41,28 @@ figcaption{color:var(--muted);font-size:.9em}
 <h1>第一部分（给人看）</h1>
 
 <h2>1　要做什么与全部运行一览</h2>
-<p>上次在 4task 训练库（BinFill、RouteStick、VideoRepick、VideoUnmaskSwap 各 400 局，共 1600 局）上跑的 512+motion modulation，motion 来自学习型 encoder <code>wan-full1600-filter2-b176x4-72ep-a</code>（输出 1×768）。在 692 局测试上，50000 步时成功率 <b>54.62%</b>，最终 79999 步时 <b>56.36%</b>。这次只换 motion 的来源：同一批 <b>stride 16 重叠窗</b>的 Wan VAE raw latent，经零参数池化成 <b>1×768</b>。帧记忆、motion 预算、modulation 注入、超参与评估口径全部不变。训到 50k，然后立刻在本机按上次口径评 @50000，直接对比 54.62%。</p>
+<p>上次在 4task 训练库（BinFill、RouteStick、VideoRepick、VideoUnmaskSwap 各 400 局，共 1600 局）上跑的 512+motion modulation，motion 来自学习型 encoder <code>wan-full1600-filter2-b176x4-72ep-a</code>（输出 1×768）。在 692 局测试上，50000 步时成功率 <b>54.62%</b>，最终 79999 步时 <b>56.36%</b>。这次只换 motion 的来源：同一批 <b>stride 16 重叠窗</b>的 Wan VAE raw latent，经零参数池化成 <b>1×768</b>。帧记忆、motion 预算、modulation 注入、超参与评估参数全部不变。训到 50k，然后立刻在本机按上次的参数评 @50000，与 54.62% 对照；54.62% 是<b>跨环境历史参考</b>（上次 GreatLakes A40 + 历史前缀，本次本机 A100 + 本机重生成前缀），不是严格同口径（U1）。不重评旧模型。</p>
 <pre>
-阶段 A  恢复训练库（HF bucket → v1-store，约 356 GB，CPU/网络）
-   │     framesamp-8x8 313.2 GB + wan-latents 42.1 GB + motion/meta/assets
-阶段 B  代码（3 个 worktree 子代理并行）→ 逐个审查合并
+阶段 A  恢复训练库（HF bucket → v1-store，约 596 GB，CPU/网络）
+   │     framesamp-8x8 313.2 GB + source 240.0 GB + wan-latents 42.1 GB + motion/meta/assets
+   │     按目录开 3–4 个并发 hf 进程（先小样实测吞吐）；每个目录下完即逐文件并行 sha256（xargs -P48）
+阶段 B  代码（3 个 worktree 子代理并行）→ 逐个审查合并      ┆ 与 source 下载重叠
    │     池化 768 + motion 表导出 ┃ 在线 sidecar + YAML ┃ 本机 692 局评估驱动
-阶段 C  建 768 池化表（CPU，约 71316 窗）＋ 闸门 G0–G5
-阶段 D  8 卡 20 步冒烟 → Beta → 正式训练 50,001 步（约 14 h，GPU 0–7）
-阶段 E  训练 done → 自动接评估：demo 前缀库本机重生成 → 692 局 @50000（GPU 0–7）
-长尾    checkpoint 上传 HF bucket + 本机读回校验
+阶段 C  建 768 池化表（CPU，Pool(48) 有序并行，71316 窗）＋ 闸门 G0–G5
+   │     ＋ demo 前缀生成（16–32 片分 8 卡）→ finalize --max-fail-rate 0.10 → E0（GPU 空闲时，提前到训练前）
+阶段 D  8 卡 20 步冒烟（G6）→ G6b 用冒烟 ckpt 走一次真实评估加载入口跑 1 局
+   │     → Beta → 正式训练 50,001 步（约 14 h，GPU 0–7）；每份 ckpt 存完即上传
+阶段 E  主会话 Monitor 见 TRAIN_FINAL_RECORD=PASS → 起评估（外壳先查 E0=PASS）
+   │     550 + 本机前缀成功条数（上次 142，合计 692）局 @50000，10 片同跑、每卡 ≤2 片
+长尾    剩余 checkpoint 上传 HF bucket + 本机读回校验
 </pre>
 <table>
 <tr><th>项</th><th>值</th><th>依据</th></tr>
 <tr><td>run_name</td><td><code>v2-1600ep-m8x8-modul-wantp768-b128-50k</code></td><td>沿用上次 <code>v2-1600ep-m8x8-modul-motion-b128-80k</code> 体例</td></tr>
 <tr><td>训练配置</td><td><code>mme_vla_suite_b128_80k</code> 全部超参，启动脚本只覆盖 <code>--num_train_steps=50001</code></td><td>§3.3</td></tr>
 <tr><td>history YAML</td><td>新 <code>perceptual-framesamp-modul-8frame-8x8-wantp768.yaml</code>（由上次 <code>…-8x8-motion.yaml</code> 只改 motion 来源字段）</td><td>§3.2</td></tr>
-<tr><td>评估</td><td>692 局、seed 7、<code>max_steps=2000</code>、BinFill 带 demo 前缀、只评 @50000</td><td>§4</td></tr>
+<tr><td>评估</td><td>550 + 本机前缀成功条数（上次 142，合计 692）局、seed 7、<code>max_steps=2000</code>、BinFill 带本机重生成的 demo 前缀、只评 @50000；历史 10 个逻辑分片在 8 卡上同跑</td><td>§4</td></tr>
+<tr><td>对照</td><td>54.62% 为<b>跨环境历史参考</b>（上次 GreatLakes A40 + 历史前缀；本次本机 A100 + 本机重生成前缀），不重评旧模型</td><td>U1</td></tr>
 <tr><td>HF bucket（ckpt）</td><td><code>HongzeFu/robomme-vla-4task-modul-wantp768-50k-v1</code></td><td>bucket 名按记忆自定</td></tr>
 <tr><td>状态机</td><td>登记两个任务：<code>4task-wantp768-train</code> → <code>4task-wantp768-eval</code></td><td>§7</td></tr>
 </table>
@@ -73,7 +79,11 @@ figcaption{color:var(--muted);font-size:.9em}
 <li><b>状态机</b>：选择题「登记 (推荐)」（§7）。</li>
 <li><b>计划放置</b>：「计划放在仓库内」→ 主检出切到本分支，计划在仓库根目录，分支已推送到远端。</li>
 <li><b>Q1–Q5</b>：「这五项全部同意。」（§8）</li>
-<li><b>demo 前缀</b>：「它这个前缀库只要你是用同样的代码去生成的就可以，它可以允许有一些呃不一样的、不一致的地方，因为不同硬件」（§4、§5 E0）。</li>
+<li><b>demo 前缀</b>：「它这个前缀库只要你是用同样的代码去生成的就可以，它可以允许有一些呃不一样的、不一致的地方，因为不同硬件」（§4、§5 E0）。→ E0 只核对生成代码相同，成功集合与逐条 D 的差异只记录。</li>
+<li><b>U1 对照口径</b>：「只拿 54.62% 作参考」→ 不重评旧模型；54.62% 一律标注为「跨环境历史参考」（上次 GreatLakes A40 + 历史前缀；本次本机 A100 + 本机重生成前缀），不写成严格同口径（§4）。</li>
+<li><b>U2 评估 error</b>：「9局预标+新error重跑一次」→ 历史 9 局（VideoRepick/easy 189；VideoRepick/medium 155/167/172；VideoRepick/xhard 168/197/201；VideoUnmaskSwap/xhard 139/164，清单见 <code>docs/training-doc/finalckpt-nomotion59999-gl/records/preseeded-errors.json</code>）起跑前在各自分片 <code>progress.json</code> 预标 <code>"error"</code> 并 <code>ALLOW_RESUME=1</code>；其他 error 只重跑该局一次并记录原因与次数，仍 error 计失败并列出；正常跑完但未成功的不重试（§4）。</li>
+<li><b>U3 训练中途异常</b>：「停下等你」→ 报错退出、OOM、进程被杀、NaN 一律停下留证等用户（§5 停止项总表）。</li>
+<li><b>U4 前缀失败率</b>：「门槛放到 10%」→ 只给 <code>pregen_binfill_demo.py::cmd_finalize</code> 加显式参数 <code>--max-fail-rate</code>（默认 0.05 保持旧行为），本次传 0.10（150 条最多 15 条失败继续，失败清单写档案；超过即停）；<code>gen</code> 路径代码不动（§4、§5 E0）。</li>
 </ol>
 
 <h2>2　数据：原库实体已不在盘上，从 HF 整库归档恢复</h2>
@@ -83,12 +93,20 @@ figcaption{color:var(--muted);font-size:.9em}
 <tr><th>目录</th><th>体积</th><th>本次下载？</th><th>用途</th></tr>
 <tr><td><code>framesamp-8x8/</code>（32 片 image_emb + meta + pos/state）</td><td>313.2 GB</td><td class="ok">下</td><td>VLA 帧记忆输入（与上次同一份）</td></tr>
 <tr><td><code>wan-latents_tars/</code>（20 个 tar）</td><td>42.1 GB</td><td class="ok">下</td><td>71316 个重叠窗的 raw latent，池化的唯一输入</td></tr>
+<tr><td><code>source/</code>（162 个文件）</td><td>240.0 GB</td><td class="ok">下</td><td>训练时 <code>FrameSampDataset.__getitem__</code> 每步读 <code>source_root/data/&lt;idx&gt;.pkl</code>：取 actions，并与帧记忆库的 episode/step 身份互校。<code>framesamp-8x8</code> 的 store_meta 记有 <code>source_dataset_root</code>；恢复后核对它指向 <code>v1-store/datasets/4task-v2-1600ep-604f16da/source</code>，不一致则用 <code>source_root</code> 参数显式传入，不跳过源库检查</td></tr>
 <tr><td><code>motion/</code>（上次的 encoder motion 表 + meta）</td><td>0.2 GB</td><td class="ok">下</td><td>行序、段索引的对照基准（G3），以及参数量对照</td></tr>
 <tr><td><code>meta/</code>、<code>assets/</code>、<code>checksums/</code>、<code>runner/</code>、<code>SHA256SUMS.pre.txt</code></td><td>≈0.1 GB</td><td class="ok">下</td><td>sha256 校验与 identity 对照</td></tr>
-<tr><td><code>framesamp/</code>（4×4）、<code>source/</code>、<code>oracle_tars/</code>、<code>motion-tokens_tars/</code></td><td>360.9 GB</td><td>不下</td><td>本次用不到</td></tr>
+<tr><td><code>framesamp/</code>（4×4）、<code>oracle_tars/</code>、<code>motion-tokens_tars/</code></td><td>约 121 GB</td><td>不下</td><td>本次用不到</td></tr>
 </table>
-<p>合计下载约 356 GB，tar 解开后再删 tar。<code>/scratch</code> 现剩 1.2 TB，下载 + 解包 + demo 前缀库（约 11.2 GB）+ 11 份 checkpoint（按上次 bucket 约 12 GB/份估）后仍剩约 650 GB。<b>不需要删任何现有产物</b>，<code>cache/orig16-wan-timepool1024-recovery/published</code>（362 GB）不动。</p>
-<p><b>数据同源（P-LINEAGE）</b>：这次的「encoder」是 Wan2.1 VAE（固定公开权重，没有训练数据）加零参数池化，所以 motion 特征的数据源就是 latent 的输入帧。闸门 G0 检查：<code>wan-latents</code> 元数据记录的输入 <code>raw_dir</code> 与 manifest identity，等于 VLA 库 <code>meta/input_manifest.json</code> 的 4 个 H5 sha256 集合。G0 失败即停工，不许 WAIVE。</p>
+<p>合计下载约 596 GB（framesamp-8x8 313.2 + source 240.0 + wan-latents 42.1 + motion 0.2 + 小文件），tar 解开后再删 tar（<code>xargs -P20 tar -x</code>，每个 tar 解到各自 key）。下载按目录开 3–4 个并发 <code>hf</code> 进程（framesamp-8x8、source、wan-latents_tars、小目录），设 <code>HF_XET_HIGH_PERFORMANCE=1</code>，先小样实测吞吐（吞吐未知，记为风险）；每个目录下完即用 <code>xargs -P48 -n16 sha256sum</code> 逐文件并行哈希、<code>sort -k2</code> 后与 bucket <code>checksums</code> diff（G1 覆盖 <code>source/</code>），596 GB 串行约 23 min，并行约 3 min。磁盘：<code>/scratch</code> 现剩 1.2 TB，下载峰值（tar 未删时多 42 GB）之后，再加 demo 前缀库约 11.2 GB、10 份 checkpoint 约 120 GB（按上次 bucket 约 12 GB/份估），约剩 430 GB。<b>不需要删任何现有产物</b>，<code>cache/orig16-wan-timepool1024-recovery/published</code>（362 GB）不动。</p>
+<p><b>数据同源（P-LINEAGE）</b>：这次的「encoder」是 Wan2.1 VAE（本次不训练 VAE）加零参数池化，所以 motion 特征的数据源就是 latent 的输入帧。闸门 G0 写成一条可追踪链，每一环都指定实际存在的证据，<b>缺任何一环即 FAIL</b>，不许 WAIVE：</p>
+<ol>
+<li><b>输入 H5</b>：本地 <code>meta/input_manifest.json</code> 的 4 个 H5 sha256，与 bucket 的 <code>meta/input_manifest.json</code> 逐字节相同；</li>
+<li><b>canonical manifest</b>：<code>meta/episode_manifest.json</code> 的 sha256 为 <code>4cd5a170…bb918</code>；</li>
+<li><b>wan-latents</b>：恢复后 latent 根的 metadata/summary 中记录的 manifest identity 与 <code>raw_dir</code> 对上前两环；latent 文件 sha256 与 bucket <code>checksums/sha256-shards.txt</code> 一致；</li>
+<li><b>新表 provenance</b>：<code>motion-wan-pool768</code> 的 provenance 记录 latent 根的文件摘要与 manifest sha，与第 2、3 环一致。</li>
+</ol>
+<p>建库档案证据用 <code>git show origin/v2-motionmem:docs/dataset-build-doc/4task-v2-1600ep-motion-demopad17/result.md</code>（本分支没有该文件）。</p>
 
 <h2>3　机制</h2>
 <figure>
@@ -223,13 +241,14 @@ F[0, 48c+8i+j]  = P[c,i,j]                                            C→H→W 
 </ul>
 
 <h3>3.2　motion 表与 YAML：行序与上次 motion 表逐行相同</h3>
-<p>离线导出脚本 <code>scripts/dataset/export_wan_pool768.py</code> 按上次 motion 表 <code>motion/meta/motion_index.json</code> 的段序（episode 序，先 demo 后 exec）逐段读 <code>wan-latents/&lt;key&gt;.bin</code>，逐窗池化，写出新表 <code>v1-store/datasets/4task-v2-1600ep-604f16da/motion-wan-pool768/</code>：71316 行 × 768 float32 = 219,082,752 字节，<b>与上次 encoder 表字节数相同</b>。布局沿用 <code>LAYOUT="motion-768-grid16-demopad17-v1"</code>，读取侧的窗口、索引、补帧逻辑一行不改。provenance 改记 <code>encoder_kind=wan_fixedpool768</code>、<code>encoder_ckpt=null</code>、<code>parameter_count=0</code>、池化源码 sha256、latent 根的 identity。</p>
+<p>离线导出脚本 <code>scripts/dataset/export_wan_pool768.py</code> 按上次 motion 表 <code>motion/meta/motion_index.json</code> 的段序（episode 序，先 demo 后 exec）读 <code>wan-latents/&lt;key&gt;.bin</code> 逐窗池化。并行方式：按旧 <code>motion_index</code> 段切成连续区间，<code>multiprocessing.Pool(48)</code> 的 <code>imap</code>（有序）分发，<code>OMP_NUM_THREADS=1</code>，纯 NumPy、窗间独立，主进程按 <code>row_base</code> 顺序写表，所以结果逐位确定且与进程数无关（G3 独立重算用同样分片）。写出新表 <code>v1-store/datasets/4task-v2-1600ep-604f16da/motion-wan-pool768/</code>：71316 行 × 768 float32 = 219,082,752 字节，<b>与上次 encoder 表字节数相同</b>。布局沿用 <code>LAYOUT="motion-768-grid16-demopad17-v1"</code>，读取侧的窗口、索引、补帧逻辑一行不改。provenance 改记 <code>encoder_kind=wan_fixedpool768</code>、<code>encoder_ckpt=null</code>、<code>parameter_count=0</code>、池化源码 sha256、latent 根的 identity。</p>
 <p>新 YAML 由 <code>perceptual-framesamp-modul-8frame-8x8-motion.yaml</code> 复制，只改 motion 节里的 <code>store_path</code>→上述新表、<code>source_run</code>→删除、新增 <code>encoder_kind: wan_fixedpool768</code> 与 <code>readout</code>。<code>dim: 768</code>、<code>budget: 160</code>、<code>pos_dim: 256</code>、<code>stride: 16</code>、<code>window_frames: 33</code>、<code>demo_min_real_frames: 17</code>、帧路 8 帧×8×8=512、<code>integration_type: modulation</code>、<code>memory_token_dim: 1024</code> 全部不变。</p>
+<p><b>调用链概述</b>：新 kind <code>wan_fixedpool768</code> 要从 YAML 一路贯通到评估 sidecar——YAML（<code>encoder_kind</code>/<code>readout</code>，不再有 <code>source_run</code>）→ <code>training/dataloader.py::_motion_gates</code>（池化分支改核 readout、池化源码 sha256、<code>encoder_ckpt=null</code>）→ <code>datastore/motion_store.py::MotionMeta.load</code> → 训练快照 <code>motion_provenance.json</code> → <code>policies/policy_config.py</code> → <code>policies/motion_client.py::MotionEncoderClient</code>（握手按 kind 比较）→ <code>scripts/dataset/wan/motion_sidecar.py</code>（池化后 <code>reshape(768)</code>）。验收不能只靠 YAML 可解析与 stub 握手。每一跳的文件锚点、读写字段与 owner 见「第二部分 一」。</p>
 
 <h3>3.3　训练：除 motion 来源与步数外与上次逐项相同</h3>
 <table>
 <tr><th>项</th><th>上次 <code>…-motion-b128-80k</code></th><th>本次</th></tr>
-<tr><td>代码基线</td><td><code>2f10473</code>（V10.2Beta）</td><td><code>ba52d79</code> + 本计划改动（<code>2f10473..ba52d79</code> 在 <code>src</code> 下只改评估侧 <code>policy.py</code>/<code>policy_config.py</code>）</td></tr>
+<tr><td>代码基线</td><td><code>2f10473</code>（V10.2Beta）</td><td><code>ba52d79</code> + 本计划改动（<code>2f10473..ba52d79</code> 在 <code>src</code> 下改 4 个文件，均为推理侧：<code>policies/framesamp_memory.py</code>、<code>policies/motion_client.py</code>、<code>policies/policy.py</code>、<code>policies/policy_config.py</code>）</td></tr>
 <tr><td>TrainConfig</td><td><code>mme_vla_suite_b128_80k</code></td><td>同一条，启动脚本覆盖 <code>--num_train_steps=50001</code>，不改 <code>config.py</code> 默认</td></tr>
 <tr><td>batch / 卡 / FSDP / workers</td><td>128 / 8 / 8 / 16</td><td>相同</td></tr>
 <tr><td>学习率</td><td>warmup 5000，peak = decay = 5e-5（warmup 后恒定）</td><td>相同；因为 LR 恒定，前 50k 的学习率曲线与上次逐步相同</td></tr>
