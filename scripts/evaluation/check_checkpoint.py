@@ -29,9 +29,9 @@ print('SERVER_SOURCE', sys.executable, policy_source.__file__, model_source.__fi
 WANTP768_KIND = 'wan_fixedpool768'
 WANTP768_READOUT = 'wan_raw_timepool8_adaptive6x8_v1'
 WANTP768_YAML = 'src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-8frame-8x8-wantp768.yaml'
-# 待填：S2 定稿 YAML 交来后用 `check_checkpoint.py --resolved-sha256 <WANTP768_YAML>` 复算写入（口径见 resolved_sha256_of_yaml）。
-# 未填时任何 checkpoint 都过不了 main() 里的 resolved_sha256 断言，不会误放行。
-WANTP768_RESOLVED_SHA256 = 'PENDING-S2-YAML'
+# 由 S2 定稿 YAML（S2 分支 b5c5b5b，文件字节 sha256 e049ed62…f5eb）经 `check_checkpoint.py --resolved-sha256 <WANTP768_YAML>`
+# 按 resolved_sha256_of_yaml 口径独立复算得出，与 S2 预算值逐位一致（2026-11-08）；正式 run 与冒烟 run 共用。
+WANTP768_RESOLVED_SHA256 = '4e70e93373d5b20061a4067c911021100375d2bc28cff276acaf7559b2441910'
 
 
 def resolved_sha256_of_yaml(yaml_path) -> str:
