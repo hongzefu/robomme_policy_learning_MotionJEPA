@@ -481,6 +481,90 @@ def test_compare_tamper_fails(tmp_path, PL, G4, capsys, monkeypatch, tamper):
         assert out == "ONLINE_POOL768=FAIL windows=6 padded=2 bitexact=5"
 
 
+# ── runner 内置 G0（DATA_LINEAGE 两侧 pin 取自独立记录）──────────────────────────
+
+def _sha_file(p: pathlib.Path) -> str:
+    return hashlib.sha256(p.read_bytes()).hexdigest()
+
+
+def _build_g0_lib(root: pathlib.Path, PL) -> dict:
+    """在 _build_lib 小夹具上补齐 G0 各环要读的文件；返回 argv 所需的 manifest identity 与 latent 元数据摘要。"""
+    from mme_vla_suite.datastore import motion_store as ms
+    table = _build_lib(root, PL, [("BinFill", 80, 40), ("RouteStick", 80, 40)], with_frames=False)
+    man = json.loads((root / "meta/episode_manifest.json").read_text())
+    raw_dir = man["raw_dir"]
+    im = {"raw_dir": raw_dir, "count": 4,
+          "files": {f"record_dataset_{t}.h5": {"size": i + 1, "sha256": hashlib.sha256(t.encode()).hexdigest()}
+                    for i, t in enumerate(("BinFill", "RouteStick", "VideoRepick", "VideoUnmaskSwap"))}}
+    (root / "meta/input_manifest.json").write_text(json.dumps(im, indent=2))
+    (root / "meta.bucket").mkdir()
+    (root / "meta.bucket/input_manifest.json").write_bytes((root / "meta/input_manifest.json").read_bytes())
+    im_sha = _sha_file(root / "meta/input_manifest.json")
+    lat_p = root / "wan-latents/metadata.json"
+    lat = json.loads(lat_p.read_text()); lat["raw_dir"] = raw_dir
+    lat_p.write_text(json.dumps(lat))
+    lat_sha = _sha_file(lat_p)
+    meta_p = table / ms.META_RELPATH
+    meta = json.loads(meta_p.read_text())
+    meta["provenance"].update(manifest_sha256=man["sha256"], latent_root={"metadata_sha256": lat_sha},
+                              input_manifest_sha256=im_sha)
+    meta_p.write_text(json.dumps(meta))
+    (root / "motion/meta").mkdir(parents=True)
+    (root / "motion/meta/store_meta.json").write_text(json.dumps({"provenance": {"input_manifest_sha256": im_sha}}))
+    (root / "source/meta").mkdir(parents=True)
+    (root / "source/meta/provenance.json").write_text(json.dumps({"manifest_sha256": man["sha256"], "raw_dir": raw_dir}))
+    (root / "framesamp-8x8/meta").mkdir(parents=True)
+    (root / "framesamp-8x8/meta/store_meta.json").write_text(json.dumps({
+        "manifest_sha256": man["sha256"], "source_dataset_root": str(root / "source"),
+        "source_provenance_sha256": _sha_file(root / "source/meta/provenance.json")}))
+    return {"table": table, "manifest_id": man["sha256"], "lat_sha": lat_sha, "rows": meta["num_rows"]}
+
+
+def _run_g0(root: pathlib.Path, info: dict, PL, monkeypatch, capsys) -> tuple[int, str]:
+    import re
+    import mme_vla_suite.shared as shared
+    code = re.findall(r"<<'PY'\n(.*?)\nPY\n", RUNNER.read_text(), re.S)[0]
+    code = code.replace("mm.num_rows == 71316", f"mm.num_rows == {info['rows']}")   # 夹具行数替换全库常量
+    monkeypatch.setitem(sys.modules, "mme_vla_suite.shared.wan_pool768", PL)
+    monkeypatch.setattr(shared, "wan_pool768", PL, raising=False)
+    monkeypatch.delenv("MMEVLA_MOTION_STORE", raising=False)
+    monkeypatch.setattr(sys, "argv", ["g0", str(root), str(info["table"]), info["manifest_id"], info["lat_sha"]])
+    with pytest.raises(SystemExit) as ex:
+        exec(compile(code, "runner_g0", "exec"), {"__name__": "__main__"})
+    out = capsys.readouterr().out
+    lines = [l for l in out.splitlines() if l.startswith("DATA_LINEAGE=")]
+    assert len(lines) == 1, out
+    return ex.value.code, lines[0]
+
+
+@pytest.mark.parametrize("case", ["pass", "record_differs", "record_missing", "old_record_differs"])
+def test_runner_g0_lineage_independent_pins(tmp_path, PL, monkeypatch, capsys, case):
+    from mme_vla_suite.datastore import motion_store as ms
+    info = _build_g0_lib(tmp_path, PL)
+    meta_p = info["table"] / ms.META_RELPATH
+    meta = json.loads(meta_p.read_text())
+    if case == "record_differs":
+        meta["provenance"]["input_manifest_sha256"] = "0" * 64
+    elif case == "record_missing":
+        del meta["provenance"]["input_manifest_sha256"]
+    elif case == "old_record_differs":
+        (tmp_path / "motion/meta/store_meta.json").write_text(json.dumps({"provenance": {"input_manifest_sha256": "1" * 64}}))
+    meta_p.write_text(json.dumps(meta))
+    rc, line = _run_g0(tmp_path, info, PL, monkeypatch, capsys)
+    im_sha = _sha_file(tmp_path / "meta/input_manifest.json")
+    if case == "pass":
+        assert rc == 0 and line.startswith("DATA_LINEAGE=PASS "), line
+        fields = dict(kv.split("=", 1) for kv in line.split()[1:])
+        assert fields["encoder_source_pin"] == fields["vla_input_pin"] != "None"
+        assert fields["files"] == "4" and fields["mismatches"] == "0"
+        assert fields["binding"] == f"input_manifest_sha256:{im_sha[:8]}"
+        assert fields["enc_record"] == "motion-wan-pool768.provenance+motion.provenance"
+    else:
+        assert rc == 1 and line.startswith("DATA_LINEAGE=FAIL "), line
+        if case in ("record_differs", "record_missing"):
+            assert "encoder_source_pin=None" in line
+
+
 if __name__ == "__main__":
     class _Count:
         def __init__(self):

@@ -159,11 +159,11 @@ need("encoder_ckpt" in prov and prov["encoder_ckpt"] is None and prov.get("param
 need(prov.get("pool_source_sha256") == wp.pool_source_sha256(), 4, f"pool_source_sha256={prov.get('pool_source_sha256')}")
 need(mm.manifest_sha256 == manifest_id and prov.get("manifest_sha256") == manifest_id, 4, f"table manifest_sha256={prov.get('manifest_sha256')}")
 need(latents_meta_sha in set(walk_values(prov.get("latent_root"))), 4, "latent_root 记录 wan-latents/metadata.json 摘要")
-need(prov.get("input_manifest_sha256") == im_sha, 4, f"input_manifest_sha256={prov.get('input_manifest_sha256')}")
 vae = prov.get("vae") or {}
 need(bool(vae.get("vae_state_sha256")), 4, f"vae_state_sha256={vae.get('vae_state_sha256')}")
-# 环 5（VLA 侧）：framesamp store_meta 与 source/meta 的 manifest identity / raw_dir 先相互一致，
-# 再经 raw_dir 绑定到 input_manifest 的 4 个 H5 sha256（store_meta 与 source/meta 本身不逐文件记 H5 sha256）
+# 环 5（P-LINEAGE）：两侧 pin 各取独立记录，逐文件比较 H5 sha256 集合，任一侧取不到即 FAIL。
+# VLA 侧：VLA 库 meta/input_manifest.json 的 4 个 H5 sha256（规则原文定义的 vla_input_pin）；并核 framesamp store_meta 与
+# source/meta/provenance.json 的 manifest identity、raw_dir / source_dataset_root 一致，source_provenance_sha256 = 文件摘要。
 sm_path = ds / "framesamp-8x8/meta/store_meta.json"
 sm = json.loads(sm_path.read_text()) if sm_path.is_file() else {}
 sp_path = ds / "source/meta/provenance.json"
@@ -173,12 +173,40 @@ need(sm.get("manifest_sha256") == manifest_id and sp.get("manifest_sha256") == m
 need(sm.get("source_provenance_sha256") is not None and sm.get("source_provenance_sha256") == sha(sp_path), 5,
      "store_meta.source_provenance_sha256 = sha256(source/meta/provenance.json)")
 need(sp.get("raw_dir") is not None and sp.get("raw_dir") == im.get("raw_dir"), 5, f"source raw_dir={sp.get('raw_dir')}")
-vla_pin = pin_of(files) if not fails else None
-enc_pin = pin_of(files) if (lat.get("raw_dir") == im.get("raw_dir") and prov.get("input_manifest_sha256") == im_sha) else None
-ok = not fails and vla_pin is not None and vla_pin == enc_pin
+need(sm.get("source_dataset_root") is not None and pathlib.Path(sm["source_dataset_root"]).resolve() == (ds / "source").resolve(), 5,
+     f"store_meta.source_dataset_root={sm.get('source_dataset_root')}")
+def h5_set(manifest):
+    return {k: v.get("sha256") for k, v in (manifest.get("files") or {}).items()}
+vla_files = h5_set(im)
+# encoder 侧：从 encoder 侧独立记录取 input_manifest 文件摘要，按摘要内容寻址找清单，再取 H5 sha256 集合
+records = []
+rec = prov.get("input_manifest_sha256")
+if rec:
+    records.append(("motion-wan-pool768.provenance", rec))
+old_meta = ds / "motion/meta/store_meta.json"
+if old_meta.is_file():
+    records.append(("motion.provenance", json.loads(old_meta.read_text()).get("provenance", {}).get("input_manifest_sha256")))
+if "input_manifest_sha256" in lat:
+    records.append(("wan-latents.metadata", lat.get("input_manifest_sha256")))
+need(bool(rec), 5, f"新表 provenance.input_manifest_sha256={rec}")
+need(all(v == rec for _, v in records), 5, f"encoder 侧各记录一致: {records}")
+found = None
+for cand in (ds / "meta/input_manifest.json", ds / "meta.bucket/input_manifest.json"):
+    if rec and sha(cand) == rec:
+        found = cand
+        break
+need(found is not None, 5, f"按摘要 {rec} 寻址到的清单={found}")
+enc_files = h5_set(json.loads(found.read_text())) if found is not None else {}
+diff_files = sorted(k for k in set(vla_files) | set(enc_files) if vla_files.get(k) is None or vla_files.get(k) != enc_files.get(k))
+need(len(vla_files) == 4 and len(enc_files) == 4 and not diff_files, 5,
+     f"逐文件比较 vla={len(vla_files)} enc={len(enc_files)} 不符={diff_files}")
+vla_pin = pin_of(im.get("files") or {}) if len(vla_files) == 4 else None
+enc_pin = pin_of(json.loads(found.read_text())["files"]) if found is not None and len(enc_files) == 4 else None
+ok = not fails and vla_pin is not None and enc_pin is not None and vla_pin == enc_pin
 print(f"DATA_LINEAGE={'PASS' if ok else 'FAIL'} encoder=wanvae-{str(vae.get('vae_state_sha256'))[:8]}+pool768 "
-      f"encoder_source_pin={enc_pin} vla_input_pin={vla_pin} files={len(files)} mismatches={len(fails)}", flush=True)
-print(f"MOTION_STORE_META_SHA256={sha(motion / 'meta/store_meta.json')}", flush=True)
+      f"encoder_source_pin={enc_pin} vla_input_pin={vla_pin} files={len(vla_files)} mismatches={len(fails)} "
+      f"binding=input_manifest_sha256:{str(rec)[:8]} enc_record={'+'.join(n for n, _ in records) or 'none'}", flush=True)
+print(f"MOTION_STORE_META=PASS sha256={sha(motion / 'meta/store_meta.json')} layout={mm.raw.get('layout')} rows={mm.num_rows}", flush=True)
 sys.exit(0 if ok else 1)
 PY
 
