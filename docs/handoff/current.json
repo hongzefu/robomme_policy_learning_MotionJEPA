@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-02T15:55:59Z",
-    "America/New_York": "2026-11-02T10:55:59-0500"
+    "utc": "2026-11-08T21:00:14Z",
+    "America/New_York": "2026-11-08T16:00:14.005272-05:00"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "b4d7b7319e62aaf4166d03c8bf53dde9f8d25638",
+    "base_head": "1d10bf26cbc493b7cfe37ab08e5ec99d5ee7628e",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -1315,7 +1315,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-11-02T15:35:08Z",
-      "state_reason": "两正式80k/B64/FSDP4已于美东2026-11-02 10:23:07在65209321.7/gl1519和65209330.7/gl1503实际启动，Beta8b52210固定。两条均已到同步step100且指标finite，正式日志step0至100间隔6.1363/6.3915秒，估全程136.36/142.03小时，现有占位够用。任务继续running，80k完成/16份checkpoint/79999严格恢复及上传长尾尚未执行；原SAVE_LOAD numerics元数据握手FAIL保留，不伪PASS。",
+      "state_reason": "两条80000步正式训练均于美东2026-11-08完成（noxyz03:02:33、nostate07:14:00），EXIT0/final record通过、16份检查点齐全。严格恢复与备份未完成，任务仍running。交付离线导出被四文件七项路径披露拦截后，用户明确同意开始；精确披露补丁385fd43已推送，正在部署后继续原验收。训练Beta8b52210不变；原SAVE_LOAD失败保留。",
       "owner": {
         "session": "01a19abc-1926-71b0-bac0-a2d7375a739d",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1328,6 +1328,12 @@
           "what": "V9两正式run已达同步step100并finite",
           "evidence": "TRAIN_START=PASS run=gl-orig100-ctx32x4x4-noxyz-motion-s2split4x256-b64-80k head=8b52210ff0048a9ea22776090fda3d76cd181c89 jobid=65209321 step=100；nostate对应65209330 step100亦PASS",
           "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-train-start.summary.txt",
+          "status": "pass"
+        },
+        {
+          "what": "两条80000步训练退出0，最终记录通过，精确16份checkpoint目录齐全；不替代恢复",
+          "evidence": "TRAIN_COMPLETE=PASS tags=noxyz,nostate steps=80000 exit=0；TRAIN_FINAL_RECORD=PASS tail_steps=99 ema_leaves=59；CKPT_STEPS=PASS count=16",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-train-final.summary.txt",
           "status": "pass"
         },
         {
@@ -1353,22 +1359,7 @@
           "status": "pending"
         }
       ],
-      "running_handles": [
-        {
-          "tmux": "o16abl-train-noxyz",
-          "jobid": "65209321",
-          "step": "65209321.7",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-train-noxyz.log",
-          "done_line": "EXIT_CODE=0"
-        },
-        {
-          "tmux": "o16abl-train-nostate",
-          "jobid": "65209330",
-          "step": "65209330.7",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-train-nostate.log",
-          "done_line": "EXIT_CODE=0"
-        }
-      ],
+      "running_handles": [],
       "authorizations": [
         {
           "kind": "decision",
@@ -1435,14 +1426,20 @@
           "date": "2026-11-02",
           "quote": "不用再测速了，可以正式训练启动。你再看一下这个，你先看一下这个冗余的时间还够不够，不够的话要重新启动任务。",
           "scope": "取消100步独立测时；按现有预算核实际剩余，够则直接正式、不够重新申请；用户随后「赶紧开始了你还在等什么！！！」再次要求立即起跑。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-08",
+          "quote": "同意开始",
+          "scope": "针对主会话逐项列明的四文件，允许encoder_dependencies.json、motion_provenance.json、_run-meta/train.log的集群绝对路径及组织名(P1/P2)，以及motion_evidence/G3.json本机路径(P3)公开披露；继续既定打包、严格恢复、上传和GL CPU校验，不放宽数值或凭据检查。"
         }
       ],
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "继续正式运行，按训练日志每5000步核finite/进度/余量，不起额外测速；结束后按V10核终态checkpoint与原严格恢复，原SAVE_LOAD FAIL不能伪PASS，再做既定上传读回长尾。",
-          "command": "查看running_handles日志及G/v1-store/train-runs/mme_vla_suite_orig16_b64_80k/<run>；代码固定Beta8b52210",
-          "verdict_line": "TRAIN_FINAL_RECORD=PASS；CKPT_STEPS=PASS count=16；CKPT_DELIVERY_READY=PASS step=79999（均待实际验收）"
+          "what": "部署已批精确披露补丁，重新离线导出；同原占位做79999严格恢复，随后按既有范围上传并GL standard纯CPU匿名流式校验。已完成训练不得重启。",
+          "command": "G按交付补丁固定HEAD运行既有exporter SMOKE=1 O16_MODE=final；原hold65209321/65209330 check_stage2_checkpoint.py --mode delivery --delivery-step79999",
+          "verdict_line": "CKPT_DELIVERY_READY=PASS|FAIL step=79999；HF_VERIFY=PASS|FAIL（未验收不标done）"
         }
       ]
     }

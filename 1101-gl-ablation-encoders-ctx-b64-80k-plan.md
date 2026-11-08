@@ -331,3 +331,16 @@ S1合前与合后复核曾分别发现旧8卡分支绕过、K2诊断小batch误�
 两条正式任务在美东2026-11-02 10:23:07真正起跑，Beta `8b52210ff0048a9ea22776090fda3d76cd181c89`，step `65209321.7/gl1519`、`65209330.7/gl1503`，各4×A40、global64、workers8、80000步；MAX_STEPS和TRAIN_TIMING_STEPS均未设置、无NVML采样。各54项合同及实际mesh `(1,4)`通过。正式同步step100已到，step0→100日志间隔分别6.1363/6.3915秒每步，对全程估计136.36/142.03h；loss100分别0.36810/0.36983、grad_norm有限。两条`TRAIN_START=PASS`已可按实际step100记录，未把正式运行完成或策略性能写成PASS。
 
 `SAVE_LOAD=FAIL`源于真实A40握手numerics与A6000离线来源不同，按既定V6b口径保留原判定，不改阈值。第一次post64因PATH把env解析到HOME不可执行路径，目标程序未起；独立`ADJUST_REVIEW=PASS scale=same findings=0`后仅改两个命令为`/usr/bin/env`，保留旧载体及失败日志，做一次基础设施重试。后续100步测时按用户要求取消，记`NOT_REQUIRED`。完整建表、代码、缓存及输入适配结果见数据档案；实际正式日志与句柄登记`docs/handoff/current.json`。
+
+## 十二、正式训练完成与收尾中的调整（美东2026-11-08）
+
+两条正式训练已完成80000步，训练代码仍为Beta `8b52210ff0048a9ea22776090fda3d76cd181c89`。noxyz于美东11月8日03:02:33退出0、记录耗时136小时36分；nostate于07:14:00退出0、耗时140小时47分。两条内日志均有`TRAIN_FINAL_RECORD=PASS tail_steps=99 ema_leaves=59`，各检查点目录集合精确为5000到75000每5000一步，加79999，共16份。训练完成和目录齐全不替代79999严格恢复或公开备份验收；当前任务仍为`running`。
+
+| 收尾调整 | 旧 → 新与理由 | 独立审查、授权与实际范围 |
+|---|---|---|
+| 四文件的路径披露 | 原导出器离线模式在`encoder_dependencies.json P1`拒绝。现场扫描两run的交付根来源与训练日志，缺少7项披露裁决：三文件`encoder_dependencies.json`、`motion_provenance.json`、`_run-meta/train.log`的P1/P2，以及`motion_evidence/G3.json`的P3。用户在完整清单后明确「同意开始」，故只新增7项精确文件匹配，保留原字节与SHA，不改凭据硬停或恢复判据。 | `ADJUST_REVIEW=PASS scale=same findings=0`；披露提交`385fd43dd64b680e7aa738cff9768a7a4db63978`已push。`DISCLOSURE_SCOPE=PASS added=7 old_unchanged=1 exact_paths=4`。 |
+| 上传与纯CPU读回分离 | 既有`Publisher::transfer/readback/verify_all`把上传与落盘回读混合，不能直接满足本计划V11及`greatlakes.md`标准分区纯CPU匿名流式要求。保留原离线导出器，新增小入口`stage2_bucket_delivery.py`：Aspen只上传；GL预装CLI列远端完整集合，无Authorization的HTTP请求逐对象流式核SHA与字节数、不落对象文件。清单自身也纳入交付身份，未知既存bucket拒绝接管。 | `ADJUST_REVIEW=PASS scale=same findings=0`；S8独立工作树仅新增入口与定向测试，10项真实本地HTTP测试通过，固定子提交`06ce58adb981de016901ad077eda5aa9a5f5fcb1`独立审查通过。合并及真实HF/GL结果另据现场回写，不把fixture当备份通过。 |
+
+S8由`gpt-6.1-sol/medium`修改与独立审查，探索由`gpt-6-luna/high`执行，采用用户2026-11-04更新的通用映射。共享文件归属不变，S8仅有两个新文件。原主检出已由其他会话切到`v4.1-interpretMotion`且存在他人的未跟踪文档，因此本次计划与状态更新使用原任务分支`v4-eval-official-1026`的独立交接工作树，不切换、不清理他人的现场。
+
+初次收尾载体未消费标签参数而让公共入口拒绝额外参数，退出2；消费参数后一次重试才得到真实披露失败，全部日志保留。原导出驱动短测59通过、9项被其硬编码AWS缓存目录`/scratch/hongze/.cache/uv`的子进程权限错误阻断；没有修改无关测试，也未虚报全套通过。79999严格恢复、占位释放、公开上传与集群CPU读回仍按各自实际判定留档。
