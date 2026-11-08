@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-08T11:31:29.171972+00:00",
-    "america_new_york": "2026-11-08T06:31:29.171972-05:00"
+    "utc": "2026-11-08T12:27:58.528287+00:00",
+    "america_new_york": "2026-11-08T07:27:58.528287-05:00"
   },
   "repo": {
     "branch": "v9-ctx-wan-timepool1024-60k",
-    "base_head": "b3c1e9060ed9bb78e1074999ce0f8dacd42d105b"
+    "base_head": "8151e9460e80f3fc5b7ce2c95abe2599d63a2f1e"
   },
   "freeze": {
     "active": false,
@@ -1408,9 +1408,9 @@
         "file": "1106-orig16-context-wan-timepool1024-60k-plan.html",
         "sha": "ed5714c389cefbae0035f0d878718f5145e04c94"
       },
-      "state": "running",
-      "state_changed_at": "2026-11-08T11:31:29.171972+00:00",
-      "state_reason": "60k 完成（EXIT_CODE=0，TRAIN_FINAL_RECORD=PASS）；G9 首次 CKPT_INVENTORY 误判已修（b3c1e90），待 GPU 0、1 空出后重跑 G9。",
+      "state": "done",
+      "state_changed_at": "2026-11-08T12:27:58.528287+00:00",
+      "state_reason": "G0–G9 全部 PASS，60000 步退出 0，12 份 checkpoint，59999 严格恢复；交付档案 commitV11.81。长尾：最终全量匿名读回。",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiUrxBxra275CF71Wtx",
         "host": "Claude@AWS"
@@ -1452,9 +1452,9 @@
         },
         {
           "what": "正式 60k 与 G9",
-          "evidence": "TRAIN_FINAL_RECORD=PASS state_step=60000 checkpoint_step=59999；RESTORE_POOL=PASS；EXIT_CODE=0（训练）。首次 CKPT_INVENTORY=FAIL 为验证器把 train_state 列为必需项，b3c1e90 修复后真实 run 根只读检查 findings=0，待重跑出正式判定行",
-          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx32x4x4-wan-timepool8x8-b128-60k.log",
-          "status": "pending"
+          "evidence": "TRAIN_FINAL_RECORD=PASS state_step=60000 checkpoint_step=59999；CKPT_INVENTORY=PASS steps=12；RESTORE_POOL=PASS；训练 EXIT_CODE=0；G9 EXIT_CODE=0",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig16-wan-timepool1024/g9-final-rerun.log",
+          "status": "pass"
         }
       ],
       "long_tail": [
@@ -1511,12 +1511,17 @@
           "scope": "针对 ed5714c 修订后计划及所列两处差异（16 路下载；从当前 HEAD 建分支 v9-ctx-wan-timepool1024-60k）；范围同计划阶段 0-5，不含策略评估。"
         }
       ],
-      "pending_decisions": [],
+      "pending_decisions": [
+        {
+          "what": "是否删除恢复产物 published（362GB）、wan-latents（25GB）及备份暂存 v1-store/exports/hf-ckpt-orig100-ctx32x4x4-wan-timepool8x8-b128-60k（130GB，全量读回通过后）",
+          "status": "pending"
+        }
+      ],
       "next_steps": [
         {
-          "what": "GPU 0、1 空出后按修复后验证器重跑 G9，写 result.md",
-          "command": "bash /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig16-wan-timepool1024/g9-final.sh",
-          "verdict_line": "CKPT_INVENTORY=PASS steps=12；RESTORE_POOL=PASS"
+          "what": "长尾完成后标 closed；用户裁决清理",
+          "command": "grep HF_VERIFY /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig16-wan-timepool1024/checkpoint-backup.log",
+          "verdict_line": "HF_VERIFY=PASS mismatches=0；CKPT_UPLOAD=PASS steps=12"
         }
       ]
     }
