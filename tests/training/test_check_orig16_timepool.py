@@ -1290,8 +1290,9 @@ def final_env(tmp_path, monkeypatch):
     dump(t.records / "checkpoint_wait_done.json", dict(run_uuid="u", head=t.head, wait_until_finished=True))
     t.run_root = tmp_path / "run"
     for step in chk.EXPECT["checkpoint_steps"]:
+        # 与 checkpoints.py::save_state 实际落盘一致：只有 assets 与 params，没有 train_state
         (t.run_root / str(step) / "params").mkdir(parents=True)
-        (t.run_root / str(step) / "train_state").mkdir()
+        (t.run_root / str(step) / "assets").mkdir()
         (t.run_root / str(step) / "_CHECKPOINT_METADATA").write_text("{}")
         (t.run_root / str(step) / "params/_METADATA").write_text("{}")
         (t.run_root / str(step) / "params/manifest.ocdbt").write_text("x")
@@ -1321,6 +1322,46 @@ def test_final_missing_checkpoint(final_env, capsys, step):
     code, lines = run_cli(capsys, final_env.argv)
     assert code == 1 and lines[1].startswith("CKPT_INVENTORY=FAIL field=checkpoint_steps")
     assert lines[0].startswith("TRAIN_FINAL_RECORD=PASS")
+
+
+@pytest.mark.parametrize("entry", ["assets", "params/_METADATA"])
+def test_final_checkpoint_entry_missing(final_env, capsys, entry):
+    import shutil
+    target = final_env.run_root / "5000" / entry
+    shutil.rmtree(target) if target.is_dir() else target.unlink()
+    code, lines = run_cli(capsys, final_env.argv)
+    assert code == 1 and lines[1].startswith("CKPT_INVENTORY=FAIL field=checkpoint_entry_missing")
+    assert f"5000/{entry}" in lines[1]
+
+
+def _save_state_item_keys():
+    """用 AST 取 checkpoints.py::save_state 里 items 字典的实际键（被注释掉的键不在 AST 里）。"""
+    tree = ast.parse((ROOT / "src/openpi/training/checkpoints.py").read_text())
+    func = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "save_state")
+    for node in ast.walk(func):
+        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "items" for t in node.targets):
+            return {key.value for key in node.value.keys}
+    raise AssertionError("save_state 里找不到 items 字典")
+
+
+def test_checkpoint_required_entries_match_save_state(tmp_path):
+    keys = _save_state_item_keys()
+    assert keys == {"assets", "params"}
+    top = {name.split("/")[0] for name in chk.CHECKPOINT_REQUIRED_ENTRIES}
+    assert top == keys | {"_CHECKPOINT_METADATA"}
+    assert "train_state" not in top
+    # 只按 save_state 实际保存项造 12 份 checkpoint（无 train_state），清点应零 finding
+    for step in chk.EXPECT["checkpoint_steps"]:
+        directory = tmp_path / str(step)
+        (directory / "params").mkdir(parents=True)
+        (directory / "assets").mkdir()
+        (directory / "_CHECKPOINT_METADATA").write_text("{}")
+        (directory / "params/_METADATA").write_text("{}")
+        (directory / "params/manifest.ocdbt").write_text("x")
+    findings = chk.Findings()
+    steps = chk.check_checkpoint_inventory(findings, tmp_path)
+    assert steps == list(chk.EXPECT["checkpoint_steps"]) and len(steps) == 12
+    assert findings.total == 0 and not findings.items
 
 
 def test_final_extra_and_uncommitted_checkpoint(final_env, capsys):
