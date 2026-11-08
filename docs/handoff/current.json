@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-08T12:27:58.528287+00:00",
-    "america_new_york": "2026-11-08T07:27:58.528287-05:00"
+    "utc": "2026-11-08T12:29:37.625537+00:00",
+    "america_new_york": "2026-11-08T07:29:37.625537-05:00"
   },
   "repo": {
     "branch": "v9-ctx-wan-timepool1024-60k",
-    "base_head": "8151e9460e80f3fc5b7ce2c95abe2599d63a2f1e"
+    "base_head": "14fa3b898a79f0693d6a99014b074e7c062caea3"
   },
   "freeze": {
     "active": false,
@@ -1408,9 +1408,9 @@
         "file": "1106-orig16-context-wan-timepool1024-60k-plan.html",
         "sha": "ed5714c389cefbae0035f0d878718f5145e04c94"
       },
-      "state": "done",
-      "state_changed_at": "2026-11-08T12:27:58.528287+00:00",
-      "state_reason": "G0–G9 全部 PASS，60000 步退出 0，12 份 checkpoint，59999 严格恢复；交付档案 commitV11.81。长尾：最终全量匿名读回。",
+      "state": "closed",
+      "state_changed_at": "2026-11-08T12:29:37.625537+00:00",
+      "state_reason": "长尾完成：HF_VERIFY=PASS objects=268 bytes=139094797889 mismatches=0；CKPT_UPLOAD=PASS steps=12；BACKUP_EXIT_CODE=0。清理本地大文件待用户裁决。",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiUrxBxra275CF71Wtx",
         "host": "Claude@AWS"
@@ -1463,7 +1463,8 @@
           "tmux": "o16-tp-backup-11062345",
           "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig16-wan-timepool1024/checkpoint-backup.log",
           "done_line": "HF_VERIFY=PASS mismatches=0；CKPT_UPLOAD=PASS steps=12；BACKUP_EXIT_CODE=0",
-          "status": "running"
+          "status": "pass",
+          "evidence": "HF_VERIFY=PASS bucket=HongzeFu/robomme-vla-orig100-ctx32x4x4-wan-timepool8x8-60k-v1 objects=268 bytes=139094797889 mismatches=0；CKPT_UPLOAD=PASS steps=12"
         }
       ],
       "running_handles": [],
@@ -1519,9 +1520,9 @@
       ],
       "next_steps": [
         {
-          "what": "长尾完成后标 closed；用户裁决清理",
-          "command": "grep HF_VERIFY /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig16-wan-timepool1024/checkpoint-backup.log",
-          "verdict_line": "HF_VERIFY=PASS mismatches=0；CKPT_UPLOAD=PASS steps=12"
+          "what": "用户裁决是否删除恢复产物与备份暂存",
+          "command": "见 pending_decisions",
+          "verdict_line": "用户裁决"
         }
       ]
     }
