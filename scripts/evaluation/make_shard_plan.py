@@ -71,6 +71,7 @@ def cmd_shards(args):
                 "shards": args.shards, "total": len(primary), "files": {}}
 
     seen = set()
+    per_shard_group = []
     for i, rows in enumerate(shards):
         tag = f"s{i}"
         path = out / f"shard{i}.json"
@@ -83,15 +84,22 @@ def cmd_shards(args):
         if len(per_group) != 14:
             raise SystemExit(f"分片 {i} 少了组：只有 {len(per_group)} 组")
         # 无 --demo-store 时 14 组各 50 条、必然整除，沿用严格判据；
-        # 带 --demo-store 时 BinFill 三组被剔到 49/49/44，各片只能保证「最多差 1 条」
-        if args.demo_store:
-            if max(per_group.values()) - min(per_group.values()) > 1:
-                raise SystemExit(f"分片 {i} 的组分布不均：{dict(per_group)}")
-        elif set(per_group.values()) != {len(rows) // 14}:
+        # 带 --demo-store 时的均匀性改为下面的「同一组跨片最多差 1」（1108 计划 C6）
+        if not args.demo_store and set(per_group.values()) != {len(rows) // 14}:
             raise SystemExit(f"分片 {i} 的组分布不均：{dict(per_group)}")
+        per_shard_group.append(per_group)
 
     if len(seen) != len(primary):
         raise SystemExit(f"分片并集 {len(seen)} != {len(primary)}")
+    if args.demo_store:
+        # 1108 计划 C6：原「片内各组最多差 1」与 10% 前缀失败门槛不兼容（15 条失败全来自 hard 时
+        # BinFill 三组为 50/35/50，35 条的组每片只有 3–4 条，片内必差 2 以上）。改为同一组在各分片之间
+        # 数量最多差 1；相交与并集检查（上面两处）保留，合起来即「不交、全覆盖、各组均匀分散」。
+        # rows[i::shards] 轮转对排好序的行逐组连续发牌，本身保证该条件成立。
+        for group in sorted({g for pg in per_shard_group for g in pg}):
+            counts = [pg.get(group, 0) for pg in per_shard_group]
+            if max(counts) - min(counts) > 1:
+                raise SystemExit(f"组 {group[0]}/{group[1]} 在各分片间分布不均：{counts}")
     (out / "plan_manifest.json").write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     per = len(primary) // args.shards

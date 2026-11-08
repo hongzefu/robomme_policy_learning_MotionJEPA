@@ -1,8 +1,12 @@
 """不加载大数组，先核对冻结配置、归一化与完整参数形状。
 按 run 根目录名（checkpoint 的父目录名）查 RUNS 表，决定允许的 step 集合、motion 开关、config 名、budget 与两个 sha256 的期望值；
-不在表里的 run 直接拒绝——评估只认这张表里登记过的权重。"""
+不在表里的 run 直接拒绝——评估只认这张表里登记过的权重。
+
+另一用法（1108 计划 C8 / D1.5）：``check_checkpoint.py --resolved-sha256 <history YAML>`` 按
+``train.py::init_history_config`` 同口径复算 resolved_sha256 并打印 ``RESOLVED_SHA256=<sha> yaml=<路径>``，不查 checkpoint。"""
 import dataclasses
 import hashlib
+import json
 from pathlib import Path
 import sys
 
@@ -19,6 +23,50 @@ repo = Path(__file__).resolve().parents[2]
 assert Path(policy_source.__file__).resolve() == repo / 'src/mme_vla_suite/policies/policy_config.py'
 assert Path(model_source.__file__).resolve() == repo / 'src/openpi/models/model.py'
 print('SERVER_SOURCE', sys.executable, policy_source.__file__, model_source.__file__, flush=True)
+
+# 1108 计划的池化 run：kind / readout 与 S1 的 wan_pool768.POOL768_ENCODER_KIND / POOL768_READOUT 同值（计划 §3.1 写死）；
+# 这里写字面量而不 import，评估 server venv 不必依赖离线池化模块。
+WANTP768_KIND = 'wan_fixedpool768'
+WANTP768_READOUT = 'wan_raw_timepool8_adaptive6x8_v1'
+WANTP768_YAML = 'src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-8frame-8x8-wantp768.yaml'
+# 待填：S2 定稿 YAML 交来后用 `check_checkpoint.py --resolved-sha256 <WANTP768_YAML>` 复算写入（口径见 resolved_sha256_of_yaml）。
+# 未填时任何 checkpoint 都过不了 main() 里的 resolved_sha256 断言，不会误放行。
+WANTP768_RESOLVED_SHA256 = 'PENDING-S2-YAML'
+
+
+def resolved_sha256_of_yaml(yaml_path) -> str:
+    """与 scripts/training/train.py::init_history_config 写 history_config.resolved.yaml 同口径：
+    训练侧 get_history_config(name) 即 OmegaConf.load(src/mme_vla_suite/models/config/robomme/<name>)，
+    快照字节 = OmegaConf.to_yaml(cfg, resolve=True).encode('utf-8')，resolved_sha256 = 该字节的 sha256。
+    runner 的覆盖项（--num_train_steps、--exp_name 等 TrainConfig 字段）不进 history 快照，故不参与计算。"""
+    from omegaconf import OmegaConf
+    raw = OmegaConf.to_yaml(OmegaConf.load(str(yaml_path)), resolve=True).encode('utf-8')
+    return hashlib.sha256(raw).hexdigest()
+
+
+def assert_motion(cfg, run, prov):
+    """motion 断言按 run['motion_kind'] 分支：未写 motion_kind 的旧条目走 encoder 分支，断言与改动前逐字相同。"""
+    # budget 是模型语义参数（决定 mem_len=512+budget 与 RoPE 位置号），参数树形状对它失明，必须显式钉死
+    assert int(cfg.motion.budget) == run['motion_budget'], cfg.motion.budget
+    kind = run.get('motion_kind')
+    if kind is None:
+        assert str(cfg.motion.source_run) == run['motion_source_run'], cfg.motion.source_run
+        assert int(cfg.motion.stride) == 16 and int(cfg.motion.window_frames) == 33 and int(cfg.motion.frame_size) == 256
+        print(f'BUDGET_CONSISTENT=PASS budget={int(cfg.motion.budget)} source_run={cfg.motion.source_run}', flush=True)
+        return
+    # 池化分支（1108 计划 1.1 第 6 行）：不要求 motion_source_run，改核快照与 motion_provenance.json 的 kind / readout
+    assert kind == WANTP768_KIND, kind
+    assert cfg.motion.get('encoder_kind') == kind, cfg.motion.get('encoder_kind')
+    assert cfg.motion.get('readout') == run['readout'], cfg.motion.get('readout')
+    assert int(cfg.motion.stride) == 16 and int(cfg.motion.window_frames) == 33 and int(cfg.motion.frame_size) == 256
+    assert int(cfg.motion.dim) == 768, cfg.motion.dim
+    assert prov.get('encoder_kind') == kind and prov.get('readout') == run['readout'], \
+        (prov.get('encoder_kind'), prov.get('readout'))
+    assert prov.get('encoder') is None and prov.get('vae') is not None and prov.get('pool_source_sha256'), \
+        (prov.get('encoder'), prov.get('vae'), prov.get('pool_source_sha256'))
+    print(f'BUDGET_CONSISTENT=PASS budget={int(cfg.motion.budget)} motion_kind={kind} readout={run["readout"]} '
+          f'pool_source_sha256={str(prov["pool_source_sha256"])[:16]}', flush=True)
+
 
 # 登记过的权重：键 = run 根目录名（download.sh 的落点目录名）
 RUNS = {
@@ -70,40 +118,65 @@ RUNS = {
         resolved_sha256='9df78b4dac2acdc43fbce5040a88014805df1b50bb803feba027559fc31f96a3',
         norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
     ),
+    # ── 1108 计划（1108-4task-modul-wantp768-50k-plan.html F4 / C8）：Wan 重叠窗零参数池化 768 替换 motion encoder ──
+    # bucket HongzeFu/robomme-vla-4task-modul-wantp768-50k-v1，run v2-1600ep-m8x8-modul-wantp768-b128-50k，motion 开启，只评 @50000。
+    # motion 分支按 motion_kind（见 assert_motion）：池化分支不要求 motion_source_run，改核快照 encoder_kind / readout。
+    # resolved_sha256 按 train.py::init_history_config 的口径从 S2 定稿 YAML 预计算（resolved_sha256_of_yaml）；
+    # history YAML 不含步数与 run 名，故正式 run 与冒烟 run 同值。
+    'v2-1600ep-m8x8-modul-wantp768-b128-50k': dict(
+        steps=('50000',), motion=True, config='mme_vla_suite_b128_80k', budget=512,
+        resolved_sha256=WANTP768_RESOLVED_SHA256,
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+        motion_budget=160, motion_kind=WANTP768_KIND, readout=WANTP768_READOUT,
+    ),
+    # G6 冒烟 run（runner --smoke20 --run-name w768-smoke20，num_train_steps=20，按 step == num_train_steps - 1
+    # 规则最后一份 ckpt 为 19）；G6b 用它走一次真实评估入口，跑完即删。与正式条目只差 run 名与步数。
+    'w768-smoke20': dict(
+        steps=('19',), motion=True, config='mme_vla_suite_b128_80k', budget=512,
+        resolved_sha256=WANTP768_RESOLVED_SHA256,
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+        motion_budget=160, motion_kind=WANTP768_KIND, readout=WANTP768_READOUT,
+    ),
 }
 
-checkpoint = Path(sys.argv[1]).resolve()
-run = RUNS.get(checkpoint.parent.name)
-assert run is not None, f'未登记的 run 根目录 {checkpoint.parent.name}，已登记: {sorted(RUNS)}'
-assert checkpoint.name in run['steps'], (checkpoint, run['steps'])
-cfg, motion_enabled = _load_resolved_snapshot(checkpoint.parent)
-assert motion_enabled == run['motion'], (motion_enabled, run['motion'])
-# budget 逐 run 钉死：它是模型语义参数（决定 static_image_emb 的序列长度与取帧数 budget//token_per_image），
-# 参数树形状对它失明，配错了不会被 PARAM_TREE_EXACT 拦住
-assert int(cfg.budget) == run['budget'], (cfg.budget, run['budget'])
-assert cfg.token_per_image == 64 and cfg.integration_type == 'modulation'
-assert cfg.perceptual_memory.type == 'frame_sampling'
-assert hashlib.sha256((checkpoint.parent / 'history_config.resolved.yaml').read_bytes()).hexdigest() == run['resolved_sha256']
-assert hashlib.sha256((checkpoint / 'assets/robomme/norm_stats.json').read_bytes()).hexdigest() == run['norm_stats_sha256']
-if run['motion']:
-    # budget 是模型语义参数（决定 mem_len=512+budget 与 RoPE 位置号），参数树形状对它失明，必须显式钉死
-    assert int(cfg.motion.budget) == run['motion_budget'], cfg.motion.budget
-    assert str(cfg.motion.source_run) == run['motion_source_run'], cfg.motion.source_run
-    assert int(cfg.motion.stride) == 16 and int(cfg.motion.window_frames) == 33 and int(cfg.motion.frame_size) == 256
-    print(f'BUDGET_CONSISTENT=PASS budget={int(cfg.motion.budget)} source_run={cfg.motion.source_run}', flush=True)
-model_config = dataclasses.replace(get_config(run['config']).model, history_config=cfg, use_history=True)
-model = nnx.eval_shape(model_config.create, jax.random.key(0))
-expected = flatten_dict(nnx.state(model, nnx.Param).to_pure_dict())
-with ocp.PyTreeCheckpointer() as reader:
-    metadata = reader.metadata(checkpoint / 'params')
-assert set(metadata.tree) == {'params'}
-actual = flatten_dict(metadata.tree['params'])
-if all(key[-1] == 'value' for key in actual):
-    actual = {key[:-1]: value for key, value in actual.items()}
-assert set(actual) == set(expected), (set(expected) - set(actual), set(actual) - set(expected))
-for key, value in expected.items():
-    assert value.shape == actual[key].shape, (key, value.shape, actual[key].shape)
-motion_leaves = sorted('/'.join(map(str, k)) for k in actual if 'motion_pos_proj' in '/'.join(map(str, k)) or 'motion_encoder_static' in '/'.join(map(str, k)))
-assert bool(motion_leaves) == run['motion'], motion_leaves
-print(f'PARAM_TREE_EXACT=PASS n_model={len(expected)} n_ckpt={len(actual)} missing=0 extra=0 shape_mismatch=0 motion_leaves={len(motion_leaves)}', flush=True)
-print(f"HISTORY_CONFIG=PASS NORM_STATS=PASS {'MOTION_ENABLED=PASS' if run['motion'] else 'MOTION_DISABLED=PASS'} config={run['config']} step={checkpoint.name} budget={int(cfg.budget)}", flush=True)
+
+def main(argv):
+    if len(argv) == 3 and argv[1] == '--resolved-sha256':
+        print(f'RESOLVED_SHA256={resolved_sha256_of_yaml(argv[2])} yaml={argv[2]}', flush=True)
+        return
+    checkpoint = Path(argv[1]).resolve()
+    run = RUNS.get(checkpoint.parent.name)
+    assert run is not None, f'未登记的 run 根目录 {checkpoint.parent.name}，已登记: {sorted(RUNS)}'
+    assert checkpoint.name in run['steps'], (checkpoint, run['steps'])
+    cfg, motion_enabled = _load_resolved_snapshot(checkpoint.parent)
+    assert motion_enabled == run['motion'], (motion_enabled, run['motion'])
+    # budget 逐 run 钉死：它是模型语义参数（决定 static_image_emb 的序列长度与取帧数 budget//token_per_image），
+    # 参数树形状对它失明，配错了不会被 PARAM_TREE_EXACT 拦住
+    assert int(cfg.budget) == run['budget'], (cfg.budget, run['budget'])
+    assert cfg.token_per_image == 64 and cfg.integration_type == 'modulation'
+    assert cfg.perceptual_memory.type == 'frame_sampling'
+    assert hashlib.sha256((checkpoint.parent / 'history_config.resolved.yaml').read_bytes()).hexdigest() == run['resolved_sha256']
+    assert hashlib.sha256((checkpoint / 'assets/robomme/norm_stats.json').read_bytes()).hexdigest() == run['norm_stats_sha256']
+    if run['motion']:
+        prov = json.loads((checkpoint.parent / 'motion_provenance.json').read_text(encoding='utf-8'))
+        assert_motion(cfg, run, prov)
+    model_config = dataclasses.replace(get_config(run['config']).model, history_config=cfg, use_history=True)
+    model = nnx.eval_shape(model_config.create, jax.random.key(0))
+    expected = flatten_dict(nnx.state(model, nnx.Param).to_pure_dict())
+    with ocp.PyTreeCheckpointer() as reader:
+        metadata = reader.metadata(checkpoint / 'params')
+    assert set(metadata.tree) == {'params'}
+    actual = flatten_dict(metadata.tree['params'])
+    if all(key[-1] == 'value' for key in actual):
+        actual = {key[:-1]: value for key, value in actual.items()}
+    assert set(actual) == set(expected), (set(expected) - set(actual), set(actual) - set(expected))
+    for key, value in expected.items():
+        assert value.shape == actual[key].shape, (key, value.shape, actual[key].shape)
+    motion_leaves = sorted('/'.join(map(str, k)) for k in actual if 'motion_pos_proj' in '/'.join(map(str, k)) or 'motion_encoder_static' in '/'.join(map(str, k)))
+    assert bool(motion_leaves) == run['motion'], motion_leaves
+    print(f'PARAM_TREE_EXACT=PASS n_model={len(expected)} n_ckpt={len(actual)} missing=0 extra=0 shape_mismatch=0 motion_leaves={len(motion_leaves)}', flush=True)
+    print(f"HISTORY_CONFIG=PASS NORM_STATS=PASS {'MOTION_ENABLED=PASS' if run['motion'] else 'MOTION_DISABLED=PASS'} config={run['config']} step={checkpoint.name} budget={int(cfg.budget)}", flush=True)
+
+
+if __name__ == '__main__':
+    main(sys.argv)

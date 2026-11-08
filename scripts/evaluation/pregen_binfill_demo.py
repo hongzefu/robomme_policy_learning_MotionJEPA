@@ -437,8 +437,9 @@ def cmd_finalize(args):
     if failed:
         rate = len(failed) / len(expected)
         print(f"[warn] {len(failed)} 条未产出（{rate:.1%}）：{sorted(failed)}", flush=True)
-        if rate > 0.05:
-            raise SystemExit(f"失败率 {rate:.1%} > 5%，按计划停下来找用户裁决")
+        # 门槛由 --max-fail-rate 给（默认 0.05 = 旧行为；1108 计划 U4 本机重生成传 0.10）
+        if rate > args.max_fail_rate:
+            raise SystemExit(f"失败率 {rate:.1%} > {args.max_fail_rate:.0%}，按计划停下来找用户裁决")
     return 0
 
 
@@ -456,6 +457,8 @@ def main():
     parser.add_argument("--candidates", default=str(DEFAULT_CANDIDATES))
     parser.add_argument("--partial", action="store_true",
                         help="finalize 模式：只归整已有记录（冒烟用），跳过「全部集齐」断言；正式跑不得带")
+    parser.add_argument("--max-fail-rate", type=float, default=0.05,
+                        help="finalize 模式：失败率超过该值即停（默认 0.05 = 旧行为）")
     args = parser.parse_args()
     if not (0 <= args.shard < args.shards):
         raise SystemExit(f"--shard 必须落在 [0, {args.shards})")
