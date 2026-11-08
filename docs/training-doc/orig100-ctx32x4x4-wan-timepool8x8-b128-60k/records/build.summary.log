@@ -1,0 +1,142 @@
+
+=== STEP G0 2026-11-07T03:15:46Z
+DATA_LINEAGE=PASS encoder_kind=wan_fixedpool1024 encoder_ckpt=none files=16 mismatches=0
+
+=== STEP G3 2026-11-07T03:18:47Z
+POOL_CONTRACT=PASS shape=1x1024 dtype=float32 params=0 raw=1 drop_first=1
+
+=== STEP G1 2026-11-07T03:18:47Z
+WAN_RESTORE_EQ=PASS windows=45228 input_mismatches=0 latent_mismatches=0
+
+=== STEP EXPORT 2026-11-07T03:19:01Z
+EXPORT_WAN_TIMEPOOL=PASS source_windows=45228 windows=23253 copy=21814 fill=1439 demo_tail=386 exec_fill=1053 segments=2496 bytes=95244288 table_sha256=df60d2b523c4b85a1ea27d7d5aa79b10d4b05f728da119830cbe2b713a8e3ca4 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/orig16-wan-timepool1024-recovery/wan-timepool-export
+
+=== STEP PACK 2026-11-07T03:21:14Z
+[pack] episodes=1600 rows=23253 (exec 14138 + demo 9115) index_sha256=6f92f59547f9ac39…
+PACK_PROVENANCE_PRECHECK=PASS mode=single_pin segments=2496
+[pack] 表 95,244,288 B / 23253 行 / 2496 段, sha256=df60d2b523c4b85a…; meta 阶段1 落盘（status=packed）; 耗时 1208.7s
+PACK_MOTION_DONE=1 raw_dir_match=1 （pack.lock 保留，verify 回填后才释放）
+
+=== STEP VERIFY_PACKED 2026-11-07T03:41:22Z
+VERIFY_MOTION=PASS scanned=23253 mismatches=0 status=packed gate_records=0 （全表核对通过，等待 --gate-records-dir，未写 verified）
+
+=== STEP G2 2026-11-07T03:41:26Z
+WINDOW_EQ=PASS windows=23253 copy=21814 fill=1439 demo_tail=386 exec_fill=1053 max_visible=44
+
+=== STEP G4 2026-11-07T03:41:31Z
+POOL_TABLE_EQ=PASS rows=23253 mismatches=0 nonfinite=0 bytes=95244288
+
+=== STEP BIND 2026-11-07T03:42:39Z
+GATE_BIND=PASS bound=3 already=2 store_table_sha256=df60d2b523c4b85a1ea27d7d5aa79b10d4b05f728da119830cbe2b713a8e3ca4 motion_index_sha256=6f92f59547f9ac3965ceda844e500d51c106f3b831728b0114f8b62ff6ef45fc
+
+=== STEP SEAL 2026-11-07T03:42:40Z
+[verify] meta 回填（status=verified）+ row_digests 落盘, 耗时 3.3s
+VERIFY_MOTION=PASS scanned=23253 mismatches=0 nonfinite=0 segment_set_mismatch=0 status=verified gate_records=5
+
+=== STEP G5_PARAM 2026-11-07T03:42:44Z
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: context ======
+Perceptual Memory using frame_sampling type
+
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: context ======
+Perceptual Memory using frame_sampling type
+
+VLA_PARAM_EQ=PASS total=3363663120 trainable=2948859424 frozen=414803696 leaves=59 trainable_leaves=36
+
+=== STEP G5_INIT 2026-11-07T03:42:51Z
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: context ======
+Perceptual Memory using frame_sampling type
+
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: context ======
+Perceptual Memory using frame_sampling type
+
+VLA_INIT_EQ=PASS leaves=59 mismatches=0 seed=42
+
+=== STEP G5_CONFIG 2026-11-07T03:45:21Z
+max_token_len: 64
+TRAIN_CONFIG_EQ=PASS
+
+=== STEP G5_SAMPLE 2026-11-07T03:45:28Z
+max_token_len: 64
+max_token_len: 64
+NON_MOTION_EQ=PASS mismatches=0
+
+=== STEP G6 2026-11-07T03:45:40Z
+POOL_SHARED_EQ=PASS max_abs=0 bitwise_equal=1
+
+=== STEP DRY_RUN 2026-11-07T03:45:41Z
+TRAIN_CMD=/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/bin/python scripts/training/train.py mme_vla_suite_orig16_b128_60k --exp-name orig100-ctx32x4x4-wan-timepool8x8-b128-60k --dataset-path /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-orig100-1600ep-9e109419/framesamp-4x4 --assets-base-dir /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets --data.assets.assets-dir /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/16task-orig100-1600ep-9e109419 --data.assets.asset-id robomme --checkpoint-base-dir /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs --weight-loader.params-path /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params --model.use-history --model.history-config perceptual-framesamp-ctx-32frame-4x4-wan-timepool1024-orig16.yaml 
+CHECK_BUILD_PINS=PASS 构建pin必须全部回填
+CHECK_ARGV_CONFIG_NAME=PASS 
+CHECK_ARGV_ALLOWLIST=PASS []
+CHECK_ARGV_STEPS=PASS 
+CHECK_ARGV_HISTORY=PASS 
+CHECK_ARGV_NO_RESUME=PASS 禁止resume/overwrite/resum_ckpt_id 实际=[]
+CHECK_ENV_MOTION_STORE_UNSET=PASS MMEVLA_MOTION_STORE=<未设置>
+CHECK_ENV_NO_ALLOW_OVERRIDES=PASS 残留放行变量=[]
+CHECK_ENV_VERIFY_LEVEL=PASS MMEVLA_FRAMESAMP_VERIFY=<未设置>
+CHECK_ENV_PYTHONPATH_UNSET=PASS PYTHONPATH=<未设置>
+CHECK_ENV_OPENPI_DATA_HOME=PASS OPENPI_DATA_HOME=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models
+CHECK_ENV_FRAMESAMP_SOURCE=PASS 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-orig100-1600ep-9e109419/source
+CHECK_ENV_FRAMESAMP_MANIFEST=PASS 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-orig100-1600ep-9e109419/meta/episode_manifest.json
+CHECK_ENV_PREALLOCATE=PASS 
+CHECK_ENV_GPUS=PASS 单JAX进程8卡 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+CHECK_ENV_FINAL_RECORD_DIR=PASS 须为 v1-store 内绝对、名为final-record、不存在或为空 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/orig16-wan-timepool1024/final-record
+CHECK_ENV_TRAIN_RECORD_DIR=PASS 须为 final-record 同级 train-record 且无 metrics.jsonl 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/orig16-wan-timepool1024/train-record
+GPU_SCOPE=PASS allowed=0-7
+CHECK_FRAME_LAYOUT=PASS 
+CHECK_FUSION=PASS 
+CHECK_MOTION_READOUT=PASS 
+CHECK_HISTORY_KEYS=PASS 除readout、encoder_kind、store_path与删除的来源两键外不接受配置漂移
+FRAME_LAYOUT=PASS layout=4x4 frames=32 tokens_per_frame=16 budget=512
+MOTION_LAYOUT=PASS readout=timepool tokens_per_window=1 budget=96 total_tokens=608
+FUSION=PASS integration=context memory_token_dim=2048
+CHECK_EPISODE_MANIFEST.JSON_SHA=PASS 
+CHECK_INPUT_MANIFEST.JSON_SHA=PASS 
+CHECK_NORM_SHA=PASS 
+CHECK_MANIFEST_IDENTITY=PASS 
+CHECK_DATASET_LAYOUT=PASS 
+CHECK_WINDOW_BUDGET=PASS 
+CHECK_STORE_VERIFIED=PASS status=verified
+CHECK_MOTION_VERIFIED=PASS 
+CHECK_STORE_MANIFESTS=PASS 
+CHECK_SOURCE_H5_SET=PASS files=16 mismatches=[]
+CHECK_NO_ENCODER=PASS 
+CHECK_RECORD_DATA_LINEAGE=PASS /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/orig16-wan-timepool1024/DATA_LINEAGE.json
+CHECK_RECORD_WAN_RESTORE_EQ=PASS /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/orig16-wan-timepool1024/WAN_RESTORE_EQ.json
+CHECK_RECORD_WINDOW_EQ=PASS /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/orig16-wan-timepool1024/WINDOW_EQ.json
+CHECK_RECORD_POOL_CONTRACT=PASS /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/orig16-wan-timepool1024/POOL_CONTRACT.json
+CHECK_RECORD_POOL_TABLE_EQ=PASS /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/orig16-wan-timepool1024/POOL_TABLE_EQ.json
+CHECK_RECORD_LINEAGE_VERDICT=PASS DATA_LINEAGE=PASS encoder_kind=wan_fixedpool1024 encoder_ckpt=none files=16 mismatches=0
+DATA_LINEAGE=PASS encoder_kind=wan_fixedpool1024 encoder_ckpt=none files=16 mismatches=0
+CHECK_STORE_HEAD_ANCESTOR=PASS store=19be5e9ed247921a1f799df119470cfad755d67f train=19be5e9ed247921a1f799df119470cfad755d67f
+CHECK_STORE_HEAD_CODE_EQ=PASS store=19be5e9ed247921a1f799df119470cfad755d67f train=19be5e9ed247921a1f799df119470cfad755d67f changed=[]
+CHECK_CFG_BATCH_SIZE=PASS 
+CHECK_CFG_FSDP_DEVICES=PASS 
+CHECK_CFG_NUM_WORKERS=PASS 
+CHECK_CFG_SEED=PASS 
+CHECK_CFG_EMA_DECAY=PASS 
+CHECK_CFG_STEPS=PASS 
+CHECK_CFG_SCHEDULE=PASS 
+CHECK_CFG_SAVE=PASS 
+CHECK_CFG_MODEL=PASS 
+CHECK_CFG_NO_RESUME=PASS 
+CHECK_CFG_EXACT=PASS 完整配置除已列CLI路径/名称/短测步数外须等于新60k配置
+CHECK_CFG_IMPORT_ROOT=PASS 
+CHECK_CFG_RUN=PASS exp_name=orig100-ctx32x4x4-wan-timepool8x8-b128-60k
+CHECK_CFG_NEW_RUN=PASS 
+TRAIN_CONFIG_EQ=PASS diff_keys=exp_name,history.motion.checkpoint_sha256,history.motion.encoder_kind,history.motion.readout,history.motion.source_run,history.motion.store_path,model.history_config
+CHECK_TRAIN_CONFIG_EQ=PASS 
+CHECK_REPO_CWD=PASS 期望=/scratch/hongze/robomme_policy_learning_MotionJEPA 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA
+CHECK_REPO_PACKAGE=PASS mme_vla_suite=/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/__init__.py
+CHECK_REPO_HEAD=PASS 期望=19be5e9ed247921a1f799df119470cfad755d67f 实际=19be5e9ed247921a1f799df119470cfad755d67f
+CHECK_REPO_CLEAN=PASS porcelain=空
+CHECK_PI05_ASSET_LOCK=PASS ASSETS_LOCK cheap pi05_base 失败=[]
+LAUNCH_CONTRACT=PASS checks=60 failed=0
+
+BUILD_STAGES=COMPLETE head=19be5e9ed247921a1f799df119470cfad755d67f
+END_UTC=2026-11-07T03:45:51Z
+EXIT_CODE=0
