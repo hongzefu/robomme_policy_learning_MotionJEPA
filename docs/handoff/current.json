@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-08T21:00:14Z",
-    "America/New_York": "2026-11-08T16:00:14.005272-05:00"
+    "utc": "2026-11-08T21:09:57Z",
+    "America/New_York": "2026-11-08T16:09:57-05:00"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "1d10bf26cbc493b7cfe37ab08e5ec99d5ee7628e",
+    "base_head": "25b220a855c1303f70df3c743032e45ec2fbfbc3",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -1440,6 +1440,72 @@
           "what": "部署已批精确披露补丁，重新离线导出；同原占位做79999严格恢复，随后按既有范围上传并GL standard纯CPU匿名流式校验。已完成训练不得重启。",
           "command": "G按交付补丁固定HEAD运行既有exporter SMOKE=1 O16_MODE=final；原hold65209321/65209330 check_stage2_checkpoint.py --mode delivery --delivery-step79999",
           "verdict_line": "CKPT_DELIVERY_READY=PASS|FAIL step=79999；HF_VERIFY=PASS|FAIL（未验收不标done）"
+        }
+      ]
+    },
+    "gl-abl-encoders-eval": {
+      "plan": {
+        "file": "1108-gl-ablation-encoders-3seed-eval-plan.html（分支 v4.1-interpretMotion）",
+        "sha": "77a14a4"
+      },
+      "state": "planned",
+      "state_changed_at": "2026-11-08T16:09:57-05:00",
+      "state_reason": "用户 2026-11-08 美东同意登记（「登记」）；等用户对计划给开工令，且上游 gl-abl-encoders-train 为 done 并把两份占位转交本任务",
+      "owner": {
+        "session": "cc3c43d3-a0ab-4628-b8ac-dd31bccb44f6",
+        "host": "sled-aspen.eecs.umich.edu"
+      },
+      "depends_on": [
+        "gl-abl-encoders-train"
+      ],
+      "pre_handoff": [
+        {
+          "what": "两模型冒烟各 2 局",
+          "evidence": "SMOKE2=PASS model=<N|S> accepted=2 errors=0 ×2",
+          "where": "docs/evaluation-doc/o16abl-3seed-1108/result.md",
+          "status": "pending"
+        },
+        {
+          "what": "6 次 800 局全部确定终局",
+          "evidence": "COMPUTE_DONE completed=800 missing=0 errors=0 uncertain=0 ×6；SEED_ECHO=PASS ×6",
+          "where": "$E/v1-store/evaluation/o16abl-80k/*/run800/queue/summary.json",
+          "status": "pending"
+        },
+        {
+          "what": "两模型三 seed 汇总",
+          "evidence": "THREE_SEED=PASS model=<N|S> seeds=7,42,0 runs=3 ×2",
+          "where": "docs/evaluation-doc/o16abl-3seed-1108/result.md",
+          "status": "pending"
+        },
+        {
+          "what": "两份占位逐个 scancel",
+          "evidence": "HOLDS_RELEASED=PASS cancelled=2 squeue_empty=1",
+          "where": "squeue -u hongzefu",
+          "status": "pending"
+        },
+        {
+          "what": "档案提交并 push",
+          "evidence": "commit sha",
+          "where": "origin",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [],
+      "pending_decisions": [
+        "需用户亲自通知 gl-abl-encoders-train 的 owner 会话：V10 完成后不取消占位 65209321、65209330，在其条目中写明转交 gl-abl-encoders-eval（跨会话消息不代替用户授权）"
+      ],
+      "next_steps": [
+        {
+          "what": "用户对 77a14a4 计划给开工令后：派计划一致性审查，再派 E0 合并 8b52210+5fce5d3",
+          "command": "见计划第二部分 §四 runbook A0",
+          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS；EVAL_CODE=PASS；RELEASE_SNAPSHOT=PASS"
+        },
+        {
+          "what": "上游 done 后现场核对占位已转交且无训练 step",
+          "command": "ssh greatlakes 'squeue -j 65209321,65209330 -s'",
+          "verdict_line": "UPSTREAM=PASS task=gl-abl-encoders-train state=done holds_running=2 foreign_steps=0"
         }
       ]
     }
