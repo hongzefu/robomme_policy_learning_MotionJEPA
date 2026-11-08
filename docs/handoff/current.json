@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-08T21:28:46Z",
-    "America/New_York": "2026-11-08T16:28:46.808778-05:00"
+    "utc": "2026-11-08T21:55:44Z",
+    "America/New_York": "2026-11-08T16:55:44-05:00"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "1de1ceb7ab3ddd4c1db3dd4a185b89eafc9a508e",
+    "base_head": "cd3891fe9af4af377ed271e660f60db4238846cf",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -1498,9 +1498,9 @@
         "file": "1108-gl-ablation-encoders-3seed-eval-plan.html（分支 v4.1-interpretMotion）",
         "sha": "77a14a4"
       },
-      "state": "planned",
-      "state_changed_at": "2026-11-08T16:09:57-05:00",
-      "state_reason": "用户 2026-11-08 美东同意登记（「登记」）；等用户对计划给开工令，且上游 gl-abl-encoders-train 为 done 并把两份占位转交本任务",
+      "state": "running",
+      "state_changed_at": "2026-11-08T16:55:44-05:00",
+      "state_reason": "用户 2026-11-08 美东「开工」；先做计划一致性审查与 A0（E0 合并、执行副本、run 根），A1 起等上游 gl-abl-encoders-train done",
       "owner": {
         "session": "cc3c43d3-a0ab-4628-b8ac-dd31bccb44f6",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1542,7 +1542,14 @@
       ],
       "long_tail": [],
       "running_handles": [],
-      "authorizations": [],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-11-08",
+          "quote": "开工",
+          "scope": "计划 1108-gl-ablation-encoders-3seed-eval-plan.html @ 77a14a4 全文；不依赖上游的 A0 先做，占位与冒烟/正式评估等上游 done 且占位转交后再动"
+        }
+      ],
       "pending_decisions": [
         "需用户亲自通知 gl-abl-encoders-train 的 owner 会话：V10 完成后不取消占位 65209321、65209330，在其条目中写明转交 gl-abl-encoders-eval（跨会话消息不代替用户授权）"
       ],
