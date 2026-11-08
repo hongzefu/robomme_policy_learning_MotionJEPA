@@ -8,8 +8,8 @@
 
 | 档案 | 配置 | 状态 |
 |---|---|---|
-| [去 depth](gl-orig100-ctx32x4x4-noxyz-motion-s2split4x256-b64-80k/launch.md) | 新encoder ep105、ctx896、4×A40、B64、80k | 两表已验证；准备训练Beta与64档冒烟，正式未起 |
-| [去 action](gl-orig100-ctx32x4x4-nostate-motion-s2split4x256-b64-80k/launch.md) | 同制度、另一encoder | 两表已验证；准备训练Beta与64档冒烟，正式未起 |
+| [去 depth](gl-orig100-ctx32x4x4-noxyz-motion-s2split4x256-b64-80k/result.md) | 新encoder ep105、ctx896、4×A40、B64、80k | 80000步完成、EXIT0、终态59叶读回通过；完整在线握手FAIL保留，备份接续中 |
+| [去 action](gl-orig100-ctx32x4x4-nostate-motion-s2split4x256-b64-80k/result.md) | 同制度、另一encoder | 80000步完成、EXIT0、终态59叶读回通过；完整在线握手FAIL保留，备份接续中 |
 
 ## 一、环境 B 现行（AWS 8×A100，2026-09-04 起）
 
