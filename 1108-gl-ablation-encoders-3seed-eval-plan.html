@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>双消融三 seed 评估计划</title>
+<style>
+:root{--bg:#fff;--fg:#1d1d1f;--mut:#5f6368;--line:#d9dce1;--head:#f3f5f8;--warn:#fff5e0;--warnb:#d08a00;--code:#f6f8fa}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#16181c;--fg:#e6e8eb;--mut:#a0a6ad;--line:#3a3f46;--head:#21252b;--warn:#3a2f16;--warnb:#e0a530;--code:#1f2329}}
+:root[data-theme="dark"]{--bg:#16181c;--fg:#e6e8eb;--mut:#a0a6ad;--line:#3a3f46;--head:#21252b;--warn:#3a2f16;--warnb:#e0a530;--code:#1f2329}
+body{background:var(--bg);color:var(--fg);font:15px/1.65 -apple-system,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;max-width:1080px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:1.5em;border-bottom:2px solid var(--line);padding-bottom:6px;margin-top:2.2em}
+h2{font-size:1.2em;margin-top:1.8em}h3{font-size:1.05em;margin-top:1.4em}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:.92em;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:5px 8px;vertical-align:top;text-align:left}
+th{background:var(--head)}
+code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88em;background:var(--code)}
+code{padding:1px 4px;border-radius:3px}
+pre{padding:10px 12px;overflow-x:auto;border-radius:6px;border:1px solid var(--line);line-height:1.45}
+blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid var(--line);color:var(--mut)}
+.warn{background:var(--warn);border-left:4px solid var(--warnb);padding:8px 12px;margin:10px 0}
+.mut{color:var(--mut)}
+</style>
+</head>
+<body>
+
+<p class="mut">计划文件：<code>1108-gl-ablation-encoders-3seed-eval-plan.html</code>（美东 2026-11-08 创建）</p>
+
+<blockquote>
+<b>权威性与边界</b>：本文件只规划、不实施；按 <code>AGENTS.md</code> 第 2 条，你看过完整计划且不改动、明确说「开工」之后才动手。<br>
+<b>评估对象</b>：GreatLakes 训练的两条双消融 run（同属训练计划 <code>1101-gl-ablation-encoders-ctx-b64-80k-plan.md</code>），只评最终 checkpoint 79999：<code>gl-orig100-ctx32x4x4-noxyz-motion-s2split4x256-b64-80k</code>（编码器去掉 depth/xyz，下称 N）与 <code>gl-orig100-ctx32x4x4-nostate-motion-s2split4x256-b64-80k</code>（编码器去掉 action/state，下称 S）。<br>
+<b>代码锚点</b>：训练 Beta <code>8b52210</code>（含 <code>mme_vla_suite_orig16_b64_80k</code> 和两份消融 yaml）；10-31 评估执行代码 <code>5fce5d3</code>（官方 seed 门，放行 0/7/42）。两者共同祖先是 <code>9459859</code>，三方 <code>git merge-tree</code> 冲突数为 0。<br>
+<b>上游依赖</b>：状态机任务 <code>gl-abl-encoders-train</code>（评估分支 <code>v4-eval-official-1026</code> 的 <code>docs/handoff/current.json</code>，owner 是 aspen 上的 Codex 会话 <code>01a19abc…</code>），美东 11-08 16:00 的状态是 <code>running</code>，V10（离线导出 + 79999 严格恢复）尚未完成。<br>
+<b>资源</b>：复用训练的两份占位 <code>65209321</code>（gl1519）和 <code>65209330</code>（gl1503），各 4×A40 / 16 CPU / 128G，到期时刻分别是美东 <b>11-09 13:38</b> 和 <b>11-09 14:04</b>。不新提交 job。<br>
+<b>commit 体例</b>：计划与档案用 <code>docs:</code>；评估代码合并按 <code>commitV&lt;x&gt;.&lt;y&gt;:</code> 续号；子代理提交前缀 <code>sub/E0: </code>。
+</blockquote>
+
+<h1>第一部分（给人看）</h1>
+
+<h2>一、要做什么</h2>
+
+<p>两条消融模型各用官方三个 seed（7、42、0）评官方 test 16×50 = 800 局，共 <b>6 次 × 800 = 4800 局</b>，在两份训练占位的 8 张 A40 上跑，沿用 10-29/10-31 跑通的弹性队列（控制器放 sled-vail，每个 worker 常驻一份模型、按 5 局一块领取任务）。和以前相比有两处新做法：<b>每张卡可以跑两个 worker</b>，以及 <b>ssh 会话分到两条 ControlMaster 上</b>。第一次正式运行顺便测出一卡一个 worker 和一卡两个 worker 哪种更快，后五次统一用快的那种。</p>
+
+<pre>
+训练会话 V10（离线导出 + 79999 严格恢复）完成 → gl-abl-encoders-train = done，两份占位不取消、转交本任务
+   │
+   ├─ E0 合并评估代码（8b52210 + 5fce5d3）→ 导出执行副本 → 生成 N / S 两份 runtime 合同
+   │
+   ├─ 冒烟：N、S 各 2 局（seed 0，purpose=validation）
+   │
+   ├─ 第 1 次正式运行 N-s42：A 份占位每卡 1 个 worker（4 个），B 份每卡 2 个（8 个），同一个队列 → 测速
+   │
+   ├─ 第 2–6 次：S-s42 → N-s7 → S-s7 → N-s0 → S-s0，统一用较快的布局
+   │
+   └─ 汇总三 seed 均值 ± std，逐个 scancel 两份占位
+</pre>
+
+<h3>已定口径</h3>
+<table>
+<tr><th>编号</th><th>口径</th><th>依据</th></tr>
+<tr><td>K1</td><td>评两条 run，每条三个 seed 7/42/0，各 800 局，只评 79999</td><td>你的选择：「三 seed 7/42/0」；「都只评最终 ckpt 79999」</td></tr>
+<tr><td>K2</td><td>复用两份训练占位 65209321、65209330，<b>等训练验收后接手</b>：训练会话做完 V10 后不取消这两份占位，交给本任务；本任务跑完后逐个 <code>scancel</code></td><td>你的选择：「复用两份训练占位」「训练验收后接手占位」；训练会话 V10 写有「两hold释放」，要由你通知它改掉（§三.4）</td></tr>
+<tr><td>K3</td><td>每卡多 worker：第 1 次运行同时测两种布局，后五次用较快的那种（判据见 §四 V5）</td><td>你的提问「能不能实现1卡多worker」与「写进计划」</td></tr>
+<tr><td>K4</td><td>ssh 会话：A 份占位的 worker 走 <code>greatlakes</code>，B 份走 <code>greatlakes2</code>，每个主连接最多 8 个长挂会话（上限 10）</td><td>你：「再开第二个 ControlMaster」「controlmaster你直接起 不在计划内」；<code>greatlakes2</code> 已于美东 11-08 建好（gl-login3）</td></tr>
+<tr><td>K5</td><td>运行顺序 N、S 交替：N-s42 → S-s42 → N-s7 → S-s7 → N-s0 → S-s0。占位如果提前不够用，两个模型完成的 seed 数最多差 1</td><td>本计划约定；§三.3</td></tr>
+<tr><td>K6</td><td>和 10-31 的 context split（b128/60k，38.42 ± 1.25）只做探索性比较：batch、步数、硬件、EMA 样本尺度都不同</td><td>训练计划 K12</td></tr>
+<tr><td>K7</td><td>官方 profile 不变：1300 步上限；正常失败不重试；基础设施错误每局最多重试 1 次；spec 写 <code>"purpose": "production"</code>；worker 环境不导出 <code>MMEVLA_MOTION_OVERFLOW</code>、<code>XHARD_METADATA_DIR</code></td><td>10-29/10-31 同口径</td></tr>
+</table>
+
+<h2>二、和 10-31 相比改了什么</h2>
+<table>
+<tr><th>项</th><th>10-31</th><th>本次</th><th>为什么</th></tr>
+<tr><td>执行代码</td><td><code>5fce5d3</code></td><td>新合并 <code>8b52210</code> + <code>5fce5d3</code>（E0）</td><td><code>5fce5d3</code> 里没有 <code>mme_vla_suite_orig16_b64_80k</code> 和两份消融 yaml，server 加载不了这两条模型；<code>8b52210</code> 又没有 seed 门，只放行 seed 42</td></tr>
+<tr><td>checkpoint 来源</td><td>从 HF bucket 下载</td><td>直接只读引用 turbo 上训练会话 V10 离线导出的目录</td><td>就在 GreatLakes 上训练，不用下载；要用 V10 验过严格恢复的那份</td></tr>
+<tr><td>占位</td><td>10 份 1×A40 / 4 CPU / 24G</td><td>2 份 4×A40 / 16 CPU / 128G（训练占位转交）</td><td>K2</td></tr>
+<tr><td>GPU 绑定</td><td>1 卡占位，<code>CUDA_VISIBLE_DEVICES</code> 由 Slurm 给</td><td>wrapper 里显式 <code>export CUDA_VISIBLE_DEVICES=&lt;卡号&gt;</code></td><td>4 卡占位里不显式绑卡，worker 会看到 4 张卡（<code>resident_worker.py::server_command</code> 把这个变量原样传给 <code>--motion-online-gpu</code>）</td></tr>
+<tr><td>每卡 worker</td><td>1 个，4 CPU</td><td>A 份 1 个 / 4 CPU；B 份 2 个 / 2 CPU（第 1 次运行），之后统一</td><td>K3。显存靠 <code>XLA_PYTHON_CLIENT_PREALLOCATE=false</code>（10-31 的 <code>run-worker-*.sh</code> 已经设了），不会一个 worker 先把整张卡占满</td></tr>
+<tr><td>ssh 会话</td><td>10 条全部走 <code>greatlakes</code></td><td>8 条走 <code>greatlakes</code>，8 条走 <code>greatlakes2</code></td><td>K4</td></tr>
+</table>
+
+<h2>三、关键机制</h2>
+
+<h3>1. 一卡两个 worker 为什么不用改评估代码</h3>
+<p><code>scripts/evaluation/resident_worker.py</code>（<code>9459859</code> 以来没变）在起 server 前用 <code>probe.bind(("127.0.0.1", int(spec.get("port", 0))))</code> 取一个空闲端口；spec 不写 <code>port</code>，就是让系统分配，同一节点上的多个 worker 不会冲突。控制器 <code>official_queue.py</code> 只按 <code>worker_id</code> 发块，不管 worker 在哪张卡上。所以同一张卡起 <code>wNa</code>、<code>wNb</code> 两个 worker，就是两个独立的领取者。</p>
+<div class="warn">⚠ 陷阱：端口是先探测、再交给 server 绑定，中间有一段空档。10-31 CC-s42 时，同节点（gl1513）上两个 worker 撞了一次 <code>OSError: [Errno 98] address already in use</code>。一卡两个 worker 时同节点的 worker 更多，撞的概率更高。处置沿用 10-31：用<b>新的</b> worker-id 在同一张卡上重起（控制器会拒绝重复使用旧 id），不改代码。</div>
+
+<h3>2. 测速怎么做（V5）</h3>
+<p>第 1 次正式运行 N-s42：A 份占位（65209321）每卡 1 个 worker，<code>--cpus-per-task=4</code>，共 4 个；B 份（65209330）每卡 2 个，<code>--cpus-per-task=2</code>，共 8 个。12 个 worker 从同一个队列领块，跑完 800 局后，按每局 accepted 记录的 worker 归属和完成时刻，分别算两份占位的稳态吞吐（局/小时，去掉每个 worker 的第一块，因为第一块里有 JIT 编译）。</p>
+<ul>
+<li>B 份吞吐 ≥ 1.15 × A 份 → 后五次两份占位都改成每卡 2 个 worker（共 16 个）。</li>
+<li>否则后五次都用每卡 1 个 worker（共 8 个）。</li>
+<li>B 份出现 <code>Killed</code>、<code>out of memory</code>，或者局失败率明显偏高（基础设施 error &gt; 0）→ 判定每卡 2 个不可行，后五次用每卡 1 个。</li>
+</ul>
+<p>把测速放在正式运行里不影响成绩：每局的环境由 test 元数据固定；模型采样噪声取决于 server 的 seed 和这个 worker 依次领到了哪些局，原本就随动态队列变，worker 布局和以往一样不进入成绩口径。</p>
+
+<h3>3. 时间与占位余量</h3>
+<p>10-31 实测 10 卡每卡 1 个 worker，800 局约 85 分钟，即约 14.2 卡·时/800 局。8 卡每卡 1 个 worker 时约 106 分钟/次；每卡 2 个 worker 如果有 1.3–1.6 倍收益，约 66–82 分钟/次（<b>未实测</b>）。6 次运行加冒烟和换根间隙，合计约 <b>7.5–11.5 小时</b>。</p>
+<p>占位分别在美东 11-09 13:38、14:04 到期。现在是 11-08 16:06，训练的 V10 还没做完，所以余量取决于它什么时候交出占位。规则：<b>每次起一轮新运行前</b>，算剩余时间是否 ≥ 1.2 × 上一次实测单轮时长；不够就不起这一轮，汇报你，由你决定是新提交单卡占位接着跑，还是到此为止。按 K5 的交替顺序，两个模型完成的 seed 数最多差 1。</p>
+
+<h3>4. 占位交接（要你出面的一步）</h3>
+<p>训练会话的 V10 写着「两hold释放」，它做完严格恢复会按规则逐个 <code>scancel</code>。跨会话消息不能算你的授权，所以这一步要<b>你自己告诉训练会话</b>：V10 完成后不取消 65209321、65209330，在它的 <code>current.json</code> 里写明占位已转交 <code>gl-abl-encoders-eval</code>。本任务开工前会现场核对：上游是 <code>done</code>、两份占位都还是 RUNNING、上面没有训练会话残留的 srun step（<code>squeue -s</code>）。如果占位已经被取消，本任务停下来问你。</p>
+
+<h2>四、验收</h2>
+<table>
+<tr><th>编号</th><th>查什么</th><th>怎么查</th><th>过了说明什么</th><th>判定行</th></tr>
+<tr><td>V0</td><td>上游与占位</td><td>读 <code>origin/v4-eval-official-1026:docs/handoff/current.json</code>；<code>squeue -j 65209321,65209330 -s</code></td><td>训练已交付、占位已转交且空闲</td><td><code>UPSTREAM=PASS task=gl-abl-encoders-train state=done holds_running=2 foreign_steps=0</code></td></tr>
+<tr><td>V1</td><td>执行代码合并</td><td>E0 合并后跑 <code>tests/evaluation</code> 与训练配置导入</td><td>seed 门和 b64 配置都在</td><td><code>EVAL_CODE=PASS sha=&lt;merge&gt; tests=&lt;n&gt;passed cfg=mme_vla_suite_orig16_b64_80k</code></td></tr>
+<tr><td>V2</td><td>执行副本</td><td><code>git archive</code> 导出到 <code>$E/releases/&lt;sha&gt;/</code>，逐路径比对 git 树</td><td>跑的就是这个提交</td><td><code>RELEASE_SNAPSHOT=PASS files=&lt;n&gt; tree_diff=0</code></td></tr>
+<tr><td>V3</td><td>runtime 合同</td><td>对两份导出目录的 <code>motion_provenance.json</code> 各跑一次 <code>runtime_contract.py::make_eval_runtime_contract</code></td><td>编码器身份（N <code>6acc92af…</code>、S <code>be7cdec7…</code>）进入合同</td><td><code>CONTRACT=PASS model=N encoder_sha=6acc92af…</code> ×2</td></tr>
+<tr><td>V4</td><td>冒烟</td><td>每个模型 2 局（BinFill:0、VideoPlaceOrder:18），seed 0，单卡 1 个 worker</td><td>模型能加载、在线 motion sidecar 能用新编码器、局能跑到终局</td><td><code>SMOKE2=PASS model=&lt;N|S&gt; accepted=2 errors=0 readout=stage2_pool4_split_v1</code> ×2</td></tr>
+<tr><td>V5</td><td>布局测速</td><td>§三.2</td><td>后五次用哪种布局</td><td><code>LAYOUT_SPEED=PASS a_eps_per_h=&lt;x&gt; b_eps_per_h=&lt;y&gt; ratio=&lt;y/x&gt; choose=&lt;1x|2x&gt;</code></td></tr>
+<tr><td>V6</td><td>每次 800 局完整</td><td>各 run 根 <code>queue/summary.json</code></td><td>没有遗漏或重复</td><td><code>COMPUTE_DONE completed=800 missing=0 errors=0 uncertain=0</code> ×6</td></tr>
+<tr><td>V7</td><td>seed 用对</td><td>spec、run 身份、800 条 accepted 的 <code>run_identity_sha256</code> 三处比对（10-31 同法）</td><td>每局都是对应 seed</td><td><code>SEED_ECHO=PASS run=&lt;编号&gt; seed=&lt;s&gt; records=800 identity_mismatch=0</code> ×6</td></tr>
+<tr><td>V8</td><td>汇总</td><td>同官方 <code>compute_results.py</code> 口径（ddof=1）</td><td>出三 seed 均值 ± std</td><td><code>THREE_SEED=PASS model=&lt;N|S&gt; seeds=7,42,0 runs=3 overall=&lt;m±s&gt;</code> ×2</td></tr>
+<tr><td>V9</td><td>资源释放</td><td>逐个 <code>scancel</code> 两个 JobID，<code>squeue -u hongzefu</code></td><td>没有残留资源</td><td><code>HOLDS_RELEASED=PASS cancelled=2 squeue_empty=1</code></td></tr>
+</table>
+
+<h2>五、步骤</h2>
+<table>
+<tr><th>阶段</th><th>内容</th><th>判据</th></tr>
+<tr><td>A0（开工令后立即）</td><td>派 E0 写代码子代理合并评估代码；主会话写 run 根、spec、wrapper（不依赖上游）</td><td>V1、V2</td></tr>
+<tr><td>A1（上游 done 后）</td><td>现场核对上游与占位；生成两份合同</td><td>V0、V3</td></tr>
+<tr><td>A2</td><td>A 份占位 GPU0 跑 N 冒烟，GPU1 跑 S 冒烟（并行）</td><td>V4 ×2</td></tr>
+<tr><td>A3</td><td>N-s42：A 份 4 个 worker + B 份 8 个 worker</td><td>V6、V7、V5</td></tr>
+<tr><td>A4</td><td>S-s42 → N-s7 → S-s7 → N-s0 → S-s0，用 V5 选出的布局；每轮起跑前核余量（§三.3）</td><td>V6、V7 ×5</td></tr>
+<tr><td>A5</td><td>汇总、写 result.md、逐个 scancel、提交推送、状态机写 done</td><td>V8、V9</td></tr>
+</table>
+
+<h2>六、子代理分工与合并（简述）</h2>
+<p>只有 E0 一块代码改动：一个写代码子代理（opus，独立 worktree，从 <code>8b52210</code> 新开分支 <code>v4-eval-abl-1108</code>），只做 <code>git merge --no-ff 5fce5d3</code>，然后跑测试。合入前派一个只读审查子代理（sonnet）看 <code>8b52210..TIP</code> 的 diff 是否恰好只有 <code>examples/robomme/eval.py</code> 和 <code>tests/evaluation/test_official_seed_gate.py</code> 两个文件。审查通过后主会话把分支 push 到远端（这个分支本身就是执行代码的锚点，不合进其他分支）。其余步骤（导出、合同、占位、控制器、worker、监听、汇总、释放）都由主会话亲自做，因为要用 aspen 和 sled-vail 上的 ControlMaster，还要一直挂 Monitor，和 10-31 一样。逐项分配见第二部分 §三。</p>
+
+<p class="mut">逐文件、命令、风险与盲区见第二部分。</p>
+
+<h1>第二部分（技术细节，供 agent 追踪）</h1>
+
+<h2>〇、前置声明与红线</h2>
+<ul>
+<li><b>R1</b> 只取消清单里的两个 JobID（65209321、65209330），逐个 <code>scancel &lt;id&gt;</code>，禁 <code>scancel -u</code>；只在上游已 <code>done</code>、你已通知训练会话转交之后才把它们当作本任务资源。</li>
+<li><b>R2</b> 不改 <code>third_party/robomme_benchmark</code>、训练配置、checkpoint、精度和动作执行口径；不写训练 run 目录（只读引用 V10 导出目录）。</li>
+<li><b>R3</b> spec 必须 <code>"purpose": "production"</code>（冒烟为 <code>validation</code>）；不写 <code>profile</code>、<code>max_steps</code>、<code>port</code>、<code>motion_overflow</code>、<code>xhard_metadata_dir</code>。</li>
+<li><b>R4</b> tmux 前缀 <code>evab-</code>；只 <code>tmux kill-session -t '=确切名'</code>，删前删后各跑一次 <code>tmux ls</code>。</li>
+<li><b>R5</b> 每个 ControlMaster 上长挂的 worker 会话 ≤ 8，给 <code>squeue</code> 等查询留 2 个。</li>
+<li><b>R6</b> 正常任务失败不重试；不为挑成功局重跑；基础设施错误每局最多重试 1 次（队列已有行为）。</li>
+<li><b>R7</b> 评估目录与日志：turbo <code>$O=$E/v1-store/evaluation/o16abl-80k</code>，本机 <code>$L=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed</code>，档案 <code>docs/evaluation-doc/o16abl-3seed-1108/</code>。</li>
+</ul>
+<p class="mut">记号：<code>$E=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval</code>；N、S 的训练产物根 <code>/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_orig16_b64_80k/&lt;run&gt;/</code>（已核：两条都有 <code>5000…75000</code>、<code>79999</code> 共 16 份及 <code>motion_provenance.json</code>、<code>encoder_dependencies.json</code> 等根文件）。V10 导出目录的确切路径以训练会话 done 记录为准，A1 时填入 launch.md。</p>
+
+<h2>一、逐项改动清单</h2>
+<table>
+<tr><th>对象</th><th>位置</th><th>改什么</th><th>进 git？</th></tr>
+<tr><td>评估代码合并（E0）</td><td>新分支 <code>v4-eval-abl-1108</code> @ <code>8b52210</code></td><td><code>git merge --no-ff 5fce5d3</code>，只带进 <code>examples/robomme/eval.py</code>（seed 门）与 <code>tests/evaluation/test_official_seed_gate.py</code></td><td>是，push 该分支</td></tr>
+<tr><td>执行副本</td><td><code>$E/releases/&lt;merge sha&gt;/</code></td><td><code>git archive &lt;sha&gt; | tar -x</code> 并初始化子模块到 <code>856bc3a</code>（同 10-31）；逐路径比对</td><td>否</td></tr>
+<tr><td>运行合同</td><td><code>$O/o16abl-&lt;N|S&gt;/contracts/runtime.json</code></td><td>由 V10 导出目录 <code>motion_provenance.json</code> 生成，6 次运行与冒烟共用（每模型一份）</td><td>否，sha 写 launch.md</td></tr>
+<tr><td>run 根与 spec</td><td><code>$O/o16abl-&lt;N|S&gt;-seed&lt;s&gt;/run800</code>、<code>…/smoke2</code>；<code>inputs/*.spec-input.json</code>、<code>*.run-identity.json</code></td><td>从 10-31 C-s7 同名文件复制，换 <code>repo</code>、<code>checkpoint</code>、<code>policy_config=mme_vla_suite_orig16_b64_80k</code>、<code>model_seed</code>、<code>target_contract</code>、<code>run_identity_sha256</code>；800 局清单沿用 10-29 的（内部签封 <code>991c3496…</code>）</td><td>否</td></tr>
+<tr><td>worker 脚本</td><td><code>$O/o16abl-&lt;…&gt;/run-worker.sh</code></td><td>由 10-31 <code>run-worker-run800.sh</code> 逐行复制，只换 run 根与执行 sha，<b>新增一行</b> <code>export CUDA_VISIBLE_DEVICES="$3"</code>（第 3 个参数是卡号）</td><td>否，diff 写 launch.md</td></tr>
+<tr><td>本机启动包装</td><td><code>$L/start-worker.sh</code></td><td>由 10-31 同名包装改：多两个参数 <code>&lt;ssh 别名&gt;</code>、<code>&lt;卡号&gt;</code>、<code>&lt;cpus&gt;</code>；<code>ssh -o BatchMode=yes &lt;别名&gt; srun --jobid=&lt;id&gt; --overlap --exact --ntasks=1 --cpus-per-task=&lt;cpus&gt; --gpu_cmode=shared /usr/bin/bash &lt;run-worker.sh&gt; &lt;sha&gt; &lt;worker-id&gt; &lt;卡号&gt;</code></td><td>否</td></tr>
+<tr><td>控制器</td><td>sled-vail，<code>$O/…/run-controller-vail.sh</code></td><td>10-31 同名脚本只换 run 根；换根沿用 <code>switch-run.sh</code> 的步骤</td><td>否</td></tr>
+<tr><td>档案</td><td><code>docs/evaluation-doc/o16abl-3seed-1108/{launch,result}.md</code>、<code>records/</code></td><td>起跑前写 launch.md，跑完写 result.md</td><td>是</td></tr>
+<tr><td>状态机</td><td><code>v4-eval-official-1026</code> 的 <code>docs/handoff/current.json</code></td><td>新增任务 <code>gl-abl-encoders-eval</code>（需你同意登记）</td><td>是</td></tr>
+</table>
+
+<h3>worker 布局与 id</h3>
+<table>
+<tr><th>占位</th><th>ssh 别名</th><th>第 1 次（N-s42）</th><th>后五次（V5 选 2x）</th><th>后五次（V5 选 1x）</th></tr>
+<tr><td>A 65209321 gl1519</td><td><code>greatlakes</code></td><td>4 个：<code>a0…a3</code>，卡 0–3，各 4 CPU</td><td>8 个：卡 k 上 <code>a&lt;k&gt;x</code>、<code>a&lt;k&gt;y</code>，各 2 CPU</td><td>4 个，各 4 CPU</td></tr>
+<tr><td>B 65209330 gl1503</td><td><code>greatlakes2</code></td><td>8 个：<code>b&lt;k&gt;x</code>、<code>b&lt;k&gt;y</code>，各 2 CPU</td><td>8 个，各 2 CPU</td><td>4 个，各 4 CPU</td></tr>
+</table>
+<p>worker-id 每轮加运行编号前缀（如 <code>ns42-a0</code>），撞端口重起时用 <code>-r1</code> 后缀的新 id。</p>
+
+<h2>二、对拍闸门总表</h2>
+<p>判定行同第一部分 §四 V0–V9，另加两条过程闸门：</p>
+<ul>
+<li><code>GPU_PIN=PASS hold=&lt;id&gt; workers=&lt;n&gt; per_gpu=&lt;1|2&gt;</code>：每个 worker 的 <code>WORKER_START</code> 行之后，在占位内跑一次 <code>srun --jobid=&lt;id&gt; --overlap nvidia-smi --query-compute-apps=pid,used_memory --format=csv</code>，每张卡上的进程数等于布局。</li>
+<li><code>SESSIONS=PASS greatlakes=&lt;n&gt; greatlakes2=&lt;n&gt;</code>：<code>ps -eo args | grep "[s]sh .*greatlakes"</code> 按别名计数，每个 ≤ 8。</li>
+</ul>
+
+<h2>三、子代理分配表</h2>
+<table>
+<tr><th>编号</th><th>角色 / 模型</th><th>目标</th><th>可写</th><th>禁触</th><th>依赖</th><th>验收</th><th>资源</th></tr>
+<tr><td>E0</td><td>写代码 / opus，<code>isolation: worktree</code>（<code>worktree.baseRef=head</code>，基线 <code>8b52210</code>）</td><td>新分支合并 <code>5fce5d3</code></td><td>合并带进的两个文件</td><td>其余全部；不 push</td><td>无</td><td><code>UV_PROJECT_ENVIRONMENT=&lt;主 .venv&gt; PYTHONPATH=&lt;wt&gt;/src uv run --no-sync python -m pytest tests/evaluation -q</code> 全过；<code>git diff --name-only 8b52210..HEAD</code> 恰为 2 个文件</td><td>CPU</td></tr>
+<tr><td>E0-R</td><td>审查 / sonnet，只读</td><td>钉死 <code>REVIEW_BASE=8b52210</code>、<code>REVIEW_TIP</code></td><td>无</td><td>全部</td><td>E0</td><td><code>PRE_MERGE_REVIEW=PASS|FAIL …</code></td><td>—</td></tr>
+<tr><td>主会话</td><td>—</td><td>导出、合同、run 根、占位核对、冒烟、6 次运行、监听、汇总、释放、档案、状态机</td><td>turbo 评估目录、本机 <code>$L</code>、档案、状态机</td><td>训练 run 目录、训练会话的 tmux</td><td>E0、上游 done</td><td>V0–V9</td><td>8×A40（两份占位）</td></tr>
+</table>
+<p>开工前另派一个只读审查子代理（sonnet）按第 2 条审本计划全文一致性，写 <code>PLAN_CONSISTENCY_REVIEW=…</code>。</p>
+
+<h2>四、runbook</h2>
+<pre>
+# A0：E0 合并后（主会话核对、push 分支），导出执行副本
+git -C /data/hongzefu/robomme_policy_learning_MotionJEPA push -u origin v4-eval-abl-1108
+#   导出 $E/releases/&lt;sha&gt;/ 并比对树（同 10-31 RELEASE_SNAPSHOT 做法）
+
+# A1：上游核对
+git fetch origin v4-eval-official-1026
+git show origin/v4-eval-official-1026:docs/handoff/current.json   # gl-abl-encoders-train == done
+ssh greatlakes 'squeue -j 65209321,65209330 -s'                  # 只剩 .batch/.extern，无训练 step
+
+# A2：冒烟（A 份卡 0 / 卡 1）
+tmux new-session -d -s evab-w-smokeN "bash $L/start-worker.sh greatlakes 65209321 smN-a0 0 4 $O/o16abl-N-seed42/smoke2/run-worker.sh smokeN"
+tmux new-session -d -s evab-w-smokeS "bash $L/start-worker.sh greatlakes 65209321 smS-a1 1 4 $O/o16abl-S-seed42/smoke2/run-worker.sh smokeS"
+
+# A3/A4：每轮
+ssh sled-vail.eecs.umich.edu "tmux new-session -d -s evab-ctl-&lt;run&gt; 'bash $O/&lt;run&gt;/run-controller-vail.sh'"
+tmux new-session -d -s evab-w-&lt;run&gt;-&lt;wid&gt; "bash $L/start-worker.sh &lt;别名&gt; &lt;JobID&gt; &lt;run&gt;-&lt;wid&gt; &lt;卡号&gt; &lt;cpus&gt; $O/&lt;run&gt;/run-worker.sh &lt;run&gt;-&lt;wid&gt;"
+
+# 监听：每份 worker 日志一个 Monitor
+tail -n +1 -F $L/&lt;日志&gt;.log | stdbuf -oL tr '\r' '\n' \
+  | grep --line-buffered -E "WORKER_START|WORKER_DONE|EXIT_CODE=|Traceback|RuntimeError|Errno 98|out of memory|Killed"
+# 完成判据：queue/summary.json compute_status=COMPUTE_DONE（控制器日志在 NFS 上为空，10-31 实测）
+
+# A5：释放
+ssh greatlakes scancel 65209321
+ssh greatlakes scancel 65209330
+ssh greatlakes 'squeue -u hongzefu'
+</pre>
+
+<h2>五、风险登记</h2>
+<table>
+<tr><th>风险</th><th>表现</th><th>处置</th></tr>
+<tr><td>训练会话按原 V10 取消了占位</td><td>A1 时 squeue 查不到</td><td>停下汇报你；是否新提交 10 份单卡占位由你决定</td></tr>
+<tr><td>V10 拖得久、占位余量不够</td><td>§三.3 起跑前核算不过</td><td>不起新一轮，汇报你；已完成的运行照常汇总</td></tr>
+<tr><td>B 份每 worker 只有 2 CPU / 约 16G</td><td>仿真变慢、<code>Killed</code></td><td>V5 判 1x；已被杀的局由队列回收重发（基础设施错误重试 1 次）</td></tr>
+<tr><td>同节点端口撞车</td><td><code>Errno 98</code></td><td>新 worker-id 同卡重起（§三.1）</td></tr>
+<tr><td>4 卡占位内绑卡失败</td><td><code>GPU_PIN</code> 不过，或两个 worker 落在同一张卡</td><td>停该占位的 worker，查 <code>CUDA_VISIBLE_DEVICES</code> 透传；不改评估代码</td></tr>
+<tr><td>新编码器在线 sidecar 出错</td><td>冒烟 server 报错</td><td>该模型停，交你裁决；另一个模型照跑</td></tr>
+<tr><td>ControlMaster 掉线</td><td>worker 的 ssh 断开</td><td>队列支持 worker 重连；<code>greatlakes2</code> 重建要 Okta，先问你验证方式</td></tr>
+</table>
+
+<h2>六、盲区诚实清单</h2>
+<ul>
+<li>一卡两个 worker 在 A40 + 官方队列上的吞吐<b>没有实测</b>；aspen 上 A6000 的同卡双 worker（1106/1107）只证明显存放得下（两个 motion worker 峰值 35274 MiB），没和单 worker 比过速度。</li>
+<li>每个 worker 的实际 RSS 没量过，16G 够不够只能靠 V5 实跑判断。</li>
+<li>4 卡占位里 <code>--overlap</code> 的 step 显式绑卡这种用法，评估链路上第一次用（训练是一个 step 用 4 卡）。</li>
+<li>N、S 两个新编码器在评估链路上首次跑；训练侧的 SAVE_LOAD 跨 A6000/A40 numerics 握手原判 FAIL（训练档案保留原判），本评估不重复判定，只用 V10 严格恢复的结论。</li>
+<li>V10 导出目录的确切路径和结构要等训练会话交付后才知道；若与 10-31 bucket 资产目录结构不同，以 server 能否加载（V4）为准。</li>
+</ul>
+
+<h2>七、交接顺序与状态机登记</h2>
+<table>
+<tr><th>项</th><th>内容</th></tr>
+<tr><td>任务 id</td><td><code>gl-abl-encoders-eval</code></td></tr>
+<tr><td>依赖的上游</td><td><code>gl-abl-encoders-train</code> 为 <code>done</code>；对上游的假设：V10 的 79999 严格恢复 PASS、导出目录可读、两份占位未取消并已标注转交</td></tr>
+<tr><td>交接前必须完成</td><td>V4 ×2、V6 ×6、V7 ×6、V8 ×2、V9；档案提交并 push</td></tr>
+<tr><td>长尾</td><td>无</td></tr>
+<tr><td>done 后可开工的下游</td><td>无自动解锁的下游</td></tr>
+</table>
+
+<h2>八、留档与 commit 纪律</h2>
+<ul>
+<li>计划提交：<code>docs: 双消融三 seed 官方评估计划</code>。</li>
+<li>E0：子代理 <code>sub/E0: 合并官方 seed 门到双消融训练锚点</code>；合并提交（主会话）<code>commitV&lt;续号&gt;: 双消融评估执行代码（8b52210 + 5fce5d3）</code>。</li>
+<li>launch.md 在 A3 起控制器之前提交：执行 sha、两份导出目录、合同 sha、spec 与 run 身份 sha、占位与节点、全部 tmux 会话名、每条启动命令。</li>
+<li>result.md：两模型逐 seed 与三 seed 均值 ± std、逐任务表、V5 测速数字、与 10-31 的探索性对照、计划外事件、占位释放记录；<code>records/</code> 只放 summary.json、清洗后日志与测速原始表。</li>
+</ul>
+
+</body>
+</html>
