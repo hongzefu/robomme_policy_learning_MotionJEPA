@@ -6,7 +6,7 @@
   },
   "repo": {
     "branch": "v11-4task-modul-wantp768-50k",
-    "base_head": "4b14722"
+    "base_head": "0b49008"
   },
   "freeze": {
     "active": false,
@@ -21,26 +21,87 @@
       },
       "state": "running",
       "state_changed_at": "2026-11-08T16:36:36Z",
-      "state_reason": "用户开工令「全部同意 开工」；先做开工前计划一致性审查，再恢复数据与 S1/S2/S3 并行实施",
+      "state_reason": "阶段 B 三块代码已合入（commitV11.84–86）；阶段 A 恢复与评估环境搭建在跑",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiTAgjMcs9tdyGT8J4e",
         "host": "ip-10-242-11-177"
       },
       "depends_on": [],
       "pre_handoff": [
-        {"what": "G1 恢复两层校验与运行时验收", "evidence": "RESTORE_SHA=PASS objects=<n> members=<n> runtime=PASS mismatches=0", "where": "v1-store/logs/w768-restore.log", "status": "pending"},
-        {"what": "G0 数据同源链", "evidence": "DATA_LINEAGE=PASS", "where": "v1-store/logs/w768-export.log", "status": "pending"},
-        {"what": "G2 池化公式", "evidence": "POOL768_CONTRACT=PASS", "where": "S1 合并后单测输出", "status": "pending"},
-        {"what": "G3 新表对齐与独立重算", "evidence": "POOL768_TABLE=PASS", "where": "v1-store/logs/w768-g3.log", "status": "pending"},
-        {"what": "G4 在线离线逐字节一致", "evidence": "ONLINE_POOL768=PASS windows=64 padded=8 bitexact=64", "where": "v1-store/logs/w768-g4.log", "status": "pending"},
-        {"what": "G5 参数量与训练配置", "evidence": "VLA_PARAM_EQ=PASS / TRAIN_CONFIG_EQ=PASS diffs=3", "where": "主会话记录", "status": "pending"},
-        {"what": "G6 8 卡 20 步冒烟", "evidence": "SMOKE20=PASS steps=20 save_load=PASS", "where": "v1-store/logs/w768-smoke.log", "status": "pending"},
-        {"what": "G6b 评估加载冒烟与同卡 2 片", "evidence": "EVAL_LOAD_SMOKE=PASS episodes=1 handshake=PASS share2=PASS peak_mem_gb=<x>", "where": "v1-store/logs/w768-g6b.log", "status": "pending"},
-        {"what": "E0 demo 前缀同代码生成（训练前完成）", "evidence": "DEMO_PREFIX_SRC=PASS code_same=1 benchmark=b4e97f2", "where": "v1-store/demo-prefix/binfill-3b4de03a0b46/E0.txt", "status": "pending"},
-        {"what": "G7 训练完成", "evidence": "TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10", "where": "v1-store/logs/w768-train.log", "status": "pending"}
+        {
+          "what": "G1 恢复两层校验与运行时验收",
+          "evidence": "RESTORE_SHA=PASS objects=<n> members=<n> runtime=PASS mismatches=0",
+          "where": "v1-store/logs/w768-restore.log",
+          "status": "pending"
+        },
+        {
+          "what": "G0 数据同源链",
+          "evidence": "DATA_LINEAGE=PASS",
+          "where": "v1-store/logs/w768-export.log",
+          "status": "pending"
+        },
+        {
+          "what": "G2 池化公式",
+          "evidence": "POOL768_CONTRACT=PASS",
+          "where": "S1 合并后单测输出",
+          "status": "pending"
+        },
+        {
+          "what": "G3 新表对齐与独立重算",
+          "evidence": "POOL768_TABLE=PASS",
+          "where": "v1-store/logs/w768-g3.log",
+          "status": "pending"
+        },
+        {
+          "what": "G4 在线离线逐字节一致",
+          "evidence": "ONLINE_POOL768=PASS windows=64 padded=8 bitexact=64",
+          "where": "v1-store/logs/w768-g4.log",
+          "status": "pending"
+        },
+        {
+          "what": "G5 参数量与训练配置",
+          "evidence": "VLA_PARAM_EQ=PASS / TRAIN_CONFIG_EQ=PASS diffs=3",
+          "where": "主会话记录",
+          "status": "pending"
+        },
+        {
+          "what": "G6 8 卡 20 步冒烟",
+          "evidence": "SMOKE20=PASS steps=20 save_load=PASS",
+          "where": "v1-store/logs/w768-smoke.log",
+          "status": "pending"
+        },
+        {
+          "what": "G6b 评估加载冒烟与同卡 2 片",
+          "evidence": "EVAL_LOAD_SMOKE=PASS episodes=1 handshake=PASS share2=PASS peak_mem_gb=<x>",
+          "where": "v1-store/logs/w768-g6b.log",
+          "status": "pending"
+        },
+        {
+          "what": "E0 demo 前缀同代码生成（训练前完成）",
+          "evidence": "DEMO_PREFIX_SRC=PASS code_same=1 benchmark=b4e97f2",
+          "where": "v1-store/demo-prefix/binfill-3b4de03a0b46/E0.txt",
+          "status": "pending"
+        },
+        {
+          "what": "G7 训练完成",
+          "evidence": "TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10",
+          "where": "v1-store/logs/w768-train.log",
+          "status": "pending"
+        }
       ],
       "long_tail": [],
-      "running_handles": [],
+      "running_handles": [
+        {
+          "tmux": "w768-restore",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/w768-restore.log",
+          "done_line": "RESTORE_SHA=PASS objects=<n> members=<n> runtime=PASS mismatches=0"
+        },
+        {
+          "tmux": "w768-evalenv",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/w768-evalenv.log",
+          "done_line": "EXIT_CODE=0"
+        }
+      ],
       "authorizations": [
         {
           "kind": "go",
@@ -51,8 +112,16 @@
       ],
       "pending_decisions": [],
       "next_steps": [
-        {"what": "开工前计划一致性审查", "command": "派 sonnet 只读审查计划 @4b14722", "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS base=4b14722 findings=<n> blocking=0"},
-        {"what": "阶段 A 恢复与阶段 B 代码并行", "command": "运行代理起 w768-restore；S1/S2/S3 写入子代理", "verdict_line": "RESTORE_SHA=PASS / PRE_MERGE_REVIEW=PASS"}
+        {
+          "what": "恢复完成后 G0 前三环与 VLA 侧、导出 768 表",
+          "command": "tmux w768-export: export_wan_pool768.py --checksums sha256-source-files.txt --workers 48",
+          "verdict_line": "DATA_LINEAGE=PASS / 导出 EXIT_CODE=0"
+        },
+        {
+          "what": "G3/G4/G5 并行，随后 demo 前缀 + E0、G6、D1.5、G6b、Beta、训练",
+          "command": "见计划 runbook C4–D3",
+          "verdict_line": "POOL768_TABLE=PASS / ONLINE_POOL768=PASS / VLA_PARAM_EQ=PASS"
+        }
       ]
     },
     "4task-wantp768-eval": {
@@ -67,10 +136,22 @@
         "session": "https://claude.ai/code/session_01WvPQiTAgjMcs9tdyGT8J4e",
         "host": "ip-10-242-11-177"
       },
-      "depends_on": ["4task-wantp768-train"],
+      "depends_on": [
+        "4task-wantp768-train"
+      ],
       "pre_handoff": [
-        {"what": "E1 本机评估完成", "evidence": "EVAL692=PASS episodes=<n> success=<k> rate=<x> preseeded_errors=9 new_errors=<n> retried=<n> expect_motion_stats=1", "where": "v1-store/logs/w768-eval.log", "status": "pending"},
-        {"what": "预标 9 局按身份定位", "evidence": "PRESEED=PASS episodes=9 placed=9 duplicates=0", "where": "v1-store/logs/w768-eval.log", "status": "pending"}
+        {
+          "what": "E1 本机评估完成",
+          "evidence": "EVAL692=PASS episodes=<n> success=<k> rate=<x> preseeded_errors=9 new_errors=<n> retried=<n> expect_motion_stats=1",
+          "where": "v1-store/logs/w768-eval.log",
+          "status": "pending"
+        },
+        {
+          "what": "预标 9 局按身份定位",
+          "evidence": "PRESEED=PASS episodes=9 placed=9 duplicates=0",
+          "where": "v1-store/logs/w768-eval.log",
+          "status": "pending"
+        }
       ],
       "long_tail": [],
       "running_handles": [],
@@ -84,7 +165,11 @@
       ],
       "pending_decisions": [],
       "next_steps": [
-        {"what": "训练 done 后启动评估", "command": "tmux w768-eval: bash scripts/evaluation/local_692_pool.sh <ckpt …/50000> 7", "verdict_line": "EVAL692=PASS"}
+        {
+          "what": "训练 done 后启动评估",
+          "command": "tmux w768-eval: bash scripts/evaluation/local_692_pool.sh <ckpt …/50000> 7",
+          "verdict_line": "EVAL692=PASS"
+        }
       ]
     }
   }

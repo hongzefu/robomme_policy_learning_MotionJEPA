@@ -411,7 +411,7 @@ F[0, 48c+8i+j]  = P[c,i,j]                                            C→H→W 
 <table>
 <tr><th>#</th><th>环节</th><th>文件::锚点</th><th>读写字段</th><th>池化分支行为</th><th>encoder 分支（旧行为逐位不变）</th><th>owner</th></tr>
 <tr><td>1</td><td>YAML</td><td><code>models/config/robomme/perceptual-framesamp-modul-8frame-8x8-wantp768.yaml</code> 的 <code>motion</code> 节</td><td>写 <code>motion.encoder_kind: wan_fixedpool768</code>、<code>motion.readout: wan_raw_timepool8_adaptive6x8_v1</code>、<code>motion.store_path</code>；<b>无</b> <code>motion.source_run</code></td><td>其余键与旧 YAML 逐键相同（G5）</td><td>旧 <code>…-8x8-motion.yaml</code> 不动：有 <code>source_run</code>、无 <code>encoder_kind</code></td><td>S2</td></tr>
-<tr><td>2</td><td>离线导出</td><td><code>scripts/dataset/export_wan_pool768.py::main</code></td><td>写 <code>meta/store_meta.json</code> 的 provenance：<code>encoder_kind</code>、<code>encoder_ckpt: null</code>、<code>parameter_count: 0</code>、<code>readout</code>、<code>pool_source_sha256</code>、<code>vae</code>（沿用旧表 provenance 的 vae 块）、<code>latent_root</code>（latent 根路径 + bucket <code>checksums/sha256-shards.txt</code> 的 sha256）、<code>manifest_sha256</code>（<code>4cd5a170…bb918</code>）</td><td>新表</td><td>—</td><td>S1</td></tr>
+<tr><td>2</td><td>离线导出</td><td><code>scripts/dataset/export_wan_pool768.py::main</code></td><td>写 <code>meta/store_meta.json</code> 的 provenance：<code>encoder_kind</code>、<code>encoder_ckpt: null</code>、<code>parameter_count: 0</code>、<code>readout</code>、<code>pool_source_sha256</code>、<code>vae</code>（沿用旧表 provenance 的 vae 块）、<code>latent_root</code>（latent 根路径 + bucket <code>checksums/sha256-source-files.txt</code> 的成员摘要；实施中按 S1 落地更正，tar 摘要清单不用于成员）、<code>manifest_sha256</code>（<code>4cd5a170…bb918</code>）</td><td>新表</td><td>—</td><td>S1</td></tr>
 <tr><td>3</td><td>store 读取</td><td><code>datastore/motion_store.py::MotionMeta.load</code></td><td>读 provenance.<code>encoder_kind</code></td><td><code>encoder_kind == POOL768_ENCODER_KIND</code>：要求 <code>encoder_ckpt is None</code>、<code>parameter_count == 0</code>、<code>readout == POOL768_READOUT</code>、<code>pool_source_sha256 == pool_source_sha256()</code>；布局、索引、窗口校验走原路径</td><td>provenance 无 <code>encoder_kind</code> 时走原校验，<code>provenance["encoder"]</code> 仍必填</td><td>S1</td></tr>
 <tr><td>4</td><td>训练闸</td><td><code>training/dataloader.py::_motion_gates</code></td><td>读 <code>mcfg.encoder_kind</code>、<code>mcfg.readout</code>；encoder 分支读 <code>mcfg.source_run</code></td><td>不调 <code>_parse_source_run</code>；改核 YAML <code>readout</code> 与 store provenance 的 <code>readout</code>、<code>pool_source_sha256</code> 相等，<code>encoder_ckpt</code> 为 null；锁、verified、stride、同源闸照旧</td><td>未写 <code>encoder_kind</code>：<code>_parse_source_run</code> 与 provenance.encoder 绑定照旧</td><td>S1</td></tr>
 <tr><td>5</td><td>训练快照</td><td><code>scripts/training/train.py::init_history_config</code>（写 run 根 <code>motion_provenance.json</code>，即「资产转存」处：现只转存 store provenance 的 <code>vae</code>、<code>encoder</code> 两块）</td><td>池化分支写 <code>vae</code>（照旧）、<code>encoder: null</code>，另加 <code>encoder_kind</code>、<code>readout</code>、<code>pool_source_sha256</code> 三键</td><td>三新键只在池化分支出现</td><td>encoder 分支与 closed run 的键集合与文件字节不变（closed run 仍按「motion-only 字段写 null、禁止省键」）</td><td>S1</td></tr>
@@ -526,13 +526,13 @@ uv run --no-sync python -c 'import sys; from mme_vla_suite.datastore.manifest im
 #   环 5（VLA 侧，裁决 F3）：framesamp-8x8/meta/store_meta.json 与 source/meta/ 的 manifest identity 与 H5 sha256 集合 即 vla_input_pin（取自 store_meta 与 source/meta 本身，二者先互相一致）；encoder_source_pin 取 wan-latents 元数据的 H5 sha256 集合；vla_input_pin、encoder_source_pin 与 meta/input_manifest.json 三方逐文件相等才 PASS，取不到即 FAIL（framesamp-8x8/meta 与 source/meta 已由 fetch_small 先下，导出前即可核）
 
 # ── C3 导出（P3，CPU）
-tmx w768-export "env OMP_NUM_THREADS=1 uv run --no-sync python scripts/dataset/export_wan_pool768.py --latents $LIB/wan-latents --motion-ref $LIB/motion --manifest $LIB/meta/episode_manifest.json --checksums $LIB/checksums/sha256-shards.txt --workers 48 --out $LIB/motion-wan-pool768"
+tmx w768-export "env OMP_NUM_THREADS=1 uv run --no-sync python scripts/dataset/export_wan_pool768.py --latents $LIB/wan-latents --motion-ref $LIB/motion --manifest $LIB/meta/episode_manifest.json --checksums $LIB/checksums/sha256-source-files.txt --workers 48 --out $LIB/motion-wan-pool768"
 
 # ── C4 → 等 w768-export EXIT_CODE=0；G4 另需等 w768-restore 末行 RESTORE_SHA=PASS（exec 窗读解包后的 source/data/*.pkl，R13）；以下三项互不依赖，同时起
 tmx w768-g3 "env OMP_NUM_THREADS=1 uv run --no-sync python scripts/dataset/verify_wan_pool768.py --table $LIB/motion-wan-pool768 --latents $LIB/wan-latents --motion-ref $LIB/motion --workers 48"   # → POOL768_TABLE=PASS …
 #   G4 两类帧来源（C3）：source pkl 只对 exec 帧存 image（build_robomme_dataset.py 中 if not is_video_demo: 才写），其余 exec 窗从 $LIB/source/data/&lt;idx&gt;.pkl 取帧；
 #   全部 demo 窗（其中必含 8 个补帧窗）取原始 H5。H5 小样准备（主会话，秒到分钟级）：
-#     ① 定位每任务 episode map record_dataset_&lt;task&gt;_episode_map.json（merge_v2_h5.py::map_path 写出；先查 trainset bucket source/meta/，再查 h5 bucket；找不到 → ONLINE_POOL768=FAIL，停）
+#     ① 定位每任务 episode map record_dataset_&lt;task&gt;_episode_map.json（merge_v2_h5.py::map_path 写出；实施中查明：两个 bucket 原先都没有，四份 map 已归档在 git 的 docs/dataset-build-doc/4task-v2-1600ep-604f16da/records/（sha256 与 MERGE_DONE.json 的 maps_sha256 一致），并于 2026-11-08 按用户要求补传到训练库 bucket meta/episode_maps/（HF_VERIFY=PASS files=5）；--episode-map-dir 指向 git records；找不到 → ONLINE_POOL768=FAIL，停）
 #     ② 用工具的抽样口径（--dry-run 只打印抽中窗）得 8 个 demo 窗的 episode_&lt;k&gt;，经 map 查原始 task/difficulty/episode/member 与 h5_sha256/h5_bytes
 #     ③ $HF buckets list -R HongzeFu/robomme-4task-h5-20260912-v2 看实际对象；按 tar.xz 对象为下载单位，只下含这些 episode 的对象到 $LIB/raw-h5/（新建空目录），解出单 episode H5
 #     ④ 单 episode H5 的 sha256/bytes = map 行；工具内再把每窗输入帧摘要与 latent 元数据 input_frames_sha256 核对，过了才送 sidecar
@@ -629,5 +629,15 @@ tmx w768-eval "bash scripts/evaluation/local_692_pool.sh &lt;CKPT=…/50000&gt; 
 <li>只 <code>git add</code> 明确路径；每次 commit 后 push；子代理提交用 <code>sub/S1: …</code> 等前缀，不 push。</li>
 </ul>
 
+
+<h2>八　实施中调整（2026-11-08 起，随实施追加）</h2>
+<table>
+<tr><th>#</th><th>旧 → 新</th><th>理由</th><th>审查结论</th></tr>
+<tr><td>1</td><td>恢复脚本放 <code>v1-store/runbook/</code>（不进 git），由主会话写；首跑在核 tar 前缀时因 <code>tar -tf | head</code> 触发 SIGPIPE，在 <code>pipefail</code>+<code>set -e</code> 下以 <code>EXIT_CODE=141</code> 退出；改为先落文件再读。第二跑磁盘门槛未扣已落盘下载物而 STOP；改为 740G 减已落盘量、下限 143G</td><td>脚本缺陷，不改判据本意（峰值 + 100G 余量）</td><td>主会话自测（单 tar 夹具 TAR_OK/TAR_FAIL）</td></tr>
+<tr><td>2</td><td>runbook 导出 <code>--checksums</code> 由 <code>sha256-shards.txt</code> 改为 <code>sha256-source-files.txt</code>；契约表 latent_root 同步</td><td>shards 是 tar 摘要，成员校验必须用成员清单（S1 落地发现）</td><td>S1 PRE_MERGE_REVIEW=PASS</td></tr>
+<tr><td>3</td><td>runner 不给 preflight 传 <code>--motion-*</code>，改在 G0 环 4 做同等检查</td><td><code>preflight_train_launch.py</code> 写死表在帧库同级 <code>motion/</code>，新表必然 FAIL，且不在 S2 写集</td><td>ADJUST_REVIEW=PASS scale=same</td></tr>
+<tr><td>4</td><td>G0 VLA 侧一环：store_meta 与 source/meta 不逐文件记 H5 sha，改为 vla_input_pin 取 VLA 库 <code>meta/input_manifest.json</code>、encoder_source_pin 取 encoder 侧独立记录的清单摘要（<code>655e64b4…</code>）内容寻址后取 H5 sha；判定行写 binding 与 enc_record</td><td>首版两个 pin 同一表达式属自证等式（审查 FAIL）；信任点为「新表记录的清单摘要 = VLA 库清单文件摘要」，是现有数据的固有上限</td><td>第二轮 PRE_MERGE_REVIEW=PASS、ADJUST_REVIEW=PASS scale=same</td></tr>
+<tr><td>5</td><td>G4 episode map 来源改为 git records（并补传 bucket <code>meta/episode_maps/</code>）</td><td>两个 bucket 都没有该文件；用户：「你把这个文件补充在这个 Hugging Face 里面」</td><td>sha 与 MERGE_DONE 一致；HF_VERIFY=PASS files=5</td></tr>
+</table>
 </main></body>
 </html>
