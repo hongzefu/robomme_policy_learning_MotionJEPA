@@ -6,7 +6,7 @@
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
 command -v uv
-PYTHON_BIN=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/uv-python/cpython-3.11.14-linux-x86_64-gnu/bin/python3.11
+PYTHON_BIN="${PYTHON_BIN:-/nfs/turbo/coe-chaijy-unreplicated/hongzefu/uv-python/cpython-3.11.14-linux-x86_64-gnu/bin/python3.11}"
 export DS_BUILD_OPS=0
 TARGETS="${*:-server client wan}"
 mkdir -p "$UV_CACHE_DIR" "$XDG_CACHE_HOME" "$HF_HOME" "$OPENPI_DATA_HOME" "$TORCH_HOME" "$MS_ASSET_DIR" "$CUDA_CACHE_PATH" "$JAX_COMPILATION_CACHE_DIR" "$WANDB_DIR"
