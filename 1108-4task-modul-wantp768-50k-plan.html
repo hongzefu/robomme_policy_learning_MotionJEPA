@@ -50,7 +50,7 @@ figcaption{color:var(--muted);font-size:.9em}
    │     池化 768 + motion 表导出 ┃ 在线 sidecar + YAML ┃ 本机 692 局评估驱动
 阶段 C  建 768 池化表（CPU，Pool(48) 有序并行，71316 窗）＋ 闸门 G0–G5
    │     ＋ demo 前缀生成（16–32 片分 8 卡）→ finalize --max-fail-rate 0.10 → E0（GPU 空闲时，提前到训练前）
-阶段 D  8 卡 20 步冒烟（G6）→ G6b 用冒烟 ckpt 走一次真实评估加载入口跑 1 局
+阶段 D  8 卡 20 步冒烟（G6）→ G6b 用冒烟 ckpt 走一次真实评估加载入口跑 1 局，再同卡 2 片各 1 局（U5）
    │     → Beta → 正式训练 50,001 步（约 14 h，GPU 0–7）；每份 ckpt 存完即上传
 阶段 E  主会话 Monitor 见 TRAIN_FINAL_RECORD=PASS → 起评估（外壳先查 E0=PASS）
    │     550 + 本机前缀成功条数（上次 142，合计 692）局 @50000，10 片同跑、每卡 ≤2 片（用户裁决「放宽闸门同卡2片」，G6b 先实测）
@@ -403,7 +403,7 @@ F[0, 48c+8i+j]  = P[c,i,j]                                            C→H→W 
 <tr><td><code>scripts/evaluation/pregen_binfill_demo.py</code>（U4、F6）</td><td><code>cmd_finalize</code> 的失败率判断；<code>main</code> argparse</td><td>新增 <code>--max-fail-rate</code>（float，默认 0.05）替换写死的 <code>rate &gt; 0.05</code>；失败清单照旧打印；本次传 0.10</td><td>不传参与旧行为逐字节相同；<code>cmd_gen</code> 等 gen 路径不动（R11）</td><td>S3</td></tr>
 <tr><td><code>scripts/evaluation/setup.sh</code>（F9）</td><td><code>PYTHON_BIN=</code> 赋值行</td><td>改为 <code>PYTHON_BIN="${PYTHON_BIN:-/nfs/turbo/…/python3.11}"</code>，默认值不动；本机传 <code>uv python find 3.11</code> 的结果</td><td>不设环境变量时不变</td><td>S3</td></tr>
 <tr><td><code>scripts/evaluation/local_demo_pool.sh</code>（新）</td><td>本机前缀驱动</td><td>P5：<code>SHARDS</code> 取 16–32（先 1 卡 2 片小样测定），分片 k 用 GPU <code>k % 8</code>，每片后台调 <code>run_demo_shard.sh k</code>、<code>wait</code> 拿退出码写 <code>SHARD_EXIT_CODE=&lt;rc&gt; shard=&lt;k&gt;</code>；全部为 0 才 <code>pregen_binfill_demo.py finalize --shards $SHARDS --max-fail-rate 0.10</code>（finalize 按排序键汇总，结果与片数无关）；finalize 0 后做 E0（三 C6）并写判定行</td><td>—</td><td>S3</td></tr>
-<tr><td><code>scripts/evaluation/local_692_pool.sh</code>（新）</td><td>本机评估驱动</td><td>① 开头检查 E0 判定行文件存在且为 <code>DEMO_PREFIX_SRC=PASS</code>，否则退出；② 保留历史 10 个逻辑分片（<code>make_shard_plan.py</code> 不改），分片 k 用 GPU <code>k % 8</code>（每卡 ≤2 片，传 <code>LOCAL_GPU_SHARE=2</code> 与 <code>XLA_PYTHON_CLIENT_MEM_FRACTION=0.45</code>），端口由 <code>run_shard.sh</code> 按 shard 下标给；③ U2：起跑前按 <code>docs/training-doc/finalckpt-nomotion59999-gl/records/preseeded-errors.json</code> 的 <code>by_shard</code> 在对应分片 <code>progress.json</code> 预标 9 局 <code>"error"</code>，并 <code>ALLOW_RESUME=1</code>；④ 固定 F8 环境变量；⑤ <code>wait</code> 全部分片、收集 <code>SHARD_EXIT_CODE</code>；⑥ 新 error（不在预标清单内）只重跑该局一次（清该局 error 记录后 <code>ALLOW_RESUME=1</code> 续跑），记录原因与次数，仍 error 计失败；正常跑完未成功的不重试；⑦ <code>merge_shards.py</code> 合并后写 E1 判定行</td><td>—</td><td>S3</td></tr>
+<tr><td><code>scripts/evaluation/local_692_pool.sh</code>（新）</td><td>本机评估驱动</td><td>① 开头检查 E0 判定行文件存在且为 <code>DEMO_PREFIX_SRC=PASS</code>，否则退出；② 保留历史 10 个逻辑分片（<code>make_shard_plan.py</code> 不改），分片 k 用 GPU <code>k % 8</code>（每卡 ≤2 片，传 <code>LOCAL_GPU_SHARE=2</code> 与 <code>XLA_PYTHON_CLIENT_MEM_FRACTION=0.45</code>），端口由 <code>run_shard.sh</code> 按 shard 下标给；③ U2：起跑前按 <code>docs/training-doc/finalckpt-nomotion59999-gl/records/preseeded-errors.json</code> 的 <code>by_shard</code> 在对应分片 <code>progress.json</code> 预标 9 局 <code>"error"</code>，并 <code>ALLOW_RESUME=1</code>；④ 固定 F8 环境变量；⑤ <code>wait</code> 全部分片、收集 <code>SHARD_EXIT_CODE</code>；⑥ 新 error（不在预标清单内）只重跑该局一次（清该局 error 记录后 <code>ALLOW_RESUME=1</code> 续跑），记录原因与次数，仍 error 计失败；正常跑完未成功的不重试；⑦ <code>merge_shards.py</code> 合并后写 E1 判定行；⑧ <code>--g6b</code> 模式（只在训练前用冒烟 ckpt）：GPU 0 上先单片 1 局，再 <code>LOCAL_GPU_SHARE=2</code>、显存占比 0.45 同时起 2 片各 1 局，单个 <code>nvidia-smi -lms 500</code> 进程只查 GPU 0 取显存峰值，写 G6b 判定行</td><td>—</td><td>S3</td></tr>
 <tr><td><code>scripts/dataset/hf_export/run_wantp768_ckpt_export.sh</code>（新，P7）</td><td>driver</td><td>由 <code>run_ckpt_export.sh</code> 复制，改 <code>RUN_NAME</code>、<code>BUCKET_ID</code>、<code>NPROC=32</code>–48；按 step 5000…50000 依次等该份 ckpt 落盘完成即 stage + 上传 + 本机读回 sha256 对照，不等 50k；末行 <code>HF_VERIFY=PASS ckpts=10</code></td><td>原脚本不动</td><td>S3（主会话 2026-11-08 确认归 S3）</td></tr>
 </table>
 <div class="box warn">
@@ -494,8 +494,12 @@ tmx w768-demo "env SHARDS=&lt;16..32&gt; bash scripts/evaluation/local_demo_pool
 # ── D1 冒烟 → 等 G3/G4/G5 PASS 且 w768-demo EXIT_CODE=0（GPU 空出）
 tmx w768-smoke "bash scripts/training/run_4task_wantp768_50k.sh &lt;HEAD&gt; --smoke20 --run-name w768-smoke20"   # → SMOKE20=PASS steps=20 save_load=PASS；冒烟 ckpt 留到 G6b 后删
 # ── D2 G6b → 等 SMOKE20=PASS
-tmx w768-g6b "env CUDA_VISIBLE_DEVICES=0 SHARD_INDEX=0 EPISODES=1 bash scripts/evaluation/run_shard.sh &lt;冒烟 ckpt&gt; 7"   # run_shard → check_checkpoint → serve_policy → sidecar 握手 → 1 局
-#   → EVAL_LOAD_SMOKE=PASS episodes=1 handshake=PASS；之后删冒烟 run 与其评估目录
+tmx w768-g6b "bash scripts/evaluation/local_692_pool.sh --g6b &lt;冒烟 ckpt&gt; 7"
+#   由驱动的 G6b 模式在 GPU 0 上顺序做两步，自己等待并收集退出码：
+#   ① 单片：CUDA_VISIBLE_DEVICES=0 SHARD_INDEX=0 EPISODES=1 run_shard.sh（run_shard → check_checkpoint → serve_policy → sidecar 握手 → 1 局）
+#   ② 同卡 2 片：LOCAL_GPU_SHARE=2 XLA_PYTHON_CLIENT_MEM_FRACTION=0.45 CUDA_VISIBLE_DEVICES=0，SHARD_INDEX=0 与 1 各 EPISODES=1 同时起、wait 两片，
+#      期间以单个 nvidia-smi 进程 -lms 500 只查 GPU 0 显存，取峰值；单局耗时与 ① 对比
+#   → EVAL_LOAD_SMOKE=PASS episodes=1 handshake=PASS share2=PASS peak_mem_gb=&lt;x&gt;；之后删冒烟 run 与其评估目录
 # ── D3 Beta commit（commitV11.8xBeta）+ push → 只读锁 src/scripts/packages → 正式训练
 tmx w768-train "bash scripts/training/run_4task_wantp768_50k.sh &lt;TRAIN_HEAD&gt;"
 #   → 等起跑横幅与前 300 步吞吐正常后，起长尾上传（P7，每份存完即传，不等 50k）
@@ -513,7 +517,7 @@ tmx w768-eval "bash scripts/evaluation/local_692_pool.sh &lt;CKPT=…/50000&gt; 
 <h2>四　交接顺序与状态机登记</h2>
 <table>
 <tr><th>任务 id</th><th>pre_handoff（交接前必须完成）</th><th>长尾</th><th>依赖</th><th>done 后解锁</th></tr>
-<tr><td><code>4task-wantp768-train</code></td><td><code>RESTORE_SHA=PASS</code>（G1）、<code>DATA_LINEAGE=PASS</code>（G0）、<code>POOL768_CONTRACT=PASS</code>（G2）、<code>POOL768_TABLE=PASS</code>（G3）、<code>ONLINE_POOL768=PASS</code>（G4）、<code>VLA_PARAM_EQ=PASS</code> + <code>TRAIN_CONFIG_EQ=PASS</code>（G5）、<code>SMOKE20=PASS</code>（G6）、<code>EVAL_LOAD_SMOKE=PASS episodes=1 handshake=PASS</code>（G6b）、<code>DEMO_PREFIX_SRC=PASS</code>（E0，训练前完成）、<code>TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10</code>（G7），<code>w768-train</code> 已退出且 <code>EXIT_CODE=0</code>；出处为各会话日志</td><td><code>w768-ckptup</code>：<code>HF_VERIFY=PASS ckpts=10</code></td><td>无</td><td>评估任务</td></tr>
+<tr><td><code>4task-wantp768-train</code></td><td><code>RESTORE_SHA=PASS</code>（G1）、<code>DATA_LINEAGE=PASS</code>（G0）、<code>POOL768_CONTRACT=PASS</code>（G2）、<code>POOL768_TABLE=PASS</code>（G3）、<code>ONLINE_POOL768=PASS</code>（G4）、<code>VLA_PARAM_EQ=PASS</code> + <code>TRAIN_CONFIG_EQ=PASS</code>（G5）、<code>SMOKE20=PASS</code>（G6）、<code>EVAL_LOAD_SMOKE=PASS episodes=1 handshake=PASS share2=PASS peak_mem_gb=&lt;x&gt;</code>（G6b）、<code>DEMO_PREFIX_SRC=PASS</code>（E0，训练前完成）、<code>TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10</code>（G7），<code>w768-train</code> 已退出且 <code>EXIT_CODE=0</code>；出处为各会话日志</td><td><code>w768-ckptup</code>：<code>HF_VERIFY=PASS ckpts=10</code></td><td>无</td><td>评估任务</td></tr>
 <tr><td><code>4task-wantp768-eval</code></td><td>全部 10 片 <code>SHARD_EXIT_CODE</code> 收齐（F6），<code>EVAL692=PASS episodes=&lt;n&gt; success=&lt;k&gt; rate=&lt;x&gt; preseeded_errors=9 new_errors=&lt;n&gt; retried=&lt;n&gt; expect_motion_stats=1</code>（F8）；结果档案 commit（含七节所列记录）</td><td>无</td><td><code>4task-wantp768-train</code> done（对上游的假设：<code>TRAIN_FINAL_RECORD=PASS step=50000</code>，且 E0 判定行文件存在）</td><td>—</td></tr>
 </table>
 <p>开工令同时批准评估在训练 done 后自动开工（AGENTS 第 2 条 ③ 的状态机例外）；触发信号是主会话 Monitor 在 <code>w768-train</code> 日志里看到 <code>TRAIN_FINAL_RECORD=PASS</code>。</p>
