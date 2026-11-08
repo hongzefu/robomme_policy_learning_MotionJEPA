@@ -35,6 +35,28 @@ def _parse_source_run(spec: str) -> dict:
     return {"run_name": run_name, "checkpoint_name": ckpt, "epoch": int(m[1]), "state_key": state_key}
 
 
+def _pool_motion_gate(mcfg, mmeta, kind: str) -> None:
+    """池化分支（1108 计划 1.1 第 4 行）：不解析 source_run；YAML readout 与 store provenance 的 kind、readout、
+    池化源码 sha256 逐项相等，encoder_ckpt 为 null（provenance 自身的形制已由 MotionMeta.load 核过）。"""
+    from mme_vla_suite.shared import wan_pool768 as wp
+
+    if kind != wp.POOL768_ENCODER_KIND:
+        raise ValueError(f"motion.encoder_kind={kind!r} 未知（只支持 {wp.POOL768_ENCODER_KIND!r}）")
+    if mcfg.get("source_run") is not None:
+        raise ValueError("池化分支（motion.encoder_kind 已写）不得同时写 motion.source_run")
+    prov = mmeta.provenance
+    if prov.get("encoder_kind") != kind:
+        raise ValueError(f"motion.encoder_kind={kind!r} != motion store provenance.encoder_kind {prov.get('encoder_kind')!r}")
+    readout = mcfg.get("readout")
+    if readout != wp.POOL768_READOUT or prov.get("readout") != readout:
+        raise ValueError(f"motion.readout={readout!r} / store provenance.readout={prov.get('readout')!r} "
+                         f"与 {wp.POOL768_READOUT!r} 不全相等")
+    if prov.get("pool_source_sha256") != wp.pool_source_sha256():
+        raise ValueError("motion store provenance.pool_source_sha256 与现行 wan_pool768.py 不符")
+    if "encoder_ckpt" not in prov or prov["encoder_ckpt"] is not None:
+        raise ValueError("池化表 provenance.encoder_ckpt 必须显式为 null")
+
+
 def _motion_gates(history_config, frame_meta: StoreMeta) -> str | None:
     """motion.enabled=true 时的 fail-loud 闸：锁 / MotionMeta / verified / stride / 同源 / source_run 绑定；关闭态返回 None 且什么都不读。"""
     mcfg = getattr(history_config, "motion", None) if history_config is not None else None
@@ -51,6 +73,15 @@ def _motion_gates(history_config, frame_meta: StoreMeta) -> str | None:
         raise ValueError(f"motion.stride={mcfg.stride} != motion store GRID_STRIDE {ms.GRID_STRIDE}")
     manifest = load_manifest(os.environ.get("MMEVLA_FRAMESAMP_MANIFEST") or frame_meta.manifest_path)
     ms.check_same_source(frame_meta.manifest_sha256, mmeta, manifest)
+    kind = mcfg.get("encoder_kind")
+    if kind is not None:
+        _pool_motion_gate(mcfg, mmeta, kind)
+        logging.info("motion memory 开启（%s）：store=%s rows=%d manifest=%s…", kind, motion_root, mmeta.num_rows,
+                     mmeta.manifest_sha256[:16])
+        return str(motion_root)
+    if "encoder_kind" in mmeta.provenance:
+        raise ValueError(f"YAML 未写 motion.encoder_kind（encoder 路径），但 motion store 是 "
+                         f"{mmeta.provenance['encoder_kind']!r} 池化表")
     want = _parse_source_run(str(mcfg.source_run))
     enc = mmeta.provenance.get("encoder", {})
     got = {k: enc.get(k) for k in ("run_name", "checkpoint_name", "epoch", "state_key")}

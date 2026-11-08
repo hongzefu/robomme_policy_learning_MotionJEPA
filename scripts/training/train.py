@@ -144,6 +144,15 @@ def init_history_config(config: _config.TrainConfig, resolved_history_config=Non
                 "motion_table_sha256": mm.table_sha256,
                 "vae": mm.provenance.get("vae"), "encoder": mm.provenance.get("encoder"),
             })
+            if mcfg.get("encoder_kind") is not None:
+                # 池化分支（1108 计划 1.1 第 5 行）：encoder 块写 null，另记 kind / readout / 池化源码摘要；
+                # 三键只在此分支出现，encoder 分支与 closed run 的键集合与字节不变。
+                prov.update({
+                    "encoder": None,
+                    "encoder_kind": mm.provenance["encoder_kind"],
+                    "readout": mm.provenance["readout"],
+                    "pool_source_sha256": mm.provenance["pool_source_sha256"],
+                })
     (ckpt_root / "motion_provenance.json").write_text(_json.dumps(prov, ensure_ascii=False, indent=1, default=str) + "\n")
 
 def _load_weights_and_validate(
