@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-08T21:15:47Z",
-    "America/New_York": "2026-11-08T16:15:47.832442-05:00"
+    "utc": "2026-11-08T21:28:46Z",
+    "America/New_York": "2026-11-08T16:28:46.808778-05:00"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "ce5303631fb5b7cfd9562343ebd9aad5466b906a",
+    "base_head": "1de1ceb7ab3ddd4c1db3dd4a185b89eafc9a508e",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -1315,7 +1315,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-11-02T15:35:08Z",
-      "state_reason": "两条80000步训练EXIT0/final record通过、16份检查点齐全。交付代码124b145已部署，完整16步包正在导出；两份独立79999终态包已通过，严格恢复首次因未建编译缓存拒绝，补齐并保留旧报告后attempt02运行中。Vail已确认上传工具和现有凭据，两个detached归档控制器等待导出及恢复结束后上传，随后经Aspen已有连接提交GL标准分区CPU匿名流式读回。所有严格判据与旧FAIL保留。用户新指令：65209321、65209330不取消，V10结束后转交gl-abl-encoders-eval。",
+      "state_reason": "两条训练80000步EXIT0、最终记录通过、16份checkpoint齐全。79999终态包SHA验证无不匹配，实际读回各59个参数叶，missing/extra/shape_mismatch/dtype_mismatch均0、finite=1。完整在线检查两条均CKPT_DELIVERY_READY=FAIL：阶段二真实握手numerics与离线来源不同，报告保留未放宽。完整16步打包继续，Vail归档控制器等待后上传并自动提GL CPU读回。是否保留该FAIL解锁评估已向用户发出具名裁决，尚未收到回答；上游未标done。两占位遵最新指令保留，待V10交接裁决后转交gl-abl-encoders-eval，不取消。",
       "owner": {
         "session": "01a19abc-1926-71b0-bac0-a2d7375a739d",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1337,10 +1337,16 @@
           "status": "pass"
         },
         {
+          "what": "79999持久化参数真实读回、结构与有限性",
+          "evidence": "TERMINAL_PACKAGE=PASS ×2；strict_restore leaves=59 missing=0 extra=0 shape_mismatch=0 dtype_mismatch=0 finite=1 ×2；不等同完整在线恢复通过",
+          "where": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/validation/o16abl/<run>/delivery-terminal/report-attempt02.json",
+          "status": "pass"
+        },
+        {
           "what": "V10：两个run最终EXIT0、final record、精确16份checkpoint与79999严格恢复；按2026-11-08用户新指令两hold保留并转交gl-abl-encoders-eval；结果归档回写并push。恢复仍待实际验收，不用训练完成替代。",
-          "evidence": "",
-          "where": "turbo v1-store/logs/<run>.log；docs/training-doc/<run>/",
-          "status": "pending"
+          "evidence": "CKPT_DELIVERY_READY=FAIL ×2 error=阶段二真实握手的numerics与离线来源不同；strict_restore leaves=59 finite=1 missing=0 extra=0 shape_mismatch=0 dtype_mismatch=0；不改完整在线判据",
+          "where": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/validation/o16abl/<run>/delivery-terminal/report-attempt02.json",
+          "status": "fail"
         }
       ],
       "long_tail": [
@@ -1372,18 +1378,6 @@
           "tmux": "o16abl-delivery-export-nostate-approved",
           "jobid": "65209330",
           "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-delivery-export-nostate-approved.log",
-          "done_line": "EXIT_CODE=0"
-        },
-        {
-          "tmux": "o16abl-delivery-restore-noxyz-attempt02",
-          "jobid": "65209321",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-delivery-restore-noxyz-attempt02.log",
-          "done_line": "EXIT_CODE=0"
-        },
-        {
-          "tmux": "o16abl-delivery-restore-nostate-attempt02",
-          "jobid": "65209330",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-delivery-restore-nostate-attempt02.log",
           "done_line": "EXIT_CODE=0"
         }
       ],
@@ -1473,7 +1467,14 @@
           "scope": "覆盖原计划B2释放两占位的指令：两份均保留；V10结束后资源转交指定评估任务，本任务无取消权限。"
         }
       ],
-      "pending_decisions": [],
+      "pending_decisions": [
+        {
+          "what": "是否保留完整在线握手FAIL，允许训练任务交接评估，由评估计划的目标运行时合同处理跨硬件适配",
+          "evidence": "两条79999真实参数读回59叶全部结构/类型/有限性通过，完整在线握手numerics不一致FAIL；本会话已发异步明确选项，尚未获答复。",
+          "status": "awaiting_user",
+          "source": "原V10 CKPT_DELIVERY_READY=PASS为交接判据，不能在未获裁决时以读回通过替代完整验收。"
+        }
+      ],
       "next_steps": [
         {
           "what": "等待精确running_handles结束并记录严格恢复真实结果；完整导出EXIT0后Vail控制器上传并自动提交CPU小对象冒烟及全量读回。V10结束后只转交65209321/65209330给gl-abl-encoders-eval，禁止取消；失败如实保留，不伪报done。",
