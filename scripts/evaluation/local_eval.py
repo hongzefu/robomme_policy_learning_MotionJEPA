@@ -1,5 +1,6 @@
-"""本机8×A100跑 context Wan 时间池化1024（orig16，60k）官方800局×三seed：
-弹性队列，每卡4个worker；先用GPU 2-7，LATE_MARKER出现后加入GPU 0、1；最后出均值±std。"""
+"""本机8×A100跑官方800局×三seed，--profile 选模型：timepool（默认，context Wan 时间池化1024，先用GPU 2-7，
+LATE_MARKER出现后加入GPU 0、1）或 ctxcat（context concat 1×1024，8卡）；弹性队列，每卡4个worker；最后出均值±std。"""
+import argparse
 import json
 from pathlib import Path
 import shlex
@@ -18,29 +19,45 @@ except ImportError:
 
 REPO = Path(__file__).resolve().parents[2]
 V1 = REPO / "v1-store"
-CKPT = V1 / "train-runs/mme_vla_suite_orig16_b128_60k/orig100-ctx32x4x4-wan-timepool8x8-b128-60k/59999"
 POLICY_CONFIG = "mme_vla_suite_orig16_b128_60k"
-MODEL_KIND = "wan_fixedpool1024"
 POLICY_PY = "/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/bin/python"
 SIM_PY = "/scratch/hongze/micromamba/envs/robomme/bin/python"
 STAGE2_PY = "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/venvs/wan-stage2/bin/python"
 BENCHMARK = "/scratch/hongze/robomme_policy_learning_MotionJEPA/third_party/robomme_benchmark"
-TRAIN_LOG = V1 / "logs/orig100-ctx32x4x4-wan-timepool8x8-b128-60k.log"
-OUT = V1 / "evaluation/ctx-wan-timepool1024-3seed-1107"
-LOGS = OUT / "logs"
 MANIFEST_SHA = "991c34960b431f4e6170357dfe428e74e404f5ccdbf8dafddc3a0a380eaeecc6"
 SEEDS = (42, 7, 0)
-GPUS = range(2, 8)
-LATE_GPUS = [0, 1]
-LATE_MARKER = V1 / "validation/orig16-wan-timepool1024/RESTORE_POOL.json"
 PER_GPU = 4
 MEM_FRACTION = "0.18"
-PORT_BASE = {42: 9300, 7: 9400, 0: 9500}
 START_GAP, POLL = 10, 30
 QUEUE, WORKER = REPO / "scripts/evaluation/official_queue.py", REPO / "scripts/evaluation/resident_worker.py"
 # tmux新会话不继承当前shell，模型与缓存路径写进命令串（与训练runbook同值）。
 CACHE_ENV = {"OPENPI_DATA_HOME": V1 / "models", "HF_HOME": V1 / "cache/hf", "XDG_CACHE_HOME": V1 / "cache/xdg",
              "TORCH_HOME": V1 / "cache/torch"}
+# 模型相关取值按profile切换；late_marker为None时不加卡。
+PROFILES = {
+    "timepool": dict(ckpt=V1 / "train-runs/mme_vla_suite_orig16_b128_60k/orig100-ctx32x4x4-wan-timepool8x8-b128-60k/59999",
+                     model_kind="wan_fixedpool1024", wait_log=V1 / "logs/orig100-ctx32x4x4-wan-timepool8x8-b128-60k.log",
+                     out=V1 / "evaluation/ctx-wan-timepool1024-3seed-1107", gpus=range(2, 8), late_gpus=[0, 1],
+                     late_marker=V1 / "validation/orig16-wan-timepool1024/RESTORE_POOL.json", prefix="evl-tp",
+                     port_base={42: 9300, 7: 9400, 0: 9500}),
+    "ctxcat": dict(ckpt=V1 / "train-runs/mme_vla_suite_orig16_b128_60k/orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k/59999",
+                   model_kind="stage2_pool4_concat", wait_log=V1 / "logs/ctx-wan-timepool1024-3seed-1107/simple-chain.log",
+                   out=V1 / "evaluation/ctx-concat1x1024-3seed-1108", gpus=range(0, 8), late_gpus=[], late_marker=None,
+                   prefix="evl-cc", port_base={42: 9600, 7: 9700, 0: 9800}),
+}
+
+
+def select(name):
+    """把选中profile写成模块级常量，其余函数照旧读这些名字。"""
+    global CKPT, MODEL_KIND, TRAIN_LOG, OUT, LOGS, GPUS, LATE_GPUS, LATE_MARKER, PREFIX, PORT_BASE
+    p = PROFILES[name]
+    CKPT, MODEL_KIND, TRAIN_LOG, OUT = p["ckpt"], p["model_kind"], p["wait_log"], p["out"]
+    LOGS = OUT / "logs"
+    GPUS, LATE_GPUS, LATE_MARKER, PREFIX, PORT_BASE = (p["gpus"], p["late_gpus"], p["late_marker"], p["prefix"],
+                                                        p["port_base"])
+
+
+select("timepool")
 
 
 def say(line):
@@ -61,7 +78,7 @@ def alive(name):
 
 
 def session(seed, worker):
-    return f"evl-tp-s{seed}-{worker}"
+    return f"{PREFIX}-s{seed}-{worker}"
 
 
 def start_workers(seed, root, gpus):
@@ -100,7 +117,7 @@ def run_seed(seed, manifest, code):
             "run_identity_sha256": identity_sha256({"checkpoint": str(CKPT), "episodes": manifest["sha256"],
                                                     "code": code, "seed": seed, "model_kind": MODEL_KIND})}
     QueueStore(root).initialize(manifest, spec)
-    controller = f"evl-tp-ctl-s{seed}"
+    controller = f"{PREFIX}-ctl-s{seed}"
     start_session(controller, [POLICY_PY, QUEUE, "controller", "--run-root", root, "--local"],
                   LOGS / f"seed{seed}-controller.log")
     workers = start_workers(seed, root, GPUS)
@@ -121,7 +138,7 @@ def run_seed(seed, manifest, code):
                 time.sleep(5)
             subprocess.run(["tmux", "kill-session", "-t", f"={controller}"])
             return True
-        if not late_started and LATE_MARKER.exists():
+        if not late_started and LATE_MARKER is not None and LATE_MARKER.exists():
             late_started = True
             workers += start_workers(seed, root, LATE_GPUS)
         recover_dead(seed, root, workers, recovered)
@@ -186,6 +203,9 @@ def wait_gpus():
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--profile", choices=("timepool", "ctxcat"), default="timepool")
+    select(parser.parse_args().profile)
     if not wait_training() or not (CKPT / "_CHECKPOINT_METADATA").exists() or not wait_gpus():
         say(f"CHAIN_STOP before_eval ckpt={CKPT}")
         return 1
