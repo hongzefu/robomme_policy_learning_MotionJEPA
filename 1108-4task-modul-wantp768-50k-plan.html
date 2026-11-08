@@ -71,6 +71,8 @@ figcaption{color:var(--muted);font-size:.9em}
 <li><b>评估</b>：「跑完之后立刻开始呃 evaluate，在本机器做 evaluate」，选择题确认「692局 seed7 单次」（§4）。</li>
 <li><b>分支</b>：「这次的修改和评估都在单独的一个 branch 来实现。」</li>
 <li><b>状态机</b>：选择题「登记 (推荐)」（§7）。</li>
+<li><b>计划放置</b>：「计划放在仓库内」→ 主检出切到本分支，计划在仓库根目录，分支已推送到远端。</li>
+<li><b>Q1–Q5</b>：「这五项全部同意。」（§8）</li>
 </ol>
 
 <h2>2　数据：原库实体已不在盘上，从 HF 整库归档恢复</h2>
@@ -278,9 +280,10 @@ F[0, 48c+8i+j]  = P[c,i,j]                                            C→H→W 
 <h2>7　子代理分工与合并（简述）</h2>
 <p>代码拆成三块，各自在独立 worktree 里由 opus 写：<b>S1</b> 负责池化模块、768 表导出脚本、motion store 的 provenance 新类型和单测；<b>S2</b> 负责在线 sidecar 的 <code>wan_fixedpool768</code> 分支、新 YAML 和训练 runner；<b>S3</b> 负责本机 692 局评估驱动和 demo 前缀重生成驱动。S2 依赖 S1 的模块接口（函数名、常量名在本计划里写死），所以三块可以同时开工，按 S1 → S2 → S3 的顺序合并。每次合并前，一个 sonnet 审查代理钉死 BASE/TIP 审一遍；合并后跑定向单测和闸门，通过再 push。下载和训练、评估的启动交给 opus 运行代理，它只负责启动、确认起跑、交回句柄，监听、接续和清理都由主会话负责。</p>
 
-<h2>8　需要你确认的事项</h2>
+<h2>8　确认事项（2026-11-08 用户全部同意）</h2>
+<p>用户原话：「这五项全部同意。」下表五项均按「默认（推荐）」列执行；Q4 已于 2026-11-08 执行（<code>origin/v11-4task-modul-wantp768-50k</code>）。</p>
 <table>
-<tr><th>#</th><th>事项</th><th>默认（推荐）</th></tr>
+<tr><th>#</th><th>事项</th><th>裁决：按此执行</th></tr>
 <tr><td>Q1</td><td>主检出从 v9 分支切到本分支，主 <code>.venv</code> 按本分支 <code>uv.lock</code> 执行 <code>uv sync --frozen</code>（会换掉 v9 的包版本；v9/v10 任务都已 done/closed，GPU 现在全空）</td><td>切</td></tr>
 <tr><td>Q2</td><td>步数落点：在启动脚本里覆盖 <code>--num_train_steps=50001</code>，不改 <code>config.py</code> 的 <code>mme_vla_suite_b128_80k</code> 默认（AGENTS 第 10 条要求确认落点）</td><td>启动脚本覆盖</td></tr>
 <tr><td>Q3</td><td>BinFill demo 前缀库在本机重生成；若 E0 不过（成功集合或 D 值与上次不同）就停下交你裁决</td><td>重生成，不过即停</td></tr>
