@@ -32,10 +32,10 @@ figcaption{color:var(--muted);font-size:.9em}
 
 <div class="box">
 <p><b>权威性与授权边界</b>：本文件是「4task 原训练库上用 Wan 重叠窗零参数池化（768 维）替换 motion encoder、走 modulation 训 50k 并立即本机评估」的唯一计划。<b>只规划不实施</b>；开工须用户对本文件不改而明确认可（AGENTS 第 2 条开工令），开工前另派一个只读审查子代理做 <code>PLAN_CONSISTENCY_REVIEW</code>。</p>
-<p><b>修订记录</b>：本计划在 <code>36bfc06</code> 之后，按 Codex 审查（<code>AUDIT_BASE=03e8b14</code>，11 条，主会话逐条回代码核实成立）与并行化审查（<code>REVIEW_BASE=36bfc06</code>）修订，并写入用户对四项新问题的裁决（U1–U4，见 §1「已定死口径」）。</p>
+<p><b>修订记录</b>：本计划在 <code>36bfc06</code> 之后，按 Codex 审查（<code>AUDIT_BASE=03e8b14</code>，11 条，主会话逐条回代码核实成立）与并行化审查（<code>REVIEW_BASE=36bfc06</code>）修订，并写入用户对四项新问题的裁决（U1–U4，见 §1「已定死口径」）。之后按 Codex 第二轮审查（<code>AUDIT_BASE=0fe6d3e</code>，8 条，主会话回代码与 bucket 清单逐条核实成立）修订 C1–C8：恢复流程区分下载对象与运行时文件（C1）、G0 manifest 身份按规范化摘要重算（C2）、G4 输入分 exec/demo 两类（C3）、同卡 2 片按分片原子占位（C4）、预标 9 局按身份重定位（C5）、分片器均衡检查改为跨片同组（C6）、新 error 重跑产物隔离（C7）、白名单摘要在 Beta 前落定（C8）。</p>
 <p><b>分支与代码锚点</b>：按用户要求「这次的修改和评估都在单独的一个 branch 来实现」，全部改动、训练、评估、留档都在新分支 <code>v11-4task-modul-wantp768-50k</code>（从 <code>origin/v2-eval-0918-motion</code> 的 <code>ba52d79</code> 切出；该分支包含上次训练基线 <code>2f10473</code>（commitV10.2Beta），且带有上次 692 局评估链）。计划写于 worktree <code>.claude/worktrees/plan-4tp768</code>；训练和评估在主检出 <code>/scratch/hongze/robomme_policy_learning_MotionJEPA</code> 切到本分支后运行。</p>
 <p><b>commit 编号</b>：全仓最近为 <code>commitV11.83</code>；本计划实施从 <code>commitV11.84</code> 起，训练 Beta 用 <code>commitV11.8xBeta</code>（与结论 commit 同号）。tmux 前缀 <code>w768-</code>。</p>
-<p><b>外部依赖锚点</b>：训练库归档 bucket <code>HongzeFu/robomme-4task-v2-1600ep-trainset-20260920-v1</code>；源 H5 <code>HongzeFu/robomme-4task-h5-20260912-v2</code>@<code>604f16da36d6b6d175884df8fb687dc08e0a36eb</code>；canonical manifest sha256 <code>4cd5a170…bb918</code>；norm_stats sha256 <code>856c75ea…d173</code>；Wan latent 由钉版 <code>scripts/dataset/wan/wan_motion_infer.py</code>（sha256 <code>af67fdd9…1b34</code>）在建库时算出；benchmark gitlink <code>b4e97f22fe007078e297205898c07c1acbc69165</code>。</p>
+<p><b>外部依赖锚点</b>：训练库归档 bucket <code>HongzeFu/robomme-4task-v2-1600ep-trainset-20260920-v1</code>；源 H5 <code>HongzeFu/robomme-4task-h5-20260912-v2</code>@<code>604f16da36d6b6d175884df8fb687dc08e0a36eb</code>；canonical manifest identity <code>4cd5a170…bb918</code>（<code>datastore/manifest.py::manifest_sha256</code> 规范化摘要，不是文件字节 sha256）；norm_stats sha256 <code>856c75ea…d173</code>；Wan latent 由钉版 <code>scripts/dataset/wan/wan_motion_infer.py</code>（sha256 <code>af67fdd9…1b34</code>）在建库时算出；benchmark gitlink <code>b4e97f22fe007078e297205898c07c1acbc69165</code>。</p>
 </div>
 
 <h1>第一部分（给人看）</h1>
@@ -45,7 +45,10 @@ figcaption{color:var(--muted);font-size:.9em}
 <pre>
 阶段 A  恢复训练库（HF bucket → v1-store，约 596 GB，CPU/网络）
    │     framesamp-8x8 313.2 GB + source 240.0 GB + wan-latents 42.1 GB + motion/meta/assets
-   │     按目录开 3–4 个并发 hf 进程（先小样实测吞吐）；每个目录下完即逐文件并行 sha256（xargs -P48）
+   │     按目录开 3–4 个并发 hf 进程（先小样实测吞吐）；每个目录下完依次：
+   │     下载对象校验 G1a（tar 对 sha256-shards.txt、非 tar 对 sha256-plain.txt）
+   │     → 逐 tar 解包并删该 tar → 成员校验 G1b（对 sha256-source-files.txt）
+   │     → 运行时目录验收（source/data/*.pkl 数、wan-latents 3200 段、8x8 store_meta）
 阶段 B  代码（3 个 worktree 子代理并行）→ 逐个审查合并      ┆ 与 source 下载重叠
    │     池化 768 + motion 表导出 ┃ 在线 sidecar + YAML ┃ 本机 692 局评估驱动
 阶段 C  建 768 池化表（CPU，Pool(48) 有序并行，71316 窗）＋ 闸门 G0–G5
@@ -53,7 +56,7 @@ figcaption{color:var(--muted);font-size:.9em}
 阶段 D  8 卡 20 步冒烟（G6）→ G6b 用冒烟 ckpt 走一次真实评估加载入口跑 1 局，再同卡 2 片各 1 局（U5）
    │     → Beta → 正式训练 50,001 步（约 14 h，GPU 0–7）；每份 ckpt 存完即上传
 阶段 E  主会话 Monitor 见 TRAIN_FINAL_RECORD=PASS → 起评估（外壳先查 E0=PASS）
-   │     550 + 本机前缀成功条数（上次 142，合计 692）局 @50000，10 片同跑、每卡 ≤2 片（用户裁决「放宽闸门同卡2片」，G6b 先实测）
+   │     550 + 本机前缀成功条数（上次 142，合计 692）局 @50000，10 片同跑、每卡 ≤2 片，按分片原子占位（flock + 登记进程树，不数 GPU 进程；用户裁决「放宽闸门同卡2片」，G6b 先实测）
 长尾    剩余 checkpoint 上传 HF bucket + 本机读回校验
 </pre>
 <table>
@@ -61,7 +64,7 @@ figcaption{color:var(--muted);font-size:.9em}
 <tr><td>run_name</td><td><code>v2-1600ep-m8x8-modul-wantp768-b128-50k</code></td><td>沿用上次 <code>v2-1600ep-m8x8-modul-motion-b128-80k</code> 体例</td></tr>
 <tr><td>训练配置</td><td><code>mme_vla_suite_b128_80k</code> 全部超参，启动脚本只覆盖 <code>--num_train_steps=50001</code></td><td>§3.3</td></tr>
 <tr><td>history YAML</td><td>新 <code>perceptual-framesamp-modul-8frame-8x8-wantp768.yaml</code>（由上次 <code>…-8x8-motion.yaml</code> 只改 motion 来源字段）</td><td>§3.2</td></tr>
-<tr><td>评估</td><td>550 + 本机前缀成功条数（上次 142，合计 692）局、seed 7、<code>max_steps=2000</code>、BinFill 带本机重生成的 demo 前缀、只评 @50000；历史 10 个逻辑分片在 8 卡上同跑</td><td>§4</td></tr>
+<tr><td>评估</td><td>550 + 本机前缀成功条数（上次 142，合计 692）局、seed 7、<code>max_steps=2000</code>、BinFill 带本机重生成的 demo 前缀、只评 @50000；历史 10 个逻辑分片在 8 卡上同跑，同卡 2 片按分片原子占位（每卡占位文件用 <code>flock</code> 获取与释放，登记每片 server/sidecar 进程树，按已登记分片数 &lt;2 判定，不用 GPU 进程数代替）</td><td>§4</td></tr>
 <tr><td>对照</td><td>54.62% 为<b>跨环境历史参考</b>（上次 GreatLakes A40 + 历史前缀；本次本机 A100 + 本机重生成前缀），不重评旧模型</td><td>U1</td></tr>
 <tr><td>HF bucket（ckpt）</td><td><code>HongzeFu/robomme-vla-4task-modul-wantp768-50k-v1</code></td><td>bucket 名按记忆自定</td></tr>
 <tr><td>状态机</td><td>登记两个任务：<code>4task-wantp768-train</code> → <code>4task-wantp768-eval</code></td><td>§7</td></tr>
@@ -93,19 +96,26 @@ figcaption{color:var(--muted);font-size:.9em}
 <table>
 <tr><th>目录</th><th>体积</th><th>本次下载？</th><th>用途</th></tr>
 <tr><td><code>framesamp-8x8/</code>（32 片 image_emb + meta + pos/state）</td><td>313.2 GB</td><td class="ok">下</td><td>VLA 帧记忆输入（与上次同一份）</td></tr>
-<tr><td><code>wan-latents_tars/</code>（20 个 tar）</td><td>42.1 GB</td><td class="ok">下</td><td>71316 个重叠窗的 raw latent，池化的唯一输入</td></tr>
-<tr><td><code>source/</code>（162 个文件）</td><td>240.0 GB</td><td class="ok">下</td><td>训练时 <code>FrameSampDataset.__getitem__</code> 每步读 <code>source_root/data/&lt;idx&gt;.pkl</code>：取 actions，并与帧记忆库的 episode/step 身份互校。<code>framesamp-8x8</code> 的 store_meta 记有 <code>source_dataset_root</code>；恢复后核对它指向 <code>v1-store/datasets/4task-v2-1600ep-604f16da/source</code>，不一致则用 <code>source_root</code> 参数显式传入，不跳过源库检查</td></tr>
+<tr><td><code>wan-latents_tars/</code>（20 个 tar）</td><td>42.1 GB</td><td class="ok">下</td><td>71316 个重叠窗的 raw latent，池化的唯一输入。归档器 <code>scripts/dataset/hf_export/pack_and_hash.py::pack_tar_shard</code> 写入的成员名（arcname）自带前缀 <code>wan-latents/</code>（<code>build_jobs</code> 里 wan-latents 的 <code>arc_prefix</code>），所以解包目标是 <code>$LIB/</code>，解出 <code>$LIB/wan-latents/…</code>；不要解到 <code>$LIB/wan-latents</code>，否则多一层</td></tr>
+<tr><td><code>source/</code>（162 个文件）</td><td>240.0 GB</td><td class="ok">下</td><td><b>bucket 里的实际形态</b>（<code>hf buckets list -R</code> 实测）：<code>source/data_tars/*.tar</code> 共 148 个、<code>source/features/episode_*/token_emb_*.npy</code> 8 个样例、<code>source/meta/</code> 6 个文件；没有可直接读的 <code>source/data/</code>。训练读的是 <code>source/data/&lt;idx&gt;.pkl</code>，所以 148 个 data tar 必须逐个解包到 <code>$LIB/source/</code>：按 <code>pack_and_hash.py::shard_members</code>，data 分片成员名为 <code>data/&lt;k&gt;.pkl</code>（<code>arc_prefix="data"</code>），解出即 <code>$LIB/source/data/&lt;idx&gt;.pkl</code>；S 实施时先 <code>tar -tf</code> 读第一个 tar 的成员名确认前缀，写进盲区。训练时 <code>FrameSampDataset.__getitem__</code> 每步读 <code>source_root/data/&lt;idx&gt;.pkl</code>：取 actions，并与帧记忆库的 episode/step 身份互校。<code>framesamp-8x8</code> 的 store_meta 记有 <code>source_dataset_root</code>；恢复后核对它指向 <code>v1-store/datasets/4task-v2-1600ep-604f16da/source</code>，不一致则用 <code>source_root</code> 参数显式传入，不跳过源库检查</td></tr>
 <tr><td><code>motion/</code>（上次的 encoder motion 表 + meta）</td><td>0.2 GB</td><td class="ok">下</td><td>行序、段索引的对照基准（G3），以及参数量对照</td></tr>
 <tr><td><code>meta/</code>、<code>assets/</code>、<code>checksums/</code>、<code>runner/</code>、<code>SHA256SUMS.pre.txt</code></td><td>≈0.1 GB</td><td class="ok">下</td><td>sha256 校验与 identity 对照</td></tr>
 <tr><td><code>framesamp/</code>（4×4）、<code>oracle_tars/</code>、<code>motion-tokens_tars/</code></td><td>约 121 GB</td><td>不下</td><td>本次用不到</td></tr>
 </table>
-<p>合计下载约 596 GB（framesamp-8x8 313.2 + source 240.0 + wan-latents 42.1 + motion 0.2 + 小文件），tar 解开后再删 tar（<code>xargs -P20 tar -x</code>，每个 tar 解到各自 key）。下载按目录开 3–4 个并发 <code>hf</code> 进程（framesamp-8x8、source、wan-latents_tars、小目录），设 <code>HF_XET_HIGH_PERFORMANCE=1</code>，先小样实测吞吐（吞吐未知，记为风险）；每个目录下完即用 <code>xargs -P48 -n16 sha256sum</code> 逐文件并行哈希、<code>sort -k2</code> 后与 bucket <code>checksums</code> diff（G1 覆盖 <code>source/</code>），596 GB 串行约 23 min，并行约 3 min。磁盘：<code>/scratch</code> 现剩 1.2 TB，下载峰值（tar 未删时多 42 GB）之后，再加 demo 前缀库约 11.2 GB、10 份 checkpoint 约 120 GB（按上次 bucket 约 12 GB/份估），约剩 430 GB。<b>不需要删任何现有产物</b>，<code>cache/orig16-wan-timepool1024-recovery/published</code>（362 GB）不动。</p>
+<p>合计下载约 596 GB（framesamp-8x8 313.2 + source 240.0 + wan-latents 42.1 + motion 0.2 + 小文件）。下载按目录开 3–4 个并发 <code>hf</code> 进程（framesamp-8x8、source、wan-latents_tars、小目录），设 <code>HF_XET_HIGH_PERFORMANCE=1</code>，先小样实测吞吐（吞吐未知，记为风险）。<b>恢复分「下载对象」与「运行时文件」两层校验，再做运行时目录验收</b>，三步各自用 <code>xargs -P48 -n16 sha256sum</code> 逐文件并行（P1），哈希结果 <code>sort -k2</code> 后与清单 diff：</p>
+<ol>
+<li><b>G1a 下载对象层</b>：下载下来的 tar（<code>source/data_tars/</code> 148 个、<code>wan-latents_tars/</code> 20 个）对 bucket <code>checksums/sha256-shards.txt</code>（tar 文件本身的摘要，按 bucket 相对路径登记）；非 tar 文件（<code>framesamp-8x8/</code>、<code>motion/</code>、<code>source/features/</code> 样例、<code>source/meta/</code>、<code>meta/</code>、<code>assets/</code> 等）对 <code>checksums/sha256-plain.txt</code>。不一致即停，不解包。</li>
+<li><b>逐 tar 解包并删 tar</b>：G1a 通过后按 tar 流水「解包 → 该 tar 成员校验 → 删该 tar」：data tar 解到 <code>$LIB/source/</code>（成员 <code>data/&lt;k&gt;.pkl</code>），wan tar 解到 <code>$LIB/</code>（成员 <code>wan-latents/…</code>）；<code>xargs -P20</code> 并发处理 20 个 tar。</li>
+<li><b>G1b 成员层</b>：解出的每个成员文件对 <code>checksums/sha256-source-files.txt</code>（<code>pack_and_hash.py::pack_tar_shard</code> 打包时按 arcname 逐成员写入的摘要，由各分片的 <code>.sha256</code> 片段拼成）；路径按 arcname 相对解包根比对。某 tar 的成员有一项不符即停，该 tar 不删、留证。<code>sha256-shards.txt</code> 只校 tar 对象本身，不用于成员。</li>
+<li><b>运行时目录验收</b>：<code>$LIB/source/data/</code> 下 pkl 数等于 framesamp-8x8 store_meta 的 <code>num_exec_samples</code>（且文件名恰为 <code>0.pkl … (N-1).pkl</code>，与 <code>pack_and_hash.py::build_jobs</code> 打包前的核对同口径）；<code>$LIB/wan-latents/</code> 段数为 3200；framesamp-8x8 的 <code>meta/store_meta.json</code> sha256 与上次相同。</li>
+</ol>
+<p>596 GB 串行哈希约 23 min，48 路并行约 3 min（两层合计约 6 min）。<b>磁盘</b>：<code>/scratch</code> 现剩 1.2 TB（<code>df -h /scratch</code> 实测 Avail 1.2T）。解包后的内容体积按成员总字节算（<code>pack_tar_shard</code> 记录的 <code>member_bytes</code>，与 tar 字节只差每成员 512 B 级的 tar 头），约等于 source 240 GB + wan-latents 42.1 GB。若先整体解包再删 tar，峰值会是归档与解包内容同时在盘（多出约 282 GB，峰值约 878 GB、只剩约 320 GB）；按上面逐 tar 流水，任一时刻在盘的「归档+解包」重叠只有正在处理的 ≤20 个 tar（source 单 tar 平均约 1.6 GB、wan 单 tar 约 2 GiB），峰值多出 ≤约 43 GB，即峰值约 640 GB、余约 560 GB。稳态（tar 全删后）约 596 GB，再加 demo 前缀库约 11.2 GB、10 份 checkpoint 约 120 GB（按上次 bucket 约 12 GB/份估），稳态余量约 470 GB。<b>不需要删任何现有产物</b>，<code>cache/orig16-wan-timepool1024-recovery/published</code>（362 GB）不动。</p>
 <p><b>数据同源（P-LINEAGE）</b>：这次的「encoder」是 Wan2.1 VAE（本次不训练 VAE）加零参数池化，所以 motion 特征的数据源就是 latent 的输入帧。闸门 G0 写成一条可追踪链，每一环都指定实际存在的证据，<b>缺任何一环即 FAIL</b>，不许 WAIVE：</p>
 <ol>
 <li><b>输入 H5</b>：本地 <code>meta/input_manifest.json</code> 的 4 个 H5 sha256，与 bucket 的 <code>meta/input_manifest.json</code> 逐字节相同；</li>
-<li><b>canonical manifest</b>：<code>meta/episode_manifest.json</code> 的 sha256 为 <code>4cd5a170…bb918</code>；</li>
-<li><b>wan-latents</b>：恢复后 latent 根的 metadata/summary 中记录的 manifest identity 与 <code>raw_dir</code> 对上前两环；latent 文件 sha256 与 bucket <code>checksums/sha256-shards.txt</code> 一致；</li>
-<li><b>新表 provenance</b>：<code>motion-wan-pool768</code> 的 provenance 记录 latent 根的文件摘要与 manifest sha，与第 2、3 环一致。</li>
+<li><b>canonical manifest</b>：用 <code>src/mme_vla_suite/datastore/manifest.py::load_manifest</code> 读 <code>meta/episode_manifest.json</code>（它内部用 <code>manifest_sha256</code> 对去掉 <code>sha256</code> 字段后的规范化 JSON——<code>sort_keys</code>、紧凑分隔符——重算摘要，与文件内记录的 <code>sha256</code> 不符即 raise），重算出的 canonical identity 必须为 <code>4cd5a170…bb918</code>。<b>注意</b>：这个值不是文件字节的 sha256；文件字节 sha256 实测为 <code>df0ec8edd823b1415fa2bba6a51fa1c911dadc4d10364590d537a97526add482</code>，只在 G1 用于与 bucket <code>meta/episode_manifest.json</code> 的字节对照，不进 G0；</li>
+<li><b>wan-latents</b>：恢复后 latent 根的 metadata/summary 中记录的 manifest identity 与 <code>raw_dir</code> 对上前两环；latent 成员文件 sha256 已在 G1b 对 <code>checksums/sha256-source-files.txt</code> 通过（tar 对象本身在 G1a 对 <code>sha256-shards.txt</code> 通过）；</li>
+<li><b>新表 provenance</b>：<code>motion-wan-pool768</code> 的 provenance 记录 latent 根的文件摘要与 manifest canonical identity（<code>4cd5a170…bb918</code>，不是文件字节 sha256），与第 2、3 环一致。</li>
 </ol>
 <p>建库档案证据用 <code>git show origin/v2-motionmem:docs/dataset-build-doc/4task-v2-1600ep-motion-demopad17/result.md</code>（本分支没有该文件）。</p>
 
