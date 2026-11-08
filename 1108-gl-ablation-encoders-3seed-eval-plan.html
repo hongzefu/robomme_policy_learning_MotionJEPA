@@ -89,13 +89,14 @@ blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid var(--line);colo
 <ul>
 <li>B 份吞吐 ≥ 1.15 × A 份 → 后五次两份占位都改成每卡 2 个 worker（共 16 个）。</li>
 <li>否则后五次都用每卡 1 个 worker（共 8 个）。</li>
-<li>B 份出现 <code>Killed</code>、<code>out of memory</code>，或者局失败率明显偏高（基础设施 error &gt; 0）→ 判定每卡 2 个不可行，后五次用每卡 1 个。</li>
+<li>B 份出现以下任一情况 → 判定每卡 2 个不可行，后五次用每卡 1 个，且<b>优先于</b>上面的 1.15 倍判据：① B 份 worker 处理的局在队列重试 1 次后仍为 error；② B 份 worker 日志出现 <code>Killed</code> 或 <code>out of memory</code>。同节点撞端口（<code>Errno 98</code>）按 §三.1 换新 worker-id 重起的，不算。</li>
+<li>V6 照旧要求 <code>errors=0</code>：第 1 次运行若最终 <code>errors&gt;0</code>，V6 如实记 FAIL，其余 5 次照跑，最后一并汇报。</li>
 </ul>
 <p>把测速放在正式运行里不影响成绩：每局的环境由 test 元数据固定；模型采样噪声取决于 server 的 seed 和这个 worker 依次领到了哪些局，原本就随动态队列变，worker 布局和以往一样不进入成绩口径。</p>
 
 <h3>3. 时间与占位余量</h3>
 <p>10-31 实测 10 卡每卡 1 个 worker，800 局约 85 分钟，即约 14.2 卡·时/800 局。8 卡每卡 1 个 worker 时约 106 分钟/次；每卡 2 个 worker 如果有 1.3–1.6 倍收益，约 66–82 分钟/次（<b>未实测</b>）。6 次运行加冒烟和换根间隙，合计约 <b>7.5–11.5 小时</b>。</p>
-<p>占位分别在美东 11-09 13:38、14:04 到期。现在是 11-08 16:06，训练的 V10 还没做完，所以余量取决于它什么时候交出占位。规则：<b>每次起一轮新运行前</b>，算剩余时间是否 ≥ 1.2 × 上一次实测单轮时长；不够就不起这一轮，汇报你，由你决定是新提交单卡占位接着跑，还是到此为止。按 K5 的交替顺序，两个模型完成的 seed 数最多差 1。</p>
+<p>占位分别在美东 11-09 13:38、14:04 到期。现在是 11-08 16:06，训练的 V10 还没做完，所以余量取决于它什么时候交出占位。规则：<b>每次起一轮新运行前</b>，算剩余时间是否 ≥ 1.2 × 上一次实测单轮时长；不够就不起这一轮，汇报你，由你决定是新提交单卡占位（份数由你定）接着跑，还是到此为止。按 K5 的交替顺序，两个模型完成的 seed 数最多差 1。</p>
 
 <h3>4. 占位交接（要你出面的一步）</h3>
 <p>训练会话的 V10 写着「两hold释放」，它做完严格恢复会按规则逐个 <code>scancel</code>。跨会话消息不能算你的授权，所以这一步要<b>你自己告诉训练会话</b>：V10 完成后不取消 65209321、65209330，在它的 <code>current.json</code> 里写明占位已转交 <code>gl-abl-encoders-eval</code>。本任务开工前会现场核对：上游是 <code>done</code>、两份占位都还是 RUNNING、上面没有训练会话残留的 srun step（<code>squeue -s</code>）。如果占位已经被取消，本任务停下来问你。</p>
@@ -118,7 +119,7 @@ blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid var(--line);colo
 <h2>五、步骤</h2>
 <table>
 <tr><th>阶段</th><th>内容</th><th>判据</th></tr>
-<tr><td>A0（开工令后立即）</td><td>派 E0 写代码子代理合并评估代码；主会话写 run 根、spec、wrapper（不依赖上游）</td><td>V1、V2</td></tr>
+<tr><td>A0（开工令后立即）</td><td>派 E0 写代码子代理合并评估代码；主会话建 run 根目录、wrapper 和 spec 中不依赖上游的字段（spec 在 A1 定稿）</td><td>V1、V2</td></tr>
 <tr><td>A1（上游 done 后）</td><td>现场核对上游与占位；生成两份合同</td><td>V0、V3</td></tr>
 <tr><td>A2</td><td>A 份占位 GPU0 跑 N 冒烟，GPU1 跑 S 冒烟（并行）</td><td>V4 ×2</td></tr>
 <tr><td>A3</td><td>N-s42：A 份 4 个 worker + B 份 8 个 worker</td><td>V6、V7、V5</td></tr>
@@ -127,7 +128,7 @@ blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid var(--line);colo
 </table>
 
 <h2>六、子代理分工与合并（简述）</h2>
-<p>只有 E0 一块代码改动：一个写代码子代理（opus，独立 worktree，从 <code>8b52210</code> 新开分支 <code>v4-eval-abl-1108</code>），只做 <code>git merge --no-ff 5fce5d3</code>，然后跑测试。合入前派一个只读审查子代理（sonnet）看 <code>8b52210..TIP</code> 的 diff 是否恰好只有 <code>examples/robomme/eval.py</code> 和 <code>tests/evaluation/test_official_seed_gate.py</code> 两个文件。审查通过后主会话把分支 push 到远端（这个分支本身就是执行代码的锚点，不合进其他分支）。其余步骤（导出、合同、占位、控制器、worker、监听、汇总、释放）都由主会话亲自做，因为要用 aspen 和 sled-vail 上的 ControlMaster，还要一直挂 Monitor，和 10-31 一样。逐项分配见第二部分 §三。</p>
+<p>只有 E0 一块代码改动：一个写代码子代理（opus，独立 worktree；worktree 按 <code>baseRef=head</code> 从当前分支分出，子代理在 worktree 内先 <code>git checkout -b</code> 到 <code>8b52210</code> 再操作），只做 <code>git merge --no-ff 5fce5d3</code>（这个合并提交就是 <code>sub/E0:</code> 提交），然后跑测试。审查通过后主会话把分支名 <code>v4-eval-abl-1108</code> 指到该提交。合入前派一个只读审查子代理（sonnet）看 <code>8b52210..TIP</code> 的 diff 是否恰好只有 <code>examples/robomme/eval.py</code> 和 <code>tests/evaluation/test_official_seed_gate.py</code> 两个文件。审查通过后主会话把分支 push 到远端（这个分支本身就是执行代码的锚点，不合进其他分支）。其余步骤（导出、合同、占位、控制器、worker、监听、汇总、释放）都由主会话亲自做，因为要用 aspen 和 sled-vail 上的 ControlMaster，还要一直挂 Monitor，和 10-31 一样。逐项分配见第二部分 §三。</p>
 
 <p class="mut">逐文件、命令、风险与盲区见第二部分。</p>
 
@@ -151,9 +152,9 @@ blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid var(--line);colo
 <tr><td>评估代码合并（E0）</td><td>新分支 <code>v4-eval-abl-1108</code> @ <code>8b52210</code></td><td><code>git merge --no-ff 5fce5d3</code>，只带进 <code>examples/robomme/eval.py</code>（seed 门）与 <code>tests/evaluation/test_official_seed_gate.py</code></td><td>是，push 该分支</td></tr>
 <tr><td>执行副本</td><td><code>$E/releases/&lt;merge sha&gt;/</code></td><td><code>git archive &lt;sha&gt; | tar -x</code> 并初始化子模块到 <code>856bc3a</code>（同 10-31）；逐路径比对</td><td>否</td></tr>
 <tr><td>运行合同</td><td><code>$O/o16abl-&lt;N|S&gt;/contracts/runtime.json</code></td><td>由 V10 导出目录 <code>motion_provenance.json</code> 生成，6 次运行与冒烟共用（每模型一份）</td><td>否，sha 写 launch.md</td></tr>
-<tr><td>run 根与 spec</td><td><code>$O/o16abl-&lt;N|S&gt;-seed&lt;s&gt;/run800</code>、<code>…/smoke2</code>；<code>inputs/*.spec-input.json</code>、<code>*.run-identity.json</code></td><td>从 10-31 C-s7 同名文件复制，换 <code>repo</code>、<code>checkpoint</code>、<code>policy_config=mme_vla_suite_orig16_b64_80k</code>、<code>model_seed</code>、<code>target_contract</code>、<code>run_identity_sha256</code>；800 局清单沿用 10-29 的（内部签封 <code>991c3496…</code>）</td><td>否</td></tr>
-<tr><td>worker 脚本</td><td><code>$O/o16abl-&lt;…&gt;/run-worker.sh</code></td><td>由 10-31 <code>run-worker-run800.sh</code> 逐行复制，只换 run 根与执行 sha，<b>新增一行</b> <code>export CUDA_VISIBLE_DEVICES="$3"</code>（第 3 个参数是卡号）</td><td>否，diff 写 launch.md</td></tr>
-<tr><td>本机启动包装</td><td><code>$L/start-worker.sh</code></td><td>由 10-31 同名包装改：多两个参数 <code>&lt;ssh 别名&gt;</code>、<code>&lt;卡号&gt;</code>、<code>&lt;cpus&gt;</code>；<code>ssh -o BatchMode=yes &lt;别名&gt; srun --jobid=&lt;id&gt; --overlap --exact --ntasks=1 --cpus-per-task=&lt;cpus&gt; --gpu_cmode=shared /usr/bin/bash &lt;run-worker.sh&gt; &lt;sha&gt; &lt;worker-id&gt; &lt;卡号&gt;</code></td><td>否</td></tr>
+<tr><td>run 根与 spec</td><td>正式：<code>$O/o16abl-&lt;N|S&gt;-seed&lt;s&gt;/run800</code>；冒烟：<code>$O/o16abl-&lt;N|S&gt;-smoke/smoke2</code>（seed 0）；各目录的 <code>inputs/*.spec-input.json</code>、<code>*.run-identity.json</code>。A0 先建目录与不依赖上游的字段，<code>checkpoint</code>、<code>target_contract</code>、<code>run_identity_sha256</code> 在 A1 拿到导出目录与合同后定稿</td><td>从 10-31 C-s7 同名文件复制，换 <code>repo</code>、<code>checkpoint</code>、<code>policy_config=mme_vla_suite_orig16_b64_80k</code>、<code>model_seed</code>、<code>target_contract</code>、<code>run_identity_sha256</code>；800 局清单沿用 10-29 的（内部签封 <code>991c3496…</code>）</td><td>否</td></tr>
+<tr><td>worker 脚本</td><td>每个 run 名目录一份：<code>$O/o16abl-&lt;N|S&gt;-seed&lt;s&gt;/run-worker.sh</code>、<code>$O/o16abl-&lt;N|S&gt;-smoke/run-worker.sh</code>（与 run 根 <code>run800</code>／<code>smoke2</code> 同级）</td><td>由 10-31 <code>run-worker-run800.sh</code> 逐行复制，只换 run 根与执行 sha，<b>新增一行</b> <code>export CUDA_VISIBLE_DEVICES="$3"</code>（第 3 个参数是卡号）</td><td>否，diff 写 launch.md</td></tr>
+<tr><td>本机启动包装</td><td><code>$L/start-worker.sh</code></td><td>由 10-31 同名包装改，参数固定为 7 个：<code>start-worker.sh &lt;ssh 别名&gt; &lt;JobID&gt; &lt;worker-id&gt; &lt;卡号&gt; &lt;cpus&gt; &lt;run-worker.sh 绝对路径&gt; &lt;日志名&gt;</code>；执行 sha 写死在包装里（E0 合并后的 <code>v4-eval-abl-1108</code> HEAD），不作参数。内部执行 <code>ssh -o BatchMode=yes &lt;别名&gt; srun --jobid=&lt;JobID&gt; --overlap --exact --ntasks=1 --cpus-per-task=&lt;cpus&gt; --gpu_cmode=shared /usr/bin/bash &lt;run-worker.sh&gt; &lt;sha&gt; &lt;worker-id&gt; &lt;卡号&gt;</code>，输出 <code>tee</code> 到 <code>$L/&lt;日志名&gt;.log</code> 并追加 <code>EXIT_CODE=</code></td><td>否</td></tr>
 <tr><td>控制器</td><td>sled-vail，<code>$O/…/run-controller-vail.sh</code></td><td>10-31 同名脚本只换 run 根；换根沿用 <code>switch-run.sh</code> 的步骤</td><td>否</td></tr>
 <tr><td>档案</td><td><code>docs/evaluation-doc/o16abl-3seed-1108/{launch,result}.md</code>、<code>records/</code></td><td>起跑前写 launch.md，跑完写 result.md</td><td>是</td></tr>
 <tr><td>状态机</td><td><code>v4-eval-official-1026</code> 的 <code>docs/handoff/current.json</code></td><td>新增任务 <code>gl-abl-encoders-eval</code>（需你同意登记）</td><td>是</td></tr>
@@ -177,7 +178,7 @@ blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid var(--line);colo
 <h2>三、子代理分配表</h2>
 <table>
 <tr><th>编号</th><th>角色 / 模型</th><th>目标</th><th>可写</th><th>禁触</th><th>依赖</th><th>验收</th><th>资源</th></tr>
-<tr><td>E0</td><td>写代码 / opus，<code>isolation: worktree</code>（<code>worktree.baseRef=head</code>，基线 <code>8b52210</code>）</td><td>新分支合并 <code>5fce5d3</code></td><td>合并带进的两个文件</td><td>其余全部；不 push</td><td>无</td><td><code>UV_PROJECT_ENVIRONMENT=&lt;主 .venv&gt; PYTHONPATH=&lt;wt&gt;/src uv run --no-sync python -m pytest tests/evaluation -q</code> 全过；<code>git diff --name-only 8b52210..HEAD</code> 恰为 2 个文件</td><td>CPU</td></tr>
+<tr><td>E0</td><td>写代码 / opus，<code>isolation: worktree</code>（<code>worktree.baseRef=head</code> 从当前分支分出；子代理在 worktree 内 <code>git checkout -b sub-e0-eval-abl-1108 8b52210</code> 后作业，BASE=<code>8b52210</code>）</td><td>新分支合并 <code>5fce5d3</code></td><td>合并带进的两个文件</td><td>其余全部；不 push</td><td>无</td><td><code>UV_PROJECT_ENVIRONMENT=&lt;主 .venv&gt; PYTHONPATH=&lt;wt&gt;/src uv run --no-sync python -m pytest tests/evaluation -q</code> 全过；<code>git diff --name-only 8b52210..HEAD</code> 恰为 2 个文件</td><td>CPU</td></tr>
 <tr><td>E0-R</td><td>审查 / sonnet，只读</td><td>钉死 <code>REVIEW_BASE=8b52210</code>、<code>REVIEW_TIP</code></td><td>无</td><td>全部</td><td>E0</td><td><code>PRE_MERGE_REVIEW=PASS|FAIL …</code></td><td>—</td></tr>
 <tr><td>主会话</td><td>—</td><td>导出、合同、run 根、占位核对、冒烟、6 次运行、监听、汇总、释放、档案、状态机</td><td>turbo 评估目录、本机 <code>$L</code>、档案、状态机</td><td>训练 run 目录、训练会话的 tmux</td><td>E0、上游 done</td><td>V0–V9</td><td>8×A40（两份占位）</td></tr>
 </table>
@@ -195,12 +196,13 @@ git show origin/v4-eval-official-1026:docs/handoff/current.json   # gl-abl-encod
 ssh greatlakes 'squeue -j 65209321,65209330 -s'                  # 只剩 .batch/.extern，无训练 step
 
 # A2：冒烟（A 份卡 0 / 卡 1）
-tmux new-session -d -s evab-w-smokeN "bash $L/start-worker.sh greatlakes 65209321 smN-a0 0 4 $O/o16abl-N-seed42/smoke2/run-worker.sh smokeN"
-tmux new-session -d -s evab-w-smokeS "bash $L/start-worker.sh greatlakes 65209321 smS-a1 1 4 $O/o16abl-S-seed42/smoke2/run-worker.sh smokeS"
+#   参数顺序：&lt;ssh 别名&gt; &lt;JobID&gt; &lt;worker-id&gt; &lt;卡号&gt; &lt;cpus&gt; &lt;run-worker.sh&gt; &lt;日志名&gt;
+tmux new-session -d -s evab-w-smokeN "bash $L/start-worker.sh greatlakes 65209321 smN-a0 0 4 $O/o16abl-N-smoke/run-worker.sh smN-a0"
+tmux new-session -d -s evab-w-smokeS "bash $L/start-worker.sh greatlakes 65209321 smS-a1 1 4 $O/o16abl-S-smoke/run-worker.sh smS-a1"
 
-# A3/A4：每轮
-ssh sled-vail.eecs.umich.edu "tmux new-session -d -s evab-ctl-&lt;run&gt; 'bash $O/&lt;run&gt;/run-controller-vail.sh'"
-tmux new-session -d -s evab-w-&lt;run&gt;-&lt;wid&gt; "bash $L/start-worker.sh &lt;别名&gt; &lt;JobID&gt; &lt;run&gt;-&lt;wid&gt; &lt;卡号&gt; &lt;cpus&gt; $O/&lt;run&gt;/run-worker.sh &lt;run&gt;-&lt;wid&gt;"
+# A3/A4：每轮（&lt;名&gt; = o16abl-&lt;N|S&gt;-seed&lt;s&gt;，run 根 = $O/&lt;名&gt;/run800）
+ssh sled-vail.eecs.umich.edu "tmux new-session -d -s evab-ctl-&lt;名&gt; 'bash $O/&lt;名&gt;/run-controller-vail.sh'"
+tmux new-session -d -s evab-w-&lt;名&gt;-&lt;wid&gt; "bash $L/start-worker.sh &lt;别名&gt; &lt;JobID&gt; &lt;名&gt;-&lt;wid&gt; &lt;卡号&gt; &lt;cpus&gt; $O/&lt;名&gt;/run-worker.sh &lt;名&gt;-&lt;wid&gt;"
 
 # 监听：每份 worker 日志一个 Monitor
 tail -n +1 -F $L/&lt;日志&gt;.log | stdbuf -oL tr '\r' '\n' \
@@ -216,7 +218,7 @@ ssh greatlakes 'squeue -u hongzefu'
 <h2>五、风险登记</h2>
 <table>
 <tr><th>风险</th><th>表现</th><th>处置</th></tr>
-<tr><td>训练会话按原 V10 取消了占位</td><td>A1 时 squeue 查不到</td><td>停下汇报你；是否新提交 10 份单卡占位由你决定</td></tr>
+<tr><td>训练会话按原 V10 取消了占位</td><td>A1 时 squeue 查不到</td><td>停下汇报你；默认不新提交 job，是否新提交单卡占位、提交几份由你决定</td></tr>
 <tr><td>V10 拖得久、占位余量不够</td><td>§三.3 起跑前核算不过</td><td>不起新一轮，汇报你；已完成的运行照常汇总</td></tr>
 <tr><td>B 份每 worker 只有 2 CPU / 约 16G</td><td>仿真变慢、<code>Killed</code></td><td>V5 判 1x；已被杀的局由队列回收重发（基础设施错误重试 1 次）</td></tr>
 <tr><td>同节点端口撞车</td><td><code>Errno 98</code></td><td>新 worker-id 同卡重起（§三.1）</td></tr>
@@ -247,9 +249,16 @@ ssh greatlakes 'squeue -u hongzefu'
 <h2>八、留档与 commit 纪律</h2>
 <ul>
 <li>计划提交：<code>docs: 双消融三 seed 官方评估计划</code>。</li>
-<li>E0：子代理 <code>sub/E0: 合并官方 seed 门到双消融训练锚点</code>；合并提交（主会话）<code>commitV&lt;续号&gt;: 双消融评估执行代码（8b52210 + 5fce5d3）</code>。</li>
+<li>E0：子代理的合并提交即 <code>sub/E0: 合并官方 seed 门到双消融训练锚点</code>；主会话不再另做合并提交，只把 <code>v4-eval-abl-1108</code> 指到它并 push（该分支不合进其他分支）。</li>
+<li>提交落点：计划与评估档案 <code>docs/evaluation-doc/o16abl-3seed-1108/</code> 提交到主检出当前分支 <code>v4.1-interpretMotion</code>；状态机 <code>docs/handoff/current.json</code> 在 <code>v4-eval-official-1026</code> 分支的检出 <code>v1-store/worktrees/o16abl-handoff</code> 里写，写前 <code>git fetch</code> 并快进。</li>
 <li>launch.md 在 A3 起控制器之前提交：执行 sha、两份导出目录、合同 sha、spec 与 run 身份 sha、占位与节点、全部 tmux 会话名、每条启动命令。</li>
 <li>result.md：两模型逐 seed 与三 seed 均值 ± std、逐任务表、V5 测速数字、与 10-31 的探索性对照、计划外事件、占位释放记录；<code>records/</code> 只放 summary.json、清洗后日志与测速原始表。</li>
+</ul>
+
+<h2>实施中调整（开工后追加，不改写上文原计划）</h2>
+<ul>
+<li><b>V0 上游门由用户放行</b>：开工后上游 <code>gl-abl-encoders-train</code> 仍为 <code>running</code>（V10 <code>CKPT_DELIVERY_READY=FAIL ×2</code> 待裁决）。用户 2026-11-08 美东原话：「暂时不管这个问题了开始了」。V0 改为：两份占位 RUNNING、上面无训练 step（美东 16:54 现场核对：只剩 <code>.batch</code>／<code>.extern</code>，两个导出日志 <code>EXIT_CODE=0</code>）即可，不等上游 <code>done</code>。V10 导出目录：<code>/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-&lt;run&gt;/stage/</code>（含 <code>79999/</code>、<code>encoder_dependencies/</code>、<code>motion_provenance.json</code>）。</li>
+<li><b>开工前一致性审查</b>：<code>PLAN_CONSISTENCY_REVIEW=FAIL base=77a14a4 findings=9 blocking=2</code>。F2（启动包装参数）及 F3–F9 为文字统一，已直接改：参数顺序固定为 7 个、run-worker.sh 放 run 名目录、冒烟目录改 <code>o16abl-&lt;N|S&gt;-smoke</code>、spec 在 A1 定稿、E0 不另做主会话合并提交、E0 worktree 先 checkout 到 <code>8b52210</code>、新提交占位份数由用户定、写明计划／档案／状态机各自的提交分支。F1（V5 的失败判据与 V6 的 errors=0 口径）涉及失败处理与验收，交用户裁决；用户选「推荐口径，V6 FAIL 照跑」，已写入 §三.2：只有重试后仍为 error 的局、B 份 Killed/OOM 判不可行，撞端口重起不算，Killed/OOM 优先于 1.15 倍；V6 仍要求 errors=0，未过如实记 FAIL、其余照跑。</li>
 </ul>
 
 </body>
