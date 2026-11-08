@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-08T21:55:44Z",
-    "America/New_York": "2026-11-08T16:55:44-05:00"
+    "utc": "2026-11-08T23:48:17Z",
+    "America/New_York": "2026-11-08T18:48:17-05:00"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "cd3891fe9af4af377ed271e660f60db4238846cf",
+    "base_head": "ad321ec68584d6860e981f4963971b7afc6f0cdf",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -1500,7 +1500,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-11-08T16:55:44-05:00",
-      "state_reason": "用户 2026-11-08 美东「开工」；先做计划一致性审查与 A0（E0 合并、执行副本、run 根），A1 起等上游 gl-abl-encoders-train done",
+      "state_reason": "执行代码 4d70b1a、执行副本与 8 个 run 根就绪，两模型 SMOKE2=PASS；N-s42 美东 18:46:42 起跑兼测速（A 每卡1、B 每卡2，共12 worker）",
       "owner": {
         "session": "cc3c43d3-a0ab-4628-b8ac-dd31bccb44f6",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1511,9 +1511,9 @@
       "pre_handoff": [
         {
           "what": "两模型冒烟各 2 局",
-          "evidence": "SMOKE2=PASS model=<N|S> accepted=2 errors=0 ×2",
+          "evidence": "SMOKE2=PASS model=N accepted=2 errors=0 readout=stage2_pool4_split_v1；SMOKE2=PASS model=S accepted=2 errors=0 readout=stage2_pool4_split_v1",
           "where": "docs/evaluation-doc/o16abl-3seed-1108/result.md",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "6 次 800 局全部确定终局",
@@ -1541,13 +1541,116 @@
         }
       ],
       "long_tail": [],
-      "running_handles": [],
+      "running_handles": [
+        {
+          "tmux": "evab-ctl-o16abl-N-seed42",
+          "host": "sled-vail",
+          "log": "$E/v1-store/evaluation/o16abl-80k/o16abl-N-seed42/run800/queue/summary.json",
+          "done_line": "compute_status=COMPUTE_DONE"
+        },
+        {
+          "tmux": "evab-w-ns42-a0",
+          "host": "sled-aspen",
+          "jobid": "65209321",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-a0.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "evab-w-ns42-a1",
+          "host": "sled-aspen",
+          "jobid": "65209321",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-a1.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "evab-w-ns42-a2",
+          "host": "sled-aspen",
+          "jobid": "65209321",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-a2.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "evab-w-ns42-a3",
+          "host": "sled-aspen",
+          "jobid": "65209321",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-a3.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "evab-w-ns42-b0x",
+          "host": "sled-aspen",
+          "jobid": "65209330",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-b0x.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "evab-w-ns42-b0y",
+          "host": "sled-aspen",
+          "jobid": "65209330",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-b0y.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "evab-w-ns42-b1x",
+          "host": "sled-aspen",
+          "jobid": "65209330",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-b1x.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "evab-w-ns42-b1y",
+          "host": "sled-aspen",
+          "jobid": "65209330",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-b1y.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "evab-w-ns42-b2x",
+          "host": "sled-aspen",
+          "jobid": "65209330",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-b2x.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "evab-w-ns42-b2y",
+          "host": "sled-aspen",
+          "jobid": "65209330",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-b2y.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "evab-w-ns42-b3x",
+          "host": "sled-aspen",
+          "jobid": "65209330",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-b3x.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "evab-w-ns42-b3y",
+          "host": "sled-aspen",
+          "jobid": "65209330",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-b3y.log",
+          "done_line": "EXIT_CODE="
+        }
+      ],
       "authorizations": [
         {
           "kind": "go",
           "date": "2026-11-08",
           "quote": "开工",
           "scope": "计划 1108-gl-ablation-encoders-3seed-eval-plan.html @ 77a14a4 全文；不依赖上游的 A0 先做，占位与冒烟/正式评估等上游 done 且占位转交后再动"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-08",
+          "quote": "暂时不管这个问题了开始了",
+          "scope": "上游 V10 FAIL 不等 done，直接使用两份占位与 V10 导出目录"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-08",
+          "quote": "推荐口径，V6 FAIL 照跑",
+          "scope": "开工前审查 F1：V5 失败判据与 V6 errors=0 口径"
         }
       ],
       "pending_decisions": [
@@ -1555,14 +1658,9 @@
       ],
       "next_steps": [
         {
-          "what": "用户对 77a14a4 计划给开工令后：派计划一致性审查，再派 E0 合并 8b52210+5fce5d3",
-          "command": "见计划第二部分 §四 runbook A0",
-          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS；EVAL_CODE=PASS；RELEASE_SNAPSHOT=PASS"
-        },
-        {
-          "what": "上游 done 后现场核对占位已转交且无训练 step",
-          "command": "ssh greatlakes 'squeue -j 65209321,65209330 -s'",
-          "verdict_line": "UPSTREAM=PASS task=gl-abl-encoders-train state=done holds_running=2 foreign_steps=0"
+          "what": "N-s42 COMPUTE_DONE 后算 V5 测速、定后五次布局，按 S-s42→N-s7→S-s7→N-s0→S-s0 换根",
+          "command": "见计划 §四 runbook A3/A4",
+          "verdict_line": "LAYOUT_SPEED=PASS …；COMPUTE_DONE completed=800 …"
         }
       ]
     }
