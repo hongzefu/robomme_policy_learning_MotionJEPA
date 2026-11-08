@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-08T21:09:57Z",
-    "America/New_York": "2026-11-08T16:09:57-05:00"
+    "utc": "2026-11-08T21:15:47Z",
+    "America/New_York": "2026-11-08T16:15:47.832442-05:00"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "25b220a855c1303f70df3c743032e45ec2fbfbc3",
+    "base_head": "ce5303631fb5b7cfd9562343ebd9aad5466b906a",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -1315,7 +1315,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-11-02T15:35:08Z",
-      "state_reason": "两条80000步正式训练均于美东2026-11-08完成（noxyz03:02:33、nostate07:14:00），EXIT0/final record通过、16份检查点齐全。严格恢复与备份未完成，任务仍running。交付离线导出被四文件七项路径披露拦截后，用户明确同意开始；精确披露补丁385fd43已推送，正在部署后继续原验收。训练Beta8b52210不变；原SAVE_LOAD失败保留。",
+      "state_reason": "两条80000步训练EXIT0/final record通过、16份检查点齐全。交付代码124b145已部署，完整16步包正在导出；两份独立79999终态包已通过，严格恢复首次因未建编译缓存拒绝，补齐并保留旧报告后attempt02运行中。Vail已确认上传工具和现有凭据，两个detached归档控制器等待导出及恢复结束后上传，随后经Aspen已有连接提交GL标准分区CPU匿名流式读回。所有严格判据与旧FAIL保留。用户新指令：65209321、65209330不取消，V10结束后转交gl-abl-encoders-eval。",
       "owner": {
         "session": "01a19abc-1926-71b0-bac0-a2d7375a739d",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1337,7 +1337,7 @@
           "status": "pass"
         },
         {
-          "what": "V10：两个run最终EXIT0、final record、精确16份checkpoint与79999严格恢复；两hold释放；结果归档回写并push。尚待实际完成，不用起跑PASS替代。",
+          "what": "V10：两个run最终EXIT0、final record、精确16份checkpoint与79999严格恢复；按2026-11-08用户新指令两hold保留并转交gl-abl-encoders-eval；结果归档回写并push。恢复仍待实际验收，不用训练完成替代。",
           "evidence": "",
           "where": "turbo v1-store/logs/<run>.log；docs/training-doc/<run>/",
           "status": "pending"
@@ -1347,19 +1347,46 @@
         {
           "what": "noxyz run 16 份 ckpt 公开上传并集群 CPU job 读回校验",
           "tmux": "o16abl-upload-noxyz",
-          "log": "v1-store/logs/o16abl-upload-noxyz.log",
-          "done_line": "HF_VERIFY=PASS",
-          "status": "pending"
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/o16abl-upload-noxyz.log",
+          "done_line": "ARCHIVE_DONE=PASS tag=noxyz",
+          "status": "running",
+          "host": "sled-vail"
         },
         {
           "what": "nostate run 16 份 ckpt 公开上传并集群 CPU job 读回校验",
           "tmux": "o16abl-upload-nostate",
-          "log": "v1-store/logs/o16abl-upload-nostate.log",
-          "done_line": "HF_VERIFY=PASS",
-          "status": "pending"
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/o16abl-upload-nostate.log",
+          "done_line": "ARCHIVE_DONE=PASS tag=nostate",
+          "status": "running",
+          "host": "sled-vail"
         }
       ],
-      "running_handles": [],
+      "running_handles": [
+        {
+          "tmux": "o16abl-delivery-export-noxyz-approved",
+          "jobid": "65209321",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-delivery-export-noxyz-approved.log",
+          "done_line": "EXIT_CODE=0"
+        },
+        {
+          "tmux": "o16abl-delivery-export-nostate-approved",
+          "jobid": "65209330",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-delivery-export-nostate-approved.log",
+          "done_line": "EXIT_CODE=0"
+        },
+        {
+          "tmux": "o16abl-delivery-restore-noxyz-attempt02",
+          "jobid": "65209321",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-delivery-restore-noxyz-attempt02.log",
+          "done_line": "EXIT_CODE=0"
+        },
+        {
+          "tmux": "o16abl-delivery-restore-nostate-attempt02",
+          "jobid": "65209330",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-delivery-restore-nostate-attempt02.log",
+          "done_line": "EXIT_CODE=0"
+        }
+      ],
       "authorizations": [
         {
           "kind": "decision",
@@ -1432,16 +1459,38 @@
           "date": "2026-11-08",
           "quote": "同意开始",
           "scope": "针对主会话逐项列明的四文件，允许encoder_dependencies.json、motion_provenance.json、_run-meta/train.log的集群绝对路径及组织名(P1/P2)，以及motion_evidence/G3.json本机路径(P3)公开披露；继续既定打包、严格恢复、上传和GL CPU校验，不放宽数值或凭据检查。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-08",
+          "quote": "Aspen如果传不上去就用vail来传试一下",
+          "scope": "Aspen访问共享盘RPC阻塞，允许Vail承担既定公开上传；GL标准分区CPU匿名流式读回不变。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-08",
+          "quote": "10 完成后不取消 65209321、65209330，在它的 current.json 里写明占位已转交 gl-abl-encoders-eval",
+          "scope": "覆盖原计划B2释放两占位的指令：两份均保留；V10结束后资源转交指定评估任务，本任务无取消权限。"
         }
       ],
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "部署已批精确披露补丁，重新离线导出；同原占位做79999严格恢复，随后按既有范围上传并GL standard纯CPU匿名流式校验。已完成训练不得重启。",
-          "command": "G按交付补丁固定HEAD运行既有exporter SMOKE=1 O16_MODE=final；原hold65209321/65209330 check_stage2_checkpoint.py --mode delivery --delivery-step79999",
-          "verdict_line": "CKPT_DELIVERY_READY=PASS|FAIL step=79999；HF_VERIFY=PASS|FAIL（未验收不标done）"
+          "what": "等待精确running_handles结束并记录严格恢复真实结果；完整导出EXIT0后Vail控制器上传并自动提交CPU小对象冒烟及全量读回。V10结束后只转交65209321/65209330给gl-abl-encoders-eval，禁止取消；失败如实保留，不伪报done。",
+          "command": "逐日志核EXIT_CODE、CKPT_DELIVERY_READY、HF_VERIFY；Vail tmux o16abl-upload-noxyz/o16abl-upload-nostate；CPU校验JobID自动写各exports/hf-ckpt-<run>/vail-upload/cpu_verify_job.json",
+          "verdict_line": "CKPT_DELIVERY_READY=PASS|FAIL step=79999；HF_VERIFY=PASS|FAIL；HOLD_TRANSFER=PASS to=gl-abl-encoders-eval（均据实际结果）"
         }
-      ]
+      ],
+      "resource_handoff": {
+        "to_task": "gl-abl-encoders-eval",
+        "jobids": [
+          "65209321",
+          "65209330"
+        ],
+        "status": "retained_for_transfer",
+        "condition": "V10检查结束后写为transferred；当前验收运行中，不伪报已完成",
+        "cancel_by_training_owner": false
+      }
     },
     "gl-abl-encoders-eval": {
       "plan": {

@@ -117,7 +117,7 @@
 | A3b | 写两份 `docs/training-doc/<run>/launch.md` 第一段 → **Beta commit**（`git status --short` 为空）→ 集群副本 `git fetch && git checkout <Beta sha>` → V8 部署行；占位可早于 Beta RUNNING，但部署前不得启动冒烟或训练 | V8 |
 | A4 | 占位 RUNNING 后：V4b 计算节点 venv 核对（1031 同式）→ 64 档冒烟。**PASS** → 该 run 的 SAVE_LOAD原判定记录；100步测时已由用户取消。两个 run 的 64 档都通过后统一完成第一阶段，起跑前刷新剩余时间，余量 < 10% 自动重申请，否则原占位 B1；**FAIL** → 32／16 档峰值 → `scancel` ×2 → 停下交用户 | V6、V6b记录、K7余量（V7取消） |
 | B1（两个 run 的第一阶段完成后立即，不另问） | 两个 run 各在自己占位里 `srun` 起训练（tmux `o16abl-train-<tag>`）→ 每份日志挂 Monitor；两个 run 的 64 档都通过、V6b原判定已记录、V7取消且余量够用且 phase1 done 后才起正式训练；先到的占位在此之前只做冒烟及规定判定并等待 | V9 |
-| B2 | 跑完核 EXIT_CODE、final record、步集合；导出脚本产 manifest；同占位内 79999 严格恢复；`scancel` 两份占位；写 result.md、清洗日志、回写 commit、handoff；起上传长尾 | V10、V11 |
+| B2 | 跑完核 EXIT_CODE、final record、步集合；导出脚本产 manifest；同占位内 79999 严格恢复；按2026-11-08用户新指令保留65209321、65209330并在状态机记明转交`gl-abl-encoders-eval`，不取消；写 result.md、清洗日志、回写 commit、handoff；起上传长尾 | V10、V11 |
 
 ## 八、子代理分工与合并（简述，Codex 映射）
 
@@ -344,3 +344,13 @@ S1合前与合后复核曾分别发现旧8卡分支绕过、K2诊断小batch误�
 S8由`gpt-6.1-sol/medium`修改与独立审查，探索由`gpt-6-luna/high`执行，采用用户2026-11-04更新的通用映射。共享文件归属不变，S8仅有两个新文件。原主检出已由其他会话切到`v4.1-interpretMotion`且存在他人的未跟踪文档，因此本次计划与状态更新使用原任务分支`v4-eval-official-1026`的独立交接工作树，不切换、不清理他人的现场。
 
 初次收尾载体未消费标签参数而让公共入口拒绝额外参数，退出2；消费参数后一次重试才得到真实披露失败，全部日志保留。原导出驱动短测59通过、9项被其硬编码AWS缓存目录`/scratch/hongze/.cache/uv`的子进程权限错误阻断；没有修改无关测试，也未虚报全套通过。79999严格恢复、占位释放、公开上传与集群CPU读回仍按各自实际判定留档。
+
+### 本次最新用户覆盖与已启动句柄
+
+用户原话：「Aspen如果传不上去就用vail来传试一下」。Aspen直接访问NFS部署的`git fetch`与共享工具预装卡在RPC，主会话核实进程归属后只停止该两项部署进程；在Aspen制作从训练Beta到`124b145f3f410a9e59b8b4372f90f51626319c57`的增量bundle，经SSH/rsync传到G，再由Aspen发起GL本地bundle导入和detached checkout，GL不需要Git凭据或网络fetch。共享HF工具固定1.30.0，在GL登录节点按共享Python3.11.14正常预装，计算节点不安装。独立`ADJUST_REVIEW=PASS scale=same findings=0`，G最终代码和clean已读回。
+
+为尽早得到终态恢复结果，保持16步全量打包并行，用同一固定导出器原始代码块和原函数，在独立`delivery-terminal/stage`准备完整根依赖＋79999一步的恢复包；保留原16份集合检查、扫描、源文件稳定性复核与所有摘要判据。额外约24GB，`ADJUST_REVIEW=PASS scale=same findings=0`。两份`TERMINAL_PACKAGE=PASS`已生成。首次严格恢复因本轮遗漏创建编译缓存目录而拒绝；已补齐缓存，保留原FAIL报告，复用终态包并用新`report-attempt02.json`重试，不重跑训练、不覆盖失败。
+
+Vail现场确认共享存储、预装HF工具和既有用户凭据可用。两条归档控制器已经在Vail的detached tmux `o16abl-upload-noxyz`、`o16abl-upload-nostate`启动：流式等待准确导出与恢复日志；导出必须退出0，恢复退出码原样记录；原计划仅V4的EMA来源及V5的H5 SHA失败硬停，两者已由实际前序证据通过，本次备份不把恢复FAIL伪写成PASS。随后Vail只上传，通过Aspen已有GreatLakes连接提交标准分区4CPU/8G/12h纯CPU任务，同一脚本先验一个小对象，再逐对象匿名流式核对集合、SHA和字节数。`RUNTIME_REVIEW=PASS findings=0`；不在计算节点装依赖，不在工作机回读，不将待上传写成已备份。
+
+用户随后明确：「10 完成后不取消 65209321、65209330，在它的 current.json 里写明占位已转交 gl-abl-encoders-eval」。这条覆盖原B2释放指令：两份占位始终保留，不执行任何`scancel`；当前先在状态机标为`retained_for_transfer`，V10检查结束后记录`transferred`及实际验收结果，不能把仍运行中的验收标为完成。
