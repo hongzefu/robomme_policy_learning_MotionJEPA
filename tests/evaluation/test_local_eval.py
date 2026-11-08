@@ -188,8 +188,9 @@ def test_official_branch_rejects_other_seed():
     assert isinstance(error, candidate.ContractError) and "seed 须为官方" in str(error)
 
 
-def run_seed_with_fake_tmux(monkeypatch, tmp_path, marker_exists):
-    """只替换tmux与等待，真实run_seed循环：一轮RUNNING后COMPUTE_DONE，返回起过的会话。"""
+def run_seed_with_fake_tmux(monkeypatch, tmp_path, marker_exists, argvs=None, keep_marker=False):
+    """只替换tmux与等待，真实run_seed循环：一轮RUNNING后COMPUTE_DONE，返回起过的会话。
+    keep_marker为真时不替换LATE_MARKER（沿用当前profile的取值）；argvs给出时按会话名记下argv。"""
     marker = tmp_path / "RESTORE_POOL.json"
     if marker_exists:
         marker.touch()
@@ -198,6 +199,8 @@ def run_seed_with_fake_tmux(monkeypatch, tmp_path, marker_exists):
 
     def start_session(name, argv, log, env=None):
         started.append((name, env))
+        if argvs is not None:
+            argvs[name] = argv
         summary.touch()
 
     def read(path):
@@ -211,9 +214,12 @@ def run_seed_with_fake_tmux(monkeypatch, tmp_path, marker_exists):
         return {"assignments": {}, "workers": {}}
 
     read.first = True
-    for name, value in (("OUT", tmp_path / "out"), ("LOGS", tmp_path / "out/logs"), ("LATE_MARKER", marker),
-                        ("GPUS", [2]), ("START_GAP", 0), ("POLL", 0), ("start_session", start_session),
-                        ("read_json", read), ("alive", lambda name: running[0])):
+    patches = [("OUT", tmp_path / "out"), ("LOGS", tmp_path / "out/logs"), ("GPUS", [2]), ("START_GAP", 0),
+               ("POLL", 0), ("start_session", start_session), ("read_json", read),
+               ("alive", lambda name: running[0])]
+    if not keep_marker:
+        patches.append(("LATE_MARKER", marker))
+    for name, value in patches:
         monkeypatch.setattr(local_eval, name, value)
     monkeypatch.setattr(local_eval.subprocess, "run", lambda *args, **kwargs: None)
     episodes = [{"task_name": "BinFill", "episode_id": i, "env_seed": 100 + i, "difficulty": "easy"} for i in range(7)]
@@ -264,3 +270,57 @@ def test_three_seed_table_requires_800(tmp_path, monkeypatch, capsys):
     write_accepted(tmp_path, 0, 352, total=799)
     assert local_eval.three_seed_summary() == 1
     assert "THREE_SEED=FAIL" in capsys.readouterr().out
+
+
+PROFILE_NAMES = ("CKPT", "MODEL_KIND", "TRAIN_LOG", "OUT", "LOGS", "GPUS", "LATE_GPUS", "LATE_MARKER", "PREFIX",
+                 "PORT_BASE")
+
+
+@pytest.fixture
+def ctxcat(monkeypatch):
+    """先用monkeypatch登记timepool原值（结束时还原），再切到ctxcat。"""
+    for name in PROFILE_NAMES:
+        monkeypatch.setattr(local_eval, name, getattr(local_eval, name))
+    local_eval.select("ctxcat")
+
+
+def test_default_profile_is_timepool_constants():
+    V1 = local_eval.V1
+    assert local_eval.CKPT == V1 / "train-runs/mme_vla_suite_orig16_b128_60k/orig100-ctx32x4x4-wan-timepool8x8-b128-60k/59999"
+    assert local_eval.MODEL_KIND == "wan_fixedpool1024"
+    assert local_eval.TRAIN_LOG == V1 / "logs/orig100-ctx32x4x4-wan-timepool8x8-b128-60k.log"
+    assert local_eval.OUT == V1 / "evaluation/ctx-wan-timepool1024-3seed-1107"
+    assert local_eval.LOGS == local_eval.OUT / "logs"
+    assert local_eval.GPUS == range(2, 8) and local_eval.LATE_GPUS == [0, 1]
+    assert local_eval.LATE_MARKER == V1 / "validation/orig16-wan-timepool1024/RESTORE_POOL.json"
+    assert local_eval.PREFIX == "evl-tp" and local_eval.session(42, "g2k0") == "evl-tp-s42-g2k0"
+    assert local_eval.PORT_BASE == {42: 9300, 7: 9400, 0: 9500}
+    assert local_eval.PROFILES["timepool"]["prefix"] == "evl-tp"
+
+
+def test_ctxcat_profile_values(ctxcat):
+    V1 = local_eval.V1
+    assert local_eval.CKPT == V1 / "train-runs/mme_vla_suite_orig16_b128_60k/orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k/59999"
+    assert local_eval.MODEL_KIND == "stage2_pool4_concat"
+    assert local_eval.TRAIN_LOG == V1 / "logs/ctx-wan-timepool1024-3seed-1107/simple-chain.log"
+    assert local_eval.OUT == V1 / "evaluation/ctx-concat1x1024-3seed-1108"
+    assert local_eval.GPUS == range(0, 8) and local_eval.LATE_GPUS == [] and local_eval.LATE_MARKER is None
+    assert local_eval.PORT_BASE == {42: 9600, 7: 9700, 0: 9800}
+    assert local_eval.session(7, "g0k1") == "evl-cc-s7-g0k1"
+
+
+def test_ctxcat_run_seed_spec_names_ports_and_no_late_gpus(ctxcat, monkeypatch, tmp_path):
+    # 即便late_gpus非空，late_marker为None也不加卡。
+    monkeypatch.setattr(local_eval, "LATE_GPUS", [0, 1])
+    argvs = {}
+    started = run_seed_with_fake_tmux(monkeypatch, tmp_path, True, argvs=argvs, keep_marker=True)
+    assert [name for name, _ in started] == ["evl-cc-ctl-s42"] + [f"evl-cc-s42-g2k{k}" for k in range(4)]
+    assert [argvs[f"evl-cc-s42-g2k{k}"][-1] for k in range(4)] == [9600 + 20 + k for k in range(4)]
+    spec = json.loads((tmp_path / "out/seed42/run800/spec.json").read_text())
+    assert spec["model_kind"] == "stage2_pool4_concat"
+    assert spec["stage2_python"] == local_eval.STAGE2_PY
+    assert spec["checkpoint"] == str(local_eval.CKPT)
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "5")
+    command = server_command(spec, "n", 9620)
+    assert command[command.index("--motion-online-gpu") + 1] == "5"
+    assert command[command.index("--stage2-python") + 1] == local_eval.STAGE2_PY
