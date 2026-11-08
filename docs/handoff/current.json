@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-08T16:36:36Z",
-    "america_new_york": "2026-11-08T11:36:36-05:00"
+    "utc": "2026-11-08T18:27:41Z",
+    "america_new_york": "2026-11-08T13:27:41-05:00"
   },
   "repo": {
     "branch": "v11-4task-modul-wantp768-50k",
-    "base_head": "0b49008"
+    "base_head": "a0bded4"
   },
   "freeze": {
     "active": false,
@@ -21,7 +21,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-11-08T16:36:36Z",
-      "state_reason": "阶段 B 三块代码已合入（commitV11.84–86）；阶段 A 恢复与评估环境搭建在跑",
+      "state_reason": "起跑前闸门 G0–G6b、D1.5、E0 全部 PASS；Beta 锚点 commitV11.88Beta 后起跑正式训练 50001 步",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiTAgjMcs9tdyGT8J4e",
         "host": "ip-10-242-11-177"
@@ -30,57 +30,57 @@
       "pre_handoff": [
         {
           "what": "G1 恢复两层校验与运行时验收",
-          "evidence": "RESTORE_SHA=PASS objects=<n> members=<n> runtime=PASS mismatches=0",
+          "evidence": "RESTORE_SHA=PASS objects=168 members=615212 runtime=PASS mismatches=0",
           "where": "v1-store/logs/w768-restore.log",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "G0 数据同源链",
-          "evidence": "DATA_LINEAGE=PASS",
+          "evidence": "DATA_LINEAGE=PASS encoder=wanvae-9980d252+pool768 files=4 mismatches=0 binding=input_manifest_sha256:655e64b4",
           "where": "v1-store/logs/w768-export.log",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "G2 池化公式",
-          "evidence": "POOL768_CONTRACT=PASS",
+          "evidence": "POOL768_CONTRACT=PASS cases=24 max_abs=2.907e-07 bins=6x8",
           "where": "S1 合并后单测输出",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "G3 新表对齐与独立重算",
-          "evidence": "POOL768_TABLE=PASS",
+          "evidence": "POOL768_TABLE=PASS rows=71316 demo=35913 exec=35403 padded=1600 index_mismatch=0 max_abs=9.437e-07",
           "where": "v1-store/logs/w768-g3.log",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "G4 在线离线逐字节一致",
           "evidence": "ONLINE_POOL768=PASS windows=64 padded=8 bitexact=64",
-          "where": "v1-store/logs/w768-g4.log",
-          "status": "pending"
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/w768-g4-r2.log",
+          "status": "pass"
         },
         {
           "what": "G5 参数量与训练配置",
-          "evidence": "VLA_PARAM_EQ=PASS / TRAIN_CONFIG_EQ=PASS diffs=3",
+          "evidence": "VLA_PARAM_EQ=PASS params=3443670288 shape_mismatch=0 / TRAIN_CONFIG_EQ=PASS diffs=3",
           "where": "主会话记录",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "G6 8 卡 20 步冒烟",
           "evidence": "SMOKE20=PASS steps=20 save_load=PASS",
-          "where": "v1-store/logs/w768-smoke.log",
-          "status": "pending"
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/w768-smoke.log",
+          "status": "pass"
         },
         {
           "what": "G6b 评估加载冒烟与同卡 2 片",
-          "evidence": "EVAL_LOAD_SMOKE=PASS episodes=1 handshake=PASS share2=PASS peak_mem_gb=<x>",
-          "where": "v1-store/logs/w768-g6b.log",
-          "status": "pending"
+          "evidence": "EVAL_LOAD_SMOKE=PASS episodes=1 handshake=PASS share2=PASS peak_mem_gb=78.3",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/w768-g6b-r2.log",
+          "status": "pass"
         },
         {
           "what": "E0 demo 前缀同代码生成（训练前完成）",
-          "evidence": "DEMO_PREFIX_SRC=PASS code_same=1 benchmark=b4e97f2",
+          "evidence": "DEMO_PREFIX_SRC=PASS code_same=1 benchmark=b4e97f2 shards_ok=16/16 ok=142 failed=8 diff_vs_old=40",
           "where": "v1-store/demo-prefix/binfill-3b4de03a0b46/E0.txt",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "G7 训练完成",
@@ -89,17 +89,20 @@
           "status": "pending"
         }
       ],
-      "long_tail": [],
+      "long_tail": [
+        {
+          "what": "10 份 ckpt 逐份上传 HF bucket 并本机读回",
+          "tmux": "w768-ckptup",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/w768-ckptup.log",
+          "done_line": "HF_VERIFY=PASS ckpts=10",
+          "status": "pending"
+        }
+      ],
       "running_handles": [
         {
-          "tmux": "w768-restore",
-          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/w768-restore.log",
-          "done_line": "RESTORE_SHA=PASS objects=<n> members=<n> runtime=PASS mismatches=0"
-        },
-        {
-          "tmux": "w768-evalenv",
-          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/w768-evalenv.log",
-          "done_line": "EXIT_CODE=0"
+          "tmux": "w768-train",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/w768-train.log",
+          "done_line": "TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10"
         }
       ],
       "authorizations": [
@@ -113,14 +116,14 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "恢复完成后 G0 前三环与 VLA 侧、导出 768 表",
-          "command": "tmux w768-export: export_wan_pool768.py --checksums sha256-source-files.txt --workers 48",
-          "verdict_line": "DATA_LINEAGE=PASS / 导出 EXIT_CODE=0"
+          "what": "正式训练结束后核验",
+          "command": "Monitor v1-store/logs/w768-train.log",
+          "verdict_line": "TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10"
         },
         {
-          "what": "G3/G4/G5 并行，随后 demo 前缀 + E0、G6、D1.5、G6b、Beta、训练",
-          "command": "见计划 runbook C4–D3",
-          "verdict_line": "POOL768_TABLE=PASS / ONLINE_POOL768=PASS / VLA_PARAM_EQ=PASS"
+          "what": "训练 done 后自动接本机 692 局评估",
+          "command": "tmux w768-eval: bash scripts/evaluation/local_692_pool.sh <…/v2-1600ep-m8x8-modul-wantp768-b128-50k/50000> 7",
+          "verdict_line": "EVAL692=PASS"
         }
       ]
     },
