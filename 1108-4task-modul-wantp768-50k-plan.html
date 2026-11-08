@@ -73,6 +73,7 @@ figcaption{color:var(--muted);font-size:.9em}
 <li><b>状态机</b>：选择题「登记 (推荐)」（§7）。</li>
 <li><b>计划放置</b>：「计划放在仓库内」→ 主检出切到本分支，计划在仓库根目录，分支已推送到远端。</li>
 <li><b>Q1–Q5</b>：「这五项全部同意。」（§8）</li>
+<li><b>demo 前缀</b>：「它这个前缀库只要你是用同样的代码去生成的就可以，它可以允许有一些呃不一样的、不一致的地方，因为不同硬件」（§4、§5 E0）。</li>
 </ol>
 
 <h2>2　数据：原库实体已不在盘上，从 HF 整库归档恢复</h2>
@@ -243,7 +244,7 @@ F[0, 48c+8i+j]  = P[c,i,j]                                            C→H→W 
 <tr><th>评估输入</th><th>本机</th><th>处理</th></tr>
 <tr><td>评估代码（<code>run_shard.sh</code>、<code>eval.py</code>、<code>demo_prefix.py</code>）</td><td>本分支自带</td><td><code>run_shard.sh</code> 已有本机模式（无 <code>SLURM_JOB_ID</code> 时必须显式 <code>CUDA_VISIBLE_DEVICES</code>，并输出 <code>LOCAL_GPU_IDLE=PASS</code>）</td></tr>
 <tr><td>benchmark <code>b4e97f2</code> 与候选文件</td><td>commit 对象在本地 .git，工作区是 <code>856bc3a</code></td><td>评估前在主检出把 <code>third_party/robomme_benchmark</code> 检出到 gitlink <code>b4e97f2</code>（本分支记录的就是它）</td></tr>
-<tr><td>BinFill demo 前缀库 <code>v1-store/demo-prefix/binfill-3b4de03a0b46</code>（11.2 GB）</td><td>没有，HF 也没有</td><td>本机用 <code>run_demo_shard.sh</code> 重生成（同 seed、同 spec 现跑专家轨迹）；闸门 E0 要求与旧清单逐条相同：150 条中成功 142、失败 8，成功集合与各条 D 值都一致</td></tr>
+<tr><td>BinFill demo 前缀库 <code>v1-store/demo-prefix/binfill-3b4de03a0b46</code>（11.2 GB）</td><td>没有，HF 也没有</td><td>本机用 <code>run_demo_shard.sh</code> 重生成（同 seed、同 spec 现跑专家轨迹）。用户裁决：「它这个前缀库只要你是用同样的代码去生成的就可以，它可以允许有一些呃不一样的、不一致的地方，因为不同硬件」→ E0 只要求生成代码与上次相同（本分支 <code>pregen_binfill_demo.py</code>、<code>run_demo_shard.sh</code>、<code>examples/robomme/demo_prefix.py</code> 与 benchmark <code>b4e97f2</code>），与旧清单（成功 142、失败 8、各条 D 值）的差异只记录、不停</td></tr>
 <tr><td>在线 motion</td><td>旧 sidecar 只会 encoder</td><td><code>motion_sidecar.py</code> 新增 <code>wan_fixedpool768</code> 分支：Wan VAE 之后调 <code>pool_raw_wan_latent_768</code>，不加载 encoder</td></tr>
 </table>
 <p>本机驱动 <code>scripts/evaluation/local_692_pool.sh</code> 只是把上次的 GL 外壳（<code>gl_hold_pool.sh → gl_eval_shard.sbatch → run_shard.sh</code>）换成本机 8 卡分片调 <code>run_shard.sh</code>，分片与合并沿用 <code>make_shard_plan.py</code>、<code>merge_shards.py</code>。参考耗时：GL 上 142 局×3 个模型共 30 个单元，墙钟 1 h 45 m；本机 692 局的实际时长以实测为准。</p>
@@ -260,10 +261,27 @@ F[0, 48c+8i+j]  = P[c,i,j]                                            C→H→W 
 <tr><td>G5</td><td>参数量与配置</td><td>新 YAML 与旧 YAML 的参数树逐路径、逐形状相同；TrainConfig 差异只有 exp_name、YAML 路径、<code>num_train_steps</code></td><td>两次 run 只差 motion 来源</td><td><code>VLA_PARAM_EQ=PASS params=&lt;n&gt; shape_mismatch=0</code>；<code>TRAIN_CONFIG_EQ=PASS diffs=3</code></td></tr>
 <tr><td>G6</td><td>8 卡冒烟</td><td>20 步训练 + 保存 + 真实加载，跑完即删</td><td>正式 run 能起、能存、能读</td><td><code>SMOKE20=PASS steps=20 save_load=PASS</code></td></tr>
 <tr><td>G7</td><td>训练完成</td><td>日志尾行 <code>EXIT_CODE=0</code>，checkpoint 5000…50000 共 10 份齐全，50000 真实加载</td><td>可交给评估</td><td><code>TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10</code></td></tr>
-<tr><td>E0</td><td>demo 前缀库</td><td>本机重生成后，与 <code>records/demo-prefix-manifest.json</code> 逐条比对 ok 集合与 D 值</td><td>BinFill 142 局的注入内容与上次相同</td><td><code>DEMO_PREFIX_EQ=PASS ok=142 failed=8 d_mismatch=0</code></td></tr>
+<tr><td>E0</td><td>demo 前缀库用同一份代码生成</td><td>核对生成用的三个脚本在本分支的 blob 与上次生成时（<code>ba52d79</code>）相同，benchmark 检出为 <code>b4e97f2</code>；再与 <code>records/demo-prefix-manifest.json</code> 比对成功集合与 D 值，差异只写进记录</td><td>BinFill 的注入方式与上次同代码；硬件差异造成的个别不同按用户裁决接受</td><td><code>DEMO_PREFIX_SRC=PASS code_same=1 benchmark=b4e97f2 ok=&lt;n&gt; failed=&lt;n&gt; diff_vs_old=&lt;k&gt;</code>（<code>diff_vs_old</code> 只记录，不是停止条件）</td></tr>
 <tr><td>E1</td><td>评估完成</td><td>692 局全部有结果，<code>merge_shards.py</code> 合并</td><td>成功率可与 54.62% 直接比</td><td><code>EVAL692=PASS episodes=692 success=&lt;k&gt; errors=&lt;n&gt; rate=&lt;x&gt;</code></td></tr>
 </table>
-<p>按用户反馈「评估不要叠加检查」，评估阶段只保留 E0、E1 两道闸门，不加心跳或多层验证。E0 不过（重生成的前缀与旧清单不同）即停，交用户裁决。</p>
+<p>按用户反馈「评估不要叠加检查」，评估阶段只保留 E0、E1 两道闸门，不加心跳或多层验证。E0 只在「生成代码与上次不同」时不过；重生成结果与旧清单的差异只记录、照常评估。BinFill 实际评估局数等于本机重生成成功的条数，总局数为 550 + 该条数（上次是 142，合计 692）；结果按实际局数报告，并列出与上次不同的候选。</p>
+
+<h3>停止项总表</h3>
+<p>开发阶段子代理写代码时单测未过属于正常修复，由子代理改到通过，不在此表内。下表是会停下交用户裁决的全部情形：</p>
+<table>
+<tr><th>时点</th><th>停止条件</th><th>为什么停</th></tr>
+<tr><td>开工前</td><td><code>PLAN_CONSISTENCY_REVIEW</code> blocking &gt; 0</td><td>AGENTS 第 2 条：涉及失败处理、接口、范围、验收的矛盾由用户裁决</td></tr>
+<tr><td>恢复数据</td><td>G1 FAIL：下载文件 sha256 与 bucket 校验和不符</td><td>训练输入不再是上次那份</td></tr>
+<tr><td>建表前</td><td>G0 FAIL：latent 来源与 VLA 库不是同一批 1600 局</td><td>P-LINEAGE 硬约束，不许 WAIVE</td></tr>
+<tr><td>建表后</td><td>G3 FAIL：池化表行数、窗口序与上次 motion 表不对齐，或独立重算不一致</td><td>重叠窗没对齐，实验不成立</td></tr>
+<tr><td>建表后</td><td>G4 FAIL：在线 sidecar 与离线表不一致</td><td>评估时 motion 与训练时不同</td></tr>
+<tr><td>训练前</td><td>G5 FAIL：参数量不同，或训练配置差异超出 exp_name、YAML 路径、步数三处</td><td>不再是「只差 motion 来源」</td></tr>
+<tr><td>训练前</td><td>G6 FAIL：8 卡 20 步冒烟失败</td><td>正式 run 不能起、存或读</td></tr>
+<tr><td>训练中</td><td>报错退出、NaN、显存溢出、进程被杀（<b>处置方式待用户定</b>：停下等裁决，或从最近 checkpoint 自动续训一次；未定前按停下）</td><td>需要决定修复重跑还是放弃</td></tr>
+<tr><td>评估前</td><td>E0 FAIL：生成前缀的代码与上次不同（结果差异不算）</td><td>不再是同一份生成代码</td></tr>
+<tr><td>合并时</td><td>同一子任务合并前审查连续两轮 FAIL</td><td>CLAUDE.md 计划执行模式</td></tr>
+<tr><td>任何时候</td><td>AGENTS 第 2 条硬停：资源超出已批量 5 倍、删除或覆盖现有产物、放宽会影响结论的判据；git push 被拒</td><td>规则规定</td></tr>
+</table>
 
 <h2>6　步骤表</h2>
 <table>
@@ -286,7 +304,7 @@ F[0, 48c+8i+j]  = P[c,i,j]                                            C→H→W 
 <tr><th>#</th><th>事项</th><th>裁决：按此执行</th></tr>
 <tr><td>Q1</td><td>主检出从 v9 分支切到本分支，主 <code>.venv</code> 按本分支 <code>uv.lock</code> 执行 <code>uv sync --frozen</code>（会换掉 v9 的包版本；v9/v10 任务都已 done/closed，GPU 现在全空）</td><td>切</td></tr>
 <tr><td>Q2</td><td>步数落点：在启动脚本里覆盖 <code>--num_train_steps=50001</code>，不改 <code>config.py</code> 的 <code>mme_vla_suite_b128_80k</code> 默认（AGENTS 第 10 条要求确认落点）</td><td>启动脚本覆盖</td></tr>
-<tr><td>Q3</td><td>BinFill demo 前缀库在本机重生成；若 E0 不过（成功集合或 D 值与上次不同）就停下交你裁决</td><td>重生成，不过即停</td></tr>
+<tr><td>Q3</td><td>BinFill demo 前缀库在本机重生成（后经用户修订：只要求同一份生成代码，结果差异只记录不停，见 §4、§5）</td><td>重生成，差异只记录</td></tr>
 <tr><td>Q4</td><td>新分支没有 upstream：计划 commit 后执行 <code>git push -u origin v11-4task-modul-wantp768-50k</code></td><td>push -u</td></tr>
 <tr><td>Q5</td><td>checkpoint 上传：10 份（5000…50000）全部上传到上表 bucket，作为长尾，不阻塞评估</td><td>全部上传</td></tr>
 </table>
@@ -357,7 +375,7 @@ tmux new-session -d -s w768-eval "bash scripts/evaluation/local_692_pool.sh &lt;
 <table>
 <tr><th>任务 id</th><th>交接前必须完成</th><th>长尾</th><th>依赖</th><th>done 后解锁</th></tr>
 <tr><td><code>4task-wantp768-train</code></td><td>G0–G7 判定行全 PASS（出处：各阶段日志），<code>w768-train</code> 已退出</td><td><code>w768-ckptup</code>：上传 10 份 ckpt + 读回，完成行 <code>HF_VERIFY=PASS</code></td><td>无</td><td>评估任务</td></tr>
-<tr><td><code>4task-wantp768-eval</code></td><td>E0、E1 PASS，结果档案 commit</td><td>无</td><td><code>4task-wantp768-train</code> done（对上游的假设：<code>TRAIN_FINAL_RECORD=PASS step=50000</code>）</td><td>—</td></tr>
+<tr><td><code>4task-wantp768-eval</code></td><td>E0（同代码）、E1 PASS，结果档案 commit（含与旧前缀清单的差异）</td><td>无</td><td><code>4task-wantp768-train</code> done（对上游的假设：<code>TRAIN_FINAL_RECORD=PASS step=50000</code>）</td><td>—</td></tr>
 </table>
 <p>开工令同时批准评估在训练 done 后自动开工（AGENTS 第 2 条 ③ 的状态机例外）。</p>
 
@@ -365,7 +383,7 @@ tmux new-session -d -s w768-eval "bash scripts/evaluation/local_692_pool.sh &lt;
 <ol>
 <li>HF 下载速度未知，阶段 A 时长按实测；中断时用 <code>hf</code> 的续传，不另写重试层。</li>
 <li>本分支 <code>uv.lock</code> 比 v9 旧，主 <code>.venv</code> 换包后再回 v9 需要重新 sync（Q1）。</li>
-<li>demo 前缀重生成用到 RRT（上次 6 条），本机重跑可能不完全相同 → E0 不过即停（Q3）。</li>
+<li>demo 前缀重生成用到 RRT（上次 6 条），加上硬件不同，本机重跑可能有个别候选的成功与否或 D 值不同；按用户裁决接受，评估局数可能不是正好 692，结果按实际局数报告并列出差异。</li>
 <li>本机评估与 GL A40 的渲染、数值不逐位相同；对比旧数字时只能称「同口径」，不能称「同环境」。</li>
 <li>6×8 自适应池化 H 方向有 4 行重叠，这是已知设计，不当作缺陷修。</li>
 </ol>
