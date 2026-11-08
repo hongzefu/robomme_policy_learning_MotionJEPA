@@ -64,6 +64,28 @@ def _assert_param_tree_exact(model, params) -> None:
         raise ValueError(f"严格恢复失败：模型有而 checkpoint 缺 {missing[:5]}…（{len(missing)}），checkpoint 多出 {extra[:5]}…（{len(extra)}）")
 
 
+def _make_pool_motion_client(mcfg, run_root: pathlib.Path, motion_stub: bool):
+    """池化 kind（如 wan_fixedpool768）的在线 sidecar 句柄：读 run 快照 motion.encoder_kind / readout 与
+    motion_provenance.json 的 vae / encoder_kind / readout / pool_source_sha256（计划 1108 第二部分 1.1 第 7 行）。
+    不读 source_run、不要求 encoder；快照与 provenance 的 kind / readout 不一致即拒绝。"""
+    from mme_vla_suite.policies.motion_client import MotionEncoderClient
+    kind, readout = str(mcfg.encoder_kind), mcfg.get("readout", None)
+    prov_path = run_root / "motion_provenance.json"
+    prov = json.loads(prov_path.read_text(encoding="utf-8")) if prov_path.is_file() else {}
+    if not motion_stub:
+        missing = [k for k in ("vae", "encoder_kind", "readout", "pool_source_sha256") if prov.get(k) is None]
+        if missing or readout is None:
+            raise ValueError(f"池化 kind run 缺 motion_provenance.json 字段 {missing} 或快照缺 motion.readout: {run_root}")
+        if prov["encoder_kind"] != kind or prov["readout"] != str(readout):
+            raise ValueError(f"motion_provenance.json 的 encoder_kind/readout 与 run 快照不符: {run_root}")
+    online_gpu = os.environ.get("MMEVLA_MOTION_ONLINE_GPU") or mcfg.get("online_gpu", 1)
+    logging.info(f"motion sidecar（{kind}）online_gpu={online_gpu!r}")
+    return MotionEncoderClient(
+        online_gpu=online_gpu, stub=motion_stub, store_provenance={"vae": prov.get("vae")},
+        encoder_kind=kind, readout=None if readout is None else str(readout),
+        expected_pool_sha256=prov.get("pool_source_sha256"))
+
+
 def create_trained_policy(
     train_config: _config.TrainConfig,
     checkpoint_dir: pathlib.Path | str,
@@ -134,7 +156,9 @@ def create_trained_policy(
     #    motion_stub=True 时用 stub 档（P1–P4 测试）；关闭态为 None
     motion_enc_fn = None
     mcfg = getattr(train_config.model.history_config, "motion", None) if not isinstance(train_config.model.history_config, str) else None
-    if mcfg is not None and mcfg.get("enabled", False):
+    if mcfg is not None and mcfg.get("enabled", False) and mcfg.get("encoder_kind", None) is not None:
+        motion_enc_fn = _make_pool_motion_client(mcfg, run_root, motion_stub)
+    elif mcfg is not None and mcfg.get("enabled", False):
         from mme_vla_suite.policies.motion_client import MotionEncoderClient
         prov_path = run_root / "motion_provenance.json"
         prov = json.loads(prov_path.read_text(encoding="utf-8")) if prov_path.is_file() else {}

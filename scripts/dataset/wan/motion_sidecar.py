@@ -10,6 +10,12 @@
 校验连续且首帧 == 请求里的起点，返回 `np.full(768, 起点, float32)`；P1–P4 用它走完整 IPC 路径。
 
 协议公共件从 `<repo>/src/mme_vla_suite/policies/motion_protocol.py`（由 `Path(__file__).resolve().parents[3]` 定位）按文件加载，不 import 整个包。
+
+`--encoder-kind wan_fixedpool768`（计划 1108-4task-modul-wantp768-50k-plan.html 第二部分 1.1 第 9 行）：不加载 encoder；
+`W.encode_chunk` 返回的 GPU torch Tensor 经 `.detach().float().cpu().numpy()`（float32 原值）交给
+`<repo>/src/mme_vla_suite/shared/wan_pool768.py::pool_raw_wan_latent_768`（同样按文件加载）得 (1,768)，再 `reshape(768)`
+满足协议 (768,)；握手 info 另回 `encoder_kind`、`readout`、`pool_source_sha256`。`--stub` 与它同用时只在握手里带这三键，
+编码仍是 stub 约定。缺省 `--encoder-kind` 即 encoder 分支，逐字不变。
 """
 
 from __future__ import annotations
@@ -30,6 +36,8 @@ _HERE = pathlib.Path(__file__).resolve().parent
 _REPO_ROOT = _HERE.parents[2]
 _PROTO_PATH = _REPO_ROOT / "src" / "mme_vla_suite" / "policies" / "motion_protocol.py"
 VAE_ID = "Wan-AI/Wan2.1-T2V-1.3B-Diffusers"
+_POOL768_PATH = _REPO_ROOT / "src" / "mme_vla_suite" / "shared" / "wan_pool768.py"
+POOL_KINDS = ("wan_fixedpool768",)
 
 
 def _load(path: pathlib.Path, name: str):
@@ -37,6 +45,21 @@ def _load(path: pathlib.Path, name: str):
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
+
+def pool_info(PL, kind: str) -> dict:
+    """池化分支握手键：kind 必须与模块常量相同。"""
+    if kind != PL.POOL768_ENCODER_KIND:
+        raise RuntimeError(f"--encoder-kind {kind!r} 与池化模块 {PL.POOL768_ENCODER_KIND!r} 不符")
+    return {"encoder_kind": PL.POOL768_ENCODER_KIND, "readout": PL.POOL768_READOUT,
+            "pool_source_sha256": PL.pool_source_sha256(), "pool_path": str(_POOL768_PATH), "encoder": None}
+
+
+def pool_encode(W, PL, vae, window: np.ndarray, device) -> np.ndarray:
+    """33 帧 → Wan raw latent（torch Tensor）→ float32 NumPy 原值 → 零参数池化 (1,768) → (768,)。"""
+    lat = W.encode_chunk(vae, window, device)
+    z = lat.detach().float().cpu().numpy()
+    return PL.pool_raw_wan_latent_768(z).reshape(768)
 
 
 def log(msg: str) -> None:
@@ -51,6 +74,8 @@ def main() -> int:
     ap.add_argument("--checkpoint", default="checkpoint_epoch_72.pt")
     ap.add_argument("--expected-ckpt-sha256", default="")
     ap.add_argument("--expected-vae-sha256", default="")
+    ap.add_argument("--encoder-kind", default="", choices=("",) + POOL_KINDS,
+                    help="缺省为 encoder 分支；wan_fixedpool768 为零参数池化分支（不加载 encoder）")
     args = ap.parse_args()
 
     P = _load(_PROTO_PATH, "motion_protocol")
@@ -61,6 +86,8 @@ def main() -> int:
     try:
         if args.stub:
             info = {"stub": True, "protocol_sha256": P.protocol_sha256(), "protocol_path": str(_PROTO_PATH), "pid": os.getpid()}
+            if args.encoder_kind:
+                info.update(pool_info(_load(_POOL768_PATH, "wan_pool768"), args.encoder_kind))
 
             def encode(start: int, window: np.ndarray) -> np.ndarray:
                 ids = P.stub_decode(window)
@@ -71,6 +98,36 @@ def main() -> int:
                 if not valid:
                     raise RuntimeError(f"stub: 33 帧编号不符合连续前缀与重复末帧规则: {ids[:4]}…{ids[-2:]}")
                 return np.full(P.TOKEN_DIM, float(start), np.float32)
+        elif args.encoder_kind:
+            import torch
+            W = _load(_HERE / "wan_motion_infer.py", "wan_motion_infer")
+            pin = json.loads((_HERE / "SOURCE_PIN.json").read_text(encoding="utf-8"))
+            if W.sha256_file(str(_HERE / "wan_motion_infer.py")) != pin["source_sha256"]:
+                raise RuntimeError("复制件 wan_motion_infer.py 与 SOURCE_PIN 不符")
+            W.check_env()
+            flags = W.pin_numerics()
+            W.check_versions(strict=True, with_diffusers=True)
+            torch.manual_seed(0)
+            if not torch.cuda.is_available():
+                raise RuntimeError("sidecar 需要 CUDA")
+            device = torch.device("cuda")
+            vae, vinfo = W.load_vae(VAE_ID, device, expected_state_sha256=(args.expected_vae_sha256 or W.VAE_STATE_SHA256_EXPECTED))
+            # 池化分支：不加载 encoder；VAE 之后零参数池化（pool_encode），握手回 kind / readout / 池化源码 sha256
+            PL = _load(_POOL768_PATH, "wan_pool768")
+            info = {"stub": False, "protocol_sha256": P.protocol_sha256(), "protocol_path": str(_PROTO_PATH), "pid": os.getpid(),
+                    "vae": vinfo, "flags": flags, "source_pin": pin,
+                    "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES"), **pool_info(PL, args.encoder_kind)}
+
+            def encode(start: int, window: np.ndarray) -> np.ndarray:
+                W.pin_numerics()
+                return pool_encode(W, PL, vae, window, device)      # 🔒 33 帧一次喂、B=1、fp32、关 TF32，再池化
+
+            t0 = time.perf_counter()
+            encode(0, np.zeros((P.WINDOW_FRAMES, P.FRAME_SIZE, P.FRAME_SIZE, 3), np.uint8))
+            torch.cuda.synchronize(device)
+            info["warmup_s"] = time.perf_counter() - t0
+            log(f"VAE+池化就绪 warmup={info['warmup_s']:.2f}s vae={vinfo['vae_state_sha256'][:16]}… "
+                f"pool={info['pool_source_sha256'][:16]}…")
         else:
             import torch
             W = _load(_HERE / "wan_motion_infer.py", "wan_motion_infer")
