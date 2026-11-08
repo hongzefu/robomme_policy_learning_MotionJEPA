@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-07T04:12:48.124325+00:00",
-    "america_new_york": "2026-11-06T23:12:48.124325-05:00"
+    "utc": "2026-11-08T11:31:29.171972+00:00",
+    "america_new_york": "2026-11-08T06:31:29.171972-05:00"
   },
   "repo": {
     "branch": "v9-ctx-wan-timepool1024-60k",
-    "base_head": "19be5e9ed247921a1f799df119470cfad755d67f"
+    "base_head": "b3c1e9060ed9bb78e1074999ce0f8dacd42d105b"
   },
   "freeze": {
     "active": false,
@@ -1409,8 +1409,8 @@
         "sha": "ed5714c389cefbae0035f0d878718f5145e04c94"
       },
       "state": "running",
-      "state_changed_at": "2026-11-07T04:12:48.124325+00:00",
-      "state_reason": "建库与 G0–G8 通过，正式 60k 起跑；主检出 HOLD 冻结，训练结束前不再提交。",
+      "state_changed_at": "2026-11-08T11:31:29.171972+00:00",
+      "state_reason": "60k 完成（EXIT_CODE=0，TRAIN_FINAL_RECORD=PASS）；G9 首次 CKPT_INVENTORY 误判已修（b3c1e90），待 GPU 0、1 空出后重跑 G9。",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiUrxBxra275CF71Wtx",
         "host": "Claude@AWS"
@@ -1452,19 +1452,21 @@
         },
         {
           "what": "正式 60k 与 G9",
-          "evidence": "TRAIN_FINAL_RECORD=PASS state_step=60000 checkpoint_step=59999；CKPT_INVENTORY=PASS steps=12；RESTORE_POOL=PASS；EXIT_CODE=0",
+          "evidence": "TRAIN_FINAL_RECORD=PASS state_step=60000 checkpoint_step=59999；RESTORE_POOL=PASS；EXIT_CODE=0（训练）。首次 CKPT_INVENTORY=FAIL 为验证器把 train_state 列为必需项，b3c1e90 修复后真实 run 根只读检查 findings=0，待重跑出正式判定行",
           "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx32x4x4-wan-timepool8x8-b128-60k.log",
           "status": "pending"
         }
       ],
-      "long_tail": [],
-      "running_handles": [
+      "long_tail": [
         {
-          "tmux": "o16-tp-train-11062312",
-          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx32x4x4-wan-timepool8x8-b128-60k.log",
-          "done_line": "EXIT_CODE=0 且 TRAIN_FINAL_RECORD=PASS"
+          "what": "12 份 checkpoint 公开上传与全量匿名读回",
+          "tmux": "o16-tp-backup-11062345",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig16-wan-timepool1024/checkpoint-backup.log",
+          "done_line": "HF_VERIFY=PASS mismatches=0；CKPT_UPLOAD=PASS steps=12；BACKUP_EXIT_CODE=0",
+          "status": "running"
         }
       ],
+      "running_handles": [],
       "authorizations": [
         {
           "kind": "decision",
@@ -1512,9 +1514,9 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "60k 结束后跑 G9 final（带该 run 编译缓存环境），备份 12 份 checkpoint 并读回，写 result.md",
-          "command": "check_orig16_timepool.py final；checkpoint 备份见计划 11.3",
-          "verdict_line": "RESTORE_POOL=PASS；CKPT_UPLOAD=PASS steps=12"
+          "what": "GPU 0、1 空出后按修复后验证器重跑 G9，写 result.md",
+          "command": "bash /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig16-wan-timepool1024/g9-final.sh",
+          "verdict_line": "CKPT_INVENTORY=PASS steps=12；RESTORE_POOL=PASS"
         }
       ]
     }
