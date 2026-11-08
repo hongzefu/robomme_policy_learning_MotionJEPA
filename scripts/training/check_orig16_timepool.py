@@ -1783,6 +1783,9 @@ def check_log_exit(findings, log_path) -> int:
     return hits
 
 
+CHECKPOINT_REQUIRED_ENTRIES = ("_CHECKPOINT_METADATA", "assets", "params/_METADATA", "params/manifest.ocdbt")
+
+
 def check_checkpoint_inventory(findings, run_root: Path) -> list:
     want = list(EXPECT["checkpoint_steps"])
     numeric = sorted(int(path.name) for path in run_root.iterdir() if path.is_dir() and path.name.isdigit())
@@ -1790,9 +1793,12 @@ def check_checkpoint_inventory(findings, run_root: Path) -> list:
     for path in run_root.iterdir():
         if "orbax-checkpoint-tmp" in path.name:
             findings.add("uncommitted_checkpoint", path.name, "存在", "不得存在")
+    # 必需条目与 src/openpi/training/checkpoints.py::save_state 实际保存项一致：
+    # items 只有 "assets" 与 "params"（"train_state" 在 save_state 里被注释掉、不落盘），
+    # 外加 orbax 提交标志 _CHECKPOINT_METADATA；故不要求 train_state。
     for step in want:
         directory = run_root / str(step)
-        for name in ("_CHECKPOINT_METADATA", "params/_METADATA", "params/manifest.ocdbt", "train_state"):
+        for name in CHECKPOINT_REQUIRED_ENTRIES:
             if not (directory / name).exists():
                 findings.add("checkpoint_entry_missing", f"{step}/{name}", None, "存在")
     return numeric
