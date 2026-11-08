@@ -145,10 +145,12 @@ class MotionEncoderClient:
         不等时只打印 `MOTION_PROV_RELAXED …` 到 stderr 并记入 `self.relaxed_diffs`，不 raise；其余键不等仍 raise。
         用途：评估侧跨硬件复用训练侧 run（训练在 A100、评估在 A40 / RTX 6000 Ada 时这三个硬件键必然不等，
         driver / torch / cuda / cudnn / diffusers 等软件键仍必须逐值相同）。默认不设即全键硬比对。
-        池化 kind 只比 vae 段（没有 encoder）。"""
+        池化 kind 只比 vae 段（没有 encoder），且 vae 段排除 `encoder_src_sha256`：该键是学习型 encoder 模块
+        `motion_jepa.models.wan_latent_encoder` 源文件的 sha256，池化分支不使用它。"""
         relax = {k.strip() for k in os.environ.get("MMEVLA_MOTION_PROV_RELAX", "").split(",") if k.strip()}
         diffs, relaxed = [], []
-        sections = (("vae", PROV_SAME_VAE),) if getattr(self, "encoder_kind", None) is not None \
+        sections = (("vae", tuple(k for k in PROV_SAME_VAE if k != "encoder_src_sha256")),) \
+            if getattr(self, "encoder_kind", None) is not None \
             else (("vae", PROV_SAME_VAE), ("encoder", PROV_SAME_ENC))
         for section, keys in sections:
             a, b = self.provenance.get(section, {}), store_prov.get(section, {})
