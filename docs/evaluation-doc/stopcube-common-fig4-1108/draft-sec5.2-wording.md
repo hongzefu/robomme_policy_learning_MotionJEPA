@@ -35,6 +35,23 @@
 
 > … we replay the same 98 official demonstrations through both policies and fit linear probes from their hidden states to the steps left until the correct window (\cref{fig:belief}). Layer by layer, the two policies are close and both slightly above an oracle given the true time step and target count ($R^2=0.45$); at layer 17, MotionMem's text tokens read 0.38 against 0.49. The difference lies elsewhere: added to the oracle inputs, MotionMem's text tokens raise $R^2$ to 0.78 (FrameSamp: 0.55), because they encode the cube's speed (accuracy 0.81 vs.\ 0.60). Decoding alone does not show that the policy uses it.
 
+## 方案 C：Fig. 4 换成「按记忆需求分档」图
+
+图：`paper/figures/candidates/belief_by_demand_common.pdf`（需移出 candidates 并改名为正式图）。
+
+**图注**：
+
+> **Probing the steps left to the correct window, split by memory demand.** Both policies replay the same 98 official StopCube demonstrations; out-of-fold $R^2$ of the text tokens per layer, evaluated separately on episodes needing $N\le3$ or $N\ge4$ target visits (probes trained on all). Success rates in the legend; dotted, the true $[t,N]$ reference.
+
+**正文段**（替换现有 5.2 第一段）：
+
+> Task progress is central to temporal memory, and StopCube tests it most directly: the robot must press a button when a cube reaches the target on its $N$-th visit~\cite{dai2026robomme}. We replay the same 98 official demonstrations through each policy and probe the steps left to the correct window from the text tokens (\cref{fig:belief}). When the target is reached late ($N\ge4$), decodability orders as StopCube success does at every layer (FrameSamp 0.35, MotionMem with 96 and 384 motion tokens 0.52 and 0.64 on average); when it is reached early ($N\le3$), FrameSamp is on par or better. The added information is the cube's speed, absent from FrameSamp's tokens. Decoding alone does not show that the policy uses it.
+
+要点：
+- 数字来自 result.md 第三节 J 的分档表（第 0–17 层平均）。
+- 「at every layer」：N≥4 时 18 层逐层都是 FrameSamp < concat < split，成立。
+- 正文用的是 concat（96 tokens）；加入 split（384 tokens）需要在正文里交代它是同一方法的另一个预算配置。若不想引入 split，可删去 384 tokens 那条线和对应数字。
+
 ## 可选补句：三个模型的对应关系（result.md 第三节 J）
 
 方案 A 或 B 的段末可加一句（约 35 词，篇幅紧时可放附录）：
