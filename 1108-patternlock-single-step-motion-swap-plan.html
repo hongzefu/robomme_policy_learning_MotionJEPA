@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PatternLock 单步 motion token 交换计划</title>
+<style>
+  body { margin: 0; background: #f7f8f8; color: #1d2528; font: 16px/1.75 -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 36px 24px 72px; }
+  h1 { font-size: 1.7rem; line-height: 1.35; margin: 44px 0 14px; padding-top: 16px; border-top: 3px solid #1d2528; }
+  h1.title { border-top: 0; margin-top: 0; padding-top: 0; font-size: 2rem; }
+  h2 { font-size: 1.22rem; margin: 30px 0 8px; }
+  p { margin: 9px 0; } ul, ol { margin: 9px 0; padding-left: 1.4em; } li { margin: 4px 0; }
+  code { font: 0.87em ui-monospace, Menlo, monospace; overflow-wrap: anywhere; }
+  pre { background: #fff; border: 1px solid #d3dbde; padding: 10px 12px; overflow-x: auto; font: 0.85em/1.5 ui-monospace, Menlo, monospace; }
+  .note { background: #e9eef0; padding: 10px 14px; margin: 14px 0; }
+  .tbl { overflow-x: auto; margin: 12px 0; }
+  table { border-collapse: collapse; font-size: 0.91rem; width: 100%; background: #fff; }
+  th, td { border: 1px solid #d3dbde; padding: 6px 9px; text-align: left; vertical-align: top; }
+  th { background: #eef2f3; white-space: nowrap; }
+  @media (max-width: 640px) { main { padding: 24px 16px 56px; } }
+</style>
+</head>
+<body>
+<main>
+<h1 class="title">PatternLock 单步 motion token 交换计划</h1>
+
+<div class="note">
+<p><b>状态：</b>只规划，未实施。须用户对本计划不改而直接认可后才开工（AGENTS.md 开工授权条）。</p>
+<p><b>范围：</b>只做 PatternLock；只用只有 1 个子目标（单步）的局；只用 motion 模型原本就成功的局；只换示范段那一个 motion 窗口。三种条件：位置与方向都相同、位置相同方向不同、位置不同方向相同。</p>
+<p><b>代码锚点：</b>本仓库 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code>，分支 <code>v4.1-interpretMotion</code>，计划基线 <code>48332cfcc009c98a082dc000d74e07d5d2a4f3ca</code>；benchmark gitlink <code>856bc3a189d4172f3f47dbee4424d585f8d78db3</code>，不改。环境 A（sled-aspen，2 × RTX A6000）。</p>
+<p><b>样本来源：</b>1106 子目标 rollout 档案 <code>docs/evaluation-doc/subgoal-rollout-attn-seed42-1106/</code>，运行产物 <code>v1-store/evaluation/subgoal-rollout-attn-seed42-1106/</code>（只读）。</p>
+<p><b>commit 体例：</b>功能合并 <code>commitV4.1.&lt;n&gt;:</code>，子代理 <code>sub/&lt;编号&gt;:</code>，文档 <code>docs:</code>。</p>
+<p><b>与论文的关系：</b>论文 Table 3 是 50 局闭环、按局成块换 motion token、报「跟供体路径的比例」和余弦距离。本计划是它的最小切片：只看单步，用三种受控配对把「token 记的是方向还是位置」拆开。</p>
+</div>
+
+<h1>第一部分（给人看）</h1>
+
+<h2>一、要做什么（总览与已定口径）</h2>
+<p>PatternLock 先放一段示范：杆尖从起点格走到下一格。随后机械臂回到起点，要按同样的路线重走一遍。文字指令是固定的一句话，不含路径，所以往哪走只能从记忆里读。记忆里有两路：示范帧（frame memory）和示范 motion token。本计划只把示范段的 motion token 换成另一局（供体局）的，帧记忆、文字、seed 全部不动，然后看机械臂往哪走。</p>
+<p>easy 档是 3×3 盘，格子编号 = 行 × 3 + 列（行增加为 +x，列增加为 +y，源码 <code>PatternLock._load_scene</code>）。motion 模型在官方 50 局里有 <b>8 局只有 1 个子目标，全部成功</b>。它们的示范只有 25–37 帧，正好只占 1 个 motion 窗口（起点为第 0 帧，窗长 33）。下表的路径是按每局 <code>env_seed</code> 用 <code>_load_scene</code> 的同一段随机数逻辑复算的，路径长度与 1106 记录的子目标数 m 逐局一致。</p>
+<div class="tbl"><table>
+<tr><th>局</th><th>env_seed</th><th>路径</th><th>起点格</th><th>方向</th><th>示范帧数</th></tr>
+<tr><td>5</td><td>650500</td><td>1→5</td><td>1</td><td>右下斜（+1 行，+1 列）</td><td>37</td></tr>
+<tr><td>28</td><td>652800</td><td>1→5</td><td>1</td><td>右下斜</td><td>37</td></tr>
+<tr><td>20</td><td>652000</td><td>1→0</td><td>1</td><td>左（0，−1 列）</td><td>33</td></tr>
+<tr><td>48</td><td>654800</td><td>2→1</td><td>2</td><td>左</td><td>33</td></tr>
+<tr><td>25</td><td>652500</td><td>4→3</td><td>4</td><td>左</td><td>25</td></tr>
+<tr><td>44</td><td>654400</td><td>0→1</td><td>0</td><td>右（0，+1 列）</td><td>33</td></tr>
+<tr><td>29</td><td>652900</td><td>7→4</td><td>7</td><td>上（−1 行，0）</td><td>32</td></tr>
+<tr><td>32</td><td>653200</td><td>3→0</td><td>3</td><td>上</td><td>37</td></tr>
+</table></div>
+
+<p><b>已定口径</b>（用户原话逐字，美东 2026-11-08）：</p>
+<ol>
+<li>K1 只做 PatternLock：「先只探索patternlock任务」。</li>
+<li>K2 三种条件：「给出完全一样位置*方向的motion 给出 位置一样方向不一样 位置不一样方向一样的」。</li>
+<li>K3 只用成功局：「只探索成功任务」。</li>
+<li>K4 规模最小：「做最小的探索」。</li>
+<li>K5 只看单个子目标：「只看一个subgoal的情况 不看更多」「单步的情况」。按此只选 m = 1 的局，供体也只取 m = 1 的局。</li>
+<li>K6 先写计划：「先写成 HTML 计划」。</li>
+</ol>
+
+<h2>二、怎么换（机制）</h2>
+<p><b>定义：</b>「位置」指示范第一步的起点格，「方向」指这一步的 8 邻方向。每次交换由一个接收局和一个供体局组成，接收局照常跑闭环 rollout，只有示范段那一个 motion 窗口的编码换成供体局同一窗口的编码。</p>
+<p><b>锚点：</b>不改模型和环境代码，直接用现有能力：</p>
+<ul>
+<li><code>scripts/interpret/serve_policy_attn.py</code> 的 <code>--record-motion</code>：把每局每个窗口的 <code>(start_frame, emb)</code> 写成 <code>&lt;task&gt;_ep&lt;id&gt;.npz</code>（run_local 收尾改名）。</li>
+<li>同文件的 <code>motion_swap_exact:&lt;DIR&gt;</code>：只替换起点在供体 <code>start_frames</code> 里精确存在的窗口，其余窗口保留本局原值。</li>
+<li><code>scripts/interpret/run_local.py</code> 的 <code>swap_map</code>（接收局 → 供体局）和 <code>subgoal_trace</code>（客户端逐步记杆尖位置，写 <code>traces/&lt;nonce&gt;/step_trace.jsonl</code>）。</li>
+</ul>
+<p><b>只换示范窗口的做法：</b>把供体 npz 裁到只剩 <code>start_frame == 0</code> 那一行，放进单独的供体目录。<code>motion_swap_exact</code> 遇到执行段窗口时在供体里查不到精确起点，就保留接收局原值。motion token 个数、位置、<code>motion_mask</code>、<code>mem_order</code> 都不动（该模式本身的保证）。</p>
+<p><b>⚠ 陷阱：</b></p>
+<ul>
+<li>不能用 <code>motion_swap:</code>（非 exact）：它查不到起点时会退回供体的最近窗口，执行段 motion 也会被换掉。</li>
+<li>供体帧数不同（25–37）只影响供体自己的编码内容，不影响接收局的窗口起点，因为所有示范窗口都从第 0 帧开始。</li>
+<li>帧记忆没换，接收局的示范帧仍然显示自己的路线。所以结果读的是「motion token 和帧记忆冲突时，模型听谁的」，不是「只有 motion 时」。</li>
+</ul>
+
+<h2>三、配对（三种条件）</h2>
+<div class="tbl"><table>
+<tr><th>条件</th><th>接收局 ← 供体局</th><th>跟自己的示范会走到</th><th>跟供体示范会走到</th><th>次数</th></tr>
+<tr><td>A 位置相同、方向相同</td><td>5←28；28←5</td><td>5；5</td><td>5；5（两者相同）</td><td>2</td></tr>
+<tr><td>B 位置相同、方向不同</td><td>20←5；5←20；28←20</td><td>0；5；5</td><td>5；0；0</td><td>3</td></tr>
+<tr><td>C 位置不同、方向相同</td><td>20←25；25←48；48←20（都向左）；29←32；32←29（都向上）</td><td>0；3；1；4；0（照供体的相对方向走也是这些格）</td><td>照供体的绝对目标格：3；1；0；0；4</td><td>5</td></tr>
+</table></div>
+<p>A 是对照：5 和 28 路径相同，只是场景 seed 不同，交换后应该仍然成功。B 能看出方向是不是从 motion token 读的。C 能看出 token 记的是相对方向还是绝对位置：照相对方向走，会走到接收局自己的目标格；照绝对位置走，会走到供体的目标格。三个条件分三次运行（每次一个 <code>swap_map</code>），因为局 5、20 在两个条件里都当接收局。</p>
+
+<h2>四、读数与可能的结论</h2>
+<p>每次交换报：成功与否、杆尖第一次到达的非起点格、这一格与「自己目标 / 供体绝对目标」的对应、交换前后两个示范窗口编码的余弦距离。到达格的判据：执行段内杆尖水平位置与某个非起点按钮中心的距离第一次 &lt; 0.025 m（环境 <code>goal_thresh</code>），按钮中心 <code>x = −0.1 + (行 − 1) × 0.1</code>、<code>y = (列 − 1) × 0.1</code>；全程都没到则记「未到」。</p>
+<div class="tbl"><table>
+<tr><th>看到的结果</th><th>能说什么</th><th>不能说什么</th></tr>
+<tr><td>A 全成功，B 改走供体方向</td><td>单步时方向信息可由示范 motion token 决定，且压过帧记忆</td><td>不能推到多步、其他任务或成功率</td></tr>
+<tr><td>B 仍走自己的方向</td><td>这几局里帧记忆或当前画面足以决定方向，换 motion 不改行为</td><td>不能说 motion token 不含方向信息</td></tr>
+<tr><td>C 走接收局自己的目标</td><td>与「token 记相对方向」一致</td><td>2 个方向、5 次交换，只是个例</td></tr>
+<tr><td>C 走供体绝对目标或跑偏</td><td>token 里也带了位置信息</td><td>同上</td></tr>
+</table></div>
+<p>每对只跑 1 局（seed 固定，XLA 确定性开启），10 次交换只是个例，不算成功率、不做区间。</p>
+
+<h2>五、验收</h2>
+<div class="tbl"><table>
+<tr><th>查什么</th><th>怎么查、为什么成立</th><th>判定行</th></tr>
+<tr><td>路径复算</td><td>8 局复算路径长度等于 1106 记录的 m = 1；脚本在 CPU 上按 <code>_load_scene</code> 同一随机数顺序复算</td><td><code>PL_PATHS=PASS eps=8 mismatches=0</code></td></tr>
+<tr><td>原样复现</td><td>录 motion 的这一轮不换 token，8 局应全部成功，与 1106 一致；不一致说明当前版本与 1106 的执行有差别，交换结果不可比</td><td><code>RECORD_REPRO=PASS eps=8 success=8</code></td></tr>
+<tr><td>供体裁剪</td><td>每个供体 npz 裁后恰好 1 行、<code>start_frame=0</code>，emb 与原文件第 0 帧那行逐位相等</td><td><code>DONOR_TRIM=PASS donors=7 rows=1 maxabs=0</code></td></tr>
+<tr><td>只换了示范窗口</td><td>每局 <code>episode.json</code> 的 <code>motion_content.n_replaced</code> 应为 1，<code>replace_log</code> 只有 <code>[0, 0]</code></td><td><code>SWAP_SCOPE=PASS runs=10 replaced_each=1</code></td></tr>
+<tr><td>交换读数</td><td>10 次交换全部有终局记录，且都读出到达格或「未到」</td><td><code>PL_SWAP=PASS runs=10 A=&lt;s/2&gt; B_follow_donor=&lt;n/3&gt; C_follow_relative=&lt;n/5&gt;</code></td></tr>
+</table></div>
+
+<h2>六、步骤</h2>
+<div class="tbl"><table>
+<tr><th>阶段</th><th>内容</th><th>判据</th></tr>
+<tr><td>0</td><td>开工审查（一个只读审查子代理）；写两个小脚本（一个写入型子代理），合并前后各审一次</td><td><code>PLAN_CONSISTENCY_REVIEW</code>、<code>PRE_MERGE_REVIEW</code>、<code>POST_MERGE_REVIEW</code>、<code>PL_PATHS</code></td></tr>
+<tr><td>1</td><td>冒烟：局 20 录 motion 1 局，再做 20←5 一次交换</td><td><code>SWAP_SCOPE</code>（1 次）、trace 能读出到达格</td></tr>
+<tr><td>2</td><td>8 局原样跑并录 motion；裁剪供体</td><td><code>RECORD_REPRO</code>、<code>DONOR_TRIM</code></td></tr>
+<tr><td>3</td><td>A、B、C 三次运行，共 10 局</td><td><code>SWAP_SCOPE</code>、日志 <code>EXIT_CODE=0</code></td></tr>
+<tr><td>4</td><td>读数、写档案 <code>docs/evaluation-doc/pl-single-step-swap-seed42-1108/</code></td><td><code>PL_SWAP</code></td></tr>
+</table></div>
+<p>耗时：每局约 20–35 秒（1106 实测 wall_seconds），加模型加载，全部约 20 局，单卡预计 15 分钟内；连写脚本和审查总计约 1 小时。</p>
+
+<h2>七、子代理分工与合并（简述）</h2>
+<p>只有两个新文件，归一个写入型子代理在独立 worktree 里写：一个准备脚本（复算路径、生成三个条件的 spec、裁剪供体），一个读数脚本（读 trace 与 <code>episode.json</code>，出表和判定行）。合并前在它的 worktree 里跑短测，并派一个只读审查子代理审范围与接口；合并后再跑一遍短测、确认 <code>src/</code>、<code>third_party/</code> 零改动，再 push。运行由主会话在干净的分离工作树里起 tmux。细节见第二部分。</p>
+
+<h1>第二部分（技术细节，供 agent 追踪）</h1>
+
+<h2>〇 前置声明与红线</h2>
+<ol>
+<li>R1 现有能力：<code>--record-motion</code>、<code>motion_swap_exact</code>、<code>swap_map</code>、<code>subgoal_trace</code> 都已在基线 <code>48332cf</code> 存在；拟新增的只有下面两个脚本。路径复算与 8 局清单是 2026-11-08 只读实测；单局耗时取自 1106 记录；其余为估算。</li>
+<li>R2 不改 <code>src/</code>、<code>third_party/</code>、<code>scripts/training/</code>、<code>scripts/evaluation/</code>、<code>serve_policy_attn.py</code>、<code>run_local.py</code>、<code>subgoal_trace_runner.py</code>；不改依赖。</li>
+<li>R3 1106 产物目录只读。本轮运行产物只写 <code>v1-store/evaluation/pl-single-step-swap-seed42-1108/</code>，档案只写 <code>docs/evaluation-doc/pl-single-step-swap-seed42-1108/</code>。</li>
+<li>R4 只跑 motion 模型（<code>vla-o16cc-59999/59999</code>，配置 <code>mme_vla_suite_orig16_b128_60k</code>），模型 seed 42，官方 test 局。正常任务失败不重试；基础设施故障每局最多重试 1 次并记录。</li>
+<li>R5 tmux 只用 <code>pls-*</code> 前缀，清理按 AGENTS.md 第 7 条逐个精确删除。</li>
+</ol>
+
+<h2>一 逐文件改动清单</h2>
+<div class="tbl"><table>
+<tr><th>文件</th><th>锚点</th><th>做什么</th></tr>
+<tr><td><code>scripts/interpret/pl_swap_prep.py</code>（新）</td><td><code>replay_path</code>、<code>CONDITIONS</code>、<code>write_specs</code>、<code>trim_donors</code></td><td><code>replay_path(env_seed, difficulty)</code>：按 <code>PatternLock._load_scene</code> 的顺序（<code>torch.Generator().manual_seed(seed)</code>，循环 <code>randperm(G*G)[:2]</code> + <code>find_path_0_to_8(diagonals=True)</code> 直到长度落在档位区间）复算路径，在 official-sim 解释器里运行，输出 <code>paths.json</code> 并打印 <code>PL_PATHS</code>。<code>CONDITIONS</code> 写死第一部分第三节的 10 对。<code>write_specs</code> 生成录制 spec（<code>record_motion</code>，8 局）和 A/B/C 三个交换 spec（<code>ablate="motion_swap_exact:&lt;donor_trim&gt;"</code>、<code>swap_map</code>），字段沿用 1106 <code>gen_specs.py</code>（<code>subgoal_trace=True</code>，<code>rollout_record=False</code>，<code>save_attn=False</code>）。<code>trim_donors</code>：读 <code>record/&lt;task&gt;_ep&lt;id&gt;.npz</code>，只保留 <code>start_frames == 0</code> 的行，写到 <code>donor_trim/</code>，打印 <code>DONOR_TRIM</code></td></tr>
+<tr><td><code>scripts/interpret/analysis/pl_swap_readout.py</code>（新）</td><td><code>button_xy</code>、<code>first_reached</code>、<code>summarize</code></td><td>读每局 <code>step_trace.jsonl</code> 的 <code>tcp_after</code>、<code>episode.json</code> 的 <code>motion_content</code>、run_local 结果的 <code>success</code>；按第一部分第四节判据求到达格；余弦距离用记录目录里接收局与供体的第 0 帧窗口编码计算。输出 <code>readout.json</code>、<code>readout.md</code>，打印 <code>RECORD_REPRO</code>、<code>SWAP_SCOPE</code>、<code>PL_SWAP</code></td></tr>
+<tr><td><code>scripts/interpret/test_pl_swap.py</code>（新）</td><td>—</td><td>钉住：8 局复算路径等于第一部分的表；10 对满足各自条件的位置 / 方向关系；裁剪只留 1 行；合成 trace 的到达格判定（含「未到」）</td></tr>
+</table></div>
+
+<h2>二 子代理分配表</h2>
+<div class="tbl"><table>
+<tr><th>编号</th><th>目标</th><th>可写文件集合</th><th>禁触路径</th><th>接口与依赖</th><th>合并顺序</th><th>验收（worktree，CPU）</th><th>资源</th></tr>
+<tr><td>W1（opus，worktree）</td><td>准备与读数脚本</td><td>上表三个新文件</td><td>R2 所列全部；规则文件</td><td>消费 run_local spec 格式、<code>--record-motion</code> npz 键、<code>step_trace.jsonl</code> 字段、<code>episode.json.motion_content</code></td><td>1</td><td><code>uv run python -m pytest scripts/interpret/test_pl_swap.py scripts/interpret/test_motion_swap_modes.py -q</code> 全过；official-sim 解释器跑 <code>replay_path</code> 打印 <code>PL_PATHS=PASS</code></td><td>CPU</td></tr>
+<tr><td>主会话自做</td><td>运行 S1–S3、读数、档案</td><td>产物与档案目录</td><td>代码文件</td><td>W1 合并后的确定 commit</td><td>—</td><td>第一部分第五节判定行</td><td>GPU1</td></tr>
+</table></div>
+<p>审查用 sonnet，钉死 <code>REVIEW_BASE</code> / <code>REVIEW_TIP</code>。运行量小，不另派运行型子代理，由主会话起 tmux 并挂 Monitor。</p>
+
+<h2>三 闸门总表</h2>
+<p>顺序：<code>PLAN_CONSISTENCY_REVIEW</code> → <code>PRE_MERGE_REVIEW</code> → <code>POST_MERGE_REVIEW</code> → <code>PL_PATHS</code> → 冒烟 <code>SWAP_SCOPE</code>（1 次）→ <code>RECORD_REPRO</code> → <code>DONOR_TRIM</code> → <code>SWAP_SCOPE</code>（10 次）→ <code>PL_SWAP</code>。<code>RECORD_REPRO</code> 不过（8 局不是全成功）时停下报用户，不换局、不补跑。</p>
+
+<h2>四 Runbook</h2>
+<pre>W=/data/hongzefu/robomme_policy_learning_MotionJEPA
+O=$W/v1-store/evaluation/pl-single-step-swap-seed42-1108
+git -C $W worktree add --detach $W/v1-store/worktrees/pl-swap-run &lt;合并后 commit&gt;
+# 生成 spec 与 paths.json（official-sim 解释器）
+v1-store/envs/official-sim/bin/python -m scripts.interpret.pl_swap_prep specs --out $O
+# 录 motion（8 局）
+tmux new-session -d -s pls-record "set -o pipefail; bash $O/run.sh record 2&gt;&amp;1 | tee $O/logs/record.log; echo \"EXIT_CODE=\$?\" &gt;&gt; $O/logs/record.log"
+v1-store/envs/official-sim/bin/python -m scripts.interpret.pl_swap_prep trim --out $O
+# 三个条件依次跑
+for c in A B C: tmux new-session -d -s pls-swap-$c "... run.sh swap-$c ... | tee $O/logs/swap-$c.log; echo EXIT_CODE=..."
+uv run python -m scripts.interpret.analysis.pl_swap_readout --root $O</pre>
+<p><code>run.sh</code> 由 <code>pl_swap_prep</code> 写出，环境变量照抄 1106 <code>env.sh</code>（<code>XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'</code>，GPU1，显存比例 0.55），先核对工作树 HEAD 与 clean，再调 <code>python -m scripts.interpret.run_local &lt;spec&gt;</code>。每份日志挂一个 Monitor，过滤 <code>EVAL_EPISODE|EXIT_CODE=|Error|Traceback|out of memory</code>。</p>
+
+<h2>五 风险登记</h2>
+<ul>
+<li><code>subgoal_trace</code> 与 <code>motion_swap_exact</code> 同用此前没跑过：<code>run_local.load_spec</code> 没有互斥规则，冒烟一局确认 trace 与 <code>motion_content</code> 都写出。</li>
+<li>当前 HEAD 比 1106 的执行版本 <code>6994a59</code> 新（含 MoveCube 强推的 run_local 改动 <code>c0e459d</code>），由 <code>RECORD_REPRO</code> 兜住。</li>
+<li>到达格用杆尖水平距离判，和环境的 <code>is_obj_swing_onto</code> 不完全相同；成功局以环境终局为准，到达格只用于判断跟谁走。</li>
+</ul>
+
+<h2>六 盲区诚实清单</h2>
+<ul>
+<li>每个条件只有 2–5 次交换，每次 1 局，结论只到个例。A 条件只有 5↔28 一对。</li>
+<li>只看 easy 档、单步、motion 模型；基线没有 motion token，不做。</li>
+<li>C 条件只有「向左」「向上」两个方向。</li>
+<li>帧记忆保留，读到的是 motion 与帧冲突时的行为。</li>
+</ul>
+
+<h2>七 留档与 commit 纪律</h2>
+<p>脚本经 W1 的 <code>sub/S1:</code> 提交，主会话 <code>--no-ff</code> 合并为 <code>commitV4.1.&lt;n&gt;:</code>；跑完写 <code>launch.md</code>、<code>result.md</code>、<code>records/</code> 到档案目录，<code>docs:</code> 提交。每次 commit 后立即 push。本任务约 1 小时、无上下游依赖，建议不登记进 <code>docs/handoff/current.json</code>，由用户决定。</p>
+</main>
+</body>
+</html>
