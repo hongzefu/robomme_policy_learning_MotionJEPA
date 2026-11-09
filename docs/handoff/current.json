@@ -1,8 +1,8 @@
 {
  "schema_version": 1,
  "written_at": {
-  "utc": "2026-11-09T05:07:28Z",
-  "america_new_york": "2026-11-09T00:07:28-05:00"
+  "utc": "2026-11-09T11:28:17Z",
+  "america_new_york": "2026-11-09T06:28:17-05:00"
  },
  "repo": {
   "branch": "v12-ctx-fs1024-8gpu-b64-80k",
@@ -1479,8 +1479,8 @@
     "sha": "aa810db"
    },
    "state": "running",
-   "state_changed_at": "2026-11-09T05:07:28Z",
-   "state_reason": "P0–P2 完成；fs8-chain 等待 w768 评估 EVAL692= 与 GPU 全空闲后自动冒烟并正式起跑",
+   "state_changed_at": "2026-11-09T11:28:17Z",
+   "state_reason": "w768 评估 EVAL692=PASS（298/692，43.06%）后自动触发；冒烟通过，正式训练 11-09 美东 06:13 起跑，实测 1.5 s/步，预计 11-10 美东约 14:40 完成",
    "owner": {
     "session": "https://claude.ai/code/session_01WvPQiSRg72o9g9BhMh9rT9",
     "host": "ip-10-242-11-177"
@@ -1509,9 +1509,9 @@
     },
     {
      "what": "触发与冒烟",
-     "evidence": "FS8_TRIGGER=PASS …；FS8_SMOKE=PASS steps=20 mesh=2x4",
+     "evidence": "FS8_TRIGGER=PASS eval=PASS gpus_idle=8 free_gb=382；FS8_SMOKE=PASS steps=20 mesh=2x4 s_per_step=1.6s/it；TRAIN_MESH shape=(2, 4) devices=8 batch_size=64；正式 507 步 1.5 s/it，GPU util 99%",
      "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/fs8-chain.log",
-     "status": "pending"
+     "status": "pass"
     },
     {
      "what": "正式训练完成",
@@ -1534,6 +1534,16 @@
      "tmux": "fs8-chain",
      "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/fs8-chain.log",
      "done_line": "FS8_FIRST_CKPT"
+    },
+    {
+     "tmux": "fs8-train",
+     "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx-framesamp1024-b64-80k-8gpu.log",
+     "done_line": "EXIT_CODE=0"
+    },
+    {
+     "tmux": "fs8-inc",
+     "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx-framesamp1024-b64-80k-8gpu-inc.log",
+     "done_line": "HF_VERIFY=PASS bucket=HongzeFu/robomme-vla-orig100-ctx-framesamp1024-b64-80k-8gpu-v1 steps=8 mismatches=0"
     }
    ],
    "authorizations": [
@@ -1547,9 +1557,9 @@
    "pending_decisions": [],
    "next_steps": [
     {
-     "what": "Monitor fs8-chain.log 直到 FS8_FIRST_CKPT，然后改盯正式日志与 inc 日志",
-     "command": "tail -F /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/fs8-chain.log",
-     "verdict_line": "FS8_FIRST_CKPT"
+     "what": "Monitor 正式日志直到 EXIT_CODE=0、8 份 ckpt；inc 日志直到 HF_VERIFY=PASS；然后 79999 EMA CPU 恢复、写训练档案、状态改 done",
+     "command": "tail -F /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx-framesamp1024-b64-80k-8gpu.log",
+     "verdict_line": "CTX1024_TRAIN=PASS run=orig100-ctx-framesamp1024-b64-80k-8gpu step=79999"
     }
    ]
   }
