@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-08T18:27:41Z",
-    "america_new_york": "2026-11-08T13:27:41-05:00"
+    "utc": "2026-11-09T08:10:00Z",
+    "america_new_york": "2026-11-09T03:10:00-05:00"
   },
   "repo": {
     "branch": "v11-4task-modul-wantp768-50k",
-    "base_head": "a0bded4"
+    "base_head": "f7dfe16"
   },
   "freeze": {
     "active": false,
@@ -19,9 +19,9 @@
         "file": "1108-4task-modul-wantp768-50k-plan.html",
         "sha": "4b14722"
       },
-      "state": "running",
-      "state_changed_at": "2026-11-08T16:36:36Z",
-      "state_reason": "起跑前闸门 G0–G6b、D1.5、E0 全部 PASS；Beta 锚点 commitV11.88Beta 后起跑正式训练 50001 步",
+      "state": "done",
+      "state_changed_at": "2026-11-09T08:00:21Z",
+      "state_reason": "50001 步完成，10 份 ckpt 齐全，50000 真实加载通过；ckpt 上传为长尾（bucket 已按用户裁决改公开）",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiTAgjMcs9tdyGT8J4e",
         "host": "ip-10-242-11-177"
@@ -86,25 +86,19 @@
           "what": "G7 训练完成",
           "evidence": "TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10",
           "where": "v1-store/logs/w768-train.log",
-          "status": "pending"
+          "status": "pass"
         }
       ],
       "long_tail": [
         {
-          "what": "10 份 ckpt 逐份上传 HF bucket 并本机读回",
+          "what": "10 份 ckpt 逐份上传 HF bucket HongzeFu/robomme-vla-4task-modul-wantp768-50k-v1（公开）并本机读回",
           "tmux": "w768-ckptup",
           "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/w768-ckptup.log",
           "done_line": "HF_VERIFY=PASS ckpts=10",
           "status": "pending"
         }
       ],
-      "running_handles": [
-        {
-          "tmux": "w768-train",
-          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/w768-train.log",
-          "done_line": "TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10"
-        }
-      ],
+      "running_handles": [],
       "authorizations": [
         {
           "kind": "go",
@@ -116,14 +110,9 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "正式训练结束后核验",
-          "command": "Monitor v1-store/logs/w768-train.log",
-          "verdict_line": "TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10"
-        },
-        {
-          "what": "训练 done 后自动接本机 692 局评估",
-          "command": "tmux w768-eval: bash scripts/evaluation/local_692_pool.sh <…/v2-1600ep-m8x8-modul-wantp768-b128-50k/50000> 7",
-          "verdict_line": "EVAL692=PASS"
+          "what": "等上传长尾完成后标 closed",
+          "command": "Monitor v1-store/logs/w768-ckptup.log",
+          "verdict_line": "HF_VERIFY=PASS ckpts=10"
         }
       ]
     },
@@ -132,9 +121,9 @@
         "file": "1108-4task-modul-wantp768-50k-plan.html",
         "sha": "4b14722"
       },
-      "state": "planned",
-      "state_changed_at": "2026-11-08T16:36:36Z",
-      "state_reason": "等训练任务 done 后自动开工（开工令已覆盖）",
+      "state": "running",
+      "state_changed_at": "2026-11-09T08:01:24Z",
+      "state_reason": "上游训练 done（TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10），按 kind: go 自动开工",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiTAgjMcs9tdyGT8J4e",
         "host": "ip-10-242-11-177"
@@ -153,11 +142,17 @@
           "what": "预标 9 局按身份定位",
           "evidence": "PRESEED=PASS episodes=9 placed=9 duplicates=0",
           "where": "v1-store/logs/w768-eval.log",
-          "status": "pending"
+          "status": "pass"
         }
       ],
       "long_tail": [],
-      "running_handles": [],
+      "running_handles": [
+        {
+          "tmux": "w768-eval",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/w768-eval.log",
+          "done_line": "EVAL692=PASS"
+        }
+      ],
       "authorizations": [
         {
           "kind": "go",
@@ -169,8 +164,8 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "训练 done 后启动评估",
-          "command": "tmux w768-eval: bash scripts/evaluation/local_692_pool.sh <ckpt …/50000> 7",
+          "what": "评估完成后写评估档案并标 done",
+          "command": "Monitor v1-store/logs/w768-eval.log",
           "verdict_line": "EVAL692=PASS"
         }
       ]
