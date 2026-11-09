@@ -1,23 +1,33 @@
 #!/usr/bin/env bash
-# context 1024 档 B64 80k 单条入口：td（tokendrop，GPU 0-3）或 fs（framesamp，GPU 4-7）。
-# 用法：CODE_ROOT=<固定 commit 的只读代码副本> bash run_ctx1024_b64_80k.sh <td|fs> <prod|smoke|perf>
+# context 1024 档 B64 80k 单条入口：td（tokendrop，GPU 0-3）、fs（framesamp，GPU 4-7）
+# 或 fs8（framesamp 八卡独占，GPU 0-7，run 名带 -8gpu）。
+# 用法：CODE_ROOT=<固定 commit 的只读代码副本> [PY=<解释器>] [RUN_SUFFIX=<如 -r2>] [DRY=1] \
+#        bash run_ctx1024_b64_80k.sh <td|fs|fs8> <prod|smoke|perf>
+#   PY：默认主检出 .venv/bin/python。
+#   RUN_SUFFIX：默认空，追加到 run 名（BASE）后，日志与 checkpoint 目录随之改名；
+#               JAX/CUDA 编译缓存仍按不带后缀的 BASE，冒烟、正式与重起共用。
+#   DRY=1：只打印 CUDA_VISIBLE_DEVICES、LOG 路径与 train.py 参数数组后退出 0，不读密钥、不训练。
 # 超参全用官方 mme_vla_suite 条目；prod 不传覆盖。tmux 由调用方起。
 # 不 source paths.sh：它按脚本位置解析根目录，会把 v1-store 指到 CODE_ROOT 下。
 set -euo pipefail
-[[ $# == 2 ]] || { echo "用法: CODE_ROOT=<dir> $0 <td|fs> <prod|smoke|perf>" >&2; exit 2; }
+[[ $# == 2 ]] || { echo "用法: CODE_ROOT=<dir> $0 <td|fs|fs8> <prod|smoke|perf>" >&2; exit 2; }
 : "${CODE_ROOT:?必须指定 CODE_ROOT}"
 PROJECT=/scratch/hongze/robomme_policy_learning_MotionJEPA
 STORE=$PROJECT/v1-store
 LIBRARY=16task-orig100-1600ep-9e109419
 LIB=$STORE/datasets/$LIBRARY
-PY=$PROJECT/.venv/bin/python
+PY=${PY:-$PROJECT/.venv/bin/python}
 CACHE=/scratch/hongze/.cache
 
 case "$1" in
   td) BASE=orig100-ctx-tokendrop1024-b64-80k; GPUS=0,1,2,3; FRAME=framesamp-8x8; HISTORY=perceptual-tokendrop-context-1024.yaml ;;
   fs) BASE=orig100-ctx-framesamp1024-b64-80k; GPUS=4,5,6,7; FRAME=framesamp-4x4; HISTORY=perceptual-framesamp-context-1024.yaml ;;
+  fs8) BASE=orig100-ctx-framesamp1024-b64-80k-8gpu; GPUS=0,1,2,3,4,5,6,7; FRAME=framesamp-4x4; HISTORY=perceptual-framesamp-context-1024.yaml ;;
   *) echo "未知档位: $1" >&2; exit 2 ;;
 esac
+# 编译缓存按不带后缀的档位名，RUN_SUFFIX 只改 run 名。
+CACHE_KEY=$BASE
+BASE=$BASE${RUN_SUFFIX:-}
 case "$2" in
   prod) RUN=$BASE; EXTRA=() ;;
   smoke) RUN=$BASE-smoke; EXTRA=(--num-train-steps 20 --no-wandb-enabled) ;;
@@ -33,10 +43,10 @@ export CUDA_VISIBLE_DEVICES=$GPUS XLA_PYTHON_CLIENT_MEM_FRACTION=0.95
 export OPENPI_DATA_HOME=$STORE/models
 export XDG_CACHE_HOME=$CACHE/xdg HF_HOME=$CACHE/huggingface
 # train.py 与驱动的默认缓存都在 $HOME 下。
-export MMEVLA_JAX_CACHE_DIR=$CACHE/jax/$BASE CUDA_CACHE_PATH=$CACHE/cuda/$BASE
+export MMEVLA_JAX_CACHE_DIR=$CACHE/jax/$CACHE_KEY CUDA_CACHE_PATH=$CACHE/cuda/$CACHE_KEY
 # WANDB_DIR 默认是 cwd，而 cwd 是只读代码副本。
 export WANDB_DIR=$STORE/logs/wandb WANDB_CACHE_DIR=$CACHE/wandb WANDB_CONFIG_DIR=$CACHE/wandb-config
-if [[ $2 == prod ]]; then
+if [[ $2 == prod && ${DRY:-0} != 1 ]]; then
   WANDB_API_KEY=$(</scratch/hongze/.secrets/wandb_api_key)
   # train.py 的默认 entity 对这把 key 报 403，须显式给。
   WANDB_ENTITY=$(sed -n 's/^WANDB_ENTITY=//p' "$STORE/secrets/wandb.env")
@@ -51,6 +61,14 @@ ARGS=(mme_vla_suite --exp-name "$RUN" --dataset-path "$LIB/$FRAME"
   --model.use-history --model.history-config "$HISTORY" "${EXTRA[@]}")
 
 LOG=$STORE/logs/$RUN.log
+if [[ ${DRY:-0} == 1 ]]; then
+  echo "DRY CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES"
+  echo "DRY MMEVLA_JAX_CACHE_DIR=$MMEVLA_JAX_CACHE_DIR"
+  echo "DRY LOG=$LOG"
+  echo "DRY PY=$PY"
+  printf 'DRY ARG %s\n' "${ARGS[@]}"
+  exit 0
+fi
 # 旧日志改名保留，避免重跑时覆盖，也避免 Monitor 读到上一次的 EXIT_CODE=。
 if [[ -e $LOG ]]; then mv "$LOG" "$LOG.$(date +%Y%m%d%H%M%S)"; fi
 set +e
