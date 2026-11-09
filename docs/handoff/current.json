@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-09T20:30:00Z",
-    "America/New_York": "2026-11-09T15:30:00-0500"
+    "utc": "2026-11-09T21:38:51Z",
+    "America/New_York": "2026-11-09T16:38:51-0500"
   },
   "repo": {
     "branch": "v4.2-plswap-full",
-    "base_head": "1ed88387e4c6cf27a8bc2eb4d0ff55d71cab8e8d",
+    "base_head": "9e1038d0922228401fd85b580b3df62befb6388e",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -2213,6 +2213,66 @@
       ],
       "pending_decisions": [],
       "next_steps": []
+    },
+    "rs-swap-full-1109": {
+      "plan": {
+        "file": "1109-routestick-swap-full-factorial-plan.html",
+        "sha": "9e1038d"
+      },
+      "state": "running",
+      "state_changed_at": "2026-11-09T21:38:51Z",
+      "state_reason": "开工令已给；开工前审查与 S0 核实进行中。",
+      "owner": {
+        "session": "bb27e5ee-343a-4725-ba31-e23ba7d6da8f",
+        "host": "sled-aspen.eecs.umich.edu"
+      },
+      "depends_on": [
+        "pl-swap-full-1109"
+      ],
+      "pre_handoff": [
+        {
+          "what": "MotionMem 第一步交换读数",
+          "evidence": "RS_SWAP_FULL=PASS model=motion",
+          "where": "docs/evaluation-doc/rs-swap-full-1109/",
+          "status": "pending"
+        },
+        {
+          "what": "Wan 第一步交换读数",
+          "evidence": "RS_SWAP_FULL=PASS|PARTIAL model=wan",
+          "where": "docs/evaluation-doc/rs-swap-full-1109/",
+          "status": "pending"
+        },
+        {
+          "what": "留档 commit 已 push",
+          "evidence": "",
+          "where": "origin/v4.2-plswap-full",
+          "status": "pending"
+        },
+        {
+          "what": "全部 rsf- tmux 会话退出",
+          "evidence": "",
+          "where": "tmux ls",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-11-09",
+          "quote": "同意开工并登记",
+          "scope": "计划 9e1038d 全部步骤 S0–S5"
+        }
+      ],
+      "pending_decisions": [],
+      "next_steps": [
+        {
+          "what": "S0 核实 + W1 写 rs_full_prep/rs_full_readout",
+          "command": "Agent opus worktree",
+          "verdict_line": "RS_REPLAY=PASS; RS_POOL=PASS"
+        }
+      ]
     }
   }
 }
