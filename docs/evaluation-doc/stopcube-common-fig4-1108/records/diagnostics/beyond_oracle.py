@@ -56,6 +56,21 @@ def main():
                                           "mae_gain": d["mean"], "mae_gain_ci95": d["ci95"]}
         preds[(m, g, l)] = p
     out.write_text(json.dumps(report, indent=1))
+    np.savez_compressed(out.with_suffix(".npz"), base=base, **{f"{m}|{g}|{l}": v for (m, g, l), v in preds.items()})
+    # 跨模型：同点同折，按局先相减再重采样（正 = MotionMem 误差小）
+    cross = {}
+    for g in ("text", "current", "history", "action"):
+        for l in range(-1, 18):
+            a_, b_ = preds.get(("mot", g, l)), preds.get(("ctx", g, l))
+            if a_ is None or b_ is None:
+                continue
+            ea, eb = episode_mae(y, a_, s["groups"]), episode_mae(y, b_, s["groups"])
+            cross[f"{g}|{l}"] = bootstrap([eb[k] - ea[k] for k in sorted(set(ea) & set(eb))], 2000, 42)
+    report["cross_model_mae_ctx_minus_mot"] = cross
+    out.write_text(json.dumps(report, indent=1))
+    for g in ("text", "current", "history", "action"):
+        ls = [l for l in range(-1, 18) if f"{g}|{l}" in cross]
+        print("cross", g, " ".join(f"{cross[f'{g}|{l}']['mean']:.0f}[{cross[f'{g}|{l}']['ci95'][0]:.0f},{cross[f'{g}|{l}']['ci95'][1]:.0f}]" for l in ls))
     print("oracle", round(mb["r2"], 3), round(mb["mae"], 1), "leak", report["leak"])
     for m in ("ctx", "mot"):
         for g in ("text", "current", "history", "action"):

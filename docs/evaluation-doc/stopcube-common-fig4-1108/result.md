@@ -78,6 +78,15 @@
 
 MotionMem 的 Text 在第 0–17 层每一层都在 0.78–0.83 之间，FrameSamp 的 Text 在 0.46–0.52 之间。
 
+**同点配对的跨模型差**：同一批点、同一分折，`[t,N]` + 组特征时，FrameSamp 的局级 MAE 减 MotionMem 的局级 MAE（正 = MotionMem 误差小，按局重采样 95% 区间，见 `beyond_oracle.json` 的 `cross_model_mae_ctx_minus_mot`）：
+
+| 组 | 第 17 层 | 第 0–16 层范围 |
+| --- | --- | --- |
+| Text | +18 [13, 22] | +18 ～ +26，各层区间都不含 0 |
+| History frames | +18 [11, 26] | +14 ～ +28 |
+| Action token | +5 [1, 9] | +1 ～ +16 |
+| Current frame | +3 [−2, 8] | −11 ～ +11（第 1 层为 −11 [−17, −6]） |
+
 **闭环复核**：用 `stopcube-rollout-1105` 各模型自己的 50 局闭环轨迹，取 Q4（距正确窗口中心）。样本与标签同 `rollout_probe`，折用其 `hash_fold`，拟合同上；每个模型只在自己的轨迹上计算，跨模型只比增量。脚本 `records/diagnostics/closedloop_beyond_oracle.py`，结果 `records/explore/closedloop_beyond_oracle.json`，`leak=0`。
 
 | 模型 | 只用 `[t,N]`（R²／MAE） | `[t,N,M]` | + Text（9） | + History（8） | + Action（7） |
