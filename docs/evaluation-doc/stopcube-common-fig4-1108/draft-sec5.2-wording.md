@@ -49,7 +49,7 @@
 
 要点：
 - 数字来自 result.md 第三节 J 的分档表（第 0–17 层平均）。
-- 「at every layer」：N≥4 时 18 层逐层都是 FrameSamp < concat < split；换 5 个分折种子共 90 格，90/90 成立。
+- 「at every layer」：N≥4 时 18 层逐层都是 FrameSamp < concat < split；换 5 个分折种子共 90 格，90/90 成立。**但它依赖 PCA 维度**：64、128 维全部成立；16、32 维时 concat 常低于 FrameSamp（同序 41/72，result.md 第三节 J）。正文若写「at every layer」，须注明探针用 64 维 PCA，或改为较弱的说法，例如「on average」。
 - 正文用的是 concat（96 tokens）；加入 split（384 tokens）需要在正文里交代它是同一方法的另一个预算配置。若不想引入 split，可删去 384 tokens 那条线和对应数字。
 
 ## 可选补句：三个模型的对应关系（result.md 第三节 J）
