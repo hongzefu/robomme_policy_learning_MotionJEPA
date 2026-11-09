@@ -113,6 +113,10 @@
 
 - N≤3（45 局）：+7.3 ～ +16.0 步，区间都不含 0。
 - N≥4（53 局）：+22.5 ～ +35.8 步，区间都不含 0。
+- Current frame 与 Action 组（输出 `records/explore/beyond_oracle_by_N_current_action.txt`）：
+  - N≤3 时两组各层区间都含 0（−2.4 ～ +1.8 步）。
+  - N≥4 时第 8、17 层 MotionMem 显著更好（Current +12.4、+7.5，Action +14.2、+7.7 步），第 0 层约 0。
+  - 即 Text、History 组在两类局里都有优势，Current、Action 组的优势只出现在高记忆需求的局里、中后层。
 - 单独读距按下时，N=2 是 FrameSamp 更好（C 节）；但在给定 `[t,N]` 后，MotionMem 的速度信息在低记忆需求的局里同样有用。所以 C 节的 N=2 反例来自 MotionMem 对 t、N 本身的编码，不来自速度信息。
 - 闭环同样分档（各自轨迹、模型内增量，`closedloop_beyond_oracle_by_N.py`，输出 `closedloop_beyond_oracle_by_N.txt`）：
   - FrameSamp 的 Text 第 9 层、History 第 8 层在两档都约为 0，区间含 0（−4.2 ～ +1.6 步）。
