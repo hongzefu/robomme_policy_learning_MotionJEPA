@@ -1,8 +1,8 @@
 {
  "schema_version": 1,
  "written_at": {
-  "utc": "2026-11-09T11:28:17Z",
-  "america_new_york": "2026-11-09T06:28:17-05:00"
+  "utc": "2026-11-09T15:25:38Z",
+  "america_new_york": "2026-11-09T10:25:38-05:00"
  },
  "repo": {
   "branch": "v12-ctx-fs1024-8gpu-b64-80k",
@@ -1480,7 +1480,7 @@
    },
    "state": "running",
    "state_changed_at": "2026-11-09T11:28:17Z",
-   "state_reason": "w768 评估 EVAL692=PASS（298/692，43.06%）后自动触发；冒烟通过，正式训练 11-09 美东 06:13 起跑，实测 1.5 s/步，预计 11-10 美东约 14:40 完成",
+   "state_reason": "正式训练进行中（1.4–1.5 s/步）；第 10000 步已存盘并上传；预计 11-10 美东约 14:00–14:40 完成",
    "owner": {
     "session": "https://claude.ai/code/session_01WvPQiSRg72o9g9BhMh9rT9",
     "host": "ip-10-242-11-177"
@@ -1514,6 +1514,12 @@
      "status": "pass"
     },
     {
+     "what": "首份 checkpoint 与首次真实上传",
+     "evidence": "FS8_FIRST_CKPT step=10000（11-09 美东 10:20）；fs8-chain EXIT_CODE=0；INC_UPLOADED step=10000",
+     "where": "fs8-chain.log、orig100-ctx-framesamp1024-b64-80k-8gpu-inc.log",
+     "status": "pass"
+    },
+    {
      "what": "正式训练完成",
      "evidence": "CTX1024_TRAIN=PASS run=orig100-ctx-framesamp1024-b64-80k-8gpu step=79999",
      "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx-framesamp1024-b64-80k-8gpu.log",
@@ -1530,11 +1536,6 @@
     }
    ],
    "running_handles": [
-    {
-     "tmux": "fs8-chain",
-     "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/fs8-chain.log",
-     "done_line": "FS8_FIRST_CKPT"
-    },
     {
      "tmux": "fs8-train",
      "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx-framesamp1024-b64-80k-8gpu.log",
