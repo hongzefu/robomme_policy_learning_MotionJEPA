@@ -240,6 +240,8 @@ def write_specs(out, plan_rows, shards, run_tree=RUN_TREE, frac=XLA_MEM_FRACTION
                     ablate=ablate_for(group, out))
         if group == "N" and seed == RECORD_SEED:
             spec["record_motion"] = str(out / "record")
+        if seed != RECORD_SEED:   # 客户端 official 口径要求 model_seed==42；其余 seed 走 testx（easy 局与 official 等价）
+            spec.update(profile="testx", max_steps=1300)
         if group != "N":
             spec["swap_map"] = {episode_key(ep): episode_key(donor) for ep, donor in sorted(members)}
         path = out / "specs" / f"{group}-seed{seed}-{worker}-m{shard}.json"
