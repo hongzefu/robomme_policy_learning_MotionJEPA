@@ -277,6 +277,23 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 - 跨模型差多数区间含 0。少数几格不含 0，方向也不一致：Current 第 8、17 层 MotionMem 好 2 步左右，Action 第 8、17 层 FrameSamp 好 1.5–1.7 步。
 - 结论：B 节里 MotionMem 比 FrameSamp 多补上的 16–30 步，几乎全部就是速度 M；没有发现 M 以外、显著的额外进度信息。这让机制解释更窄也更干净——MotionMem 的优势是能读出方块速度。
 
+### O. 速度信息随时间的变化
+
+做法：用训练折内选层的折外预测，读速度 M 的准确率按时间步 t 分档（每档内每局等权），跨模型配对差按局重采样。脚本 `records/diagnostics/speed_by_time.py`，结果 `records/explore/speed_by_time.json`。
+
+| t 档 | 点数／局数 | Text：MotionMem／FrameSamp（差） | History：MotionMem／FrameSamp（差） |
+| --- | --- | --- | --- |
+| [0, 80) | 265／98 | 0.55／0.50（+0.044 [−0.026, 0.111]） | 0.82／0.65（+0.175） |
+| [80, 120) | 417／89 | 0.75／0.48（+0.274） | 0.91／0.75（+0.158） |
+| [120, 160) | 358／82 | 0.85／0.51（+0.335） | 0.92／0.73（+0.194） |
+| [160, 200) | 320／71 | 0.86／0.52（+0.335） | 0.89／0.70（+0.193） |
+| [200, ∞) | 984／58 | 0.95／0.60（+0.346） | 0.93／0.69（+0.243） |
+
+除 Text 第一档外，区间都不含 0。
+
+- MotionMem 的 Text 读速度随时间上升（0.55 → 0.95），FrameSamp 基本持平；MotionMem 的 History 从最早一档起就在 0.82 以上。看上去像是速度信息先出现在记忆组，再随着看到更多 motion 窗口逐步进入 Text。
+- **混杂**：t 越大的档只来自 N 大或速度慢的局（局数从 98 降到 58），各档的局组成不同，不能直接读成同一局内随时间积累。
+
 ## 四、解释边界
 
 - B 节的「补上的信息」与 M 一致，但只对 Text、History、Motion 组成立；MotionMem 的 Current／Action 组也能补上 17 步左右，而它们读 M 并不比 FrameSamp 好，补上的可能是别的信息：`[t,N,M]` 上限 0.926；MotionMem 读速度 M 的准确率为 0.89–0.93（motion 组、history 组），FrameSamp 为 0.57–0.71。这是相关证据，没有做干预。
@@ -299,7 +316,7 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 
 - `records/fig4-tables/`：r2_by_layer.csv、fit_lines.csv、reference_lines.csv、summary.json
 - `records/explore/`：
-  - 共同轨迹：angles.json、breakdown.json、layers_by_N.json、near_decision.json、knn.json、cross_N.json、pca_dim.json、fold_seed.json、shuffle_control.json、beyond_tNM.json
+  - 共同轨迹：angles.json、breakdown.json、layers_by_N.json、near_decision.json、knn.json、cross_N.json、pca_dim.json、fold_seed.json、shuffle_control.json、beyond_tNM.json、speed_by_time.json
   - oracle 增量：beyond_oracle.json（旧口径）、beyond_oracle_scale100.json（修正口径）
   - 闭环：closedloop_beyond_oracle.json、closedloop_beyond_oracle_scale100.json、closedloop_speed.json
   - split 加跑：split/
