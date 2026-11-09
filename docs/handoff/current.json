@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-09T07:51:57Z",
-    "America/New_York": "2026-11-09T02:51:57-05:00"
+    "utc": "2026-11-09T11:03:30Z",
+    "America/New_York": "2026-11-09T06:03:30-05:00"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "d82114f0be35746f4e90824b097e5fabedfa0d3e",
+    "base_head": "b634df505fdf0f237352a4b94698c2060f8f8e2b",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -1498,9 +1498,9 @@
         "file": "1108-gl-ablation-encoders-3seed-eval-plan.html（分支 v4.1-interpretMotion）",
         "sha": "77a14a4"
       },
-      "state": "running",
-      "state_changed_at": "2026-11-08T16:55:44-05:00",
-      "state_reason": "已完成 4/6：N-s42 276/800=34.50%、S-s42 263/800=32.88%、N-s7 299/800=37.38%（retries VideoPlaceButton:19=1）、S-s7 291/800=36.38%，均 COMPUTE_DONE errors=0 SEED_ECHO PASS；N-s0 美东 11-09 02:47 起跑。N-s7 期间 vail 访问 turbo 卡顿致控制器 D 态、两批 worker 超时退出，控制器迁到 GL 占位 A 内 srun（--slurm-host \"\"），GL 控制器亦曾 D 态 30 min，取消 step 重起并对 6 个已退出 worker 执行 official_queue recover 后完成。换根链 chain2.sh 停不掉 GL 控制器 step，每次换根后手动 scancel。",
+      "state": "closed",
+      "state_changed_at": "2026-11-09T06:03:30-05:00",
+      "state_reason": "6 次 800 局全部完成：N(noxyz) 36.79±2.06（276/299/308），S(nostate) 34.50±1.76（263/291/274），均 COMPUTE_DONE errors=0、SEED_ECHO PASS；两份占位已逐个 scancel；结果档案 c34b9c4（分支 v4.1-interpretMotion，docs/evaluation-doc/o16abl-3seed-1108/）。无长尾。",
       "owner": {
         "session": "cc3c43d3-a0ab-4628-b8ac-dd31bccb44f6",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1517,100 +1517,31 @@
         },
         {
           "what": "6 次 800 局全部确定终局",
-          "evidence": "COMPUTE_DONE completed=800 missing=0 errors=0 uncertain=0 ×6；SEED_ECHO=PASS ×6",
+          "evidence": "COMPUTE_DONE completed=800 missing=0 errors=0 uncertain=0 ×6；SEED_ECHO=PASS records=800 identity_mismatch=0 ×6",
           "where": "$E/v1-store/evaluation/o16abl-80k/*/run800/queue/summary.json",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "两模型三 seed 汇总",
-          "evidence": "THREE_SEED=PASS model=<N|S> seeds=7,42,0 runs=3 ×2",
+          "evidence": "THREE_SEED=PASS model=N(noxyz) overall=36.79±2.06；THREE_SEED=PASS model=S(nostate) overall=34.50±1.76",
           "where": "docs/evaluation-doc/o16abl-3seed-1108/result.md",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "两份占位逐个 scancel",
-          "evidence": "HOLDS_RELEASED=PASS cancelled=2 squeue_empty=1",
+          "evidence": "HOLDS_RELEASED=PASS cancelled=2 squeue_empty=1（65209321、65209330 CANCELLED 2026-11-09T06:00:30）",
           "where": "squeue -u hongzefu",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "档案提交并 push",
-          "evidence": "commit sha",
-          "where": "origin",
-          "status": "pending"
+          "evidence": "c34b9c4",
+          "where": "origin/v4.1-interpretMotion",
+          "status": "pass"
         }
       ],
       "long_tail": [],
-      "running_handles": [
-        {
-          "tmux": "evab-chain2",
-          "host": "sled-aspen",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/chain2.log",
-          "done_line": "CHAIN_ALL_DONE"
-        },
-        {
-          "tmux": "evab-ctlgl-o16abl-N-seed0",
-          "host": "sled-aspen→GL 65209321.45",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ctlgl-o16abl-N-seed0.log",
-          "done_line": "COMPUTE_DONE（控制器不自退，换根后需 scancel 其 step）"
-        },
-        {
-          "tmux": "evab-w-ns0-a0",
-          "host": "sled-aspen",
-          "jobid": "65209321",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns0-a0.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "evab-w-ns0-a1",
-          "host": "sled-aspen",
-          "jobid": "65209321",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns0-a1.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "evab-w-ns0-a2",
-          "host": "sled-aspen",
-          "jobid": "65209321",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns0-a2.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "evab-w-ns0-a3",
-          "host": "sled-aspen",
-          "jobid": "65209321",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns0-a3.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "evab-w-ns0-b0",
-          "host": "sled-aspen",
-          "jobid": "65209330",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns0-b0.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "evab-w-ns0-b1",
-          "host": "sled-aspen",
-          "jobid": "65209330",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns0-b1.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "evab-w-ns0-b2",
-          "host": "sled-aspen",
-          "jobid": "65209330",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns0-b2.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "evab-w-ns0-b3",
-          "host": "sled-aspen",
-          "jobid": "65209330",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns0-b3.log",
-          "done_line": "EXIT_CODE="
-        }
-      ],
+      "running_handles": [],
       "authorizations": [
         {
           "kind": "go",
@@ -1637,19 +1568,12 @@
           "scope": "控制器可迁移到其他机器或 CPU job，不再询问"
         }
       ],
-      "pending_decisions": [
-        "需用户亲自通知 gl-abl-encoders-train 的 owner 会话：V10 完成后不取消占位 65209321、65209330，在其条目中写明转交 gl-abl-encoders-eval（跨会话消息不代替用户授权）"
-      ],
+      "pending_decisions": [],
       "next_steps": [
         {
-          "what": "chain2 自动换到 S-s0；换根后手动 scancel N-s0 控制器 step；全部完成后 scancel S-s0 控制器 step",
-          "command": "tail -F /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/chain2.log",
-          "verdict_line": "CHAIN_ALL_DONE；COMPUTE_DONE ×2"
-        },
-        {
-          "what": "汇总三 seed、写 result.md、逐个 scancel 65209321/65209330、提交推送、状态机 done",
-          "command": "计划 A5",
-          "verdict_line": "THREE_SEED=PASS ×2；HOLDS_RELEASED=PASS cancelled=2"
+          "what": "无自动解锁下游；可选：分析 nostate 在 PickXtimes/SwingXtimes、noxyz 在 StopCube 的退化，或建同制度全输入对照（均需用户另定）",
+          "command": "-",
+          "verdict_line": "-"
         }
       ]
     }
