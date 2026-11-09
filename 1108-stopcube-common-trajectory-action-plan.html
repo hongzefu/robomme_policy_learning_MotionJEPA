@@ -42,9 +42,9 @@ th { background: #eef2f3; white-space: nowrap; }
 <tr><td>K4</td><td>动作 token：每点 5 份噪声，每份 10 步去噪，<code>hidden_action</code>（18 层）先在去噪步上平均（适配器已有），再在 5 份噪声上平均</td><td>用户：「action expert 5个够了」</td></tr>
 <tr><td>K5</td><td>分析方法沿用 <code>hover_probe.py</code>：训练折内标准化、PCA 到 64 维、内层按局 4 折选 λ、每局等权</td><td>1108 K5 / 1105 A5、A6</td></tr>
 <tr><td>K6</td><td>三组 Text、Current frame、Action token；层读数共 19 个（输入层 + 18 层），Action token 只有 18 个；下排为第 17 层拟合线</td><td>1108 K6</td></tr>
-<tr><td>K7</td><td>参考线 time-only <code>[t]</code> 与 oracle <code>[t,N]</code> 都报</td><td>1108 K7</td></tr>
+<tr><td>K7</td><td>参考线 time-only <code>[t]</code>（表中 reference=<code>time_only</code>）与 oracle <code>[t,N]</code>（表中 reference=<code>time_and_target_count</code>）都报，metric 报 <code>r2</code> 与 <code>mae</code>；<code>ORACLE_EQUAL</code> 比较两模型 <code>time_and_target_count/r2</code> 两行</td><td>1108 K7</td></tr>
 <tr><td>K8</td><td>FrameSamp 用官方 ctx512 第 79999 步，MotionMem 用 <code>o16cc</code> 第 59999 步，模型 seed 42</td><td>推荐项 1</td></tr>
-<tr><td>K9</td><td>冒烟 FAIL：不起全量，停下等用户；全量起跑后出现 FAIL：如实记录，不改判据，跑到底</td><td>推荐项 2</td></tr>
+<tr><td>K9</td><td>任何 FAIL 都不停下等用户：冒烟 FAIL 时先派一个对抗验证子代理，按最小改法修复（只修代码缺陷，不改判据），重新冒烟，最多 2 轮；2 轮后仍 FAIL，这一组不起全量，如实记录，继续做其余步骤。全量起跑后出现 FAIL：如实记录，不改判据，跑到底</td><td>用户后来的原话「在明天8点不要停止 不要来问我」取代推荐项 2 的「停下等用户」（开工审查 Finding 1）</td></tr>
 </table></div>
 
 <h2>三、改动一览</h2>
@@ -57,11 +57,11 @@ th { background: #eef2f3; white-space: nowrap; }
 <h2>四、验收</h2>
 <div class="tbl"><table>
 <tr><th>查什么</th><th>怎么查</th><th>过了说明什么</th><th>判定行</th></tr>
-<tr><td>新分析入口复现 1105</td><td>用 1105 库（无动作）跑新入口，Text／Current／History 的 to_press R² 与 <code>hover-summary.json</code> 逐值比</td><td>新入口算法没漂</td><td><code>REPRO_1105=PASS maxabs=&lt;值&gt;</code>（阈值 1e-9）</td></tr>
+<tr><td>新分析入口复现 1105</td><td>合并后由主会话在主检出用 1105 库（无动作）跑新入口，Text／Current／History 的 to_press R² 与 <code>hover-summary.json</code> 逐值比</td><td>新入口算法没漂</td><td><code>REPRO_1105=PASS maxabs=&lt;值&gt;</code>（阈值 1e-9）</td></tr>
 <tr><td>K=0 不变</td><td>单测：K=0 写出的键与指纹同旧版</td><td>旧库仍可续跑</td><td>pytest 全过</td></tr>
 <tr><td>前缀与 1105 一致</td><td>新库的 <code>hidden_prefix</code> 对 1105 库逐局比</td><td>同一份输入、同一模型</td><td><code>PREFIX_MATCH=PASS maxabs=&lt;值&gt;</code>（阈值 1e-3）</td></tr>
 <tr><td>动作路径一致</td><td><code>check</code>：回放批 8 与评测批 16 两条路径在同点同噪声下的 <code>hidden_action</code> 比较</td><td>回放节奏不改动作隐状态</td><td><code>ACTION_PARITY=PASS maxabs=&lt;值&gt;</code>（阈值 1e-3）</td></tr>
-<tr><td>动作精度</td><td>相邻取点距离中位数 ÷ 上一项误差</td><td>点间差异大于数值噪声</td><td><code>HIDDEN_PRECISION=PASS group=action</code>（≥10）</td></tr>
+<tr><td>动作精度</td><td>误差 = 上一项 ACTION_PARITY 的 maxabs（跨点、跨层最大）；距离 = 同局相邻取点同层逐元素最大差，跨层与相邻对取中位数（同 <code>precision_readings</code>）；误差为 0 时比值记为 inf，判 PASS</td><td>点间差异大于数值噪声</td><td><code>HIDDEN_PRECISION=PASS group=action</code>（≥10）</td></tr>
 <tr><td>取点相同</td><td>两份新库的（局，t）集合</td><td>共同轨迹成立</td><td><code>SAME_POINTS=PASS points=2344 diff=0</code></td></tr>
 <tr><td>无泄漏</td><td>每折训练局与测试局交集</td><td>—</td><td><code>GROUP_LEAK=PASS leak=0</code></td></tr>
 <tr><td>oracle 相等</td><td>两模型各算一次 <code>[t,N]</code></td><td>同点同折</td><td><code>ORACLE_EQUAL=PASS</code></td></tr>
@@ -103,11 +103,11 @@ th { background: #eef2f3; white-space: nowrap; }
 <div class="tbl"><table>
 <tr><th>文件 / 锚点</th><th>改什么</th></tr>
 <tr><td><code>hover_replay.py::replay_episode</code></td><td>加关键字参数 <code>action_samples=0, seed, episode</code>；K&gt;0 时在每点跑 K 次 <code>adapter.run</code>，对 <code>output[-1]["hidden_action"]</code> 取平均；返回 <code>hidden_action</code> 和 <code>action_seconds</code></td></tr>
-<tr><td><code>episode_fingerprint</code>、<code>write_episode</code>、<code>run_episodes</code></td><td>K&gt;0 时指纹 payload 加 <code>action_samples</code>，写出新键，日志加 <code>action_seconds</code>；K=0 时与旧版逐位一致</td></tr>
+<tr><td><code>episode_fingerprint</code>、<code>write_episode</code>、<code>run_episodes</code></td><td>K&gt;0 时指纹 payload 加 <code>action_samples</code> 与 <code>seed</code>，写出新键，日志加 <code>action_seconds</code>；K=0 时与旧版逐位一致</td></tr>
 <tr><td><code>check_episode</code></td><td>K&gt;0 时在 on_replay 与 on_eval 两条路径都算同噪声的 hidden_action，打印 <code>ACTION_PARITY</code> 和 <code>HIDDEN_PRECISION group=action</code>；退出码纳入这两项</td></tr>
 <tr><td><code>main</code></td><td>run、check 都加 <code>--action-samples</code>（默认 0）；check 增加可选 <code>--prefix-reference &lt;1105 库根&gt;</code>，打印 <code>PREFIX_MATCH</code></td></tr>
 <tr><td><code>test_hover_replay.py</code></td><td>用现有替身补测试：K=0 键与指纹不变；K=2 时形状、平均、噪声 key 互不相同且可复现</td></tr>
-<tr><td><code>analysis/common_traj_fig4.py</code>（新）</td><td>复用 <code>hover_probe</code> 的 <code>load_samples</code>、<code>crossfit</code>、<code>time_features</code>、<code>fit_pca</code> 等函数与 <code>rollout_probe</code> 的 bootstrap。组：Text=列 3、Current frame=列 2、History frames=列 0、Motion=列 1（只有 mot）、Action token=hidden_action。层：<code>layer=input, layer_index=-1</code> 对应 prefix 第 0 项，<code>layer=k</code> 对应 prefix 第 k+1 项与 hidden_action 第 k 项。模型名映射 <code>ctx→baseline</code>、<code>mot→motion</code>。导出 <code>r2_by_layer.csv</code>（列 model,group,layer,layer_index,r2,mae_steps）、<code>fit_lines.csv</code>（列 model,group,r2,slope,slope_ci_low,slope_ci_high,intercept,n_points,n_episodes；第 17 层折外预测对真值的回归，斜率区间按局重采样，口径对齐 <code>rollout_probe</code> 的现有拟合线实现）、<code>reference_lines.csv</code>（列 model,reference,metric,target,value,ci_low,ci_high,note；行 time_only／time_and_target_count 的 r2）。另写 <code>summary.json</code> 和判定行</td></tr>
+<tr><td><code>analysis/common_traj_fig4.py</code>（新）</td><td>复用 <code>hover_probe</code> 的 <code>load_samples</code>、<code>crossfit</code>、<code>time_features</code>、<code>fit_pca</code> 等函数与 <code>rollout_probe</code> 的 bootstrap。组：Text=列 3、Current frame=列 2、History frames=列 0、Motion=列 1（只有 mot）、Action token=hidden_action。层：<code>layer=input, layer_index=-1</code> 对应 prefix 第 0 项，<code>layer=k</code> 对应 prefix 第 k+1 项与 hidden_action 第 k 项。模型名映射 <code>ctx→baseline</code>、<code>mot→motion</code>。导出 <code>r2_by_layer.csv</code>（列 model,group,layer,layer_index,r2,mae_steps；组包含 Text、Current frame、Action token、History frames、Motion（只有 mot），与旧表一致，出图脚本只画前三组）、<code>fit_lines.csv</code>（列 model,group,r2,slope,slope_ci_low,slope_ci_high,intercept,n_points,n_episodes；第 17 层：y = 折外预测、x = 真值 to_press，每局等权（<code>episode_weights</code>）的加权最小二乘直线 y = slope·x + intercept；slope 区间为按局重采样 2000 次（seed 42）的 2.5%／97.5% 分位；r2 列为该组第 17 层探针的折外 R²）、<code>reference_lines.csv</code>（列 model,reference,metric,target,value,ci_low,ci_high,note；行 time_only／time_and_target_count 的 r2 与 mae）。另写 <code>summary.json</code> 和判定行</td></tr>
 <tr><td><code>analysis/test_common_traj_fig4.py</code>（新）</td><td>合成小库上的列名、层映射、缺 hidden_action 时跳过动作组、<code>SAME_POINTS</code>、<code>ORACLE_EQUAL</code></td></tr>
 </table></div>
 
@@ -115,7 +115,7 @@ th { background: #eef2f3; white-space: nowrap; }
 <div class="tbl"><table>
 <tr><th>编号</th><th>目标</th><th>可写文件</th><th>禁触</th><th>依赖</th><th>合并顺序</th><th>验收</th><th>资源</th></tr>
 <tr><td>W1</td><td>回放加动作捕获</td><td><code>scripts/interpret/hover_replay.py</code>、<code>scripts/interpret/test_hover_replay.py</code></td><td>B0 第 1 条与其他一切文件</td><td>B1 契约</td><td>1</td><td><code>pytest scripts/interpret/test_hover_replay.py -q</code> 全过（worktree 内，CPU）</td><td>不用 GPU</td></tr>
-<tr><td>W2</td><td>Fig. 4 分析入口</td><td><code>scripts/interpret/analysis/common_traj_fig4.py</code>、<code>scripts/interpret/analysis/test_common_traj_fig4.py</code></td><td>同上</td><td>B1 契约</td><td>2</td><td>新测试全过；在 1105 库上 <code>REPRO_1105=PASS</code>（CPU，只读 1105 库）</td><td>CPU 8 进程</td></tr>
+<tr><td>W2</td><td>Fig. 4 分析入口</td><td><code>scripts/interpret/analysis/common_traj_fig4.py</code>、<code>scripts/interpret/analysis/test_common_traj_fig4.py</code></td><td>同上</td><td>B1 契约</td><td>2</td><td>合成小库上的新测试全过（worktree 内，≤5 分钟）；<code>REPRO_1105</code> 由主会话合并后在主检出跑</td><td>CPU 8 进程</td></tr>
 <tr><td>主会话</td><td>冒烟、全量、分析、稿件出图、留档</td><td>运行产物、<code>docs/evaluation-doc/</code>、稿件仓库 <code>data/stopcube_belief/</code>、图</td><td>—</td><td>W1、W2 合入</td><td>—</td><td>四、验收各行</td><td>GPU0 ctx、GPU1 mot</td></tr>
 </table></div>
 
@@ -139,11 +139,13 @@ th { background: #eef2f3; white-space: nowrap; }
 <ul>
 <li>回放中模型是开环看专家轨迹，不代表闭环行为。</li>
 <li>两个模型训练时都见过这些示教局。</li>
-<li>动作 token 的拟合线口径须对齐旧实现，W2 需读 <code>rollout_probe.py</code> 确认。</li>
+<li>旧 Fig. 4 的 <code>fit_lines.csv</code> 生成代码不在本仓库当前分支可查（开工审查 Finding 2），本轮按 B2 写死的定义计算，与旧表口径可能有细微差别，留档写明。</li>
 </ul>
 
 <h2>B7 留档与 commit</h2>
 <p>运行留档写 <code>docs/evaluation-doc/stopcube-common-fig4-1108/</code>（launch.md、result.md、records/）。每次合并单独提交并推送；稿件仓库用 <code>build:</code> 提交数据与图。</p>
+<h2>B8 开工审查</h2>
+<p><code>PLAN_CONSISTENCY_REVIEW=FAIL base=6facf5f findings=7 blocking=3</code>。Finding 1（冒烟 FAIL 处理）按用户后来的原话裁定，见 K9；Finding 2、3 在 B2、验收表写死定义；Finding 4–7 做文字统一（组集合、参考线命名、指纹加 seed、REPRO_1105 移到合并后）。</p>
 </main>
 </body>
 </html>
