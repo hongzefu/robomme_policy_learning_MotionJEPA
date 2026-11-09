@@ -1,4 +1,4 @@
-"""探索性：正式 3 seed 评测（official-stage2-1026，只读）的 StopCube 成功率按 N、M 拆分，o16cc（MotionMem）对 o16ctx（同数据 FrameSamp Context）。
+"""探索性：正式 3 seed 评测（official-stage2-1026，只读）的 StopCube 成功率按 N、M 拆分，o16cc（MotionMem）对 o16ctx（context split 4×256，motion 预算 384，即 MotionMem 的 split 变体；不是 FrameSamp）。
 M、N 取自 stopcube-oracle-1104 的 oracle_table.json（按 episode_key，核对 env_seed 一致）。逐局按（seed, episode_key）配对，精确 McNemar。
 用法：python official_success_by_N.py <official-stage2-1026 根> <oracle_table.json>
 """

@@ -1,11 +1,18 @@
 # StopCube 共同轨迹 Fig. 4 重跑：结果
 
-**一句话结论**：两个模型都在同一批官方示教上回放（98 局，2344 个点，两边取点相同）。按 Fig. 4 原口径逐层读「距按下步数」时，旧图里 MotionMem 的 Text 优势（0.77 对 0.51）基本消失：第 17 层 MotionMem 反而略低（Text 0.382 对 0.489）。只有训练折内选层时，MotionMem Text 在第 0 层较高（0.652 对 0.523）。
+**一句话结论**：两个模型都在同一批官方示教上回放（98 局，2344 个点，两边取点相同）。按 Fig. 4 原口径逐层读「距按下步数」时，旧图里 MotionMem 的 Text 优势（0.77 对 0.51）基本消失：第 17 层 MotionMem 反而略低（Text 0.382 对 0.489）。训练折内选层时，MotionMem Text 较高（0.652，多选第 0 层；FrameSamp 0.507）。
 
-探索性分析里有几处一致的 MotionMem 优势，都和「记忆 / 速度」有关：
-1. 在 `[t,N]` 上加入表征后，MotionMem 每一组都能补上 t、N 之外的信息（主要是方块速度 M），FrameSamp 几乎补不上。
-2. MotionMem 的 Text 误差不随目标次数 N 增大，FrameSamp 随 N 线性变差。
-3. 画面几乎相同、但已过次数不同的配对点，MotionMem 读对的比例高 0.2–0.3。
+探索性分析里的 MotionMem 优势，主要来自 motion 输入带来的速度信息（未做 motion 通道消融，不写成「记忆更强」）：
+1. **速度 M**：MotionMem 的 Text、History、Motion 组读速度明显更好（Text +0.207 [0.156, 0.261]）。换成 kNN 读法依然成立；在各自闭环轨迹上，FrameSamp 读不出速度（不高于多数类）。
+2. **`[t,N]` 之外的信息**：在 `[t,N]` 上加入表征后，MotionMem 的 Text、History、Motion 组在第 0–17 层都能补上 22–30 步误差，FrameSamp 各组只补 0–10 步（修正口径；同点配对差，第 17 层 Text +16.0 [12.1, 19.7] 步）。MotionMem 的 Current／Action 组在中间层最多也补 17 步，但它们读速度并不更好，补上的未必是 M。
+3. **外观相同的配对点**：画面几乎相同、但已过次数不同的配对点，MotionMem 读对的比例高 0.2–0.3。
+4. **按目标次数 N**：N≥4 时 MotionMem Text 读距按下更好（N=5 少 25.4 步）；但 N=2 时 FrameSamp 明显更好（MotionMem 多 23.8 步，比 oracle 还差），一部分来自回归到均值。
+
+**不利或中性的结果**：
+- 距按下步数的优势依赖线性读法，kNN 下不成立（E 节）。
+- 跨 N 外推两个模型都失败（D 节）。
+- Text 读剩余次数低 0.078（A 节）。
+- 临近决策时 Action 组 FrameSamp 更好（F 节）。
 
 以上都只说明「可解码」，不说明模型用了这些信息；这些局两个模型训练时都见过；回放是开环看专家轨迹。
 
@@ -38,7 +45,7 @@
 
 第 17 层拟合线（y = 折外预测，x = 真值，每局等权加权最小二乘，斜率区间为按局重采样 2000 次）：FrameSamp Text 斜率 0.474 [0.421, 0.536]、Current 0.498、Action 0.481；MotionMem Text 0.431 [0.370, 0.503]、Current 0.485、Action 0.392。
 
-**与旧 Fig. 4 对照**：旧图用的是各自闭环的 50 局。MotionMem Text 19 个读数里有 17 个高于它自己的 oracle 0.551（峰值 0.770）；FrameSamp 全部低于 0.616。换成共同轨迹后，两条 Text 曲线在第 8 层以后几乎重合，都比 oracle 略高 0.05–0.1。旧图的差距主要来自两个策略访问的状态不同。图：[records/figures/common-vs-oldfig4-1105.png](records/figures/common-vs-oldfig4-1105.png)。
+**与旧 Fig. 4 对照**：旧图用的是各自闭环的 50 局。MotionMem Text 19 个读数里有 17 个高于它自己的 oracle 0.551（峰值 0.770）；FrameSamp 全部低于 0.616。换成共同轨迹后，两条 Text 曲线在第 8–16 层接近：FrameSamp 0.49–0.52，MotionMem 0.53–0.55，都比 oracle 0.447 高 0.04–0.10。第 17 层 MotionMem 降到 0.382，低于 oracle 和 FrameSamp（0.489）。旧图的差距主要来自两个策略访问的状态不同。图：[records/figures/common-vs-oldfig4-1105.png](records/figures/common-vs-oldfig4-1105.png)。
 
 三张表的列名与旧表相同，在 [records/fig4-tables/](records/fig4-tables/)。
 
@@ -96,7 +103,7 @@
 | FrameSamp（561 点、50 局） | 0.604／59.2 | 0.935 | 0.599，−1.7 [−5.9, 2.4] | 0.575，−3.5 [−8.3, 0.9] | 0.590，−1.7 [−4.5, 1.0] |
 | MotionMem（640 点、49 局） | 0.570／51.8 | 0.923 | 0.786，+16.5 [10.3, 22.8] | 0.841，+20.3 [12.6, 28.2] | 0.723，+10.7 [4.8, 16.5] |
 
-修正后，FrameSamp 的增量在共同轨迹上是小的正值，在闭环上区间都含 0；MotionMem 修正前后基本不变。
+修正后，FrameSamp 的增量在共同轨迹上是小的正值（Text、Current 区间不含 0，History 含 0）。在闭环上，表中列出的各层区间都含 0；但不是每一层都如此，例如 Current 输入层为 −7.9 [−14.7, −1.4]，History 第 0–2 层也为负且区间不含 0。MotionMem 修正前后基本不变。
 
 ### C. 按目标次数 N 拆开（Text 组，训练折内选层）
 
@@ -130,8 +137,8 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 
 做法：训练折内标准化 + PCA64，再用 k 近邻读数（k ∈ {5, 15, 45} 在训练折内按局选），外层 5 折同上，层取 4、8、12、17。脚本 `records/diagnostics/knn_probe.py`，结果 `records/explore/knn.json`。
 
-- **速度 M：优势在非线性探针下依然成立**。Text 组 MotionMem − FrameSamp 在第 4／8／12／17 层为 +0.230 [0.148, 0.311]、+0.173 [0.129, 0.222]、+0.210 [0.152, 0.269]、+0.183 [0.128, 0.241]。History 组为 +0.112、+0.105（第 4、8 层，区间不含 0），第 12、17 层区间含 0。Current frame 组无差别。
-- **距按下步数：kNN 下 MotionMem 不占优**。FrameSamp MAE 减 MotionMem MAE：Text 第 4 层 −27.0 [−41.3, −13.3]、第 8 层 −12.7 [−24.9, −1.1]，第 12、17 层区间含 0；Action 第 4 层 −22.6，第 12、17 层约 −5～−6（区间刚好不含 0）；Current 第 8、12 层 MotionMem 略好（+5.5、+7.1）。kNN 在这个标签上整体较弱（R² 多在 0.4 以下，MotionMem Text 接近 0）。可能的原因是欧氏距离被与该标签无关的主成分主导；所以第二节、第三节 A／B 里关于距按下步数的优势依赖线性读法，正文不宜写成与探针形式无关的结论。
+- **速度 M：优势在非线性探针下依然成立**。Text 组 MotionMem − FrameSamp 在第 4／8／12／17 层为 +0.230 [0.148, 0.311]、+0.173 [0.129, 0.222]、+0.210 [0.152, 0.269]、+0.183 [0.128, 0.241]。History 组为 +0.112、+0.105（第 4、8 层，区间不含 0），第 12、17 层区间含 0。Current frame 组读速度无差别。
+- **距按下步数：kNN 下 MotionMem 不占优**。FrameSamp MAE 减 MotionMem MAE：Text 第 4 层 −27.0 [−41.3, −13.3]、第 8 层 −12.7 [−24.9, −1.1]，第 12、17 层区间含 0；Action 第 4 层 −22.6，第 12、17 层约 −5～−6（区间刚好不含 0）；Current 第 4 层 FrameSamp 明显更好（−28.9 [−41.2, −17.1]），第 8、12 层 MotionMem 略好（+5.5、+7.1）。kNN 在这个标签上整体较弱（R² 多在 0.4 以下，MotionMem Text 接近 0）。可能的原因是欧氏距离被与该标签无关的主成分主导；所以第二节、第三节 A／B 里关于距按下步数的优势依赖线性读法，正文不宜写成与探针形式无关的结论。
 
 ### F. 临近决策时刻与逐层图
 
@@ -198,7 +205,7 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 | M=120 | 48 | 0.79 | 0.88 | 1／5 | 0.22 |
 
 - 在 StopCube 上，split 变体全面好于 concat。这与 `o16-3seed-1031/result.md` 末尾提到的「concat 在 RouteStick／StopCube 上的显著退化」一致，属于 MotionMem 内部两种读法的差别，不涉及与 FrameSamp 的比较。
-- 两个 motion 变体都是 N 越大成功率越高（concat 0.16 → 0.73，split 0.38 → 0.88），最慢的 M=120 最容易成功。H 节闭环 50 局里 FrameSamp 在 N=5 时 0/11，走势相反；但官方 FrameSamp 没有逐局数据，这个对比只能停在这里。
+- split 变体 N 越大成功率越高（0.38 → 0.67 → 0.85 → 0.88）；concat 大体上升（0.16 → 0.49 → 0.44 → 0.73），N=4 略低于 N=3，不严格单调。最慢的 M=120 最容易成功。H 节闭环 50 局里 FrameSamp 在 N=5 时 0/11，走势相反；但官方 FrameSamp 没有逐局数据，这个对比只能停在这里。
 - 若稿件用的是 concat，StopCube 的绝对成功率（43%）低于 split（66%）；正文如果引用 StopCube 成功率，需注明是哪个变体。
 
 ### J. 三个模型的表征强弱与 StopCube 成功率的对应（加跑 split 变体）
@@ -208,10 +215,10 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 - **对抗验证**：`ADJUST_REVIEW=PASS scale=same findings=3`。
 - **产物**：根目录 `replay-split/mot/`。label 复用为 mot，因为 `hover_replay --label` 只接受 ctx／mot；它实际是 split 变体，不要和 `replay/mot`（concat）混淆。
 - **冒烟判定行**：`REPLAY_PARITY=PASS points=21 maxabs=0`（没有 split 的闭环记录可比，`compared=0`，只证明批 8／批 16 两条路径一致），`ACTION_PARITY=PASS maxabs=0`，各组 `HIDDEN_PRECISION=PASS`。
-- **全量判定行**：两卡分局并行，后段由 GPU1 接手 GPU0 末尾 6 局；`REPLAY_RUN=PASS` 分别为 1164、1180、212 个点，合计 98 局、2344 个点，`EXIT_CODE=0`。
+- **全量判定行**：两卡分局并行，后段由 GPU1 接手 GPU0 末尾 6 局；GPU0 `REPLAY_RUN=PASS points=1180`（局 0–46），GPU1 `REPLAY_RUN=PASS points=1164`（局 47–99），合计 98 局、2344 个点。GPU1 接手时又重算了局 41–46（`points=212`），结果写入同名文件、与 GPU0 的确定性输出一致，不计入合计。各会话 `EXIT_CODE=0`。
 - **比较方式**：v1-store 内建两个符号链接根 `cmp-split-vs-fs`、`cmp-split-vs-concat`，用 `explore_angles.py` 与 `beyond_oracle.py`（`ONEHOT_SCALE=100`）不改代码地比较。结果在 `records/explore/split/`。
 
-**三个模型的 StopCube 成功率**：FrameSamp 13.67%（论文 Table 3）< concat 43%（65/150）< split 66%（99/150）。训练折内选层后，下列读数按同样的顺序递增：
+**三个模型的 StopCube 成功率**：FrameSamp 13.67%（论文 Table 3）< concat 43%（65/150）< split 66%（99/150）。训练折内选层后，下面这些挑选出来的读数按同样的顺序递增（不是所有读数都如此，反例见表后）：
 
 | 读数 | FrameSamp | concat | split |
 | --- | ---: | ---: | ---: |
@@ -223,7 +230,7 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 | Action 读「该不该按」 | 0.866 | 0.892 | 0.944 |
 | motion 组读速度 M | — | 0.927 | 0.981 |
 
-不按这个顺序的：Current frame 读速度 M（0.574／0.660／0.592）、Action 读速度 M（0.623／0.639／0.609）、Current 读距按下（0.551／0.579／0.563）。
+不按这个顺序的：Current frame 读速度 M（0.574／0.660／0.592）、Action 读速度 M（0.623／0.639／0.609）、Current 读距按下（0.551／0.579／0.563）、Action 读距按下（0.495／0.475／0.536）、Text 读剩余次数（0.748／0.671／0.779）、Text 读外观相同配对（0.647／0.951／0.943）、Current 读外观相同配对（0.683／0.915／0.877）。表内个别相邻差不显著，例如 Text 读速度 M 的 split − concat 为 +0.038 [−0.012, 0.086]。
 
 **同点配对差**：
 
@@ -241,7 +248,7 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 
 ## 四、解释边界
 
-- B 节的「补上的信息」与 M 一致：`[t,N,M]` 上限 0.926；MotionMem 读速度 M 的准确率为 0.89–0.93（motion 组、history 组），FrameSamp 为 0.57–0.71。这是相关证据，没有做干预。
+- B 节的「补上的信息」与 M 一致，但只对 Text、History、Motion 组成立；MotionMem 的 Current／Action 组也能补上 17 步左右，而它们读 M 并不比 FrameSamp 好，补上的可能是别的信息：`[t,N,M]` 上限 0.926；MotionMem 读速度 M 的准确率为 0.89–0.93（motion 组、history 组），FrameSamp 为 0.57–0.71。这是相关证据，没有做干预。
 - C 节按 N 拆分是事后拆分。N 与局长、取点数相关（N=2 的局短、点少），每局等权后短局权重相对更大。
 - 选层后的读数，以及 B、C 两节，都没有预先登记；正文引用时须标明是探索性结果。
 - **优势来自 motion 输入，未必是「长期记忆」（审查 F5）**：MotionMem 额外看到近期 motion 窗口（相邻帧运动），可以直接得到方块速度；FrameSamp 只有稀疏采样的历史帧。所以「能读出 M」更可能是 motion 通道的作用，没有做 motion 通道消融。正文宜写成「motion 表征提供了任务规格 [t,N] 之外的动态信息」，不宜写成「记忆更强」。
@@ -255,13 +262,19 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 
 ## 六、本轮 tmux 会话
 
-`cc-cf-explore1`、`cc-cf-smoke-ctx`、`cc-cf-smoke-mot`、`cc-cf-repro-1105`、`cc-cf-ctx`、`cc-cf-mot`、`cc-cf-beyond`、`cc-cf-fig4`、`cc-cf-explore-new`、`cc-cf-beyond-new`、`cc-cf-closedloop`、`cc-cf-beyond-new2`、`cc-cf-scale100`，全部自然退出。
+`cc-cf-explore1`、`cc-cf-smoke-ctx`、`cc-cf-smoke-mot`、`cc-cf-repro-1105`、`cc-cf-ctx`、`cc-cf-mot`、`cc-cf-beyond`、`cc-cf-fig4`、`cc-cf-explore-new`、`cc-cf-beyond-new`、`cc-cf-closedloop`、`cc-cf-beyond-new2`、`cc-cf-scale100`、`cc-cf-crossN`、`cc-cf-knn`、`cc-cf-clspeed`、`cc-cf-smoke-split`、`cc-cf-split-g0`、`cc-cf-split-g1`、`cc-cf-split-g1b`、`cc-cf-split-ana`，全部自然退出。
 
 ## 七、归档
 
 - `records/fig4-tables/`：r2_by_layer.csv、fit_lines.csv、reference_lines.csv、summary.json
-- `records/explore/`：angles.json、breakdown.json、layers_by_N.json、beyond_oracle.json，以及候选图数据（beyond_oracle_by_layer.csv、by_N.csv、oracle_variants.csv、paired_diff.csv）
-- `records/figures/`：上文引用的四张图
+- `records/explore/`：
+  - 共同轨迹：angles.json、breakdown.json、layers_by_N.json、near_decision.json、knn.json、cross_N.json
+  - oracle 增量：beyond_oracle.json（旧口径）、beyond_oracle_scale100.json（修正口径）
+  - 闭环：closedloop_beyond_oracle.json、closedloop_beyond_oracle_scale100.json、closedloop_speed.json
+  - split 加跑：split/
+  - 候选图数据：beyond_oracle_by_layer.csv、beyond_oracle_by_layer_scale100.csv、by_N.csv、oracle_variants.csv、paired_diff.csv、three_model_dose.csv
+- `records/prefix-match-full.txt`：全量前缀与 1105 库逐局比对的判定行原文
+- `records/figures/`：上文引用的五张图
 - `records/diagnostics/`：探索脚本
 - 清洗后的日志在 `records/logs/`，被 `*.log` 规则忽略，只留在本机
 

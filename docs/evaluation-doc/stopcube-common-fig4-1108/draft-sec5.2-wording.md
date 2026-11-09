@@ -38,12 +38,13 @@
 
 方案 A 或 B 的段末可加一句（约 35 词，篇幅紧时可放附录）：
 
-> Across three policies, probe scores order as StopCube success does (FrameSamp 14\%, MotionMem with 96 motion tokens 43\%, with 384 tokens 66\%): text tokens decode the steps left with $R^2=0.51$, 0.65 and 0.77.
+> Across three policies, several probe scores rise with StopCube success (FrameSamp 14\%, MotionMem with 96 motion tokens 43\%, with 384 tokens 66\%); for example, text tokens decode the steps left with $R^2=0.51$, 0.65 and 0.77.
 
 注意：
 - FrameSamp 的 14% 来自论文 Table 3，另两个来自 official-stage2-1026 的三 seed 逐局结果，平台不同。
 - split 和 concat 的差别同时涉及 motion 预算（384 对 96）和读出方式，所以句子只按 token 数描述，不归因。
-- 候选图 `paper/figures/candidates/belief_dose_common.pdf`（若 F3 合入）。
+- 不是所有读数都同序（反例见 result.md 第三节 J），所以用「several … rise」，不写「order as」。
+- 候选图 `paper/figures/candidates/belief_dose_common.pdf`（F3 已合入）。
 
 ## 两版都必须保留的限定
 
