@@ -17,4 +17,4 @@ V5正式通过，原验证包装问题已闭合。源码为clean提交 `31d4bd0b
 
 实际命令除已提交launch外，增加来源核验并显式unset PYTHONPATH，记录在runtime中；没有改变计算与判据。[完整日志](records/driver.summary.log)、[压缩结果](records/func.json.gz)与[原SHA](records/archive_manifest.json)已归档。原失败及探针另行保留。此项证明位置参与和mask行为；真实训练更新、保存加载与容量/测速仍由各自门负责。
 
-用户明确选择「保持原计划，完整取证（推荐）」。环境为AWS 8×A100-SXM4-80GB，底层 `/dev/md0` XFS本地NVMe RAID；依赖锁未改。执行口径见[实施计划](../../../0920-32frame-8x8-modul-2048-plan.md)，实际版本、时刻与退出记录见[运行记录](records/launch.actual.json)。
+用户明确选择「保持原计划，完整取证（推荐）」。环境为AWS 8×A100-SXM4-80GB，底层 `/dev/md0` XFS本地NVMe RAID；依赖锁未改。执行口径见[实施计划](../../root-archive/0920-32frame-8x8-modul-2048-plan.md)，实际版本、时刻与退出记录见[运行记录](records/launch.actual.json)。

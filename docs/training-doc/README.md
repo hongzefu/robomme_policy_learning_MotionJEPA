@@ -6,11 +6,33 @@
 
 ## 一、环境 B 现行（AWS 8×A100，2026-09-04 起）
 
+### 官方16×100两条串行60k（2026-10-27美东开工）
+
+| 目录 | 内容 | 状态 |
+|---|---|---|
+| [context](orig100-ctx32x4x4-motion-s2split4x256-b128-60k/result.md) | 32帧4×4+每窗4个motion token，8卡/B128/60k，首条 | 完成：60000步/退出0，12份上传及全量读回、G12均PASS，40小时33分58秒 |
+| [modulation](orig100-m32x4x4-modul-motion-s2split4x256-b128-60k/result.md) | 与context仅融合方式/宽度不同，其余相同 | 完成：60000步/退出0，12份上传及全量读回、G12均PASS，16小时18分51秒 |
+
+### 官方16×100 concat（不 split）两条串行60k（2026-10-30美东开工）
+
+| 目录 | 内容 | 状态 |
+|---|---|---|
+| [context concat](orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k/result.md) | 32帧4×4+每窗1个1024维motion token（总608），8卡/B128/60k，首条；对照上表 split | 完成：60000步/退出0，12份上传及全量读回、G12均PASS，31小时10分47秒 |
+| [context Wan 时间池化](orig100-ctx32x4x4-wan-timepool8x8-b128-60k/launch.md) | 32帧4×4+每窗1个1024维零参数池化 token（总608），8卡/B128/60k；替换 stage2 encoder | 训练中 |
+| [modulation concat](orig100-m32x4x4-modul-motion-s2concat1x1024-b128-60k/launch.md) | 与context concat仅融合方式/宽度不同 | 用户10-31放弃，未训练 |
+
+### 官方16×100两条完整VLA短测（2026-10-28）
+
+| 目录 | 内容 | 状态 |
+|---|---|---|
+| [o16-smoke-ctx-10280431](o16-smoke-ctx-10280431/result.md) | ctx，8卡/B128/20步及严格保存恢复 | 全部通过：20步及恢复退出0，参考输出0差 |
+| [o16-smoke-modul-10280431](o16-smoke-modul-10280431/result.md) | modul，8卡/B128/20步及严格保存恢复 | 全部通过：20步及恢复退出0，参考输出0差 |
+
 ### mixed8 阶段二单 token VLA（2026-10-26）
 
 | 目录 | 内容 | 状态 |
 |---|---|---|
-| [mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k](mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/launch.md) | ep105 EMA，4×256拼1×1024，窗33／stride32／budget96；8卡batch128，计划80k | 已授权实施；独立开工审查PASS，运行闸门与正式训练尚未开始 |
+| [mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k](mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/result.md) | ep105 EMA，4×256拼1×1024，窗33／stride32／budget96；8卡batch128，原计划80k，用户终点改为70k | 用户70k停止，14份保留；encoder/VLA源H5记录16/16错配，不满足P-LINEAGE，仅历史留档。70k技术恢复PASS，最终备份核验进行中 |
 
 ### 四对运动 token 训练接入冒烟（2026-10-20）
 

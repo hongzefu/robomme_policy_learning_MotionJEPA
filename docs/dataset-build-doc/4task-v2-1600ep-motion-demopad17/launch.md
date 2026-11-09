@@ -1,6 +1,6 @@
 # 1600 集 demo 补帧 motion 表：起跑记录
 
-用户原话：「开始实施 有问题尽早问用户」；本轮方案见 [0916 计划](../../../0916-motion-modul-8x8-plan.md)。本档案只构建 motion 所需的 Wan latent、token、整表与独立 oracle，不重建已有 SigLIP/framesamp，不重算 norm_stats。
+用户原话：「开始实施 有问题尽早问用户」；本轮方案见 [0916 计划](../../root-archive/0916-motion-modul-8x8-plan.md)。本档案只构建 motion 所需的 Wan latent、token、整表与独立 oracle，不重建已有 SigLIP/framesamp，不重算 norm_stats。
 
 ## 版本与输入
 

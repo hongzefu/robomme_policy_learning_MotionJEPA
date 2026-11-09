@@ -2,7 +2,7 @@
 
 本页是 commitV11.28Beta 起跑前档案（AGENTS 第 12 条两段式第一段）；跑完后结果回写同号正式 commit 与 result.md。起跑 HEAD 即本 Beta 提交，由 runner 打印的 `GIT_HEAD=` 固定，本页不预填自身 sha。
 
-实施依据：根目录 [`1018-mixed8-2048-context-modul-plan.md`](../../../1018-mixed8-2048-context-modul-plan.md) @ `fa14d0a`。另一条并行 run 见 [mixed8-200-m32x8x8-context-b128-80k](../mixed8-200-m32x8x8-context-b128-80k/launch.md)。
+实施依据：根目录 [`1018-mixed8-2048-context-modul-plan.md`](../../root-archive/1018-mixed8-2048-context-modul-plan.md) @ `fa14d0a`。另一条并行 run 见 [mixed8-200-m32x8x8-context-b128-80k](../mixed8-200-m32x8x8-context-b128-80k/launch.md)。
 
 用户原话（按时间）：
 

@@ -143,7 +143,7 @@ driver中训练与正文tee退出0，整个runner的真实返回0另由wrapper�
 
 ## 9. 用户决定记录
 
-沿用[原计划](../../../0925-orig-80k-full-counting-4plus4-plan.md)中的用户原话：「给出方案跑完整的80k 和80k纯counting任务 完全参照原版训练 4卡+4卡 先做对拍测试」、「纯counting跑4*100 公开集合的子集合」及「恢复计划中的建库，严格按前置闸门推进」。本库独立重算norm_stats已获授权，实际a770摘要是建库完成后的客观测量值，不是另行需要用户批准的参数变更。
+沿用[原计划](../../root-archive/0925-orig-80k-full-counting-4plus4-plan.md)中的用户原话：「给出方案跑完整的80k 和80k纯counting任务 完全参照原版训练 4卡+4卡 先做对拍测试」、「纯counting跑4*100 公开集合的子集合」及「恢复计划中的建库，严格按前置闸门推进」。本库独立重算norm_stats已获授权，实际a770摘要是建库完成后的客观测量值，不是另行需要用户批准的参数变更。
 
 用户允许「主机 dtype 不同，但要求数值一致且训练标量/状态逐位一致」，并批准「允许这四键缺失与 None 等价」。仅`motion_emb/motion_pos/motion_mask/mem_order`缺失与显式None可等价，不扩展到其他键或非None值；原始dtype/raw SHA、精确数值与signed zero仍留证和严判。
 

@@ -6,7 +6,7 @@
 
 本页固定用户已确认的正式run `v2-1600ep-m8x8-modul-motion-b128-80k`。V8、V-online和八卡smoke全部验收已通过，此页为Beta起跑前档案；实际启动版本、时刻和进程随启动记录固定。用户原话：「开始实施 有问题尽早问用户」「采用 v2-1600ep-m8x8-modul-motion-b128-80k」。
 
-实施依据为 [0916计划](../../../0916-motion-modul-8x8-plan.md)。前置证据见 [建库结果](../../dataset-build-doc/4task-v2-1600ep-motion-demopad17/result.md)、[V8逐位对拍](../mv2-aa/result.md)、[V-online三档](../mv2-online/result.md) 与 [八卡smoke结果](../smoke-m8x8-modul-motion-20260918T050716Z/result.md)。
+实施依据为 [0916计划](../../root-archive/0916-motion-modul-8x8-plan.md)。前置证据见 [建库结果](../../dataset-build-doc/4task-v2-1600ep-motion-demopad17/result.md)、[V8逐位对拍](../mv2-aa/result.md)、[V-online三档](../mv2-online/result.md) 与 [八卡smoke结果](../smoke-m8x8-modul-motion-20260918T050716Z/result.md)。
 
 ## 版本与代码状态
 

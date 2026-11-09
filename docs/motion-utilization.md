@@ -18,7 +18,7 @@
 
 ## 二、为什么做这件事
 
-自训模型 `awsprod40k-b128-motion/39999` 比官方 baseline 每步多喂 96 个 motion token。此前两次评估结果打架：A100 单 seed 28% vs 官方 24%，Ada 三 seed 24.2% vs 24.5%（`training-doc/eval-3seed-context-vs-motion/result.md`）。`train-infer-consistency.md` 第十节把「模型各层到底用不用 motion」「推理时屏蔽 motion 成功率变多少」列为缺口，`motion-memory-audit-summary.md` 第 7 节第 2 条要求对真实 checkpoint 做内容干预。本轮就是补这两个缺口。
+自训模型 `awsprod40k-b128-motion/39999` 比官方 baseline 每步多喂 96 个 motion token。此前两次评估结果打架：A100 单 seed 28% vs 官方 24%，Ada 三 seed 24.2% vs 24.5%（`training-doc/eval-3seed-context-vs-motion/result.md`）。`train-infer-consistency.md` 第十节把「模型各层到底用不用 motion」「推理时屏蔽 motion 成功率变多少」列为缺口，`docs/root-archive/motion-memory-audit-summary.md` 第 7 节第 2 条要求对真实 checkpoint 做内容干预。本轮就是补这两个缺口。
 
 ## 三、评的是什么
 

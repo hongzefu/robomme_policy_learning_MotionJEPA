@@ -9,7 +9,7 @@
 # 为 dataloader 改动的一致性检验留底。
 # 与官方默认训练的逐项差异及记录文件格式见同目录 README.md。
 #
-# 身份拆分（v1-gradient-baseline.md P1）：
+# 身份拆分（docs/root-archive/v1-gradient-baseline.md P1）：
 #   EXP_NAME —— 决定 jax 编译缓存目录（A/B 对拍两轮共用它即共享编译产物与
 #               per-fusion autotune 结论）；
 #   RUN_TAG  —— 决定记录目录 / 日志 / checkpoint run 目录（每轮各异，避免
@@ -70,7 +70,7 @@ fi
 STATE_DUMP_STEPS="${STATE_DUMP_STEPS:-}"       # TrainState 数组落盘步（逗号分隔；P1b）
 KEEP_JAX_CACHE="${KEEP_JAX_CACHE:-0}"     # 1 = 保留编译缓存供下一轮共用
 WARMUP_STEPS="${WARMUP_STEPS:-50}"        # 稳态统计丢弃的头部步数（JIT 编译 + worker 起步）
-# epoch 样本数不再硬编码（0901-motion-memory-plan.md 2.8 / R14）：packed 根读 meta/store_meta.json.num_exec_samples，
+# epoch 样本数不再硬编码（docs/root-archive/0901-motion-memory-plan.md 2.8 / R14）：packed 根读 meta/store_meta.json.num_exec_samples，
 # 旧 source 根读 meta/stats.json.execution_samples；两者同时存在却不等、或都读不到即报错
 _es_sm=""; _es_st=""
 [[ -f "${DATASET_PATH}/meta/store_meta.json" ]] && _es_sm="$(jq -r '.num_exec_samples' "${DATASET_PATH}/meta/store_meta.json")"

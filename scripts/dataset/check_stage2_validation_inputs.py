@@ -19,6 +19,9 @@ sys.path.insert(0, str(ROOT / "src"))
 from mme_vla_suite.datastore import motion_store as ms
 from mme_vla_suite.datastore.manifest import load_manifest
 
+sys.path.insert(0, str(ROOT / "scripts" / "training"))
+from check_data_lineage import input_files, read_json as read_strict_json
+
 CHUNK_BYTES = 589824
 GRID_STRIDE = 16
 WINDOW_FRAMES = 33
@@ -47,7 +50,8 @@ def read_json(path):
     return json.loads(require_file(path).read_text(encoding="utf-8"))
 
 
-def select_windows(manifest, latents, *, tasks=TASKS, per_task=PER_TASK, min_demo_tail=MIN_DEMO_TAIL):
+def select_windows(manifest, latents, *, tasks=TASKS, per_task=PER_TASK, min_demo_tail=MIN_DEMO_TAIL,
+                   routes=None):
     """按排序后的候选和 seed=0 抽样，优先轮转覆盖不同任务的 demo 补帧尾窗。"""
     grouped = {}
     total = read_json(latents / "metadata.json")
@@ -118,6 +122,37 @@ def select_windows(manifest, latents, *, tasks=TASKS, per_task=PER_TASK, min_dem
         grouped[task].sort(key=lambda x: (x[2], x[3]))
         rng.shuffle(grouped[task])
         tails[task] = [x for x in grouped[task] if x[1] == "demo" and x[4]["pad_frames"] > 0]
+    if routes is not None:
+        # 每任务先留一个执行窗；优先缺窗，再锁定三条路线，最后补足 demo 尾窗。
+        for task, chosen in selected.items():
+            execution = [x for x in grouped[task] if x[1] == "exec"]
+            if not execution:
+                raise ValueError(f"G0 {task} 缺执行窗")
+            chosen.append(next((x for x in execution if routes[(x[2], x[3])] == "exec-fill"), execution[0]))
+        for route in ("copy", "demo-fill", "exec-fill"):
+            if any(routes[(x[2], x[3])] == route for chosen in selected.values() for x in chosen):
+                continue
+            candidate = next(((task, x) for task in selected for x in grouped[task]
+                              if routes[(x[2], x[3])] == route and x not in selected[task]
+                              and len(selected[task]) < per_task), None)
+            if candidate is None:
+                raise ValueError(f"G0 缺少路线 {route}")
+            selected[candidate[0]].append(candidate[1])
+        needed = min_demo_tail - sum(x[1] == "demo" and x[4]["pad_frames"] > 0
+                                     for chosen in selected.values() for x in chosen)
+        while needed > 0:
+            progressed = False
+            for task, chosen in selected.items():
+                candidate = next((x for x in tails[task] if x not in chosen), None)
+                if candidate is not None and len(chosen) < per_task and needed:
+                    chosen.append(candidate)
+                    needed -= 1
+                    progressed = True
+            if not progressed:
+                raise ValueError(f"G0 demo 补帧尾窗不足，尚缺 {needed}")
+        for task, chosen in selected.items():
+            chosen.extend([x for x in grouped[task] if x not in chosen][:per_task - len(chosen)])
+        return [x for chosen in selected.values() for x in chosen]
     needed = min_demo_tail
     while needed:
         progressed = False
@@ -219,8 +254,183 @@ def materialize_window(item, *, source, demo_root, scope, run_manifest, file_sha
                     "sources": sources, "source_frame_indices": indices}
 
 
-def build_inputs(manifest_path, latents, source, demo_root):
+def read_h5_context(manifest, input_manifest, mj_index, receipt_path):
+    """绑定输入清单、原版 episode 边界与完整导入收据。"""
+    import pyarrow.parquet as pq
+
+    inputs = input_files(read_strict_json(require_file(input_manifest)))
+    receipt = read_strict_json(require_file(receipt_path))
+    mappings = ms.validate_wan_cache_import_receipt(
+        receipt, manifest_sha256=manifest["sha256"], input_manifest_sha256=ms.sha256_file(input_manifest))
+    receipt_sources = {}
+    for item in receipt["source_h5_files"]:
+        name = item["name"]
+        if name in receipt_sources:
+            raise ValueError(f"缓存收据源 H5 重复: {name}")
+        receipt_sources[name] = {"bytes": item["bytes"], "sha256": item["sha256"]}
+    if receipt_sources != inputs:
+        raise ValueError("缓存收据源 H5 与 input_manifest 不同源")
+    index_path = pathlib.Path(mj_index)
+    if index_path.is_dir():
+        index_path = index_path / "episodes.parquet"
+    index_path = require_file(index_path)
+    published_indices = [item for item in receipt["published"]["files"]
+                         if pathlib.PurePosixPath(item["path"]).name == "episodes.parquet"]
+    if (len(published_indices) != 1 or index_path.stat().st_size != published_indices[0]["bytes"]
+            or ms.sha256_file(index_path) != published_indices[0]["sha256"]):
+        raise ValueError("MJ episodes.parquet 与发布收据的字节数或 SHA 不符")
+    episodes = {}
+    for row in pq.read_table(index_path).to_pylist():
+        name = pathlib.Path(row["h5_file"]).name
+        identity = (name, row["episode"])
+        if identity in episodes:
+            raise ValueError(f"MJ 索引 episode 重复: {identity}")
+        for field in ("episode", "demo_end", "completed_index", "num_timesteps"):
+            if type(row.get(field)) is not int or row[field] < 0:
+                raise ValueError(f"MJ 索引 {identity} 的 {field} 非法")
+        if (name not in inputs or row["source_sha256"] != inputs[name]["sha256"]
+                or row["task"] != ms.task_of_h5(name)
+                or not row["demo_end"] <= row["completed_index"] <= row["num_timesteps"]):
+            raise ValueError(f"MJ 索引 {identity} 的源 H5 或 D/C/T 边界不符")
+        episodes[identity] = row
+    wanted, routes = set(), {}
+    for ep in manifest["episodes"]:
+        identity = (ep["h5_file"], ep["raw_ep_idx"])
+        if identity in wanted or identity not in episodes:
+            raise ValueError(f"VLA 与 MJ episode 不唯一或缺失: {identity}")
+        wanted.add(identity)
+        origin = episodes[identity]
+        if ep["exec_start_idx"] != origin["demo_end"]:
+            raise ValueError(f"{identity} exec_start_idx != D（demo_end）")
+        if ep["num_timesteps"] != origin["num_timesteps"]:
+            raise ValueError(f"{identity} num_timesteps != T")
+        for kind, length in ms.segment_lengths(ep["num_timesteps"], ep["exec_start_idx"]).items():
+            minimum = 17 if kind == "demo" else 33
+            key = ms.segment_key(ep["h5_file"], ep["raw_ep_idx"], kind)
+            for m, local in enumerate(range(0, max(0, length - minimum + 1), GRID_STRIDE)):
+                start = local + (0 if kind == "demo" else ep["exec_start_idx"])
+                real = min(WINDOW_FRAMES, length - local)
+                pad = WINDOW_FRAMES - real
+                frame_ids = list(range(start, start + real)) + [start + real - 1] * pad
+                end = origin["demo_end"] if kind == "demo" else origin["completed_index"]
+                route = "copy" if start + WINDOW_FRAMES <= end else "fill"
+                mapping = mappings.get((key, m))
+                expected = {"route": route, "frame_ids": frame_ids,
+                            "real_frames": real, "pad_frames": pad,
+                            "pad_source_frame": start + real - 1 if pad else None,
+                            "output_file": f"{key}.bin", "output_offset": m * CHUNK_BYTES}
+                if not isinstance(mapping, dict) or any(mapping.get(k) != v for k, v in expected.items()):
+                    raise ValueError(f"{key} 格 {m} 的缓存映射、copy/fill 路线或帧号不符")
+                routes[(key, m)] = "copy" if route == "copy" else f"{kind}-fill"
+    if wanted != set(episodes) or {name for name, _ in wanted} != set(inputs):
+        raise ValueError("VLA、MJ 索引和 input_manifest 的完整源集合不符")
+    if set(mappings) != set(routes):
+        raise ValueError("缓存收据窗口映射缺失或多余")
+    return inputs, mappings, routes, index_path
+
+
+def materialize_h5_window(item, *, h5_root, inputs, mapping, file_sha_cache):
+    """逐像素读取原 H5；demo 与 exec 共用原 episode 编号，补帧显式重复末帧。"""
+    ep, segment, key, old_grid, row = item
+    name = ep["h5_file"]
+    if pathlib.Path(name).name != name:
+        raise ValueError(f"源 H5 文件名必须为 basename: {name}")
+    path = require_file(pathlib.Path(h5_root) / name).resolve()
+    expected = inputs[name]
+    if path not in file_sha_cache:
+        if path.stat().st_size != expected["bytes"] or ms.sha256_file(path) != expected["sha256"]:
+            raise ValueError(f"{path} 原 H5 字节数或 SHA256 不符")
+        file_sha_cache[path] = expected["sha256"]
+    start, real, pad = row["start_global_frame"], row["real_frames"], row["pad_frames"]
+    frame_ids = list(range(start, start + real)) + [row["pad_source_frame"]] * pad
+    if mapping["frame_ids"] != frame_ids or mapping["input_frames_sha256"] != row["input_frames_sha256"]:
+        raise ValueError(f"{key} 格 {old_grid} 的收据与 metadata 输入帧不符")
+    frames = []
+    with h5py.File(path, "r") as handle:
+        for frame in frame_ids:
+            address = f"episode_{ep['raw_ep_idx']}/timestep_{frame}/obs/front_rgb"
+            data = handle[address][()]
+            if not isinstance(data, np.ndarray) or data.dtype != np.uint8 or data.shape != (256, 256, 3):
+                raise ValueError(f"{path}:{address} front_rgb 形状或 dtype 不符")
+            frames.append(data)
+    pixels = np.ascontiguousarray(np.stack(frames))
+    if ms.sha256_bytes(pixels.tobytes()) != row["input_frames_sha256"]:
+        raise ValueError(f"{key} 格 {old_grid} 原帧 SHA 与缓存不一致")
+    return pixels, {"key": key, "task": ms.task_of_h5(name), "episode": ep["raw_ep_idx"],
+                    "segment_kind": segment, "source_grid": old_grid, "frame_ids": frame_ids,
+                    **{k: row[k] for k in ("real_frames", "pad_frames", "pad_source_frame", "input_frames_sha256")},
+                    "route": mapping["route"],
+                    "cache_route": "copy" if mapping["route"] == "copy" else f"{segment}-fill",
+                    "sources": [{"kind": "raw_h5", "path": str(path), "sha256": expected["sha256"],
+                                 "episode": ep["raw_ep_idx"]}],
+                    "source_frame_indices": [{"source": 0, "index": frame} for frame in frame_ids]}
+
+
+def build_h5_inputs(manifest_path, latents, source, h5_root, input_manifest, mj_index, receipt_path):
+    manifest = load_manifest(require_file(manifest_path))
+    inputs, mappings, routes, index_path = read_h5_context(manifest, input_manifest, mj_index, receipt_path)
+    receipt = read_strict_json(receipt_path)
+    if (receipt["manifest_file_sha256"] != ms.sha256_file(manifest_path)
+            or receipt["latents"]["metadata_sha256"] != ms.sha256_file(latents / "metadata.json")):
+        raise ValueError("缓存收据与 episode manifest 或 latent metadata 不同源")
+    output_files = {item["path"]: item for item in receipt["latents"]["files"]}
+    selected = select_windows(manifest, latents, routes=routes)
+    windows, checked = [], {}
+    for item in selected:
+        mapping = mappings[(item[2], item[3])]
+        raw_pixels, row = materialize_h5_window(item, h5_root=h5_root, inputs=inputs, mapping=mapping,
+                                                file_sha_cache=checked)
+        if item[1] == "exec":
+            sample_pixels, sample_row = materialize_window(
+                item, source=source, demo_root=None, scope=None, run_manifest=None, file_sha_cache=checked)
+            if not np.array_equal(raw_pixels, sample_pixels):
+                raise ValueError(f"{item[2]} 格 {item[3]} 执行样本与原 H5 像素不一致")
+            sample_row.update(route=row["route"], cache_route=row["cache_route"], raw_h5=row["sources"][0])
+            row = sample_row
+        path = require_file(latents / f"{row['key']}.bin")
+        if path not in checked:
+            metadata = read_json(latents / f"{row['key']}.metadata.json")
+            bound = output_files.get(path.name)
+            if not bound or any(bound[k] != metadata[k] for k in ("bytes", "sha256")):
+                raise ValueError(f"{path} latent metadata 与收据最终文件不符")
+            if path.stat().st_size != metadata["bytes"] or ms.sha256_file(path) != metadata["sha256"]:
+                raise ValueError(f"{path} latent 文件字节数或 SHA 与 metadata 不一致")
+            checked[path] = metadata["sha256"]
+        with path.open("rb") as stream:
+            stream.seek(row["source_grid"] * CHUNK_BYTES)
+            block = stream.read(CHUNK_BYTES)
+        digest = ms.sha256_bytes(block)
+        if len(block) != CHUNK_BYTES or digest != mapping["latent_sha256"]:
+            raise ValueError(f"{path} latent 块与缓存收据不符")
+        row.update(latent_path=str(path.resolve()), latent_block_sha256=digest)
+        windows.append(row)
+    counts = {"windows": len(windows), "tasks": len({w["task"] for w in windows}),
+              "demo_tail": sum(w["segment_kind"] == "demo" and w["pad_frames"] > 0 for w in windows),
+              "sha_mismatches": 0,
+              **{route: sum(w["cache_route"] == route for w in windows)
+                 for route in ("copy", "demo-fill", "exec-fill")}}
+    if (counts["windows"] != TASKS * PER_TASK or counts["tasks"] != TASKS
+            or counts["demo_tail"] < MIN_DEMO_TAIL
+            or any(counts[route] < 1 for route in ("copy", "demo-fill", "exec-fill"))
+            or len({(w["key"], w["source_grid"]) for w in windows}) != TASKS * PER_TASK
+            or any(sum(w["task"] == task for w in windows) != PER_TASK for task in {w["task"] for w in windows})):
+        raise ValueError("G0 抽样未满足 64 窗、16 任务、demo 尾窗和三路线合同")
+    return {"schema": "stage2-validation-inputs-v1", "gate": "G0", "status": "PASS", "seed": 0,
+            "manifest_sha256": manifest["sha256"], "latent_metadata_sha256": ms.sha256_file(latents / "metadata.json"),
+            "input_manifest_sha256": ms.sha256_file(input_manifest),
+            "cache_import_receipt_sha256": ms.sha256_file(receipt_path),
+            "mj_index": {"path": str(index_path.resolve()), "sha256": ms.sha256_file(index_path)},
+            "windows": windows, "counts": counts}
+
+
+def build_inputs(manifest_path, latents, source, demo_root, *, h5_root=None, input_manifest=None,
+                 mj_index=None, cache_import_receipt=None):
     latents, source, demo_root = (pathlib.Path(p).resolve() for p in (latents, source, demo_root))
+    original_args = (h5_root, input_manifest, mj_index, cache_import_receipt)
+    if any(x is not None for x in original_args):
+        if not all(x is not None for x in original_args):
+            raise ValueError("原版 H5 模式必须同时提供 --h5-root --input-manifest --mj-index --cache-import-receipt")
+        return build_h5_inputs(manifest_path, latents, source, h5_root, input_manifest, mj_index, cache_import_receipt)
     manifest = load_manifest(require_file(manifest_path))
     selected = select_windows(manifest, latents)
     control = demo_root.parent / "control"
@@ -274,10 +484,18 @@ def main(argv=None):
         parser.add_argument(f"--{name}", type=pathlib.Path, required=True)
     parser.add_argument("--demo-root", type=pathlib.Path,
                         default=pathlib.Path("/scratch/hongze/dataset-local-a100-16task-mixed8-200/data-raw"))
+    for name in ("h5-root", "input-manifest", "mj-index", "cache-import-receipt"):
+        parser.add_argument(f"--{name}", type=pathlib.Path)
     args = parser.parse_args(argv)
+    originals = (args.h5_root, args.input_manifest, args.mj_index, args.cache_import_receipt)
+    if any(x is not None for x in originals) and not all(x is not None for x in originals):
+        parser.error("--h5-root --input-manifest --mj-index --cache-import-receipt 四项须齐全")
     if os.path.lexists(args.out):
         raise FileExistsError(f"G0 清单已经存在，拒绝覆盖: {args.out}")
-    result = build_inputs(args.manifest, args.latents.resolve(), args.source.resolve(), args.demo_root.resolve())
+    kwargs = {} if not any(x is not None for x in originals) else {
+        "h5_root": args.h5_root, "input_manifest": args.input_manifest,
+        "mj_index": args.mj_index, "cache_import_receipt": args.cache_import_receipt}
+    result = build_inputs(args.manifest, args.latents.resolve(), args.source.resolve(), args.demo_root.resolve(), **kwargs)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     tmp = None
     try:

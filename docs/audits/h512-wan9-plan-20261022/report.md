@@ -6,7 +6,7 @@
 
 **这不是实施或训练验收。** 新schema2解析器、Wan投影、四卡并行训练、异步保存重叠和超时控制均尚未实施／运行；不能将本报告写成 `CAPACITY_AB=PASS` 或模型训练通过。
 
-计划正本：[1022-h512-vs-wan9-modulation-plan.html](../../../1022-h512-vs-wan9-modulation-plan.html)。本轮未改生产源码、实际训练配置或 `docs/handoff/current.json`，未启动模型、建库、训练或评估。
+计划正本：[1022-h512-vs-wan9-modulation-plan.html](../../root-archive/1022-h512-vs-wan9-modulation-plan.html)。本轮未改生产源码、实际训练配置或 `docs/handoff/current.json`，未启动模型、建库、训练或评估。
 
 ## 审查版本与证据来源
 

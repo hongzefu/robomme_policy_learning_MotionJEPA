@@ -1,0 +1,11 @@
+BUILD_HEAD=bd4bad0957e5162073f9bbfec0e4c985c3f830bc
+STAGE=export-smoke
+START_UTC=2026-10-28T05:07:07Z
+MJ_CLI_LINEAGE=PASS files=16 mismatches=0
+/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/venvs/wan-stage2/lib/python3.11/site-packages/torch/backends/__init__.py:46: UserWarning: Please use the new API settings to control TF32 behavior, such as torch.backends.cudnn.conv.fp32_precision = 'tf32' or torch.backends.cuda.matmul.fp32_precision = 'ieee'. Old settings, e.g, torch.backends.cuda.matmul.allow_tf32 = True, torch.backends.cudnn.allow_tf32 = True, allowTF32CuDNN() and allowTF32CuBLAS() will be deprecated after Pytorch 2.9. Please see https://pytorch.org/docs/main/notes/cuda.html#tensorfloat-32-tf32-on-ampere-and-later-devices (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:80.)
+  self.setter(val)
+/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/venvs/wan-stage2/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+STAGE2_SEGMENT=PASS key=BinFill_ep0_exec rows=17
+STAGE2_EXPORT=PASS scope=smoke segments=1 rows=17
+EXIT_CODE=0

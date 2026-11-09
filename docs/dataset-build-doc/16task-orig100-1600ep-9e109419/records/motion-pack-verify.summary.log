@@ -1,0 +1,12 @@
+BUILD_HEAD=bd4bad0957e5162073f9bbfec0e4c985c3f830bc
+STAGE=pack-verify
+START_UTC=2026-10-28T07:01:22Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[pack] episodes=1600 rows=23253 (exec 14138 + demo 9115) index_sha256=7aad314e4daee3b7…
+PACK_PROVENANCE_PRECHECK=PASS mode=vae_compat segments=2496
+[pack] 表 95,244,288 B / 23253 行 / 2496 段, sha256=a26da9936c5d7010…; meta 阶段1 落盘（status=packed）; 耗时 1444.3s
+PACK_MOTION_DONE=1 raw_dir_match=1 （pack.lock 保留，verify 回填后才释放）
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[verify] meta 回填（status=verified）+ row_digests 落盘, 耗时 1320.3s
+VERIFY_MOTION=PASS scanned=23253 mismatches=0 nonfinite=0 segment_set_mismatch=0 real_plus_pad_ne_33=0 exec_padded=0 pad_not_last_demo=0 pad_source_mismatch=0 demo_tail_padded=386 demo_tail_dropped=514 legal_zero_segments=4
+EXIT_CODE=0

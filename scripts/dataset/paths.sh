@@ -57,7 +57,7 @@ readonly WAN_VENV="${V1_STORE}/venvs/wan"
 
 # ── 原始 H5 与四个目标任务 ─────────────────────────────────────────────────────
 # 环境 A：16 任务全集 /data/hongzefu/robomme_data_h5（本机原件）；
-# 环境 B：/scratch/hongze/robomme_data_h5（从 Yinpei/robomme_data_h5 只下 4 个目标任务，见 external-assets-lock.md 第五节）
+# 环境 B：/scratch/hongze/robomme_data_h5（从 Yinpei/robomme_data_h5 只下 4 个目标任务，见 docs/root-archive/external-assets-lock.md 第五节）
 case "${REPO_ROOT}/" in
   "${AWS_WORK_PREFIX}"*) _raw_h5_default="/scratch/hongze/robomme_data_h5" ;;
   *) _raw_h5_default="/data/hongzefu/robomme_data_h5" ;;
@@ -67,7 +67,7 @@ unset _raw_h5_default
 readonly TARGET_TASKS=(ButtonUnmask ButtonUnmaskSwap VideoUnmask VideoUnmaskSwap)
 readonly TARGET_TASKS_CSV="ButtonUnmask,ButtonUnmaskSwap,VideoUnmask,VideoUnmaskSwap"
 
-# ── MotionJEPA 只读副本与 encoder 资产（0901-motion-memory-plan.md 红线 2 / 9 / 10）───────
+# ── MotionJEPA 只读副本与 encoder 资产（docs/root-archive/0901-motion-memory-plan.md 红线 2 / 9 / 10）───────
 # 环境 A 默认 turbo 只读副本；环境 B 用环境变量 MJ_REPO 指向 /scratch/hongze/MotionJEPA（同一 commit）
 MJ_REPO="${MJ_REPO:-/nfs/turbo/coe-chaijy-unreplicated/hongzefu/MotionJEPA}"
 readonly MJ_COMMIT="2a484ad960ed6155321dc34def9011eb119f857f"

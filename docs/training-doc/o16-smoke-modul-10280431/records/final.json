@@ -1,0 +1,1765 @@
+{
+  "record_version": 1,
+  "run_uuid": "e0839266-7d73-4863-9fe5-7f901df1f18d",
+  "run_name": "o16-smoke-modul-10280431",
+  "head": "491340dfb210acb0e399f9105d8283b8a2bc66f7",
+  "budget": 512,
+  "checkpoint_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_orig16_b128_60k/o16-smoke-modul-10280431",
+  "num_train_steps": 20,
+  "log_interval": 100,
+  "save_interval": 5000,
+  "keep_period": 5000,
+  "wandb_run_id": "iu98lhgs",
+  "pid": 473312,
+  "started_at": "2026-10-28T08:55:40.952657+00:00",
+  "complete": {
+    "config_record_version": 2,
+    "train_config": {
+      "type": "mme_vla_suite.training.config.TrainConfig",
+      "fields": {
+        "name": "mme_vla_suite_orig16_b128_60k",
+        "project_name": "robomme-framesamp",
+        "exp_name": "o16-smoke-modul-10280431",
+        "model": {
+          "type": "mme_vla_suite.models.integration.history_pi0.HistoryPi0Config",
+          "fields": {
+            "action_dim": 32,
+            "action_horizon": 20,
+            "max_token_len": 64,
+            "dtype": "bfloat16",
+            "paligemma_variant": "gemma_2b",
+            "action_expert_variant": "gemma_300m",
+            "pi05": true,
+            "discrete_state_input": false,
+            "memory_expert_variant": "gemma_150m",
+            "use_history": true,
+            "history_config": "perceptual-framesamp-modul-32frame-4x4-motion-stage2-4x256-orig16.yaml"
+          }
+        },
+        "weight_loader": {
+          "type": "openpi.training.weight_loaders.CheckpointWeightLoader",
+          "fields": {
+            "params_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params"
+          }
+        },
+        "pytorch_weight_path": null,
+        "pytorch_training_precision": "bfloat16",
+        "lr_schedule": {
+          "type": "openpi.training.optimizer.CosineDecaySchedule",
+          "fields": {
+            "warmup_steps": 5000,
+            "peak_lr": 5e-05,
+            "decay_steps": 60000,
+            "decay_lr": 5e-05
+          }
+        },
+        "optimizer": {
+          "type": "openpi.training.optimizer.AdamW",
+          "fields": {
+            "b1": 0.9,
+            "b2": 0.95,
+            "eps": 1e-08,
+            "weight_decay": 1e-10,
+            "clip_gradient_norm": 1.0
+          }
+        },
+        "ema_decay": 0.999,
+        "freeze_filter": {
+          "type": "openpi.shared.nnx_utils.PathRegex",
+          "fields": {
+            "pattern": {
+              "type": "re.Pattern",
+              "pattern": ".*img.*",
+              "flags": 32
+            },
+            "sep": "/"
+          }
+        },
+        "data": {
+          "type": "mme_vla_suite.training.config.RoboMMEDataConfig",
+          "fields": {
+            "repo_id": "robomme",
+            "assets": {
+              "type": "mme_vla_suite.training.config.AssetsConfig",
+              "fields": {
+                "assets_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/16task-orig100-1600ep-9e109419",
+                "asset_id": "robomme"
+              }
+            },
+            "base_config": {
+              "type": "mme_vla_suite.training.config.DataConfig",
+              "fields": {
+                "repo_id": null,
+                "asset_id": null,
+                "norm_stats": null,
+                "repack_transforms": {
+                  "type": "openpi.transforms.Group",
+                  "fields": {
+                    "inputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    },
+                    "outputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    }
+                  }
+                },
+                "data_transforms": {
+                  "type": "openpi.transforms.Group",
+                  "fields": {
+                    "inputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    },
+                    "outputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    }
+                  }
+                },
+                "model_transforms": {
+                  "type": "openpi.transforms.Group",
+                  "fields": {
+                    "inputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    },
+                    "outputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    }
+                  }
+                },
+                "use_quantile_norm": false,
+                "action_sequence_keys": {
+                  "type": "builtins.tuple",
+                  "items": [
+                    "actions"
+                  ]
+                },
+                "prompt_from_task": true,
+                "rlds_data_dir": null,
+                "action_space": null,
+                "filter_dict_path": null
+              }
+            }
+          }
+        },
+        "assets_base_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets",
+        "checkpoint_base_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs",
+        "seed": 42,
+        "batch_size": 128,
+        "num_workers": 16,
+        "num_train_steps": 20,
+        "log_interval": 100,
+        "save_interval": 5000,
+        "keep_period": 5000,
+        "overwrite": false,
+        "resume": false,
+        "wandb_enabled": true,
+        "policy_metadata": null,
+        "fsdp_devices": 8,
+        "resum_ckpt_id": null,
+        "dataset_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-orig100-1600ep-9e109419/framesamp-4x4"
+      }
+    },
+    "resolved_data": {
+      "type": "mme_vla_suite.training.config.DataConfig",
+      "fields": {
+        "repo_id": "robomme",
+        "asset_id": "robomme",
+        "norm_stats": {
+          "actions": {
+            "type": "openpi.shared.normalize.NormStats",
+            "fields": {
+              "mean": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "7762d19c0c1415fe521fa83716440d0e36240d6a47176a249a0ffd8201941f5f"
+              },
+              "std": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "81f3ea2cdd61598a0f0b8c3b8283498b0648aa3dc90b1a9c65cce5b3029738a5"
+              },
+              "q01": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "3fadc3a8a7aef95395127caf3336c7377f52ad4175133ab1b8901c7088e3b709"
+              },
+              "q99": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "3a274b2ff459b41cd178868ac0de22dcaf70723834e93c205a3771b226ecce90"
+              }
+            }
+          },
+          "state": {
+            "type": "openpi.shared.normalize.NormStats",
+            "fields": {
+              "mean": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "8b6bf13701a8b73b30159a51a613a2d097a78f39874020b00d473a0b20530583"
+              },
+              "std": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "d15a077c2f0317fb342ad577a88b0d56c2f94182912235064c121faca25f4ab7"
+              },
+              "q01": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "5ffbcaa0d9ad27409313d715eb87acbffcb23d370ed5811f696146b9984d850e"
+              },
+              "q99": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "f004f80f83dffb5d2105ce07b05f2a510cf496739d5c4f8483d772c0f5773c98"
+              }
+            }
+          }
+        },
+        "repack_transforms": {
+          "type": "openpi.transforms.Group",
+          "fields": {
+            "inputs": {
+              "type": "builtins.list",
+              "items": [
+                {
+                  "type": "openpi.transforms.RepackTransform",
+                  "fields": {
+                    "structure": {
+                      "actions": "actions",
+                      "mem_order": "mem_order",
+                      "motion_emb": "motion_emb",
+                      "motion_mask": "motion_mask",
+                      "motion_pos": "motion_pos",
+                      "observation/image": "image",
+                      "observation/state": "state",
+                      "observation/wrist_image": "wrist_image",
+                      "prompt": "prompt",
+                      "static_image_emb": "static_image_emb",
+                      "static_mask": "static_mask",
+                      "static_pos_emb": "static_pos_emb",
+                      "static_state_emb": "static_state_emb"
+                    }
+                  }
+                }
+              ]
+            },
+            "outputs": {
+              "type": "builtins.tuple",
+              "items": []
+            }
+          }
+        },
+        "data_transforms": {
+          "type": "openpi.transforms.Group",
+          "fields": {
+            "inputs": {
+              "type": "builtins.tuple",
+              "items": [
+                {
+                  "type": "mme_vla_suite.policies.robomme_policy.RoboMMEInputs",
+                  "fields": {
+                    "model_type": {
+                      "type": "openpi.models.model.ModelType",
+                      "value": "pi05"
+                    }
+                  }
+                },
+                {
+                  "type": "openpi.transforms.DeltaActions",
+                  "fields": {
+                    "mask": {
+                      "type": "builtins.tuple",
+                      "items": [
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        false
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "outputs": {
+              "type": "builtins.tuple",
+              "items": [
+                {
+                  "type": "openpi.transforms.AbsoluteActions",
+                  "fields": {
+                    "mask": {
+                      "type": "builtins.tuple",
+                      "items": [
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        false
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "mme_vla_suite.policies.robomme_policy.RoboMMEOutputs",
+                  "fields": {}
+                }
+              ]
+            }
+          }
+        },
+        "model_transforms": {
+          "type": "openpi.transforms.Group",
+          "fields": {
+            "inputs": {
+              "type": "builtins.list",
+              "items": [
+                {
+                  "type": "openpi.transforms.InjectDefaultPrompt",
+                  "fields": {
+                    "prompt": null
+                  }
+                },
+                {
+                  "type": "openpi.transforms.ResizeImages",
+                  "fields": {
+                    "height": 224,
+                    "width": 224
+                  }
+                },
+                {
+                  "type": "mme_vla_suite.training.config.TokenizePromptWithState",
+                  "fields": {
+                    "tokenizer": {
+                      "type": "mme_vla_suite.training.config.PaligemmaTokenizer",
+                      "fields": {
+                        "_max_len": 64,
+                        "_tokenizer": {
+                          "type": "sentencepiece.SentencePieceProcessor",
+                          "model_sha256": "8986bb4f423f07f8c7f70d0dbe3526fb2316056c17bae71b1ea975e77a168fc6"
+                        }
+                      }
+                    },
+                    "discrete_state_input": false
+                  }
+                },
+                {
+                  "type": "openpi.transforms.PadStatesAndActions",
+                  "fields": {
+                    "model_action_dim": 32
+                  }
+                }
+              ]
+            },
+            "outputs": {
+              "type": "builtins.tuple",
+              "items": []
+            }
+          }
+        },
+        "use_quantile_norm": true,
+        "action_sequence_keys": {
+          "type": "builtins.tuple",
+          "items": [
+            "actions"
+          ]
+        },
+        "prompt_from_task": true,
+        "rlds_data_dir": null,
+        "action_space": null,
+        "filter_dict_path": null
+      }
+    },
+    "assets": {
+      "norm_stats": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/16task-orig100-1600ep-9e109419/robomme/norm_stats.json",
+        "bytes": 2075,
+        "sha256": "c5d45b4bdb481ca46d18aeb32446bbedec34de435eef31d3212a179ee7868bcd"
+      },
+      "initialization/_METADATA": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params/_METADATA",
+        "bytes": 21402,
+        "sha256": "250d0ad0f6540a5e4bdd70442d6864cef729724f2d23e2dd2cc669563a668d70"
+      },
+      "initialization/manifest.ocdbt": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params/manifest.ocdbt",
+        "bytes": 117,
+        "sha256": "78b6898ea1f8897a0225022b0ab799455cff0e15158a9ca349d8efbbe044aa55"
+      },
+      "initialization/commit_success.txt": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params/commit_success.txt",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "tokenizer": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/big_vision/paligemma_tokenizer.model",
+        "bytes": 4264023,
+        "sha256": "8986bb4f423f07f8c7f70d0dbe3526fb2316056c17bae71b1ea975e77a168fc6"
+      },
+      "assets_lock": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/assets/ASSETS_LOCK.json",
+        "bytes": 12240,
+        "sha256": "c2d140c1d934b9c7aadc49996c978697cb008a7ef9c8f6fa66892801a64cb032"
+      }
+    },
+    "history_values": {
+      "budget": 512,
+      "num_views": 1,
+      "token_per_image": 16,
+      "streaming_obs_horizon": 16,
+      "pool_type": "mean",
+      "use_pos_emb": true,
+      "use_state_emb": false,
+      "memory_feature": {
+        "img": {
+          "net": "identity",
+          "input_dim": 2048
+        },
+        "pos": {
+          "input_dim": 768,
+          "hidden_dim": 768
+        },
+        "state": {
+          "input_dim": 8,
+          "hidden_dim": 512
+        }
+      },
+      "integration_type": "modulation",
+      "memory_token_dim": 1024,
+      "representation_type": "perceptual",
+      "perceptual_memory": {
+        "type": "frame_sampling"
+      },
+      "motion": {
+        "enabled": true,
+        "source_shape": [
+          1,
+          1024
+        ],
+        "readout": "stage2_pool4_split_v1",
+        "num_tokens": 4,
+        "dim": 256,
+        "budget": 384,
+        "pos_dim": 256,
+        "demo_min_real_frames": 17,
+        "demo_tail_pad": "repeat_last",
+        "stride": 32,
+        "window_frames": 33,
+        "window_direction": "forward",
+        "grid_origin": "segment_start",
+        "frame_size": 256,
+        "store_path": "v1-store/datasets/16task-orig100-1600ep-9e109419/motion-stage2-1024",
+        "source_run": "stage2-full144-1025-a/checkpoint_epoch_105.pt#model",
+        "checkpoint_sha256": "27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035",
+        "encoder_kind": "stage2_pool4_concat",
+        "online_gpu": 1
+      }
+    },
+    "derived": {
+      "checkpoint_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_orig16_b128_60k/o16-smoke-modul-10280431",
+      "assets_dirs": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite_orig16_b128_60k"
+    }
+  },
+  "loop_step": 19,
+  "state_step": 20,
+  "checkpoint_step": 19,
+  "ema_leaves": {
+    "PaliGemma/img/Transformer/encoder_norm/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        1152
+      ],
+      "bytes": 2304,
+      "sha256": "e40fbf8c58fbb48f582b35cdbeb6a95511f528490dbd54240d3ef934e20cbefd",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoder_norm/scale": {
+      "dtype": "bfloat16",
+      "shape": [
+        1152
+      ],
+      "bytes": 2304,
+      "sha256": "38e592a2389d54f6e6d4862c9e7197ce5905f3e34ed16a969249ea56eaae762e",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/LayerNorm_0/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152
+      ],
+      "bytes": 62208,
+      "sha256": "596e1b91b24648d5c4d1d1a3d5df8a6eb3a583e805dcc0809b49a9e8ef31ed53",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/LayerNorm_0/scale": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152
+      ],
+      "bytes": 62208,
+      "sha256": "4b6d060c0367e2d2653fff4a47cd1187437c0bca14a7ca5af5ed1df53454472b",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/LayerNorm_1/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152
+      ],
+      "bytes": 62208,
+      "sha256": "a7ac47328f8474ae0ef95470e8cae0d9fa8f924d6cbd89b7eb99ff3781c5e93f",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/LayerNorm_1/scale": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152
+      ],
+      "bytes": 62208,
+      "sha256": "8035f12cdff0aec52b6e438f12895c0da06fb8ef505944588ae44681703cb448",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MlpBlock_0/Dense_0/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        4304
+      ],
+      "bytes": 232416,
+      "sha256": "02f196bd66fc63e90ca53bfae23b59ec5c8d0822d93f39b0831d3ee7978f5b29",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MlpBlock_0/Dense_0/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152,
+        4304
+      ],
+      "bytes": 267743232,
+      "sha256": "3a3304524f1c129aacf9a6629aa17c86e1b2cdc08f4873bea4086590d17ef2f4",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MlpBlock_0/Dense_1/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152
+      ],
+      "bytes": 62208,
+      "sha256": "d8f3e9d2cb9090246cc9a1af9623f9ed589784dce90b8807a6f47340c547e59b",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MlpBlock_0/Dense_1/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        4304,
+        1152
+      ],
+      "bytes": 267743232,
+      "sha256": "9200075097fd26de9af6febf6907637c1f4a6519531ff16bcf0b37473235152c",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/key/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        16,
+        72
+      ],
+      "bytes": 62208,
+      "sha256": "d0e53f307725f9da4133720f6e931d78967893df228ab7b914c56550a2c0314f",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/key/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152,
+        16,
+        72
+      ],
+      "bytes": 71663616,
+      "sha256": "7635db8a0d391240525a112677068e5c7583b6ae38308bc755a0d524c26f1f2e",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/out/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152
+      ],
+      "bytes": 62208,
+      "sha256": "0b5fa61731342263dc4de70b17e655799aa144fb5d540bb3435fa640637d377c",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/out/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        16,
+        72,
+        1152
+      ],
+      "bytes": 71663616,
+      "sha256": "62c7ac989d35c817189aa03e6513bc332a94f6e9ec2ced566224eff19746276e",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/query/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        16,
+        72
+      ],
+      "bytes": 62208,
+      "sha256": "f9bba9fb14707b4f162d4e8b6135ec6c22236c349dc4661668bd9801a09ae698",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/query/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152,
+        16,
+        72
+      ],
+      "bytes": 71663616,
+      "sha256": "1209e74f57c9289fcb89bdab8b5906fefa0fa5d987af98b1a8c9dd38a70c7b4c",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/value/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        16,
+        72
+      ],
+      "bytes": 62208,
+      "sha256": "fd3e2717ac526d8b722e9f440732e5d7cc754e6fbfa2062e56e264c141a6c719",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/value/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152,
+        16,
+        72
+      ],
+      "bytes": 71663616,
+      "sha256": "01c8c1ac0e2e580fc509b376bfd9e66d70d754544e5cb02b4feed7079c2ec63c",
+      "finite": true
+    },
+    "PaliGemma/img/embedding/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        1152
+      ],
+      "bytes": 2304,
+      "sha256": "260ff4f39a25e99443b45b6c860d2b6cb43ecd902fd7d0f9e29cbb00c1a2704f",
+      "finite": true
+    },
+    "PaliGemma/img/embedding/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        14,
+        14,
+        3,
+        1152
+      ],
+      "bytes": 1354752,
+      "sha256": "aad5f3b62258904c442ecdc60f7997162fffc50085b663ad7c551e9b89b21bee",
+      "finite": true
+    },
+    "PaliGemma/img/head/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        2048
+      ],
+      "bytes": 4096,
+      "sha256": "af69acf0ca52d01365a2a92fc3ef66b3c3619eea64af6dcce3bf30c22366a73a",
+      "finite": true
+    },
+    "PaliGemma/img/head/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        1152,
+        2048
+      ],
+      "bytes": 4718592,
+      "sha256": "7a3627fb7babf6c8339b04100c81da01776f9428e4fc987de9d08ad09c36af9d",
+      "finite": true
+    },
+    "PaliGemma/img/pos_embedding": {
+      "dtype": "bfloat16",
+      "shape": [
+        1,
+        256,
+        1152
+      ],
+      "bytes": 589824,
+      "sha256": "f5260d6fbe079652be2209e2258014e5d5ec5305acec5b3124f9de889b68db58",
+      "finite": true
+    },
+    "PaliGemma/llm/embedder/input_embedding": {
+      "dtype": "float32",
+      "shape": [
+        257152,
+        2048
+      ],
+      "bytes": 2106589184,
+      "sha256": "1013af418fdd55811d784316effb2f0ed73c8f43b7b5fdaf33dfbc3565027670",
+      "finite": true
+    },
+    "PaliGemma/llm/final_norm/scale": {
+      "dtype": "float32",
+      "shape": [
+        2048
+      ],
+      "bytes": 8192,
+      "sha256": "fc7c06248a5399a806b4e085f967805ec699c86ba6dc7a70176e2ff4c6abc089",
+      "finite": true
+    },
+    "PaliGemma/llm/final_norm_1/Dense_0/bias": {
+      "dtype": "float32",
+      "shape": [
+        3072
+      ],
+      "bytes": 12288,
+      "sha256": "10244f7391a03dd4769f869b527d9d0eb8ff8f9a8878b1b4d2875afbe8ff5c6c",
+      "finite": true
+    },
+    "PaliGemma/llm/final_norm_1/Dense_0/kernel": {
+      "dtype": "float32",
+      "shape": [
+        1024,
+        3072
+      ],
+      "bytes": 12582912,
+      "sha256": "a05c45a955fa8364d80f381ac65792c22242a3f5f75581cd02d205bbc830c941",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/attn/attn_vec_einsum/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        8,
+        256,
+        2048
+      ],
+      "bytes": 301989888,
+      "sha256": "2109a9ea9171621f94e42f3d21c0e507396e261efac160380abf81381db59e43",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/attn/attn_vec_einsum_1/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        8,
+        256,
+        1024
+      ],
+      "bytes": 150994944,
+      "sha256": "5e8678403e8fb9463aa14033cf67197b31b891a644400423ce713e1ee52508b2",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/attn/kv_einsum/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2,
+        1,
+        2048,
+        256
+      ],
+      "bytes": 75497472,
+      "sha256": "bdfe02f6dfb0770965c6afaa73dc9e2df182e6923d4302da9376acf97f712816",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/attn/kv_einsum_1/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2,
+        1,
+        1024,
+        256
+      ],
+      "bytes": 37748736,
+      "sha256": "b905514f34fbbfc5d7b34e9a036f01597bae769c0ef08dea90594ac461a68490",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/attn/q_einsum/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        8,
+        2048,
+        256
+      ],
+      "bytes": 301989888,
+      "sha256": "630835a20d83603dc2d0ae0cf189b97d01bccb9ca55783b98efbc626b3f3e0d2",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/attn/q_einsum_1/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        8,
+        1024,
+        256
+      ],
+      "bytes": 150994944,
+      "sha256": "50f2175436a66b11c466350bbb9efadd61ba3f68034f8fc9be3687f9516a7270",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mem_attn/kv_einsum_mem/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2,
+        1,
+        1024,
+        256
+      ],
+      "bytes": 37748736,
+      "sha256": "f537f39aee2741306e6ac20c4a973357d145d3106b954ce0a99862ee482b0b33",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mem_attn/mem_rms_norm/scale": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        1024
+      ],
+      "bytes": 73728,
+      "sha256": "b5b4989882658b2691e5691ba2cd96315055acf55591dfbc679a86a345d83364",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mem_attn/out_einsum_mem/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        4,
+        256,
+        1024
+      ],
+      "bytes": 75497472,
+      "sha256": "68cfd6bade3a29c00aa14e99249aa198c86508abc79e6b329e547e08719ddb49",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mem_attn/q_einsum_mem/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        4,
+        1024,
+        256
+      ],
+      "bytes": 75497472,
+      "sha256": "5d88a00a9c6758e462d61f3a403ee33e63e2f94f3715d6da469536b3c90b00e0",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mem_rms_norm_ffn/Dense_0/bias": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2048
+      ],
+      "bytes": 147456,
+      "sha256": "b1e9789f6d53244578f75637924af710d3c34a82130012fa93bb436a12c2169a",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mem_rms_norm_ffn/Dense_0/kernel": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        1024,
+        2048
+      ],
+      "bytes": 150994944,
+      "sha256": "33d2404cb2ec96465cea1c352f5a895f9d97008597f7efe8e16b9c925a732ad7",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mlp/gating_einsum": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2,
+        2048,
+        16384
+      ],
+      "bytes": 4831838208,
+      "sha256": "b7a2d0a4592489e23652316b43caade37e42824b49821fd0fcbf270454af46da",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mlp/linear": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        16384,
+        2048
+      ],
+      "bytes": 2415919104,
+      "sha256": "f0b57dcc0f75021a0b7cfc6104e1ea00d7bba09e543cc0c138755a1534c7d955",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mlp_1/gating_einsum": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2,
+        1024,
+        4096
+      ],
+      "bytes": 603979776,
+      "sha256": "2af14ed19331c160b486efdce4ec229df49ccbf7c5b6905cb0df666d12b4a927",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mlp_1/linear": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        4096,
+        1024
+      ],
+      "bytes": 301989888,
+      "sha256": "c104d8c400adea0dd94915eb8828b8a0220c20035a718d9d6a991a8ad445a972",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/pre_attention_norm/scale": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2048
+      ],
+      "bytes": 147456,
+      "sha256": "177abbdef54c220f189ef9777177a414ae33ff0590b899a154fb561d0b7497f6",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/pre_attention_norm_1/Dense_0/bias": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        3072
+      ],
+      "bytes": 221184,
+      "sha256": "924db78131754cd255c22c35bcb022f6d7eeaac46541c1700ad72b5782dfd6c7",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/pre_attention_norm_1/Dense_0/kernel": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        1024,
+        3072
+      ],
+      "bytes": 226492416,
+      "sha256": "36568e93903c16dcdc4461b0f39dd0e8247a70986209d9e1f6d689db27670021",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/pre_ffw_norm/scale": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2048
+      ],
+      "bytes": 147456,
+      "sha256": "230c5428a1a0f12c5a16cb885777eceba09a0b9c3c49b80a5bdb95de1601274a",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/pre_ffw_norm_1/Dense_0/bias": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        3072
+      ],
+      "bytes": 221184,
+      "sha256": "a2ab529ef4dd23ae441f9f80994835f60e56c7cdbee24dfe3b7f439fb9ccc78b",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/pre_ffw_norm_1/Dense_0/kernel": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        1024,
+        3072
+      ],
+      "bytes": 226492416,
+      "sha256": "6303cb60c1aef6a5e2913543187ab4239167abb5f320e5bd172a23963f5f2d73",
+      "finite": true
+    },
+    "action_in_proj/bias": {
+      "dtype": "float32",
+      "shape": [
+        1024
+      ],
+      "bytes": 4096,
+      "sha256": "6fee76bc3372b8f8d0a06a6768c03bc54e503a5de5f3242ea23ecf9c00f1062e",
+      "finite": true
+    },
+    "action_in_proj/kernel": {
+      "dtype": "float32",
+      "shape": [
+        32,
+        1024
+      ],
+      "bytes": 131072,
+      "sha256": "deda2507ffee6063c0f0fcb598735ba391c6a9a52ff7e24ab7c3f0111453d7af",
+      "finite": true
+    },
+    "action_out_proj/bias": {
+      "dtype": "float32",
+      "shape": [
+        32
+      ],
+      "bytes": 128,
+      "sha256": "5c953acb7bb23d57abf2ba68a9aa5a0e710b4155990cbeff027317f2072c1c7d",
+      "finite": true
+    },
+    "action_out_proj/kernel": {
+      "dtype": "float32",
+      "shape": [
+        1024,
+        32
+      ],
+      "bytes": 131072,
+      "sha256": "807bb1681a25b0c6fb460f73b8e200cc16b39ed269837979936aa2262fa3d2c6",
+      "finite": true
+    },
+    "mem_encoder/feature_encoder/encoder_static/bias": {
+      "dtype": "float32",
+      "shape": [
+        1024
+      ],
+      "bytes": 4096,
+      "sha256": "4be18a7d2345a79a77752872e5e62bb306132bdda99262473ab9e8c54703c4a1",
+      "finite": true
+    },
+    "mem_encoder/feature_encoder/encoder_static/kernel": {
+      "dtype": "float32",
+      "shape": [
+        2816,
+        1024
+      ],
+      "bytes": 11534336,
+      "sha256": "36aa87986a546181a753b1e14588dbe915f7eb434e05226b4556bbd132d8267f",
+      "finite": true
+    },
+    "mem_encoder/feature_encoder/pos_proj/bias": {
+      "dtype": "float32",
+      "shape": [
+        768
+      ],
+      "bytes": 3072,
+      "sha256": "aef003e29c0de1296f0105904a1fe4391a8b9c645e1950dbe34ae26486c80261",
+      "finite": true
+    },
+    "mem_encoder/feature_encoder/pos_proj/kernel": {
+      "dtype": "float32",
+      "shape": [
+        768,
+        768
+      ],
+      "bytes": 2359296,
+      "sha256": "b720eae59a49951baa0769da410170ea8dd06d9ed56bf68a49bd944658968afe",
+      "finite": true
+    },
+    "mem_encoder/motion_encoder_static/bias": {
+      "dtype": "float32",
+      "shape": [
+        1024
+      ],
+      "bytes": 4096,
+      "sha256": "39928d4c88ebc0ed8fe3b649ebcf9b08eb9e14111db79e659f7154905b7ded3b",
+      "finite": true
+    },
+    "mem_encoder/motion_encoder_static/kernel": {
+      "dtype": "float32",
+      "shape": [
+        1024,
+        1024
+      ],
+      "bytes": 4194304,
+      "sha256": "b294a893686f78521b2ee1b46b10226cef0ee9123d2e1f040fcf9695a0ff5b60",
+      "finite": true
+    },
+    "mem_encoder/motion_pos_proj/bias": {
+      "dtype": "float32",
+      "shape": [
+        768
+      ],
+      "bytes": 3072,
+      "sha256": "f436cbe7862e9f1a19d0be98aa476d8d1ae2f6e45bb48e6facc5b598da6f7c1a",
+      "finite": true
+    },
+    "mem_encoder/motion_pos_proj/kernel": {
+      "dtype": "float32",
+      "shape": [
+        256,
+        768
+      ],
+      "bytes": 786432,
+      "sha256": "eca4c0767d4a96b3e8335c46869d4bb340a90ed0b26fae08ec3e175fe27de59a",
+      "finite": true
+    },
+    "time_mlp_in/bias": {
+      "dtype": "float32",
+      "shape": [
+        1024
+      ],
+      "bytes": 4096,
+      "sha256": "760e41449c674aaa7209b59af3eef513f054af6a33b19f4b2efdaaf6f004f6f5",
+      "finite": true
+    },
+    "time_mlp_in/kernel": {
+      "dtype": "float32",
+      "shape": [
+        1024,
+        1024
+      ],
+      "bytes": 4194304,
+      "sha256": "49229cea0dfeaa514a2f1137e7cb6736e651b02fb20c3183b169a816ea1d27da",
+      "finite": true
+    },
+    "time_mlp_out/bias": {
+      "dtype": "float32",
+      "shape": [
+        1024
+      ],
+      "bytes": 4096,
+      "sha256": "021c14a2fa7babafee0ea3d45b1abaefcaff1fe51741ce58d7f207337e8930cf",
+      "finite": true
+    },
+    "time_mlp_out/kernel": {
+      "dtype": "float32",
+      "shape": [
+        1024,
+        1024
+      ],
+      "bytes": 4194304,
+      "sha256": "c3109a24f34960d4941668e97ef28ddc54771fa4a007bac75505f0abbafa40bf",
+      "finite": true
+    }
+  },
+  "tail": [
+    {
+      "step": 1,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.3050146102905273,
+          "hex": "0x1.4e15700000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.2927089929580688,
+          "hex": "0x1.4aeefa0000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.09385940432548523,
+          "hex": "0x1.8072b80000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.10875880718231201,
+          "hex": "0x1.bd79e00000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.683837890625,
+          "hex": "0x1.c5ebc40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 2,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.339955449104309,
+          "hex": "0x1.5707520000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.3270567655563354,
+          "hex": "0x1.53b9fe0000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.09340786933898926,
+          "hex": "0x1.7e99400000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.1093255877494812,
+          "hex": "0x1.bfcc300000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.683837890625,
+          "hex": "0x1.c5ebc40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 3,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.3301957845687866,
+          "hex": "0x1.5487b60000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.3152705430984497,
+          "hex": "0x1.50b5920000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.09505908936262131,
+          "hex": "0x1.855cae0000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.11246221512556076,
+          "hex": "0x1.cca52e0000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.683837890625,
+          "hex": "0x1.c5ebc40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 4,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.1125916242599487,
+          "hex": "0x1.1cd2ce0000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.101318597793579,
+          "hex": "0x1.19f0040000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.0928892120718956,
+          "hex": "0x1.7c79660000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.09297843277454376,
+          "hex": "0x1.7cd6f40000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.683837890625,
+          "hex": "0x1.c5ebc40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 5,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.1836851835250854,
+          "hex": "0x1.2f05fe0000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.1721222400665283,
+          "hex": "0x1.2c10340000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.08895819634199142,
+          "hex": "0x1.6c5f6e0000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.09882952272891998,
+          "hex": "0x1.94ce440000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.683837890625,
+          "hex": "0x1.c5ebc40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 6,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.2164790630340576,
+          "hex": "0x1.376b2c0000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.2050117254257202,
+          "hex": "0x1.347ba60000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.09400691837072372,
+          "hex": "0x1.810d660000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.10023614764213562,
+          "hex": "0x1.9a91380000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.683837890625,
+          "hex": "0x1.c5ebc40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 7,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.2231906652450562,
+          "hex": "0x1.3923060000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.2111040353775024,
+          "hex": "0x1.360aea0000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.09258005768060684,
+          "hex": "0x1.7b353a0000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.101828433573246,
+          "hex": "0x1.a116da0000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.683837890625,
+          "hex": "0x1.c5ebc40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 8,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.2053351402282715,
+          "hex": "0x1.3490d80000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.1931641101837158,
+          "hex": "0x1.3173340000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.08885349333286285,
+          "hex": "0x1.6bf1a40000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.09958428144454956,
+          "hex": "0x1.97e5b00000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.683837890625,
+          "hex": "0x1.c5ebc40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 9,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.1778171062469482,
+          "hex": "0x1.2d856c0000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.1665860414505005,
+          "hex": "0x1.2aa5620000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.09172014147043228,
+          "hex": "0x1.77af8a0000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.0970463752746582,
+          "hex": "0x1.8d80800000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.683837890625,
+          "hex": "0x1.c5ebc40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 10,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.2140440940856934,
+          "hex": "0x1.36cb980000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.2022284269332886,
+          "hex": "0x1.33c53e0000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.09467976540327072,
+          "hex": "0x1.83ceee0000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.10031761229038239,
+          "hex": "0x1.9ae6a40000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.683837890625,
+          "hex": "0x1.c5ebc40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 11,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.2604502439498901,
+          "hex": "0x1.42acde0000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.2496410608291626,
+          "hex": "0x1.3fe87a0000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.09035247564315796,
+          "hex": "0x1.7215700000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.10419575124979019,
+          "hex": "0x1.aac92a0000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.683837890625,
+          "hex": "0x1.c5ebc40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 12,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.11919105052948,
+          "hex": "0x1.1e834e0000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.108904242515564,
+          "hex": "0x1.1be1260000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.08502045273780823,
+          "hex": "0x1.5c3e680000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.09214054048061371,
+          "hex": "0x1.79685c0000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.6837158203125,
+          "hex": "0x1.c5ebc20000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 13,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.150020956993103,
+          "hex": "0x1.2667c60000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.1393396854400635,
+          "hex": "0x1.23abc40000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.08894781768321991,
+          "hex": "0x1.6c548c0000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.09309643507003784,
+          "hex": "0x1.7d52b00000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.6837158203125,
+          "hex": "0x1.c5ebc20000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 14,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.0074968338012695,
+          "hex": "0x1.01eb500000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.997015118598938,
+          "hex": "0x1.fe78c40000000p-1",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.0856306180357933,
+          "hex": "0x1.5ebe360000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.08372325450181961,
+          "hex": "0x1.56ee320000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.6837158203125,
+          "hex": "0x1.c5ebc20000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 15,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.0327483415603638,
+          "hex": "0x1.0862320000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.0222437381744385,
+          "hex": "0x1.05b1c40000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.08357599377632141,
+          "hex": "0x1.5653c80000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.08586762100458145,
+          "hex": "0x1.5fb6ba0000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.6837158203125,
+          "hex": "0x1.c5ebc20000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 16,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.0042306184768677,
+          "hex": "0x1.0115420000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.9932374954223633,
+          "hex": "0x1.fc89a00000000p-1",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.08953779190778732,
+          "hex": "0x1.6ebf2e0000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.08244255185127258,
+          "hex": "0x1.51af480000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.6837158203125,
+          "hex": "0x1.c5ebc20000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 17,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.9878107905387878,
+          "hex": "0x1.f9c2560000000p-1",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.9783650636672974,
+          "hex": "0x1.f4ec440000000p-1",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.08400668948888779,
+          "hex": "0x1.5817660000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.08136129379272461,
+          "hex": "0x1.4d41800000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.6837158203125,
+          "hex": "0x1.c5ebc20000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 18,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.8126879334449768,
+          "hex": "0x1.a018a20000000p-1",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.8050722479820251,
+          "hex": "0x1.9c326e0000000p-1",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.07857684791088104,
+          "hex": "0x1.41d9cc0000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.06602352857589722,
+          "hex": "0x1.0e6eb00000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.6837158203125,
+          "hex": "0x1.c5ebc20000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 19,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.9363563060760498,
+          "hex": "0x1.df6a180000000p-1",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.9270184636116028,
+          "hex": "0x1.daa22a0000000p-1",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.08822418004274368,
+          "hex": "0x1.695dc20000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.07820633053779602,
+          "hex": "0x1.4055480000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.6837158203125,
+          "hex": "0x1.c5ebc20000000p+10",
+          "finite": true
+        }
+      }
+    }
+  ],
+  "tail_means": {
+    "grad_norm": 1.1378579892610248,
+    "llm_grad_norm": 1.1267057155307971,
+    "loss": 0.08946773762765683,
+    "mem_enc_norm": 0.09412761699212224,
+    "param_norm": 1815.6837864925988
+  },
+  "recorded_at": "2026-10-28T09:02:49.122116+00:00"
+}

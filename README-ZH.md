@@ -18,7 +18,7 @@
 `docs/training-doc/eval-3seed-context-vs-motion/`）。针对「推理侧喂给模型的记忆是否与训练侧同一份」的逐层对拍见
 [`docs/train-infer-consistency.md`](docs/train-infer-consistency.md)。
 
-文档总入口：[`docs/README.md`](docs/README.md)。根目录的各 `*-plan.md` 是过程档案，与 `docs/` 正本冲突时以正本为准。
+文档总入口：[`docs/README.md`](docs/README.md)。根目录保留当前训练计划、memory 注入说明与实验对比总结；其他计划和说明见 [根目录文档归档索引](docs/root-archive/README.md)，历史内容按各自标注的版本阅读。
 
 ## 项目总体目标
 
@@ -96,10 +96,10 @@ ckpt sha256 必须是 `bae96037…c15a`，与本机 `v1-store/external/motionjep
 （后者是 `--encoder-run-dir` 的默认值，**不要用下载件覆盖它**）。
 
 资产锁的设计原理、链路六处接入的改前改后、以及异地无 NFS 机器从零复刻的完整步骤，见
-[`external-assets-lock.md`](external-assets-lock.md)。
+[`docs/root-archive/external-assets-lock.md`](docs/root-archive/external-assets-lock.md)。
 
 环境 B（AWS 8×A100，2026-09-04）从零复刻 motion-memory 全部测试（≤100 步）与 4 任务 × 100 ep 完整库的完整过程——代码适配、判定行原文、A100 数字、事故与待裁决项——见
-[`env-b-aws-replication.md`](env-b-aws-replication.md)。
+[`docs/root-archive/env-b-aws-replication.md`](docs/root-archive/env-b-aws-replication.md)。
 
 ## 固定入口
 

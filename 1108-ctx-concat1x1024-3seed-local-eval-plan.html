@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>context concat 1×1024 本机三 seed 评估计划</title>
+  <style>
+    :root{--ink:#172a3a;--muted:#536676;--line:#d6e2e9;--paper:#fff;--bg:#eef3f5;--blue:#175d83;--bluebg:#eaf4fa;--green:#176b5b;--greenbg:#eaf6f0;--amber:#865818;--amberbg:#fff5df;--red:#9a3940;--redbg:#fff0ef}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.8 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","Source Han Sans SC","Microsoft YaHei","PingFang SC",sans-serif}main{max-width:1240px;margin:28px auto;padding:42px 48px;background:var(--paper);border:1px solid var(--line);border-radius:16px}.eyebrow{font-size:13px;letter-spacing:.08em;color:var(--blue);font-weight:700}.title{font-size:34px;line-height:1.35;font-weight:800;margin:12px 0}.subtitle{color:var(--muted);margin:12px 0 24px}h1{font-size:28px;line-height:1.45;border-top:3px solid var(--blue);padding-top:24px;margin:48px 0 20px}h2{font-size:22px;margin:34px 0 12px;line-height:1.5}h3{font-size:18px;margin:24px 0 10px}p{margin:10px 0}a{color:var(--blue);text-underline-offset:3px}a:hover{color:var(--green)}code,kbd{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;font-size:.9em;overflow-wrap:anywhere}code{background:#eff3f6;padding:2px 4px;border-radius:4px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#132b3b;color:#eff8ff;border-radius:10px;padding:18px 20px;font-size:13px;line-height:1.7;overflow:auto}pre code{background:none;padding:0;color:inherit;font-size:inherit}.box{padding:18px 22px;border:1px solid var(--line);border-left:5px solid var(--blue);border-radius:8px;background:var(--bluebg);margin:20px 0}.box.green{border-color:#b9dccb;border-left-color:var(--green);background:var(--greenbg)}.box.amber{border-color:#ead5a6;border-left-color:var(--amber);background:var(--amberbg)}.box.red{border-color:#edc5c3;border-left-color:var(--red);background:var(--redbg)}.badge{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--bluebg);color:var(--blue);vertical-align:middle}.badge.todo{background:var(--amberbg);color:var(--amber)}.badge.fact{background:var(--greenbg);color:var(--green)}.toc{display:flex;gap:8px 20px;flex-wrap:wrap;padding:16px 20px;background:#f5f8fa;border:1px solid var(--line);border-radius:8px}.toc a{font-size:14px}.table-wrap{overflow-x:auto;margin:16px 0}table{width:100%;border-collapse:collapse;font-size:14px;line-height:1.65}th,td{border:1px solid var(--line);padding:11px 13px;text-align:left;vertical-align:top}th{background:#edf3f6;font-weight:700}tbody tr:nth-child(even){background:#fafcfd}td strong{color:#143e5a}.num{font-variant-numeric:tabular-nums;white-space:nowrap}.small{font-size:13px;color:var(--muted)}.nowrap{white-space:nowrap}ul,ol{padding-left:24px}li{margin:7px 0}figure{margin:20px 0;background:#fafcfd;border:1px solid var(--line);border-radius:10px;padding:14px}figure svg{display:block;width:100%;height:auto;min-width:720px}.diagram{overflow-x:auto}figcaption{font-size:13px;color:var(--muted);margin:10px 4px 2px}.formula{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;line-height:1.9;font-size:14px;background:#f2f7f9;border:1px solid var(--line);padding:16px 20px;border-radius:8px;overflow-wrap:anywhere}.keynum{font-size:20px;font-weight:800;color:var(--green)}footer{border-top:1px solid var(--line);padding-top:20px;margin-top:36px;color:var(--muted);font-size:13px}section{scroll-margin-top:20px}@media(max-width:760px){main{margin:0;border:0;border-radius:0;padding:24px 18px}.title{font-size:26px}h1{font-size:24px}h2{font-size:20px}th,td{padding:9px;font-size:13px}}@media print{body{background:#fff}main{border:0;margin:0;padding:0;max-width:none}.toc{display:none}h1{break-before:page}h1:first-of-type{break-before:auto}tr,figure,.box{break-inside:avoid}a{color:inherit}pre{background:#f2f5f7;color:#172a3a}}
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">原版 RoboMME 16×100 · context stage2 concat 1×1024 · 美东 2026 年 11 月 8 日</div>
+    <p class="title">timepool1024 评估跑完后，立刻在本机评 context no-split motion（concat 1×1024）三 seed</p>
+    <p class="subtitle">同一台机器、同一份 <code>local_eval.py</code>、同一清单，和 timepool1024 做同口径对照；GreatLakes 10-31 的成绩是 37.33 ± 0.59。</p>
+    <div class="box amber"><strong>本文件是计划，只规划不实施。</strong>没有下载 checkpoint，没有改代码，没有布链。需要用户开工令。权威基线：<code>v10-ctx-wan-timepool-eval@283bb3c</code>（其上 <code>ffb307c</code> 是 timepool 评估的执行版本）；主检出 <code>/scratch/hongze/robomme_policy_learning_MotionJEPA</code> 不动。timepool 评估链 <code>evl-tp-chain</code> 正在跑，本计划不碰它。</div>
+    <div class="toc" aria-label="文档导航">
+      <a href="#human">第一部分</a><a href="#overview">运行一览</a><a href="#model">被评模型</a><a href="#ckpt">checkpoint 下载</a><a href="#trigger">触发与时间线</a><a href="#changes">要改什么</a><a href="#gates-short">验收</a><a href="#steps">步骤</a><a href="#decide">待裁决</a><a href="#technical">第二部分</a><a href="#files">逐文件</a><a href="#assign">子代理表</a><a href="#runbook">Runbook</a><a href="#risk">风险</a><a href="#blind">盲区</a>
+    </div>
+  </header>
+
+  <h1 id="human">第一部分（给人看）</h1>
+
+  <section id="overview">
+    <h2>1. 要做什么与全部运行一览</h2>
+    <p>timepool1024 评估三个 seed 跑完、链写出 <code>EXIT_CODE=0</code> 后，同一套本机评估链立即接着评我们自己的 context no-split motion 模型，也就是 stage2 encoder concat 1×1024 读法的 context 60k。它在 GreatLakes 上已有三 seed 成绩；在本机重评一次，是为了和 timepool1024 在同一台机器、同一份代码、同一清单下比较，排除平台差异。checkpoint 本地已删，先从公开 HF bucket 下载 59999 并逐文件核对 sha256。</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>运行</th><th>checkpoint</th><th>局数</th><th>GPU / worker</th><th>端口基址</th><th>输出</th></tr></thead>
+      <tbody>
+        <tr><td>seed 42</td><td rowspan="3"><code>…/orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k/59999</code></td><td>800（160 块，每块 5 局）</td><td>GPU 0–7 共 32 个</td><td>9600</td><td><code>seed42/run800</code></td></tr>
+        <tr><td>seed 7</td><td>800</td><td>同上</td><td>9700</td><td><code>seed7/run800</code></td></tr>
+        <tr><td>seed 0</td><td>800</td><td>同上</td><td>9800</td><td><code>seed0/run800</code></td></tr>
+      </tbody>
+    </table></div>
+    <p>输出根：<code>v1-store/evaluation/ctx-concat1x1024-3seed-1108/</code>。三个 seed 串行。</p>
+    <p><strong>已定死口径</strong></p>
+    <ol>
+      <li>用户原话（11-08）：「跑完了之后立刻骑我们自己的那个context No Split Motion 的那个 model，就是我在 Great Lakes 上 eval 是三十七的成功率的那那一份。」「也是3seed」。被评模型就是 GL 10-31 档案里的 <code>orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k</code> 59999（<a href="#model">第 2 节</a>）。</li>
+      <li>触发点是 timepool 链的日志末行 <code>EXIT_CODE=0</code>，即三 seed 汇总完成（<a href="#trigger">第 4 节</a>）。</li>
+      <li>沿用 1107 计划：官方 800 局（封签 <code>991c3496…eecc6</code>）、seed 42→7→0、每卡 4 worker、<code>XLA_PYTHON_CLIENT_MEM_FRACTION=0.18</code>、timeout 算失败、ddof=1，不加检查层（<a href="#changes">第 5 节</a>）。</li>
+      <li>训练已结束，G9 已过，不需要再给 G9 留卡，8 卡一次起满。</li>
+    </ol>
+  </section>
+
+  <section id="model">
+    <h2>2. 被评模型</h2>
+    <ul>
+      <li><strong>run：</strong><code>v1-store/train-runs/mme_vla_suite_orig16_b128_60k/orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k</code>。context 接法，<code>budget: 512</code> 帧 + motion <code>readout: stage2_pool4_concat_v1</code>、预算 96。run 根的元数据仍在本机（<code>history_config.resolved.yaml</code>、<code>motion_provenance.json</code>、<code>encoder_dependencies.json</code> 等），只有 <code>59999/</code> 已在上传后删除。</li>
+      <li><strong>motion 特征（在线）：</strong><code>encoder_kind: stage2_pool4_concat</code>，sidecar 加载 MotionJEPA encoder <code>stage2-full144-1025-a/checkpoint_epoch_105.pt</code>。<code>resolve_stage2_dependencies</code> 对本机 run（无 <code>encoder_dependencies/</code> 实体子目录）走标准注册目录；已确认 <code>v1-store/external/motionjepa/stage2-full144-1025-a/</code> 下 checkpoint 和 <code>config.yaml</code> 都在。</li>
+      <li><strong>身份：</strong>服务端 <code>model_kind</code> 取 <code>encoder_kind</code>，即 <code>stage2_pool4_concat</code>；spec 写同一个值。</li>
+      <li><strong>GL 成绩（10-31，<code>v4-eval-official-1026</code> 分支 <code>docs/evaluation-doc/o16-3seed-1031/result.md</code>）：</strong>seed 42/7/0 = 304/295/297，即 38.00 / 36.88 / 37.13%，<strong>37.33 ± 0.59</strong>；同档案 context split 38.42 ± 1.25，modulation split 43.42 ± 0.52。</li>
+    </ul>
+  </section>
+
+  <section id="ckpt">
+    <h2>3. checkpoint 下载与校验</h2>
+    <p>公开 bucket <code>HongzeFu/robomme-vla-orig100-ctx32x4x4-motion-s2concat1x1024-60k-v1</code> 的 <code>manifests/step-59999.json</code> 逐文件列出字节数与 sha256：38 个文件，共 11,976,241,540 字节，最大单文件 2,449,264,376 字节，与 GL 档案 <code>VLA_DOWNLOAD=PASS step=59999 files=38 bytes=11976241540</code> 一致。</p>
+    <p>做法：开工后立即在 tmux <code>evl-cc-fetch</code> 里按 manifest 用 <code>curl</code> 逐文件下载到临时目录 <code>59999.partial/</code>（8 路并行），然后用 <code>sha256sum -c</code> 核对全部 38 个文件。全部通过才把 <code>59999.partial</code> 改名为 <code>59999</code>。这样 <code>59999/_CHECKPOINT_METADATA</code> 一旦存在，就说明字节已核验，评估链原有的检查直接复用。下载是一次性运维命令，不进仓库代码。磁盘剩余 1.2 TB。</p>
+  </section>
+
+  <section id="trigger">
+    <h2>4. 触发与时间线</h2>
+    <p>新链 <code>evl-cc-chain</code> 复用 <code>local_eval.py</code> 的等待逻辑，只把“训练日志”换成 timepool 链日志 <code>v1-store/logs/ctx-wan-timepool1024-3seed-1107/simple-chain.log</code>。它的末行由 <code>chain.sh</code> 写 <code>EXIT_CODE=$?</code>，<code>THREE_SEED=PASS</code> 时为 0。末行为 0 且 <code>59999/_CHECKPOINT_METADATA</code> 存在、8 卡显存都低于 2000 MiB（最多等 600 秒）才开跑，否则写 <code>CHAIN_STOP</code>。</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>节点</th><th>预计（美东 11-08）</th><th>依据</th></tr></thead>
+      <tbody>
+        <tr><td>开工、下载开始</td><td>08:40 前后</td><td>取决于开工令时刻</td></tr>
+        <tr><td>下载 + 校验完成</td><td>09:00 前后</td><td>12 GB；本机实测带宽未知，按 ≥ 100 MB/s 估</td></tr>
+        <tr><td>timepool 三 seed 结束，concat 起跑</td><td>09:25 前后</td><td>timepool seed 42 实测 55 分钟 + 6 分钟间隔</td></tr>
+        <tr><td>concat 三 seed 完成</td><td>12:30 前后</td><td>按 timepool 与 Wan-LTM 每 seed 约 1 小时估；concat 速度未实测</td></tr>
+      </tbody>
+    </table></div>
+    <p>Claude agent 定时唤醒（1107 计划第 3 节）沿用。timepool 收尾时 <code>CronDelete</code> 旧任务，换一条同频率、指向本计划的新任务；Monitor 挂 concat 链日志，到期重挂。</p>
+  </section>
+
+  <section id="changes">
+    <h2>5. 要改什么</h2>
+    <p><strong>为什么非改不可：</strong><code>local_eval.py</code> 把 timepool 的 checkpoint、<code>MODEL_KIND</code>、输出目录、GPU 2–7 加 G9 加卡逻辑都写成常量，不能直接评另一个模型。</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>文件</th><th>改什么</th><th>规模</th></tr></thead>
+      <tbody>
+        <tr><td><code>scripts/evaluation/local_eval.py</code></td><td>把模型相关常量收进 <code>PROFILES = {"timepool": …, "ctxcat": …}</code>，命令行 <code>--profile</code> 选择，默认 <code>timepool</code> 且取值与现状逐项相同；<code>ctxcat</code> 用 8 卡、无后加入卡、会话前缀 <code>evl-cc-</code>、端口 9600/9700/9800</td><td>约 40 行</td></tr>
+        <tr><td><code>tests/evaluation/test_local_eval.py</code></td><td>加断言：默认 profile 常量与 <code>ffb307c</code> 版逐项相同；<code>ctxcat</code> 的 spec、server 命令（<code>--motion-online-gpu</code> + <code>--stage2-python</code>）、会话名与端口</td><td>约 40 行</td></tr>
+      </tbody>
+    </table></div>
+    <p>正在跑的 timepool 链用的是固定执行副本 <code>ffb307c</code>，改动不影响它。concat 链用新执行副本。<strong>明确不做：</strong>冒烟、容量探测、监督器、断点接续、下载重试循环。</p>
+  </section>
+
+  <section id="gates-short">
+    <h2>6. 验收判定行</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>查什么</th><th>怎么查</th><th>过了说明什么</th><th>判定行</th></tr></thead>
+      <tbody>
+        <tr><td>下载字节正确</td><td>manifest 生成 <code>SHA256SUMS</code>，<code>sha256sum -c</code> 全部 OK，文件数 38、总字节 11,976,241,540</td><td>评的是 bucket 里那份字节</td><td><code>VLA_VERIFY=PASS step=59999 files=38 sha_mismatch=0</code></td></tr>
+        <tr><td>改动没破坏 timepool profile</td><td>CPU 跑 <code>test_local_eval.py</code>、<code>test_simple_queue.py</code>、<code>test_official_contract.py</code></td><td>默认行为不变，ctxcat 命令正确</td><td><code>LOCAL_EVAL_TESTS=PASS failed=0</code></td></tr>
+        <tr><td>timepool 已结束</td><td>timepool 链日志末行</td><td>可以占 8 卡</td><td><code>TRAIN_DONE=PASS</code>（等待函数原名，这里含义是“上游链结束”）</td></tr>
+        <tr><td>GPU 让出</td><td>8 卡都 &lt; 2000 MiB</td><td>不和 timepool 残留抢显存</td><td><code>GPU_FREE=PASS</code></td></tr>
+        <tr><td>每 seed 算完</td><td><code>queue/summary.json</code></td><td>800 局齐全</td><td><code>COMPUTE_DONE seed=&lt;s&gt; completed=800 …</code></td></tr>
+        <tr><td>最终成绩</td><td>三 seed 各 800 份 <code>accepted</code></td><td>可与 timepool、GL 成绩对照</td><td><code>THREE_SEED=PASS seeds=7,42,0 overall=…</code></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="steps">
+    <h2>7. 实施步骤</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>阶段</th><th>内容</th><th>判据</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td>开工审查（一个 sonnet）；handoff 登记新任务</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS</code></td></tr>
+        <tr><td>1a</td><td>主会话立即起 <code>evl-cc-fetch</code> 下载与校验（与 1b 并行）</td><td><code>VLA_VERIFY=PASS</code></td></tr>
+        <tr><td>1b</td><td>E2 改 <code>local_eval.py</code> profile 与测试（独立 worktree）</td><td><code>LOCAL_EVAL_TESTS=PASS</code></td></tr>
+        <tr><td>2</td><td>合前审查 → <code>--no-ff</code> 合入 → 合后审查 → push</td><td><code>PRE_MERGE_REVIEW=PASS</code>、<code>POST_MERGE_REVIEW=PASS</code></td></tr>
+        <tr><td>3</td><td>建新执行副本，起 <code>evl-cc-chain --profile ctxcat</code>，挂 Monitor，换定时唤醒</td><td>会话存在、无 <code>CHAIN_STOP</code></td></tr>
+        <tr><td>4</td><td>等 timepool 结束 → concat 三 seed</td><td><code>THREE_SEED=PASS</code></td></tr>
+        <tr><td>5</td><td>两份评估一起写档案 <code>docs/evaluation-doc/</code>（timepool、concat 各一份 <code>result.md</code> 与对照表），更新 handoff，提交推送</td><td>无 <code>ahead</code></td></tr>
+      </tbody>
+    </table></div>
+    <h3>实测结果</h3>
+    <p>开工令：「同意开始」（11-08 美东）。<code>PLAN_CONSISTENCY_REVIEW=PASS base=83f3d21 findings=2 blocking=0</code>；<code>VLA_VERIFY=PASS step=59999 files=21 bytes=11587512853 sha_mismatch=0</code>；E2 合入 <code>dcf23da</code>（<code>PRE_MERGE_REVIEW=PASS</code>、<code>POST_MERGE_REVIEW=PASS tests=56passed</code>）。09:29 timepool 结束后起跑，GPU 0–7 共 32 个 worker，每卡约 72 GB、无 OOM。</p>
+    <p><strong>用户放弃（11-08 美东 10:20）：</strong>用户原话「你把你现在的这个 timepool 一零二四 context 的结果归档，然后 concat 不用再跑了，放弃。」当时 seed 42 已完成 674/800 局（成功 247），未完成，<strong>不构成成绩</strong>。按会话清单逐个停掉 34 个 <code>evl-cc-*</code> 会话（停前停后 <code>tmux ls</code> 差集恰为这 34 个），再对属于执行副本 <code>-eval-dcf23da</code> 的 93 个残留进程（服务端、stage2 sidecar、仿真客户端）发 SIGTERM，全部退出，8 卡显存归零。部分产物保留在 <code>v1-store/evaluation/ctx-concat1x1024-3seed-1108/</code>，checkpoint 保留在 run 根 <code>59999/</code>，均未删除。</p>
+    <h3>实施中调整</h3>
+    <p>下载只取 manifest 中 <code>59999/</code> 前缀的 21 个文件（原写 38 个，另 17 个是根快照文件），依据开工审查非阻塞项，口径不变。</p>
+    <h3>子代理分工与合并（简述）</h3>
+    <p>代码只有一块 E2（两个文件），由一个写入代理在独立 worktree 完成；下载是主会话起的运维命令，与 E2 并行。主会话合并，合前、合后各一个 sonnet 审查。起链、监听和收尾由主会话做。</p>
+  </section>
+
+  <section id="decide">
+    <h2>8. 待裁决（直接说“开工”即按推荐）</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>编号</th><th>问题</th><th>推荐</th><th>备选</th></tr></thead>
+      <tbody>
+        <tr><td>D1</td><td>timepool 若以 <code>CHAIN_STOP</code> 或 <code>THREE_SEED=FAIL</code> 结束，concat 还跑不跑</td><td><strong>不跑：</strong>concat 链看到非 0 退出码即停，我报告后由你决定</td><td>无论 timepool 结果如何都起 concat：要另加一条触发规则</td></tr>
+        <tr><td>D2</td><td>下载完成晚于 timepool 结束</td><td><strong>链按原逻辑写 <code>CHAIN_STOP</code>，</strong>下载完成后我手动重起链（此时尚未初始化任何 run，安全）</td><td>链里加等待下载：多一层机制，不推荐</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <h1 id="technical">第二部分（技术细节，供 agent 追踪）</h1>
+
+  <section id="red">
+    <h2>〇. 前置声明与红线</h2>
+    <ul>
+      <li><strong>R1</strong> 不碰 <code>evl-tp-chain</code> 及其 worker、执行副本 <code>-eval-ffb307c</code>、timepool 输出目录。</li>
+      <li><strong>R2</strong> 只往 <code>…/orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k/</code> 下新建 <code>59999.partial/</code> 与 <code>59999/</code>，不改 run 根已有文件。</li>
+      <li><strong>R3</strong> 不改 <code>src/</code>、<code>scripts/training/</code>、<code>scripts/dataset/</code>、<code>examples/</code>。</li>
+      <li><strong>R4</strong> timepool 结束前不占 GPU；E2 只跑 CPU 测试。</li>
+      <li><strong>R5</strong> tmux 只用前缀 <code>evl-cc-</code>，按清单逐个清理。</li>
+      <li><strong>R6</strong> 只用 seed 42、7、0；任务失败不重试。</li>
+      <li><strong>现有能力：</strong>v9 的 <code>server_command</code> 已支持 <code>stage2_python</code>；<code>create_trained_policy</code> 的 <code>stage2_pool4_concat</code> 分支；本机 encoder 实体齐全。<strong>待新增：</strong><code>--profile</code>。<strong>待验证：</strong>stage2 sidecar 每卡 4 份的显存，以及本机下载带宽。</li>
+    </ul>
+  </section>
+
+  <section id="files">
+    <h2>9. 逐文件改动</h2>
+    <p><code>scripts/evaluation/local_eval.py</code>（基线 <code>ffb307c</code>）：</p>
+    <pre><code>PROFILES = {
+  "timepool": dict(ckpt=V1/"train-runs/mme_vla_suite_orig16_b128_60k/orig100-ctx32x4x4-wan-timepool8x8-b128-60k/59999",
+                   model_kind="wan_fixedpool1024", wait_log=V1/"logs/orig100-ctx32x4x4-wan-timepool8x8-b128-60k.log",
+                   out=V1/"evaluation/ctx-wan-timepool1024-3seed-1107", gpus=range(2, 8), late_gpus=[0, 1],
+                   late_marker=V1/"validation/orig16-wan-timepool1024/RESTORE_POOL.json",
+                   prefix="evl-tp", port_base={42: 9300, 7: 9400, 0: 9500}),
+  "ctxcat":   dict(ckpt=V1/"train-runs/mme_vla_suite_orig16_b128_60k/orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k/59999",
+                   model_kind="stage2_pool4_concat", wait_log=V1/"logs/ctx-wan-timepool1024-3seed-1107/simple-chain.log",
+                   out=V1/"evaluation/ctx-concat1x1024-3seed-1108", gpus=range(0, 8), late_gpus=[], late_marker=None,
+                   prefix="evl-cc", port_base={42: 9600, 7: 9700, 0: 9800}),
+}
+# POLICY_CONFIG、POLICY_PY、SIM_PY、STAGE2_PY、BENCHMARK、MANIFEST_SHA、SEEDS、PER_GPU、MEM_FRACTION、START_GAP、POLL、CACHE_ENV 两者共用不变
+# main(): argparse --profile（choices 两项，默认 timepool），其余函数从选中的 profile 取值；late_marker 为 None 时不加卡</code></pre>
+    <p><code>wait_training()</code> 只读末行是否以 <code>EXIT_CODE=</code> 开头，对 timepool 链日志同样成立（<code>chain.sh</code> 最后一行写 <code>EXIT_CODE=$?</code>）。</p>
+  </section>
+
+  <section id="assign">
+    <h2>10. 子代理分配表</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>编号</th><th>目标</th><th>可写文件</th><th>禁触</th><th>依赖 / 合并顺序</th><th>验收（CPU）</th><th>资源</th><th>模型</th></tr></thead>
+      <tbody>
+        <tr><td>E2</td><td><code>--profile</code> 参数化</td><td><code>scripts/evaluation/local_eval.py</code>、<code>tests/evaluation/test_local_eval.py</code></td><td>其余全部</td><td>基线为本计划提交；唯一一块</td><td><code>LOCAL_EVAL_TESTS=PASS failed=0</code>（三个测试文件，<code>JAX_PLATFORMS=cpu</code>，主检出 <code>.venv</code>，<code>PYTHONPATH</code> 指 worktree）</td><td>无 GPU</td><td><code>opus</code>，worktree，<code>sub/E2: </code></td></tr>
+        <tr><td>R0 / R1</td><td>开工审查、合前合后审查</td><td>无</td><td>全部</td><td>E2 前 / 合入前后</td><td><code>PLAN_CONSISTENCY_REVIEW</code>、<code>PRE/POST_MERGE_REVIEW</code></td><td>只读</td><td><code>sonnet</code></td></tr>
+        <tr><td>—</td><td>下载校验、起链、监听、收尾</td><td><code>59999.partial/</code>、<code>59999/</code>、日志、档案、handoff</td><td>R1–R6</td><td>开工即下载；E2 合入后起链</td><td>第 6 节判定行</td><td>网络、8 卡、端口 9600–9879、<code>evl-cc-*</code></td><td>主会话自做</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="runbook">
+    <h2>11. Runbook</h2>
+    <p>下载与校验脚本放在日志目录 <code>v1-store/logs/ctx-concat1x1024-3seed-1108/fetch.sh</code>（运维脚本，不进仓库），在 tmux <code>evl-cc-fetch</code> 里按 1107 模板带 <code>tee</code> 和 <code>EXIT_CODE=</code> 运行：</p>
+    <pre><code>B=https://huggingface.co/buckets/HongzeFu/robomme-vla-orig100-ctx32x4x4-motion-s2concat1x1024-60k-v1/resolve
+R=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_orig16_b128_60k/orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k
+P=$R/59999.partial; mkdir -p $P
+curl -sfL $B/manifests/step-59999.json -o $P/../manifest-59999.json
+jq -r '.files | keys[]' $R/manifest-59999.json \
+  | xargs -P 8 -I{} sh -c 'mkdir -p "$(dirname "'$P'/${1#59999/}")"; curl -sfL --retry 3 "'$B'/$1" -o "'$P'/${1#59999/}"' _ {}
+jq -r '.files | to_entries[] | "\(.value.sha256)  \(.key | ltrimstr("59999/"))"' $R/manifest-59999.json &gt; $P.SHA256SUMS
+(cd $P &amp;&amp; sha256sum -c --quiet $P.SHA256SUMS) &amp;&amp; [ "$(find $P -type f | wc -l)" = 38 ] \
+  &amp;&amp; mv $P $R/59999 &amp;&amp; echo "VLA_VERIFY=PASS step=59999 files=38 sha_mismatch=0" || echo "VLA_VERIFY=FAIL"</code></pre>
+    <p>起链（E2 合入并 push 后；脚本放执行副本内，路径可写）：</p>
+    <pre><code>E=/scratch/hongze/robomme_policy_learning_MotionJEPA-eval-&lt;sha8&gt;   # git worktree add --detach，v1-store 符号链接
+L=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/ctx-concat1x1024-3seed-1108
+# $E/chain-cc.sh：cd $E; set -o pipefail; PYTHONUNBUFFERED=1 &lt;.venv python&gt; $E/scripts/evaluation/local_eval.py --profile ctxcat 2&gt;&amp;1 | tee $L/simple-chain.log; echo "EXIT_CODE=$?" &gt;&gt; $L/simple-chain.log
+tmux new-session -d -s evl-cc-chain "bash $E/chain-cc.sh"</code></pre>
+    <p>Monitor 过滤词：<code>TRAIN_DONE|GPU_FREE|COMPUTE_DONE|THREE_SEED|CHAIN_STOP|RECOVER|EXIT_CODE=|Traceback|Error</code>，<code>timeout_ms=1800000</code>，到期重挂。会话清单：<code>evl-cc-fetch</code>、<code>evl-cc-chain</code>、<code>evl-cc-ctl-s{42,7,0}</code>、<code>evl-cc-s{42,7,0}-g{0..7}k{0..3}</code>。</p>
+  </section>
+
+  <section id="risk">
+    <h2>12. 风险登记</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>风险</th><th>依据</th><th>处置</th></tr></thead>
+      <tbody>
+        <tr><td>stage2 sidecar 每卡 4 份显存不够</td><td>timepool 每卡实测约 72.6 GB；stage2 sidecar 还要多加载 MotionJEPA encoder，占用未在本机测过</td><td>不预检。OOM 导致 worker 全灭时会出 <code>CHAIN_STOP</code>，报告后改每卡 3 个</td></tr>
+        <tr><td>下载晚于 timepool 结束</td><td>带宽未实测</td><td>按 D2 处理</td></tr>
+        <tr><td>bucket 下载地址不可用</td><td>manifest 已用同一地址形式取到</td><td>改用 <code>uvx … hf buckets cp</code>（<code>ckpt_upload_common.HF_CLI</code>），仍失败交用户</td></tr>
+        <tr><td>本机与 GL 成绩差异</td><td>GL 用的是 <code>5fce5d3</code> 执行代码、A40 + Slurm；本机是 v10 代码、A100</td><td>如实并列报告，不把差异当作 timepool 与 concat 的差</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="blind">
+    <h2>13. 盲区诚实清单</h2>
+    <ul>
+      <li>本机从未跑过 stage2 sidecar 的多 worker 评估；第一局真实推理就在 seed 42 里。</li>
+      <li>concat 每 seed 耗时未实测，12:30 是估计。</li>
+      <li>GL 档案的 concat 冒烟回显 <code>readout=stage2_pool4_concat_v1 budget=96</code>，本机未复验，依赖 run 根快照恢复。</li>
+    </ul>
+  </section>
+
+  <section id="record">
+    <h2>14. 留档与 commit 纪律</h2>
+    <ul>
+      <li>计划提交到 <code>v10-ctx-wan-timepool-eval</code> 根目录并 push。开工后 handoff 新增任务 <code>ctx-concat1x1024-3seed-eval</code>，写 <code>kind: go</code> 原话，依赖 <code>ctx-wan-timepool1024-3seed-eval</code> 的链退出。</li>
+      <li>只 <code>git add</code> 明确路径；不 force；完工后在本文件第 7 节追加实测结果与实施中调整。</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

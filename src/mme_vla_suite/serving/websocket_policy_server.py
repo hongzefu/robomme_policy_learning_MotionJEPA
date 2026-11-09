@@ -105,7 +105,7 @@ class WebsocketPolicyServer:
                     if session is not None:
                         session.commit("add_buffer", rpc)
                     self._rpc_active = False
-                    # 挂钟落日志（0901-motion-memory-plan.md 3.5 计时口径：add_buffer 含帧路编码 + device_get + 运动路同步编码）
+                    # 挂钟落日志（docs/root-archive/0901-motion-memory-plan.md 3.5 计时口径：add_buffer 含帧路编码 + device_get + 运动路同步编码）
                     logger.info("TIMING add_buffer_ms=%.1f frames=%d exec_start_idx=%s",
                                 tend * 1000, len(obs.get("images", [])), obs.get("exec_start_idx"))
                     await websocket.send(packer.pack(

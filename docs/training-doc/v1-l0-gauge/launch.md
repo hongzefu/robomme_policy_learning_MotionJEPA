@@ -1,6 +1,6 @@
 # v1-l0-gauge：L0 修量具后的两档基准（S0c + S0）
 
-计划权威源：[`v1-95util.md`](../../../v1-95util.md) L0 节。本 job 是 v1-95util 顺序执行的
+计划权威源：[`v1-95util.md`](../../root-archive/v1-95util.md) L0 节。本 job 是 v1-95util 顺序执行的
 第 2 步：量具修复（commitV3.6）后，同一 allocation 同节点先后跑两档 600 步 e2e 基准，
 把「量具口径差异」归因出来，并以 log100 生产档重立 speed 基准锚点 S0。
 

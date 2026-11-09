@@ -1,0 +1,405 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1300" width="1800" height="1300">
+<defs><marker id="arr" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#1F2937"/></marker><marker id="arrR" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#EF4444"/></marker></defs>
+<rect x="0.0" y="0.0" width="1800.0" height="1300.0" rx="0" fill="#ffffff" stroke="none" stroke-width="0"/>
+<text x="900.0" y="36.0" font-size="19" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="middle">MemoryAttention 与 MemoryRMSNorm 逐步实现，以及 padding（补位 token）在每一步的具体去向（贯穿示例：8 帧全真实 + k=23 个真实 motion 窗 → 535 真实 / 73 补位）</text>
+<rect x="30.0" y="56.0" width="1740.0" height="246.0" rx="8" fill="#F9FAFB" stroke="#6B7280" stroke-width="1.4" stroke-dasharray="6,4"/>
+<text x="42.0" y="78.0" font-size="15" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">A  补位从哪来、怎么进入本层：Dataset（numpy）→ 排序置换 → PerceptualMemory 投影 → embed_memory 重排</text>
+<text x="1758.0" y="78.0" font-size="12" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="end">本图不重复上游 encoder 与 store，全链路见 1027-motion-memory-injection.svg</text>
+<rect x="42.0" y="88.0" width="347.0" height="204.0" rx="8" fill="#FFFBEB" stroke="#F59E0B" stroke-width="1.6"/>
+<text x="51.0" y="107.0" font-size="14" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B45309" font-weight="bold" text-anchor="start">A1  _pad_motion（FrameSampDataset）</text>
+<text x="51.0" y="126.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="start">做什么：</text>
+<text x="97.0" y="126.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">out_emb = zeros(…)；out_emb[:k] = emb</text>
+<text x="97.0" y="142.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">out_pos[:k]=pos;  mask[:k]=True</text>
+<text x="97.0" y="158.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">times = pad_times(frames, 96)</text>
+<text x="51.0" y="174.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">形状：</text>
+<text x="97.0" y="174.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">emb/pos f32、mask bool、times int64</text>
+<text x="51.0" y="190.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">补位：</text>
+<text x="97.0" y="190.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">k..95：向量 0、mask False、时刻哨兵</text>
+<text x="97.0" y="206.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">= int32.max；k &gt; 96 直接 raise</text>
+<text x="51.0" y="222.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#1D4ED8" font-weight="bold" text-anchor="start">帧路：</text>
+<text x="97.0" y="222.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">_pad 同构：可见帧 n&lt;8 时 [n:]=0、</text>
+<text x="97.0" y="238.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">mask[n:]=False、时刻同走哨兵</text>
+<text x="51.0" y="254.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B45309" font-weight="bold" text-anchor="start">示例：</text>
+<text x="97.0" y="254.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">k=23 → 23 真实窗 / 73 补位窗</text>
+<text x="382.0" y="286.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="end">framesamp_dataset.py:L305-349, L408-409</text>
+<path d="M389,190.0 H403" fill="none" stroke="#1F2937" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="403.0" y="88.0" width="347.0" height="204.0" rx="8" fill="#fff" stroke="#6B7280" stroke-width="1.3"/>
+<text x="412.0" y="107.0" font-size="14" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="start">A2  memory_order（shared/sampling.py）</text>
+<text x="412.0" y="126.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="start">做什么：</text>
+<text x="458.0" y="126.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">keys = concat([repeat(ft*2, 64),</text>
+<text x="458.0" y="142.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">                mt*2+1])</text>
+<text x="458.0" y="158.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">order = argsort(keys, &quot;stable&quot;)</text>
+<text x="412.0" y="174.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">形状：</text>
+<text x="458.0" y="174.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">ft (8,)、mt (96,) → order (608,) int32</text>
+<text x="412.0" y="190.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">补位：</text>
+<text x="458.0" y="190.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">哨兵×2+类型 &gt; 一切真实键 ⇒</text>
+<text x="458.0" y="206.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">两路补位一并落尾（帧路补位在前）</text>
+<text x="412.0" y="222.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">注：</text>
+<text x="458.0" y="222.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">真实按时刻交错，同刻帧在 motion 前；</text>
+<text x="458.0" y="238.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">产出后校验是 0..607 置换，否则 raise</text>
+<text x="412.0" y="254.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B45309" font-weight="bold" text-anchor="start">示例：</text>
+<text x="458.0" y="254.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">535 真实 → 0..534；73 补位 → 535..607</text>
+<text x="743.0" y="286.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="end">sampling.py:L27-58</text>
+<path d="M750,190.0 H764" fill="none" stroke="#1F2937" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="764.0" y="88.0" width="347.0" height="204.0" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.6"/>
+<text x="773.0" y="107.0" font-size="14" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#065F46" font-weight="bold" text-anchor="start">A3  PerceptualMemory 线性投影（nnx.Linear）</text>
+<text x="773.0" y="126.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="start">做什么：</text>
+<text x="819.0" y="126.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">pos_h = SiLU(W·motion_pos + b)</text>
+<text x="819.0" y="142.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">tok = W&#x27;·[motion_emb ‖ pos_h] + b&#x27;</text>
+<text x="773.0" y="158.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">形状：</text>
+<text x="819.0" y="158.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">W 256→768；W&#x27; 1792→1024；</text>
+<text x="819.0" y="174.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">motion (B,96,1024)、帧路 (B,512,1024)</text>
+<text x="773.0" y="190.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">补位：</text>
+<text x="819.0" y="190.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">输入全 0 ⇒ pos_h = SiLU(b) ≠ 0，</text>
+<text x="819.0" y="206.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">tok = W&#x27;·[0‖SiLU(b)]+b&#x27; ≠ 0：非零向量</text>
+<text x="773.0" y="222.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#1D4ED8" font-weight="bold" text-anchor="start">帧路：</text>
+<text x="819.0" y="222.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">static 编码器对补位帧同理（0 + bias）</text>
+<text x="773.0" y="238.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">注：</text>
+<text x="819.0" y="238.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">源码注释：「padding 行不做特殊处理，</text>
+<text x="819.0" y="254.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">屏蔽完全交给 input_mask」</text>
+<text x="1104.0" y="286.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="end">percep_mem.py:L40-44, L86-88</text>
+<path d="M1111,190.0 H1125" fill="none" stroke="#1F2937" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="1125.0" y="88.0" width="347.0" height="204.0" rx="8" fill="#fff" stroke="#6B7280" stroke-width="1.3"/>
+<text x="1134.0" y="107.0" font-size="14" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="start">A4  embed_memory 重排（HistoryPi0）</text>
+<text x="1134.0" y="126.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="start">做什么：</text>
+<text x="1180.0" y="126.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">input_mask = concat([static_mask,</text>
+<text x="1180.0" y="142.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">                     motion_mask])</text>
+<text x="1180.0" y="158.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">tokens = take_along_axis(tokens,</text>
+<text x="1180.0" y="174.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">              order[:,:,None], 1)</text>
+<text x="1180.0" y="190.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">input_mask 用同一 order 重排（L356）</text>
+<text x="1134.0" y="206.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">形状：</text>
+<text x="1180.0" y="206.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">tokens (B,608,1024)；mask (B,608) bool</text>
+<text x="1134.0" y="222.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">补位：</text>
+<text x="1180.0" y="222.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">token 与 mask 同一置换 ⇒ 对齐不丢；</text>
+<text x="1180.0" y="238.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">补位已非零，只剩 mask=False 这一标记</text>
+<text x="1134.0" y="254.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">注：</text>
+<text x="1180.0" y="254.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">形状闸：order 长度 608、dtype int32</text>
+<text x="1465.0" y="286.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="end">history_pi0.py:L326-360</text>
+<path d="M1472,190.0 H1486" fill="none" stroke="#1F2937" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="1486.0" y="88.0" width="272.0" height="204.0" rx="8" fill="#fff" stroke="#EF4444" stroke-width="2.0"/>
+<text x="1495.0" y="107.0" font-size="14" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">A5  本层看到的输入（k=23）</text>
+<text x="1495.0" y="126.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">mem_seq (B,608,1024)</text>
+<text x="1495.0" y="142.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">mem_mask (B,608) bool</text>
+<text x="1495.0" y="158.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">x (B,T,1024) 动作残差流</text>
+<rect x="1495.0" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1500.5" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1506.0" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1511.5" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1517.0" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1522.5" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1528.0" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1533.5" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1539.0" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1544.5" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1550.0" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1555.5" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1561.0" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1566.5" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1572.0" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1577.5" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1583.0" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1588.5" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1594.0" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1599.5" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1605.0" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1610.5" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1616.0" y="168" width="4.7" height="24" fill="#F59E0B"/>
+<rect x="1621.5" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1627.0" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1632.5" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1638.0" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1643.5" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1649.0" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1654.5" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1660.0" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1665.5" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1671.0" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1676.5" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1682.0" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1687.5" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1693.0" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1698.5" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1704.0" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1709.5" y="168" width="4.7" height="24" fill="#3B82F6"/>
+<rect x="1718.5" y="168" width="4.7" height="24" fill="#fff" stroke="#9CA3AF" stroke-width="0.8" stroke-dasharray="2,2"/>
+<rect x="1724.0" y="168" width="4.7" height="24" fill="#fff" stroke="#9CA3AF" stroke-width="0.8" stroke-dasharray="2,2"/>
+<rect x="1729.5" y="168" width="4.7" height="24" fill="#fff" stroke="#9CA3AF" stroke-width="0.8" stroke-dasharray="2,2"/>
+<rect x="1735.0" y="168" width="4.7" height="24" fill="#fff" stroke="#9CA3AF" stroke-width="0.8" stroke-dasharray="2,2"/>
+<rect x="1740.5" y="168" width="4.7" height="24" fill="#fff" stroke="#9CA3AF" stroke-width="0.8" stroke-dasharray="2,2"/>
+<text x="1495.0" y="204.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="start">0</text>
+<text x="1717.5" y="204.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" text-anchor="end">534|535</text>
+<text x="1749.0" y="204.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="end">607</text>
+<rect x="1495" y="212" width="11" height="11" fill="#3B82F6"/>
+<text x="1510.0" y="222.0" font-size="12" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">帧路真实 512 = 8 帧 × 64</text>
+<rect x="1495" y="229" width="11" height="11" fill="#F59E0B"/>
+<text x="1510.0" y="239.0" font-size="12" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">motion 真实 23（时刻交错）</text>
+<rect x="1495" y="246" width="11" height="11" fill="#fff" stroke="#9CA3AF" stroke-dasharray="2,2"/>
+<text x="1510.0" y="256.0" font-size="12" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" text-anchor="start">补位 73：非零向量、mask=False</text>
+<text x="1495.0" y="273.0" font-size="12" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">序列长恒 608，k 只移动分界。</text>
+<text x="1751.0" y="286.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="end">history_gemma.py:L51-53, L176-178</text>
+<rect x="30.0" y="312.0" width="1740.0" height="552.0" rx="8" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.4" stroke-dasharray="6,4"/>
+<text x="42.0" y="334.0" font-size="15" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">B  MemoryAttention(name=&quot;mem_attn&quot;)(x, mem_seq, mem_mask)：每层独立参数，4 头 × head_dim 256，1 个 KV 头，width 1024；按源码顺序八步，每步写明补位的去向</text>
+<text x="1758.0" y="334.0" font-size="12" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="end">history_gemma.py:L45-108；绿框 = 新训参数，红框 = mask 作用处</text>
+<rect x="42.0" y="344.0" width="562.0" height="154.0" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.6"/>
+<text x="51.0" y="363.0" font-size="14" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#065F46" font-weight="bold" text-anchor="start">1  mem_rms_norm：先 x 再 mem_seq，同一份 scale（cond=None 分支）</text>
+<text x="51.0" y="382.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="start">做什么：</text>
+<text x="97.0" y="382.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">rms_norm = MemoryRMSNorm(&quot;mem_rms_norm&quot;)</text>
+<text x="97.0" y="398.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">x = rms_norm(x);  mem_seq = rms_norm(mem_seq)</text>
+<text x="97.0" y="414.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">normed = x · rsqrt(mean(x², −1) + 1e-6) · (1 + scale)</text>
+<text x="51.0" y="430.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">形状：</text>
+<text x="97.0" y="430.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">x (B,T,1024)、mem_seq (B,608,1024)；var 用 f32，结果 cast 回输入 dtype</text>
+<text x="97.0" y="446.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">scale (1024,) 零初始化 ⇒ 初始为纯 RMSNorm</text>
+<text x="51.0" y="462.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">补位：</text>
+<text x="97.0" y="462.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">补位是非零 bias 向量 → 同样被归一化成单位 RMS；mask 不参与、</text>
+<text x="97.0" y="478.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">不检测零向量；与真实行共用同一份 scale（本步没有任何分支）</text>
+<text x="597.0" y="492.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="end">history_gemma.py:L27-36, L77-81</text>
+<path d="M604,421.0 H619" fill="none" stroke="#1F2937" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="619.0" y="344.0" width="562.0" height="154.0" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.6"/>
+<text x="628.0" y="363.0" font-size="14" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#065F46" font-weight="bold" text-anchor="start">2  Q / K / V 投影</text>
+<text x="628.0" y="382.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="start">做什么：</text>
+<text x="674.0" y="382.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">q = q_einsum_mem(&quot;BTD,NDH-&gt;BTNH&quot;, x)</text>
+<text x="674.0" y="398.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">k, v = kv_einsum_mem(&quot;BSD,2KDH-&gt;2BSKH&quot;, mem_seq)</text>
+<text x="628.0" y="414.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">形状：</text>
+<text x="674.0" y="414.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">q (B,T,4,256)；k、v 各 (B,608,1,256)；dtype 同输入</text>
+<text x="674.0" y="430.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">参数 q (4,1024,256)、kv (2,1,1024,256)，lecun_normal 初始化</text>
+<text x="628.0" y="446.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">补位：</text>
+<text x="674.0" y="446.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">73 个补位行照样被投影出 K、V（无用但照算）；</text>
+<text x="674.0" y="462.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">序列长恒 608，FLOPs 与参数量都不随 k 变</text>
+<text x="628.0" y="478.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B45309" font-weight="bold" text-anchor="start">示例：</text>
+<text x="674.0" y="478.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">K、V 各有 535 行有意义、73 行是 bias 向量的线性像</text>
+<text x="1174.0" y="492.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="end">history_gemma.py:L63-82</text>
+<path d="M1181,421.0 H1196" fill="none" stroke="#1F2937" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="1196.0" y="344.0" width="562.0" height="154.0" rx="8" fill="#fff" stroke="#6B7280" stroke-width="1.3"/>
+<text x="1205.0" y="363.0" font-size="14" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="start">3  RoPE + 缩放</text>
+<text x="1205.0" y="382.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="start">做什么：</text>
+<text x="1251.0" y="382.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">k = _apply_rope(k, positions=arange(608))</text>
+<text x="1251.0" y="398.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">q = _apply_rope(q, positions=arange(608, 608+T))</text>
+<text x="1251.0" y="414.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">q *= head_dim**-0.5   # 256**-0.5</text>
+<text x="1205.0" y="430.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">形状：</text>
+<text x="1251.0" y="430.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">positions (B,608) / (B,T) int；q、k 形状不变</text>
+<text x="1205.0" y="446.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">补位：</text>
+<text x="1251.0" y="446.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">位置 = 排序后的下标而非全域帧号：真实 token 占 0..534，补位占尾部</text>
+<text x="1251.0" y="462.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">535..607；补位挤在尾部，不改变真实 token 之间的相对位置</text>
+<text x="1205.0" y="478.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">注：</text>
+<text x="1251.0" y="478.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">Q 的位置紧接在 608 之后，与 memory 下标处在同一坐标轴上</text>
+<text x="1751.0" y="492.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="end">history_gemma.py:L84-91</text>
+<path d="M1276,498 V510.0 H323.0 V522" fill="none" stroke="#1F2937" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="42.0" y="522.0" width="562.0" height="154.0" rx="8" fill="#fff" stroke="#6B7280" stroke-width="1.3"/>
+<text x="51.0" y="541.0" font-size="14" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="start">4  logits（float32）</text>
+<text x="51.0" y="560.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="start">做什么：</text>
+<text x="97.0" y="560.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">logits = einsum(&quot;BTKGH,BSKH-&gt;BKGTS&quot;, q, k,</text>
+<text x="97.0" y="576.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">                preferred_element_type=float32)</text>
+<text x="51.0" y="592.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">形状：</text>
+<text x="97.0" y="592.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">logits (B,1,4,T,608) float32（K=1 个 KV 头，G=4 个 query 头）</text>
+<text x="51.0" y="608.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">补位：</text>
+<text x="97.0" y="608.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">补位列照样算出有限 logit（bias 向量经 norm / 投影 / RoPE 一路算下来），</text>
+<text x="97.0" y="624.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">此时尚无任何屏蔽；每个 query 行都有 608 个候选值</text>
+<text x="51.0" y="640.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B45309" font-weight="bold" text-anchor="start">示例：</text>
+<text x="97.0" y="640.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">每行 535 个真实 logit + 73 个「无意义但有限」的补位 logit</text>
+<text x="597.0" y="670.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="end">history_gemma.py:L94-96</text>
+<path d="M604,599.0 H619" fill="none" stroke="#1F2937" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="619.0" y="522.0" width="562.0" height="154.0" rx="8" fill="#FEF2F2" stroke="#EF4444" stroke-width="2.0"/>
+<text x="628.0" y="541.0" font-size="14" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">5  mask 作用点：整条路径里唯一读 mem_mask 的地方</text>
+<text x="628.0" y="560.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="start">做什么：</text>
+<text x="674.0" y="560.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">attn_mask = mem_mask[:, None, None, None, :]</text>
+<text x="674.0" y="576.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">masked_logits = where(attn_mask, logits, -2.3819763e38)</text>
+<text x="628.0" y="592.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">形状：</text>
+<text x="674.0" y="592.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">attn_mask (B,1,1,1,608) bool 广播到 (B,1,4,T,608)；结果仍 float32</text>
+<text x="628.0" y="608.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">补位：</text>
+<text x="674.0" y="608.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">补位列的 logit 被整列替换成 −2.3819763e38（≈ −float32 最大值），</text>
+<text x="674.0" y="624.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">真实列原样保留；不检测零向量、不看时刻哨兵，只看这一个 bool mask</text>
+<text x="628.0" y="640.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B45309" font-weight="bold" text-anchor="start">示例：</text>
+<text x="674.0" y="640.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">每行 73 列变成 −2.38e38，535 列不变；T 行、4 头共用同一份 mask</text>
+<text x="1174.0" y="670.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="end">history_gemma.py:L97-98</text>
+<path d="M1181,599.0 H1196" fill="none" stroke="#1F2937" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="1196.0" y="522.0" width="562.0" height="154.0" rx="8" fill="#FEF2F2" stroke="#EF4444" stroke-width="2.0"/>
+<text x="1205.0" y="541.0" font-size="14" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">6  softmax（float32）→ cast 回 x.dtype</text>
+<text x="1205.0" y="560.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="start">做什么：</text>
+<text x="1251.0" y="560.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">probs = jax.nn.softmax(masked_logits, axis=-1)</text>
+<text x="1251.0" y="576.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">            .astype(x.dtype)</text>
+<text x="1205.0" y="592.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">形状：</text>
+<text x="1251.0" y="592.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">probs (B,1,4,T,608)；f32 内算完再 cast（bf16 下 0 仍是精确 0）</text>
+<text x="1205.0" y="608.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">补位：</text>
+<text x="1251.0" y="608.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">exp(−2.38e38 − max) 下溢为精确 0 ⇒ 既不占权重、也不进分母；</text>
+<text x="1251.0" y="624.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">分母只含 535 个真实 key，真实列权重和为 1（见正下方柱状图）</text>
+<text x="1205.0" y="640.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">注：</text>
+<text x="1251.0" y="640.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">608 位全 False 不会发生（帧路至少 1 帧真实）⇒ 分母恒 &gt; 0，无 NaN</text>
+<text x="1751.0" y="670.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="end">history_gemma.py:L99</text>
+<path d="M1276,676 V688.0 H323.0 V700" fill="none" stroke="#1F2937" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="42.0" y="700.0" width="562.0" height="154.0" rx="8" fill="#fff" stroke="#6B7280" stroke-width="1.3"/>
+<text x="51.0" y="719.0" font-size="14" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="start">7  加权求和 V</text>
+<text x="51.0" y="738.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="start">做什么：</text>
+<text x="97.0" y="738.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">encoded = einsum(&quot;BKGTS,BSKH-&gt;BTKGH&quot;, probs, v)</text>
+<text x="97.0" y="754.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">encoded = rearrange(encoded, &quot;B T K G H -&gt; B T (K G) H&quot;)</text>
+<text x="51.0" y="770.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">形状：</text>
+<text x="97.0" y="770.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">(B,T,1,4,256) → (B,T,4,256)</text>
+<text x="51.0" y="786.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">补位：</text>
+<text x="97.0" y="786.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">补位的 V 乘以 0，对结果贡献精确为 0；</text>
+<text x="97.0" y="802.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">只有 535 个真实 token 的 V 被加权求和</text>
+<text x="51.0" y="818.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">注：</text>
+<text x="97.0" y="818.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">补位的 V 仍参加这次 einsum（算力不省），只是系数为 0</text>
+<text x="597.0" y="848.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="end">history_gemma.py:L100-101</text>
+<path d="M604,777.0 H619" fill="none" stroke="#1F2937" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="619.0" y="700.0" width="562.0" height="154.0" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.6"/>
+<text x="628.0" y="719.0" font-size="14" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#065F46" font-weight="bold" text-anchor="start">8  输出投影 → mem_mod_vec</text>
+<text x="628.0" y="738.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="start">做什么：</text>
+<text x="674.0" y="738.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">mem_mod_vec = out_einsum_mem(&quot;BTNH,NHD-&gt;BTD&quot;, encoded)</text>
+<text x="628.0" y="754.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">形状：</text>
+<text x="674.0" y="754.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">参数 (4,256,1024)；mem_mod_vec (B,T,1024)，dtype 同 x</text>
+<text x="628.0" y="770.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">补位：</text>
+<text x="674.0" y="770.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">mem_mod_vec 与补位无关：补位既不在分子也不在分母；</text>
+<text x="674.0" y="786.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">k 变小只是 softmax 在更少的真实 key 上分配权重</text>
+<text x="628.0" y="802.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">注：</text>
+<text x="674.0" y="802.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">参数/层：q 1,048,576 + kv 524,288 + out 1,048,576 + scale 1,024</text>
+<text x="674.0" y="818.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">= 2,622,464；nn.scan 18 层各一份独立参数</text>
+<text x="1174.0" y="848.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="end">history_gemma.py:L103-108</text>
+<path d="M604,777.0 H619" fill="none" stroke="#1F2937" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="1196.0" y="700.0" width="562.0" height="154.0" rx="8" fill="#fff" stroke="#EF4444" stroke-width="1.6"/>
+<text x="1205.0" y="719.0" font-size="14" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">第 6 步 softmax 权重示意（k=23 示例的某一 query 行；柱数示意、不按比例）</text>
+<path d="M1477.0,676 V700" fill="none" stroke="#EF4444" stroke-width="1.6" marker-end="url(#arrR)"/>
+<text x="1485.0" y="692.0" font-size="11" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#B91C1C" text-anchor="start">probs</text>
+<rect x="1209.0" y="786.5" width="6.2" height="31.5" fill="#3B82F6"/>
+<rect x="1217.2" y="797.0" width="6.2" height="21.0" fill="#3B82F6"/>
+<rect x="1225.4" y="769.0" width="6.2" height="49.0" fill="#3B82F6"/>
+<rect x="1233.6" y="804.0" width="6.2" height="14.0" fill="#3B82F6"/>
+<rect x="1241.8" y="758.5" width="6.2" height="59.5" fill="#3B82F6"/>
+<rect x="1250.0" y="790.0" width="6.2" height="28.0" fill="#3B82F6"/>
+<rect x="1258.2" y="776.0" width="6.2" height="42.0" fill="#3B82F6"/>
+<rect x="1266.4" y="793.5" width="6.2" height="24.5" fill="#3B82F6"/>
+<rect x="1274.6" y="755.0" width="6.2" height="63.0" fill="#3B82F6"/>
+<rect x="1282.8" y="800.5" width="6.2" height="17.5" fill="#3B82F6"/>
+<rect x="1291.0" y="783.0" width="6.2" height="35.0" fill="#3B82F6"/>
+<rect x="1299.2" y="772.5" width="6.2" height="45.5" fill="#F59E0B"/>
+<rect x="1307.4" y="797.0" width="6.2" height="21.0" fill="#3B82F6"/>
+<rect x="1315.6" y="765.5" width="6.2" height="52.5" fill="#3B82F6"/>
+<rect x="1323.8" y="790.0" width="6.2" height="28.0" fill="#3B82F6"/>
+<rect x="1332.0" y="779.5" width="6.2" height="38.5" fill="#3B82F6"/>
+<rect x="1340.2" y="793.5" width="6.2" height="24.5" fill="#3B82F6"/>
+<rect x="1348.4" y="762.0" width="6.2" height="56.0" fill="#3B82F6"/>
+<rect x="1356.6" y="783.0" width="6.2" height="35.0" fill="#3B82F6"/>
+<rect x="1364.8" y="776.0" width="6.2" height="42.0" fill="#3B82F6"/>
+<rect x="1373.0" y="786.5" width="6.2" height="31.5" fill="#3B82F6"/>
+<rect x="1381.2" y="769.0" width="6.2" height="49.0" fill="#3B82F6"/>
+<rect x="1389.4" y="748.0" width="6.2" height="70" fill="#fff" stroke="#9CA3AF" stroke-width="0.8" stroke-dasharray="2,2"/>
+<rect x="1397.6" y="748.0" width="6.2" height="70" fill="#fff" stroke="#9CA3AF" stroke-width="0.8" stroke-dasharray="2,2"/>
+<rect x="1405.8" y="748.0" width="6.2" height="70" fill="#fff" stroke="#9CA3AF" stroke-width="0.8" stroke-dasharray="2,2"/>
+<rect x="1414.0" y="748.0" width="6.2" height="70" fill="#fff" stroke="#9CA3AF" stroke-width="0.8" stroke-dasharray="2,2"/>
+<rect x="1422.2" y="748.0" width="6.2" height="70" fill="#fff" stroke="#9CA3AF" stroke-width="0.8" stroke-dasharray="2,2"/>
+<rect x="1430.4" y="748.0" width="6.2" height="70" fill="#fff" stroke="#9CA3AF" stroke-width="0.8" stroke-dasharray="2,2"/>
+<rect x="1438.6" y="748.0" width="6.2" height="70" fill="#fff" stroke="#9CA3AF" stroke-width="0.8" stroke-dasharray="2,2"/>
+<rect x="1446.8" y="748.0" width="6.2" height="70" fill="#fff" stroke="#9CA3AF" stroke-width="0.8" stroke-dasharray="2,2"/>
+<path d="M1208,818 H1454" fill="none" stroke="#1F2937" stroke-width="1"/>
+<path d="M1388.4,730 V821" fill="none" stroke="#EF4444" stroke-width="1" stroke-dasharray="3,2"/>
+<text x="1384.4" y="740.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="end">535 真实 key：权重 &gt;0，和为 1</text>
+<text x="1392.4" y="740.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" text-anchor="start">73 补位 = 0</text>
+<text x="1208.0" y="831.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="start">下标 0</text>
+<text x="1388.4" y="831.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" text-anchor="middle">534|535</text>
+<text x="1454.0" y="831.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="end">607</text>
+<text x="1472.0" y="742.0" font-size="12" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">p_j = exp(l_j−m) / Σ(真实 i) exp(l_i−m)</text>
+<text x="1472.0" y="758.0" font-size="12" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" text-anchor="start">补位 j：exp(−2.38e38−m) 下溢 = 0.0</text>
+<text x="1472.0" y="778.0" font-size="12" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">m = 行最大值，来自真实列（有限）；</text>
+<text x="1472.0" y="793.0" font-size="12" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">补位项仍 ≈ −2.38e38，exp 恒为 0；</text>
+<text x="1472.0" y="808.0" font-size="12" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">分母 Σ 只累加 535 个真实 key。</text>
+<text x="1472.0" y="823.0" font-size="12" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">k=5 → 517/91；k=96 → 608/0：</text>
+<text x="1472.0" y="838.0" font-size="12" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">形状与算力不变，只有支撑集大小在变</text>
+<text x="1751.0" y="848.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="end">history_gemma.py:L98-99</text>
+<rect x="30.0" y="874.0" width="1740.0" height="416.0" rx="8" fill="#F9FAFB" stroke="#6B7280" stroke-width="1.4" stroke-dasharray="6,4"/>
+<text x="42.0" y="896.0" font-size="15" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">C  MemoryRMSNorm(name=&quot;mem_rms_norm_ffn&quot;)(x, cond=mem_mod_vec)：四步</text>
+<rect x="42.0" y="906.0" width="478.0" height="160.0" rx="8" fill="#fff" stroke="#6B7280" stroke-width="1.3"/>
+<text x="51.0" y="925.0" font-size="14" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="start">1  归一化（无参数，f32 统计）</text>
+<text x="51.0" y="944.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="start">做什么：</text>
+<text x="97.0" y="944.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">var = mean(square(x.astype(f32)), −1, keepdims=True)</text>
+<text x="97.0" y="960.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">normed = x · reciprocal(sqrt(var + 1e-06))</text>
+<text x="51.0" y="976.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">形状：</text>
+<text x="97.0" y="976.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">x (B,T,1024)：attention 残差之后的 xs[i]；var (B,T,1) f32</text>
+<text x="51.0" y="992.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">补位：</text>
+<text x="97.0" y="992.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">x 是动作 token，没有 padding 概念；本步不接触 mem_mask、</text>
+<text x="97.0" y="1008.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">也不接触 memory 序列，与原版 RMSNorm 的归一化部分同式</text>
+<text x="513.0" y="1060.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="end">history_gemma.py:L30-32</text>
+<rect x="534.0" y="906.0" width="478.0" height="160.0" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.6"/>
+<text x="543.0" y="925.0" font-size="14" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#065F46" font-weight="bold" text-anchor="start">2  调制向量（新训参数 Dense 1024→2048）</text>
+<text x="543.0" y="944.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="start">做什么：</text>
+<text x="589.0" y="944.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">modulation = Dense(2048, kernel_init=normal(0.002),</text>
+<text x="589.0" y="960.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">                   use_bias)(mem_mod_vec)</text>
+<text x="589.0" y="976.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">scale, shift = split(modulation, 2, axis=-1)</text>
+<text x="543.0" y="992.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">形状：</text>
+<text x="589.0" y="992.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">参数 2,099,200/层（1024×2048+2048）；scale/shift (B,T,1024)</text>
+<text x="543.0" y="1008.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">补位：</text>
+<text x="589.0" y="1008.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">cond = mem_mod_vec 已在 B 第 6 步排除补位 ⇒ scale / shift</text>
+<text x="589.0" y="1024.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">不含任何补位信息；补位数量 73 也不会改变它们的量级</text>
+<text x="543.0" y="1040.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">注：</text>
+<text x="589.0" y="1040.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">原为零初始化、现为 normal(0.002) 小随机 ⇒ 初始不是严格恒等</text>
+<text x="1005.0" y="1060.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="end">history_gemma.py:L38-40；representation/utils.py:L5</text>
+<rect x="42.0" y="1076.0" width="478.0" height="160.0" rx="8" fill="#fff" stroke="#6B7280" stroke-width="1.3"/>
+<text x="51.0" y="1095.0" font-size="14" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="start">3  仿射调制</text>
+<text x="51.0" y="1114.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="start">做什么：</text>
+<text x="97.0" y="1114.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">out = (normed · (1 + scale) + shift).astype(x.dtype)</text>
+<text x="51.0" y="1130.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">形状：</text>
+<text x="97.0" y="1130.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">out (B,T,1024)，dtype 回到 x 的 dtype</text>
+<text x="51.0" y="1146.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">补位：</text>
+<text x="97.0" y="1146.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">无补位参与；memory 只通过 scale / shift 的数值逐维</text>
+<text x="97.0" y="1162.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">影响每个动作 token 的归一化输出</text>
+<text x="51.0" y="1178.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">注：</text>
+<text x="97.0" y="1178.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">与原版 adaRMS（cond=time）同式，只是 cond 换成了</text>
+<text x="97.0" y="1194.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">memory 交叉注意力的输出 mem_mod_vec</text>
+<text x="513.0" y="1230.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="end">history_gemma.py:L41-42</text>
+<rect x="534.0" y="1076.0" width="478.0" height="160.0" rx="8" fill="#FEF2F2" stroke="#EF4444" stroke-width="2.0"/>
+<text x="543.0" y="1095.0" font-size="14" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">4  写回位置：attention 残差之后、pre_ffw_norm_1 之前插入</text>
+<text x="543.0" y="1114.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="start">做什么：</text>
+<text x="589.0" y="1114.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">x = MemoryRMSNorm(&quot;mem_rms_norm_ffn&quot;)(x, mem_mod_vec)</text>
+<text x="589.0" y="1130.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">x, gate = RMSNorm(&quot;pre_ffw_norm_1&quot;)(x, adarms_cond)</text>
+<text x="589.0" y="1146.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">xs[i] = _gated_residual(xs[i], mlp_1(x), gate)</text>
+<text x="543.0" y="1162.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">形状：</text>
+<text x="589.0" y="1162.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">(B,T,1024) 不变；只对最后一个 expert（i == len(xs)−1）执行</text>
+<text x="543.0" y="1178.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">补位：</text>
+<text x="589.0" y="1178.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">无；FFN 残差加的是调制前的 xs[i]（_gated_residual 的 x 来自</text>
+<text x="589.0" y="1194.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">循环外），mem_mod_vec 只通过改变 FFN 的输入起作用</text>
+<text x="1005.0" y="1230.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="end">history_gemma.py:L172-202</text>
+<path d="M520.0,986.0 H534.0" fill="none" stroke="#1F2937" stroke-width="1.6" marker-end="url(#arr)"/>
+<path d="M773.0,1066 V1071.0 H281.0 V1076" fill="none" stroke="#1F2937" stroke-width="1.6" marker-end="url(#arr)"/>
+<path d="M520.0,1156.0 H534.0" fill="none" stroke="#1F2937" stroke-width="1.6" marker-end="url(#arr)"/>
+<path d="M900.0,854 V869 H972.0 V906" fill="none" stroke="#1F2937" stroke-width="1.8" marker-end="url(#arr)"/>
+<text x="964.0" y="900.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="end">mem_mod_vec (B,T,1024) → cond</text>
+<text x="1028.0" y="896.0" font-size="15" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">在 HistoryBlock 一层中的位置（插入，不替换任何原版模块）</text>
+<rect x="1028.0" y="930.0" width="150.0" height="56.0" rx="8" fill="#fff" stroke="#6B7280" stroke-width="1.3"/>
+<text x="1103.0" y="953.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="middle">attention 残差</text>
+<text x="1103.0" y="972.0" font-size="11" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#6B7280" text-anchor="middle">xs[i] (B,T,1024)</text>
+<path d="M1178,958.0 H1198" fill="none" stroke="#1F2937" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="1198.0" y="930.0" width="150.0" height="56.0" rx="8" fill="#FEF2F2" stroke="#EF4444" stroke-width="1.8"/>
+<text x="1273.0" y="953.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="middle">MemoryRMSNorm</text>
+<text x="1273.0" y="972.0" font-size="11" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#6B7280" text-anchor="middle">mem_rms_norm_ffn</text>
+<path d="M1348,958.0 H1368" fill="none" stroke="#1F2937" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="1368.0" y="930.0" width="150.0" height="56.0" rx="8" fill="#fff" stroke="#6B7280" stroke-width="1.3"/>
+<text x="1443.0" y="953.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="middle">pre_ffw_norm_1</text>
+<text x="1443.0" y="972.0" font-size="11" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#6B7280" text-anchor="middle">adaRMS, cond=time</text>
+<path d="M1518,958.0 H1538" fill="none" stroke="#1F2937" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="1538.0" y="930.0" width="150.0" height="56.0" rx="8" fill="#fff" stroke="#6B7280" stroke-width="1.3"/>
+<text x="1613.0" y="953.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="middle">mlp_1</text>
+<text x="1613.0" y="972.0" font-size="11" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#6B7280" text-anchor="middle">FFN hidden 4096</text>
+<path d="M1688,958.0 H1708" fill="none" stroke="#1F2937" stroke-width="1.6" marker-end="url(#arr)"/>
+<circle cx="1728" cy="958.0" r="18" fill="#fff" stroke="#1F2937" stroke-width="1.6"/>
+<text x="1728.0" y="964.0" font-size="18" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" font-weight="bold" text-anchor="middle">⊕</text>
+<text x="1728.0" y="1000.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="middle">gate 残差</text>
+<path d="M1103.0,930 V916 H1728 V940.0" fill="none" stroke="#EF4444" stroke-width="1.6" marker-end="url(#arrR)"/>
+<text x="1423.0" y="911.0" font-size="12" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" text-anchor="middle">FFN 残差加的是调制前的 xs[i]（_gated_residual 的 x 来自循环外，不是调制后的 x）</text>
+<path d="M1273.0,1012 V986" fill="none" stroke="#1F2937" stroke-width="1.6" marker-end="url(#arr)"/>
+<text x="1281.0" y="1026.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="start">cond = mem_mod_vec（B 第 8 步输出）</text>
+<text x="1028.0" y="1046.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">nn.scan 18 层，各层独立的 mem_attn 与 mem_rms_norm_ffn；mem_seq / mem_mask 以 nn.broadcast 传入，</text>
+<text x="1028.0" y="1063.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">18 层看到同一份 memory 与同一份 mask；每层、每个去噪步都重算 Q/K/V 与 where/softmax。</text>
+<text x="1758.0" y="1063.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" text-anchor="end">L165-202, L241-253</text>
+<rect x="1028.0" y="1076.0" width="730.0" height="206.0" rx="8" fill="#FEF2F2" stroke="#EF4444" stroke-width="1.6"/>
+<text x="1037.0" y="1097.0" font-size="15" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">padding 对本层的影响：六条结论</text>
+<text x="1037.0" y="1119.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">①</text>
+<text x="1060.0" y="1119.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">补位 token 参与 RMSNorm、K/V 投影、RoPE、logits（算力不省、形状恒定），</text>
+<text x="1060.0" y="1136.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">但在 softmax 处权重精确为 0、不进分母——靠 B 第 5 步一次 where 完成。</text>
+<text x="1037.0" y="1158.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">②</text>
+<text x="1060.0" y="1158.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">mem_mod_vec 只由真实 token 决定 ⇒ MemoryRMSNorm 的 scale / shift 不含任何补位信息。</text>
+<text x="1037.0" y="1180.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">③</text>
+<text x="1060.0" y="1180.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">序列长恒 608；k 变小只是 softmax 在更少的真实 key 上分配权重（535 → 517 → …）。</text>
+<text x="1037.0" y="1202.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">④</text>
+<text x="1060.0" y="1202.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">RoPE 的 K 位置是排序下标而非全域时刻；补位挤在尾部 535..607，不影响真实 token 间的相对位置编码。</text>
+<text x="1037.0" y="1224.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">⑤</text>
+<text x="1060.0" y="1224.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">帧路补位（早期可见帧 &lt; 8）与 motion 补位走完全相同的 mask 路径，没有任何分支区分二者。</text>
+<text x="1037.0" y="1246.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">⑥</text>
+<text x="1060.0" y="1246.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">608 位全为 False 不会发生（帧路至少 1 帧真实）⇒ softmax 分母恒 &gt; 0，不会出 NaN。</text>
+</svg>

@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Wan 时间池化 1024 context 60k · 官方 800 局三 seed 评估计划</title>
+  <style>
+    :root{--ink:#172a3a;--muted:#536676;--line:#d6e2e9;--paper:#fff;--bg:#eef3f5;--blue:#175d83;--bluebg:#eaf4fa;--green:#176b5b;--greenbg:#eaf6f0;--amber:#865818;--amberbg:#fff5df;--red:#9a3940;--redbg:#fff0ef}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.8 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","Source Han Sans SC","Microsoft YaHei","PingFang SC",sans-serif}main{max-width:1240px;margin:28px auto;padding:42px 48px;background:var(--paper);border:1px solid var(--line);border-radius:16px}.eyebrow{font-size:13px;letter-spacing:.08em;color:var(--blue);font-weight:700}.title{font-size:34px;line-height:1.35;font-weight:800;margin:12px 0}.subtitle{color:var(--muted);margin:12px 0 24px}h1{font-size:28px;line-height:1.45;border-top:3px solid var(--blue);padding-top:24px;margin:48px 0 20px}h2{font-size:22px;margin:34px 0 12px;line-height:1.5}h3{font-size:18px;margin:24px 0 10px}p{margin:10px 0}a{color:var(--blue);text-underline-offset:3px}a:hover{color:var(--green)}code,kbd{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;font-size:.9em;overflow-wrap:anywhere}code{background:#eff3f6;padding:2px 4px;border-radius:4px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#132b3b;color:#eff8ff;border-radius:10px;padding:18px 20px;font-size:13px;line-height:1.7;overflow:auto}pre code{background:none;padding:0;color:inherit;font-size:inherit}.box{padding:18px 22px;border:1px solid var(--line);border-left:5px solid var(--blue);border-radius:8px;background:var(--bluebg);margin:20px 0}.box.green{border-color:#b9dccb;border-left-color:var(--green);background:var(--greenbg)}.box.amber{border-color:#ead5a6;border-left-color:var(--amber);background:var(--amberbg)}.box.red{border-color:#edc5c3;border-left-color:var(--red);background:var(--redbg)}.badge{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--bluebg);color:var(--blue);vertical-align:middle}.badge.todo{background:var(--amberbg);color:var(--amber)}.badge.fact{background:var(--greenbg);color:var(--green)}.toc{display:flex;gap:8px 20px;flex-wrap:wrap;padding:16px 20px;background:#f5f8fa;border:1px solid var(--line);border-radius:8px}.toc a{font-size:14px}.table-wrap{overflow-x:auto;margin:16px 0}table{width:100%;border-collapse:collapse;font-size:14px;line-height:1.65}th,td{border:1px solid var(--line);padding:11px 13px;text-align:left;vertical-align:top}th{background:#edf3f6;font-weight:700}tbody tr:nth-child(even){background:#fafcfd}td strong{color:#143e5a}.num{font-variant-numeric:tabular-nums;white-space:nowrap}.small{font-size:13px;color:var(--muted)}.nowrap{white-space:nowrap}ul,ol{padding-left:24px}li{margin:7px 0}figure{margin:20px 0;background:#fafcfd;border:1px solid var(--line);border-radius:10px;padding:14px}figure svg{display:block;width:100%;height:auto;min-width:720px}.diagram{overflow-x:auto}figcaption{font-size:13px;color:var(--muted);margin:10px 4px 2px}.formula{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;line-height:1.9;font-size:14px;background:#f2f7f9;border:1px solid var(--line);padding:16px 20px;border-radius:8px;overflow-wrap:anywhere}.keynum{font-size:20px;font-weight:800;color:var(--green)}footer{border-top:1px solid var(--line);padding-top:20px;margin-top:36px;color:var(--muted);font-size:13px}section{scroll-margin-top:20px}@media(max-width:760px){main{margin:0;border:0;border-radius:0;padding:24px 18px}.title{font-size:26px}h1{font-size:24px}h2{font-size:20px}th,td{padding:9px;font-size:13px}}@media print{body{background:#fff}main{border:0;margin:0;padding:0;max-width:none}.toc{display:none}h1{break-before:page}h1:first-of-type{break-before:auto}tr,figure,.box{break-inside:avoid}a{color:inherit}pre{background:#f2f5f7;color:#172a3a}}
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">原版 RoboMME 16×100 · context B128 60k · 美东 2026 年 11 月 7 日</div>
+    <p class="title">训练一结束，立刻跑 timepool1024 三 seed 评估</p>
+    <p class="subtitle">官方 800 局 × seed 42 / 7 / 0，本机 tmux 触发，每卡 4 个 worker，最小改造上次 Wan-LTM 的 <code>local_eval.py</code>。</p>
+    <div class="box amber"><strong>已获开工令（用户 11-07 美东：「同意开始」）。</strong>实际进度见第 8 节“实测结果”。任务 <code>orig16-context-wan-timepool1024-60k</code> 的开工令明写“不含策略评估”，所以本计划必须另有用户开工令。权威基线：<code>v9-ctx-wan-timepool1024-60k@8843e40</code>（<code>commitV11.81Beta</code>，正式训练锚点，已在远端）；计划分支 <code>v10-ctx-wan-timepool-eval</code>；主检出 <code>/scratch/hongze/robomme_policy_learning_MotionJEPA</code> 有 <code>AGENTMETARULES_HOLD</code>，全程不动；benchmark 锚点 <code>856bc3a</code>。</div>
+    <div class="toc" aria-label="文档导航">
+      <a href="#human">第一部分</a><a href="#overview">运行一览</a><a href="#model">被评模型</a><a href="#trigger">触发与时间线</a><a href="#gpu">GPU 与 G9</a><a href="#changes">要改什么</a><a href="#compare">结果怎么读</a><a href="#gates-short">验收</a><a href="#steps">步骤</a><a href="#decide">待裁决</a><a href="#technical">第二部分</a><a href="#files">逐文件</a><a href="#assign">子代理表</a><a href="#runbook">Runbook</a><a href="#risk">风险</a><a href="#blind">盲区</a>
+    </div>
+  </header>
+
+  <h1 id="human">第一部分（给人看）</h1>
+
+  <section id="overview">
+    <h2>1. 要做什么与全部运行一览</h2>
+    <p>正式 60k 训练结束后，用 <code>59999</code> checkpoint 跑官方 800 局评估，共 3 个 seed，得到与 Wan-LTM 同口径的成功率均值 ± std。触发器在训练日志出现 <code>EXIT_CODE=0</code> 后约 1 分钟内起第一批 worker，无人值守跑完。这是用户要比较“零参数池化”和其他记忆方案时缺的那个数：至今没有任何 benchmark 成绩，训练 loss 不能替代。</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>运行</th><th>checkpoint</th><th>局数</th><th>GPU / worker</th><th>端口基址</th><th>输出</th></tr></thead>
+      <tbody>
+        <tr><td>seed 42</td><td rowspan="3"><code>…/orig100-ctx32x4x4-wan-timepool8x8-b128-60k/59999</code></td><td>800（160 块，每块 5 局）</td><td>GPU 2–7 共 24 个起跑；G9 结束后加 GPU 0、1，共 32 个</td><td>9300</td><td><code>seed42/run800</code></td></tr>
+        <tr><td>seed 7</td><td>800</td><td>同上；此时通常已是 32 个</td><td>9400</td><td><code>seed7/run800</code></td></tr>
+        <tr><td>seed 0</td><td>800</td><td>同上</td><td>9500</td><td><code>seed0/run800</code></td></tr>
+      </tbody>
+    </table></div>
+    <p>输出根：<code>v1-store/evaluation/ctx-wan-timepool1024-3seed-1107/</code>。三个 seed 串行，不并发。</p>
+    <p><strong>已定死口径</strong></p>
+    <ol>
+      <li>用户原话：「给出方案 训练一结束立刻启动 timepool1024的eval 3seed」。触发点是训练结束，不等备份、不等任务 <code>done</code>（见 <a href="#trigger">第 3 节</a>）。</li>
+      <li>用户原话（11-03）：「我现在要的就是每每卡四个」「做最简单的实现」。每卡固定 4 个 worker，<code>XLA_PYTHON_CLIENT_MEM_FRACTION=0.18</code>，不加放量闸门、不加心跳（<a href="#changes">第 5 节</a>）。</li>
+      <li>与 Wan-LTM 同清单：官方 800 局，封签 <code>991c34960b431f4e6170357dfe428e74e404f5ccdbf8dafddc3a0a380eaeecc6</code>，seed 顺序 42→7→0，<code>max_steps=1300</code>，timeout 算失败，std 取 ddof=1（<a href="#compare">第 6 节</a>）。</li>
+      <li>GPU 0、1 先留给训练任务收尾的 G9，G9 写出记录后自动加入（<a href="#gpu">第 4 节</a>）。</li>
+      <li>不改模型、不重新训练、不换 checkpoint，不动 <code>src/</code> 和 <code>scripts/training/</code>。</li>
+    </ol>
+  </section>
+
+  <section id="model">
+    <h2>2. 被评模型是哪份，推理时怎么走</h2>
+    <ul>
+      <li><strong>run：</strong><code>v1-store/train-runs/mme_vla_suite_orig16_b128_60k/orig100-ctx32x4x4-wan-timepool8x8-b128-60k</code>。context 接法，512 帧 token + 96 motion 预算，总参数 3,363,663,120，与旧 concat 完全一致（<code>VLA_PARAM_EQ=PASS</code>）。</li>
+      <li><strong>motion 特征（在线）：</strong>33 帧窗口 → Wan VAE → 丢第 0 个 latent → 后 8 个沿时间取均值 → 空间 32×32 池化到 8×8 → 1×1024。由 <code>scripts/dataset/wan_timepool/timepool_sidecar.py</code> 完成，fp32、B=1、无 autocast。已有 <code>ONLINE_WINDOW_EQ=PASS windows=64 input_mismatches=0</code>。</li>
+      <li><strong>配置不会跑错：</strong><code>--policy.config mme_vla_suite_orig16_b128_60k</code> 只给基础配置。<code>policy_config.py::create_trained_policy</code> 见到 run 内 <code>history_config.resolved.yaml</code> 就只从快照恢复，并核对 sha 与 <code>motion_provenance.json</code>。该快照已确认 <code>readout: wan_raw_timepool8_spatial8x8_v1</code>。</li>
+      <li><strong>身份：</strong>服务端 <code>model_kind</code> 取 <code>encoder_kind</code>，也就是 <code>wan_fixedpool1024</code>。客户端用 <code>--model-kind</code> 首包核对，spec 必须写同一个值。</li>
+    </ul>
+  </section>
+
+  <section id="trigger">
+    <h2>3. 触发条件与时间线</h2>
+    <p>会话 <code>evl-tp-chain</code> 每 30 秒读一次训练日志末行。<code>run_orig16_timepool_60k.sh</code> 把 <code>EXIT_CODE=</code> 写在收尾记录之后的最后一行，所以这一行就是可靠的完成信号。开跑只看三件事：末行是 <code>EXIT_CODE=0</code>、<code>59999/_CHECKPOINT_METADATA</code> 存在（已确认 orbax 目录有这个文件，如 <code>30000/</code>）、GPU 2–7 显存占用都低于 2000 MiB（最多等 600 秒）。任何一项不满足就写 <code>CHAIN_STOP</code> 退出。</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>节点</th><th>预计（美东）</th><th>依据</th></tr></thead>
+      <tbody>
+        <tr><td>写计划时进度</td><td>11-07 15:18：31k/60k</td><td>训练窗格：1.9 s/it，剩余 14:59:08</td></tr>
+        <tr><td>训练结束，起 seed 42</td><td>11-08 06:15 前后</td><td>上式外推；相邻 worker 隔 10 秒，24 个约 4 分钟起齐</td></tr>
+        <tr><td>G9 结束，加 GPU 0、1</td><td>随后数分钟到十余分钟</td><td>G9 含恢复与在线推理；未实测，<code>save-load</code> 短测约 2 分钟</td></tr>
+        <tr><td>三个 seed 完成</td><td>11-08 09:30 前后</td><td>Wan-LTM 实测 63 / 60 / 57 分钟，合计 3 小时；timepool 速度未实测</td></tr>
+      </tbody>
+    </table></div>
+    <p>计划批准后就能布触发器，离训练结束还有约 15 小时，实施时间足够。触发器只读日志，不影响训练和备份。</p>
+    <h3>Claude agent 定时唤醒（用户要求）</h3>
+    <p>用户原话：「你需要强制隔一段时间唤醒一次 以免时间到了没被唤醒 注意我说的是claude agent 不是代码的唤醒！」。<code>evl-tp-chain</code> 是代码，跑在 tmux 里；这里说的是另一件事：让 Claude 会话自己定时醒来查状态，不依赖 Monitor 事件。这是必需的，因为 <code>Monitor</code> 最长只活 30 分钟，到期后如果没被重挂，事件就没人收。</p>
+    <p>用 <code>CronCreate</code> 布周期任务，cron <code>7,27,47 * * * *</code>，每 20 分钟一次。调度器对周期任务最多晚 50%，也就是单次最晚约 10 分钟。每次醒来按下表动作，没有变化就回一句中文然后结束本轮。</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>醒来时的状态</th><th>agent 动作</th></tr></thead>
+      <tbody>
+        <tr><td>未开工，训练未结束</td><td>只读进度。预计剩余不足 2 小时且仍未开工，提醒用户一次</td></tr>
+        <tr><td>未开工，训练已结束</td><td><strong>不起 eval</strong>（没有开工令），用 <code>PushNotification</code> 通知用户并等待</td></tr>
+        <tr><td>已开工，链在等训练</td><td>确认 <code>evl-tp-chain</code> 活着、Monitor 在挂；Monitor 到期就重挂。链意外不在就重起（此时尚未初始化任何 run）</td></tr>
+        <tr><td>已开工，训练已结束但链没起 eval</td><td>核对 <code>EXIT_CODE=0</code> 与 checkpoint 后，查明原因并立即重起链，这正是唤醒要兜住的情况</td></tr>
+        <tr><td>评估中</td><td>读最后一行 <code>PROGRESS</code>，重挂 Monitor，不打断 worker</td></tr>
+        <tr><td><code>CHAIN_STOP</code> 或 <code>THREE_SEED=FAIL</code></td><td>原样报告用户并推送，不自动重跑</td></tr>
+        <tr><td><code>THREE_SEED=PASS</code></td><td>执行步骤 5 收尾，然后 <code>CronDelete</code> 删掉唤醒任务</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="gpu">
+    <h2>4. GPU 分配与 G9 的冲突</h2>
+    <p><strong>为什么必须处理：</strong>训练任务收尾要跑 <code>check_orig16_timepool.py final</code>（G9），代码写死父进程 <code>CUDA_VISIBLE_DEVICES=0</code>、<code>--online-gpu 1</code>，不满足直接报错。eval 占满 8 卡就会和它相撞。</p>
+    <p><strong>做法：</strong>eval 起跑只用 GPU 2–7。每 30 秒的轮询多看一个文件：<code>v1-store/validation/orig16-wan-timepool1024/RESTORE_POOL.json</code>。文件一出现就在 GPU 0、1 各加 4 个 worker。G9 不论 PASS、FAIL 还是异常都会写这份记录（<code>write_record</code>，异常分支也落 FAIL），而且这个角色只有 <code>final</code> 子命令会写，目前不存在，所以不会误触发。这正是上次 <code>g0-ready</code> 的机制，只把判断的文件和加入的卡换掉，跨会话不必约定 touch。</p>
+    <p><strong>谁跑 G9：</strong>仍是任务 owner，会话 <code>orig16 context wan timepool1024 [a09701]</code>。eval 不接管、不等待、也不把 G9 结果当开跑条件。如果 G9 没人跑，eval 就保持 6 卡直到结束，只是慢约三分之一，不影响成绩。</p>
+    <p><strong>其他并行任务：</strong><code>o16-tp-backup-11062345</code> 增量上传 checkpoint，只读、用 CPU，与 eval 无冲突。恢复产物（<code>published</code>、<code>wan-latents</code> 约 390 GB）eval 用不到，删不删仍按原任务问用户。</p>
+  </section>
+
+  <section id="changes">
+    <h2>5. 要改什么</h2>
+    <p><strong>为什么非改不可：</strong>v9 分支只有 GreatLakes 的 Slurm 路径（<code>resident_worker.py</code> 要求 <code>SLURM_STEP_ID</code>），没有本机入口。<code>launch_official_pool.py</code> 还写死 <code>model_kind == "stage2_pool4_concat"</code>。本机入口 <code>--local</code> 与 <code>local_eval.py</code> 只存在于 LTM 仓 <code>97eac11</code>。其余 eval 代码已对比：<code>manifest.py</code>、<code>runtime_contract.py</code> 差异 0 行。</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>文件</th><th>改什么</th><th>规模</th></tr></thead>
+      <tbody>
+        <tr><td><code>scripts/evaluation/official_queue.py</code></td><td>移植 <code>--local</code> 分派到 <code>confirm_local_terminal</code></td><td>约 8 行</td></tr>
+        <tr><td><code>scripts/evaluation/queue_store.py</code></td><td>移植 <code>confirm_local_terminal</code>（<code>/proc</code> 判定）</td><td>约 8 行</td></tr>
+        <tr><td><code>scripts/evaluation/resident_worker.py</code></td><td>移植 <code>--local</code>、<code>--port</code>、本机 step_id；<strong>不带</strong> LTM 的 <code>--wan-online-gpu</code> 分支，<code>server_command</code> 保持原样</td><td>约 15 行</td></tr>
+        <tr><td><code>examples/robomme/eval.py</code></td><td>官方分支 <code>args.model_seed != 42</code> 改为 <code>not in OFFICIAL_SEEDS</code>，新增 <code>OFFICIAL_SEEDS = (0, 7, 42)</code>，错误文案同步；与 <code>97eac11</code> 这 3 行相同，不带 <code>wan_ltm</code> 预算分支</td><td>3 行</td></tr>
+        <tr><td><code>scripts/evaluation/local_eval.py</code>（新）</td><td>复制 <code>97eac11</code> 版，只改常量、spec 加 <code>stage2_python</code>、后加入卡的判断（见 <a href="#files">第 10 节</a>）</td><td>约 200 行，逻辑差异约 10 行</td></tr>
+        <tr><td><code>tests/evaluation/test_local_eval.py</code>（新）</td><td>复制并适配常量，真实控制器 + 真实 worker + 假策略，不用 GPU</td><td>约 200 行</td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>明确不做：</strong>起跑前 GPU 冒烟、容量探测、监督器、断点接续、死 worker 重起、视频校验。这些是 1103 版被用户砍掉的层，本计划不加回。</p>
+  </section>
+
+  <section id="compare">
+    <h2>6. 结果怎么读</h2>
+    <p><code>three_seed_summary.txt</code> 输出总体、难度（easy / medium / hard）、16 个任务三层的逐 seed 成功率和均值 ± std。成功只算 <code>outcome==success</code>。</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>对照</th><th>成绩</th><th>能否直接比</th></tr></thead>
+      <tbody>
+        <tr><td>Wan-LTM flat16384 anchor2×16，60k，11-03</td><td>seed 42/7/0 = 40.88 / 39.88 / 41.25，<strong>40.67 ± 0.71</strong></td><td>能：清单、seed、脚本同口径</td></tr>
+        <tr><td>同数据 context + stage2 concat 1×1024（学习型 encoder）</td><td><strong>本机未找到正式三 seed 成绩</strong>：<code>result.md</code> 写“正式评估另列任务”，<code>docs/evaluation-doc</code> 无记录</td><td>这才是“零参数池化 vs 学习型 encoder”的对照，见 <a href="#decide">裁决 D2</a></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="gates-short">
+    <h2>7. 验收判定行</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>查什么</th><th>怎么查</th><th>过了说明什么</th><th>判定行</th></tr></thead>
+      <tbody>
+        <tr><td>移植没破坏队列</td><td>CPU 跑 <code>test_local_eval.py</code>、<code>test_resident_worker.py</code>、<code>test_simple_queue.py</code></td><td>本机领块、回收、覆盖正常；Slurm 路径不变</td><td><code>LOCAL_EVAL_TESTS=PASS failed=0</code></td></tr>
+        <tr><td>训练确实正常结束</td><td>日志末行</td><td>可以评估</td><td><code>TRAIN_DONE=PASS</code></td></tr>
+        <tr><td>GPU 让出</td><td><code>nvidia-smi</code>，GPU 2–7 &lt; 2000 MiB</td><td>worker 不会和训练抢显存</td><td><code>GPU_FREE=PASS</code></td></tr>
+        <tr><td>清单同一份</td><td>重建 manifest 并比对封签，不符则 assert 失败</td><td>与 Wan-LTM 同 800 局</td><td><code>assert MANIFEST_SHA</code>（无单独判定行，失败即非零退出）</td></tr>
+        <tr><td>每个 seed 算完</td><td><code>queue/summary.json</code> 的 <code>compute_status</code></td><td>800 局全部有结果</td><td><code>COMPUTE_DONE seed=&lt;s&gt; completed=800 …</code></td></tr>
+        <tr><td>最终成绩</td><td>每 seed <code>accepted/*.json</code> 恰好 800 份后汇总</td><td>成绩可报告</td><td><code>THREE_SEED=PASS seeds=7,42,0 overall=…</code></td></tr>
+      </tbody>
+    </table></div>
+    <p>失败出口只有 <code>CHAIN_STOP</code> 和 <code>THREE_SEED=FAIL</code>。正常的任务失败不重试，也不算错误。</p>
+  </section>
+
+  <section id="steps">
+    <h2>8. 实施步骤</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>阶段</th><th>内容</th><th>判据</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td>开工审查：一个 sonnet 审计划有无自相矛盾；登记 handoff</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS</code></td></tr>
+        <tr><td>1</td><td>E1 移植与新增（独立 worktree），CPU 测试</td><td><code>LOCAL_EVAL_TESTS=PASS</code></td></tr>
+        <tr><td>2</td><td>合并前审查 → <code>--no-ff</code> 合入 v10 → 合并后审查 → push</td><td><code>PRE_MERGE_REVIEW=PASS</code>、<code>POST_MERGE_REVIEW=PASS</code></td></tr>
+        <tr><td>3</td><td>建固定 sha 的执行副本，起 <code>evl-tp-chain</code>，挂 Monitor（到期重挂）；确认 agent 定时唤醒在列；告知 a09701 不要占 GPU 2–7</td><td>会话存在，日志未出现 <code>CHAIN_STOP</code>，<code>CronList</code> 有该任务</td></tr>
+        <tr><td>4</td><td>等训练 → 3 个 seed，agent 每 20 分钟醒来按第 3 节的表核查</td><td><code>TRAIN_DONE=PASS</code> → <code>THREE_SEED=PASS</code></td></tr>
+        <tr><td>5</td><td>写 <code>docs/evaluation-doc/ctx-wan-timepool1024-3seed-1107/result.md</code>，更新 handoff，提交推送，向用户报告成绩</td><td>无 <code>ahead</code></td></tr>
+      </tbody>
+    </table></div>
+    <h3>实测结果</h3>
+    <p><strong>结果（11-08 美东 09:29）：</strong><code>THREE_SEED=PASS seeds=7,42,0 overall=35.46±0.79</code>，seed 42/7/0 = 36.38 / 35.00 / 35.00%，<code>EXIT_CODE=0</code>，无 <code>RECOVER</code>。训练 06:22 结束，06:23 起跑，G9 06:24 <code>RESTORE_POOL=PASS</code> 后加入 GPU 0、1，三 seed 合计约 3 小时。档案 <code>docs/evaluation-doc/ctx-wan-timepool1024-3seed-1107/result.md</code>。</p>
+    <p>开工令：「同意开始」（11-07 美东）。<code>PLAN_CONSISTENCY_REVIEW=FAIL base=17dfb4c findings=1 blocking=1</code>，已按下述调整处置。</p>
+    <h3>实施中调整</h3>
+    <p>旧：不改 <code>examples/</code>。新：<code>examples/robomme/eval.py</code> 放开 seed 集合 3 行。理由：v9 官方分支只接受 seed 42，seed 7、0 启动即 <code>ContractError</code>，三 seed 无法完成。规模 3 行，走的是 R3 写明的路径。<code>ADJUST_REVIEW=PASS scale=same findings=0</code>；同一审查确认服务端、队列和 RPC 没有其他 seed 或 kind 限制。</p>
+    <h3>子代理分工与合并（简述）</h3>
+    <p>代码只有一块 E1，由一个写入代理在独立 worktree 完成，因为 6 个文件紧耦合，再拆只会增加合并。主会话合并，前后各由一个 sonnet 审查。起触发器由主会话亲自做，它是唯一的句柄和清理负责人。详见 <a href="#assign">第 11 节</a>。</p>
+  </section>
+
+  <section id="decide">
+    <h2>9. 待裁决（直接说“开工”即按推荐）</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>编号</th><th>问题</th><th>推荐</th><th>备选</th></tr></thead>
+      <tbody>
+        <tr><td>D1</td><td>G9 与 eval 的顺序</td><td><strong>并行：</strong>6 卡立刻起，G9 后加到 8 卡，最符合“立刻”</td><td>等 G9 跑完再 8 卡起跑：改动更少，但晚数分钟到十余分钟，还要依赖 G9 准时完成</td></tr>
+        <tr><td>D2</td><td>要不要补 concat 1×1024 对照</td><td><strong>不纳入本计划：</strong>本机没有 59999（<code>train-runs</code> 下未找到），要先从 HF 下载，另立任务</td><td>本计划跑完后串行再跑 3 个 seed，约多 3 小时，需要下载</td></tr>
+        <tr><td>D3</td><td>评估视频和结果副本</td><td><strong>不上传视频</strong>（同上次，每 seed 约 1 GB，共约 3.2 GB）；汇总与 <code>accepted</code> 记录进 git 档案</td><td>上传 HF bucket：<code>/scratch</code> 实例停机就丢，需要长期保留视频时选</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <h1 id="technical">第二部分（技术细节，供 agent 追踪）</h1>
+
+  <section id="red">
+    <h2>〇. 前置声明与红线</h2>
+    <ul>
+      <li><strong>R1</strong> 不动主检出 <code>/scratch/hongze/robomme_policy_learning_MotionJEPA</code> 的工作区、分支和 HOLD。写入都在 worktree；运行在固定 sha 的执行副本。</li>
+      <li><strong>R2</strong> 不碰 <code>o16-tp-train-11062312</code>、<code>o16-tp-backup-11062345</code>，也不写入 <code>train-runs/…/orig100-ctx32x4x4-wan-timepool8x8-b128-60k/</code>。</li>
+      <li><strong>R3</strong> 不改 <code>src/</code>、<code>scripts/training/</code>、<code>scripts/dataset/</code>、<code>examples/</code>（唯一豁免：<code>examples/robomme/eval.py</code> 的 seed 集合 3 行）。若发现必须改才能跑，按第 2 条“执行中调整”先派对抗验证。</li>
+      <li><strong>R4</strong> 训练结束前不占任何 GPU；E1 只跑 CPU 测试。</li>
+      <li><strong>R5</strong> tmux 只用前缀 <code>evl-tp-</code>，只按登记清单逐个清理，禁止 <code>kill-server</code>、通配和批量。</li>
+      <li><strong>R6</strong> 只用 seed 42、7、0，不换。任务失败不重试。</li>
+      <li><strong>现有能力</strong>（已读代码确认）：v9 的 <code>server_command</code>、<code>client_command</code>、<code>create_trained_policy</code> timepool 分支、<code>verify_timepool_snapshot</code>、<code>wan-stage2</code> 解释器。<strong>待新增</strong>：<code>--local</code> 三处、<code>local_eval.py</code>。<strong>待验证</strong>：真实 GPU 上的 eval 链路与每卡 4 worker 显存。</li>
+    </ul>
+  </section>
+
+  <section id="files">
+    <h2>10. 逐文件改动</h2>
+    <p>来源一律是 <code>/scratch/hongze/robomme-policy-learning-ltm-eval-97eac110</code>（<code>97eac11</code>）。三个队列文件照搬上文 <code>diff</code>，只剔除 <code>resident_worker.py::server_command</code> 中的 <code>wan_ltm</code> 设备分支和 <code>device</code> 变量。</p>
+    <p><code>scripts/evaluation/local_eval.py</code> 相对来源的差异：</p>
+    <pre><code>CKPT = V1 / "train-runs/mme_vla_suite_orig16_b128_60k/orig100-ctx32x4x4-wan-timepool8x8-b128-60k/59999"
+POLICY_CONFIG = "mme_vla_suite_orig16_b128_60k"
+MODEL_KIND = "wan_fixedpool1024"
+STAGE2_PY = "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/venvs/wan-stage2/bin/python"
+TRAIN_LOG = V1 / "logs/orig100-ctx32x4x4-wan-timepool8x8-b128-60k.log"
+OUT = V1 / "evaluation/ctx-wan-timepool1024-3seed-1107"
+GPUS = range(2, 8)
+LATE_GPUS = [0, 1]
+LATE_MARKER = V1 / "validation/orig16-wan-timepool1024/RESTORE_POOL.json"
+
+def session(seed, worker): return f"evl-tp-s{seed}-{worker}"
+controller = f"evl-tp-ctl-s{seed}"
+spec = {..., "stage2_python": STAGE2_PY, ...}           # server_command 用 spec["stage2_python"]
+
+if not late_started and LATE_MARKER.exists():            # 替换 g0-ready 判断
+    late_started = True
+    workers += start_workers(seed, root, LATE_GPUS)</code></pre>
+    <p>不变的部分：<code>POLICY_PY</code>、<code>SIM_PY</code>、<code>BENCHMARK</code>（主检出 <code>third_party/robomme_benchmark</code>，HEAD <code>856bc3a</code>）、<code>MANIFEST_SHA</code>、<code>SEEDS=(42,7,0)</code>、<code>PER_GPU=4</code>、<code>MEM_FRACTION="0.18"</code>、<code>PORT_BASE</code>、<code>START_GAP=10</code>、<code>POLL=30</code>、<code>CACHE_ENV</code>、汇总函数。每个 seed 开头 <code>late_started</code> 重置为 False，所以后续 seed 首轮轮询（约 30 秒后）就加入 GPU 0、1，这与上次相同。</p>
+    <p><strong>源码来源：</strong><code>resident_worker.py::worker_environment</code> 把执行副本的根、<code>src</code>、<code>packages/openpi-client/src</code> 放在 <code>PYTHONPATH</code> 最前，所以 policy 解释器虽用主检出 <code>.venv</code>，import 的是执行副本。<code>timepool_sidecar.py</code> 也从执行副本启动。仿真端 <code>robomme</code> 走主检出已安装的 benchmark，执行副本子模块不需要 init，这是上次的既有做法。</p>
+  </section>
+
+  <section id="assign">
+    <h2>11. 子代理分配表</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>编号</th><th>目标</th><th>可写文件</th><th>禁触</th><th>依赖 / 合并顺序</th><th>验收（CPU）</th><th>资源</th><th>模型</th></tr></thead>
+      <tbody>
+        <tr><td>E1</td><td>移植本机入口与 <code>local_eval.py</code></td><td>第 5 节表内 6 个文件</td><td><code>src/</code>、<code>scripts/training/</code>、<code>scripts/dataset/</code>、<code>examples/</code>（<code>eval.py</code> 除外）、<code>docs/handoff/</code></td><td>基线为计划提交；唯一一块</td><td><code>LOCAL_EVAL_TESTS=PASS failed=0</code>，在 worktree 内用主检出 <code>.venv/bin/python -m pytest</code>，<code>JAX_PLATFORMS=cpu</code></td><td>无 GPU；假进程 tmux 前缀 <code>evl-tp-test-</code>，端口选空闲</td><td><code>opus</code>，<code>isolation: worktree</code>，commit 前缀 <code>sub/E1: </code></td></tr>
+        <tr><td>R0</td><td>开工前计划一致性审查</td><td>无</td><td>全部</td><td>E1 之前</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS|FAIL base=&lt;sha&gt; findings=&lt;n&gt; blocking=&lt;n&gt;</code></td><td>只读</td><td><code>sonnet</code></td></tr>
+        <tr><td>R1</td><td>E1 合前、合后审查</td><td>无</td><td>全部</td><td>合入前后各一次，钉死 <code>REVIEW_BASE</code>／<code>REVIEW_TIP</code></td><td><code>PRE_MERGE_REVIEW</code>、<code>POST_MERGE_REVIEW</code></td><td>只读</td><td><code>sonnet</code></td></tr>
+        <tr><td>—</td><td>起触发器、监听、收尾、写档案</td><td><code>docs/evaluation-doc/…</code>、<code>docs/handoff/current.json</code>（v10 分支）</td><td>R1–R6</td><td>E1 合入后</td><td>第一部分第 7 节判定行</td><td>全部 GPU、端口 9300–9579、<code>evl-tp-*</code></td><td>主会话自做：唯一句柄负责人</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="runbook">
+    <h2>12. Runbook</h2>
+    <p>布触发器（E1 合入并 push 后）：</p>
+    <pre><code>SHA=$(git rev-parse --short=8 v10-ctx-wan-timepool-eval)
+E=/scratch/hongze/robomme_policy_learning_MotionJEPA-eval-$SHA
+git worktree add --detach "$E" v10-ctx-wan-timepool-eval
+ln -s /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store "$E/v1-store"
+L=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/ctx-wan-timepool1024-3seed-1107
+mkdir -p "$L"
+tmux new-session -d -s evl-tp-chain -c "$E" \
+  "set -o pipefail; PYTHONUNBUFFERED=1 /scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/bin/python \
+   $E/scripts/evaluation/local_eval.py 2&gt;&amp;1 | tee $L/simple-chain.log; echo \"EXIT_CODE=\$?\" &gt;&gt; $L/simple-chain.log"</code></pre>
+    <p>Monitor（只挂这一份日志，<code>timeout_ms</code> 取上限 1,800,000，到期或 agent 唤醒时发现已失效就重挂）：</p>
+    <pre><code>tail -n +1 -F $L/simple-chain.log | stdbuf -oL tr '\r' '\n' \
+  | grep --line-buffered -E "TRAIN_DONE|GPU_FREE|COMPUTE_DONE|THREE_SEED|CHAIN_STOP|RECOVER|EXIT_CODE=|Traceback"</code></pre>
+    <p>会话清单（清理只依此，逐个 <code>tmux kill-session -t '=名'</code>）：<code>evl-tp-chain</code>；<code>evl-tp-ctl-s{42,7,0}</code>；<code>evl-tp-s{42,7,0}-g{0..7}k{0..3}</code>。worker 在 seed 结束后自行退出；控制器由链结束。</p>
+    <p>失败重跑（只在 <code>CHAIN_STOP</code> 后、定位并报告用户后）：确认 <code>evl-tp-*</code> 无残留，移走出错 seed 的 <code>run800</code>，重起链；已完成 seed 需要改脚本跳过，这属于计划外调整，先报告。</p>
+    <p>查进度：<code>grep PROGRESS $L/simple-chain.log | tail -1</code>。</p>
+    <p>agent 定时唤醒：<code>CronCreate(cron="7,27,47 * * * *", recurring=true, prompt=&lt;第 3 节动作表&gt;)</code>，用 <code>CronList</code> 核对，<code>THREE_SEED=PASS</code> 收尾后 <code>CronDelete</code>。任务 7 天自动过期，本计划总时长约 18 小时，不会碰到。</p>
+  </section>
+
+  <section id="risk">
+    <h2>13. 风险登记</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>风险</th><th>依据</th><th>处置</th></tr></thead>
+      <tbody>
+        <tr><td>每卡 4 worker 显存不足</td><td>0.18×81,920 MiB = 14,746 MiB，4 个共 59 GB，留约 23 GB 给 4 个 VAE sidecar。推理参数 bfloat16 约 6.7 GB（3.36G 参数 × 2 字节），记忆只有 608 token，应轻于 Wan-LTM 的 16384 token；上次同配置 3 个 seed 零 OOM。<strong>此模型未实测</strong></td><td>不预检。出现 OOM 则 worker 死、块被回收，全灭时 <code>CHAIN_STOP</code>，报告用户后调低 worker 或分数</td></tr>
+        <tr><td>训练异常退出且没写 <code>EXIT_CODE=</code>（如会话被强杀）</td><td>链只读末行，会一直等</td><td>agent 唤醒时用 <code>tmux has-session -t '=o16-tp-train-11062312'</code> 发现，报告用户，不自行开跑。需要时手动 <code>kill-session -t '=evl-tp-chain'</code></td></tr>
+        <tr><td>agent 唤醒任务随会话消失</td><td><code>CronCreate</code> 仅存于本会话内存，没有持久化；只在会话空闲时触发</td><td>已布的 <code>evl-tp-chain</code> 在 tmux 里不受影响，eval 照跑，只是没人汇报；用户重开会话后按 <code>docs/handoff/current.json</code> 接续</td></tr>
+        <tr><td>G9 out-dir 与 <code>LATE_MARKER</code> 不一致</td><td><code>--out-dir</code> 由运行者指定，smoke 用过子目录</td><td>步骤 3 告知 a09701 路径；即使不一致也只是一直 6 卡，不影响成绩</td></tr>
+        <tr><td>G9 FAIL 后要在 GPU 0、1 重跑</td><td>届时 eval 已占这两张卡</td><td>G9 等 eval 结束后重跑，或由用户裁决；G9 FAIL 意味 checkpoint 可疑，会一并报告，成绩须标注</td></tr>
+        <tr><td>端口 TIME_WAIT</td><td>11-03 探针：服务退出后端口可能残留</td><td>每 seed 端口基址不同，跨 seed 不复用；同一 seed 内 worker 端口也互不相同</td></tr>
+        <tr><td>v9 与 LTM eval 代码版本差</td><td>差异只在上述 3 文件 + 服务端模型分支；<code>examples/robomme/eval.py</code> 用 v9 版，只放开 seed 集合；官方预算分支已核 800 局最大 D=1135，k_demo+40=75 ≤ 96</td><td>E1 跑 CPU 测试；真实第一局在 seed 42 里</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="blind">
+    <h2>14. 盲区诚实清单</h2>
+    <ul>
+      <li>没有在 GPU 上跑过这条链路：用户明确不要冒烟，且 GPU 被训练占满。第一局真实推理就在 seed 42 里。G7 验证过在线窗口，但没走过 <code>eval.py</code> + 真实仿真 + timepool。</li>
+      <li>耗时 3 小时是 Wan-LTM 的数。timepool 每窗一次独立 VAE 编码（B=1），Transformer 记忆更少，两者相对速度未测。</li>
+      <li>G9 真实耗时未知，<code>final</code> 尚未运行。</li>
+      <li>重新编译可造成数值差异：11-06 实测缺编译缓存时 <code>SAVE_LOAD</code> 参考输出 <code>max_abs=0.0195</code>。eval 不做逐位比较，不复用训练编译缓存，因此不影响判定，但也意味着 eval 进程与训练进程的数值不保证逐位相同。</li>
+      <li>concat 对照“未找到”的范围是本机 <code>docs/evaluation-doc</code>、<code>train-runs</code> 与 <code>v1-store/evaluation</code> 的目录名检索，没有查 GreatLakes 和远端分支。</li>
+    </ul>
+  </section>
+
+  <section id="record">
+    <h2>15. 留档与 commit 纪律</h2>
+    <ul>
+      <li>计划提交到 <code>v10-ctx-wan-timepool-eval</code> 根目录；首次需 <code>git push -u origin v10-ctx-wan-timepool-eval</code>。本 fetch refspec 只列部分分支，推送后核对用 <code>git ls-remote</code>。</li>
+      <li>开工后在 v10 的 <code>docs/handoff/current.json</code> 新增任务 <code>ctx-wan-timepool1024-3seed-eval</code>：写入 <code>kind: go</code> 原话、<code>running_handles</code> 登记 <code>evl-tp-chain</code>。依赖写 <code>orig16-context-wan-timepool1024-60k</code> 的训练退出，而不是其 <code>done</code>。</li>
+      <li>commit 只 <code>git add</code> 明确路径；message 沿用 <code>commitV11.xx</code> 体例，body 写用户原话和验证结果。不 force。</li>
+      <li>完工后在本文件第 8 节“实测结果”追加实际成绩与“实施中调整”，不改写上文。</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

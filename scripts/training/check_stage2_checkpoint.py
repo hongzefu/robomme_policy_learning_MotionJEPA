@@ -32,6 +32,28 @@ def canonical(value):
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode()
 
 
+def configure_compilation_cache(jax_config):
+    """在首次编译前沿用训练缓存；自定义环境变量不会被 JAX 自动读取。"""
+    paths = {}
+    for name in ("MMEVLA_JAX_CACHE_DIR", "JAX_COMPILATION_CACHE_DIR"):
+        value = os.environ.get(name)
+        if value:
+            path = Path(value).expanduser()
+            if not path.is_absolute() or not path.is_dir():
+                raise ValueError(f"{name} 必须指向已存在的绝对编译缓存目录")
+            paths[name] = str(path.resolve())
+    if len(set(paths.values())) > 1:
+        raise ValueError("MMEVLA_JAX_CACHE_DIR 与 JAX_COMPILATION_CACHE_DIR 指向不同缓存")
+    if paths:
+        if not jax_config.jax_enable_compilation_cache:
+            raise ValueError("已指定编译缓存，但 JAX 编译缓存开关被关闭")
+        jax_config.update("jax_compilation_cache_dir", next(iter(paths.values())))
+    return {"path": jax_config.jax_compilation_cache_dir,
+            "enabled": bool(jax_config.jax_compilation_cache_dir and jax_config.jax_enable_compilation_cache),
+            "environment": paths,
+            "xla_caches": jax_config.jax_persistent_cache_enable_xla_caches}
+
+
 def sha256_file(path):
     digest = hashlib.sha256()
     with Path(path).open("rb") as stream:
@@ -149,14 +171,14 @@ def verify_snapshot(root, delivery=None):
         if files.get(item["path"]) != item["sha256"]:
             raise ValueError(f"来源证据未被根快照绑定: {role}")
         record = read_json(path)
-        if role == "G2":
+        if role == "G2" and not motion_store.stage2_uses_cache(provenance):
             motion_store.validate_stage2_g2_evidence(
                 record, checkpoint_sha256=provenance["encoder"]["checkpoint_sha256"],
                 samples_sha256=evidence["G0"]["sha256"], source_pin=provenance["source_pin"],
                 numerics=provenance["numerics"], online_vae=provenance["stage2_compat"]["online_vae"])
         if role in ("G0", "G3") and (record.get("gate") != role or record.get("status") != "PASS"):
             raise ValueError(f"来源证据未通过: {role}")
-        if role in ("G2", "G3") and (
+        if role in (("G3",) if motion_store.stage2_uses_cache(provenance) else ("G2", "G3")) and (
                 record.get("checkpoint_sha256") != provenance["encoder"]["checkpoint_sha256"]
                 or record.get("samples_sha256") != evidence["G0"]["sha256"]):
             raise ValueError(f"{role} 的 checkpoint 或 G0 身份不符")
@@ -302,8 +324,8 @@ def load_online_inputs(root):
     record = read_json(inside(root, "online_restore_inputs.json"))
     if record.get("schema") != "stage2-online-restore-inputs-v1":
         raise ValueError("在线恢复素材 schema 不符")
-    if record.get("exec_batch_lengths") != [33, 32]:
-        raise ValueError("在线恢复必须覆盖连续 33/32 帧的两批 exec")
+    if record.get("exec_batch_lengths") not in ([33, 32], [1, 16, 16, 16, 16]):
+        raise ValueError("在线恢复必须覆盖旧33/32记录或新1/16/16/16/16记录")
     es = record.get("exec_start_idx")
     if type(es) is not int or not 17 <= es < 4031:
         raise ValueError("在线恢复 demo 必须至少17帧且总帧数不越4096")
@@ -388,12 +410,24 @@ def verify_process_gpus(parent_pid, sidecar_pid, inventory, online_gpu, output=N
     for line in output.splitlines():
         pid, uuid = [item.strip() for item in line.split(",", 1)]
         if int(pid) in observed:
-            observed[int(pid)].add(uuid)
-    expected = {parent_pid: {inventory[0]["uuid"]}, sidecar_pid: {inventory[online_gpu]["uuid"]}}
+            observed[int(pid)].add(uuid.removeprefix("GPU-"))
+    expected = {parent_pid: {inventory[0]["uuid"].removeprefix("GPU-")},
+                sidecar_pid: {inventory[online_gpu]["uuid"].removeprefix("GPU-")}}
     if parent_pid == sidecar_pid or observed != expected:
         raise ValueError(f"实际 GPU 进程映射不符: expected={expected}, actual={observed}")
     return {"parent": {"pid": parent_pid, "physical_index": 0, **inventory[0]},
             "sidecar": {"pid": sidecar_pid, "physical_index": online_gpu, **inventory[online_gpu]}}
+
+
+def verified_sidecar_pid(client, online_gpu, inventory):
+    """使用客户端重新验证的实际 worker，不能把 uv 启动器 PID 当成编码进程。"""
+    identity = client.provenance
+    sidecar_pid = client.worker_pid
+    if (type(sidecar_pid) is not int or sidecar_pid <= 0 or sidecar_pid != identity.get("pid")
+            or str(identity.get("cuda_visible_devices")) != str(online_gpu)
+            or str(identity.get("gpu_uuid", "")).removeprefix("GPU-") != inventory[online_gpu]["uuid"].removeprefix("GPU-")):
+        raise ValueError("sidecar 握手物理 GPU/PID 与指定分配不一致")
+    return sidecar_pid
 
 
 def run_online(policy, record, arrays, online_gpu, inventory):
@@ -405,27 +439,33 @@ def run_online(policy, record, arrays, online_gpu, inventory):
     if client is None or client.stub or not client.alive:
         raise ValueError("恢复验收必须使用存活的真实 sidecar")
     identity = client.provenance
-    sidecar_pid = identity.get("pid")
-    if (type(sidecar_pid) is not int or sidecar_pid != client._proc.pid
-            or str(identity.get("cuda_visible_devices")) != str(online_gpu)
-            or identity.get("gpu_uuid") != inventory[online_gpu]["uuid"]):
-        raise ValueError("sidecar 握手物理 GPU/PID 与指定分配不一致")
+    sidecar_pid = verified_sidecar_pid(client, online_gpu, inventory)
     policy.reset()
     es = record["exec_start_idx"]
     demo_starts = list(range(0, es - 16, 32))
     counts = []
     cursor = 0
-    for count, boundary in ((es, es), (33, 0), (32, 0)):
+    # 两种素材记录均用当前生产流式协议：完整demo加exec[0]，之后最多16帧。
+    for count, boundary in ((es + 1, es), (16, es), (16, es), (16, es), (16, es)):
         end = cursor + count
-        policy.add_buffer(utils.pack_buffer(arrays["images"][cursor:end], arrays["states"][cursor:end], boundary))
+        policy.add_buffer(utils.pack_buffer(list(arrays["images"][cursor:end]), list(arrays["states"][cursor:end]), boundary))
         counts.append({"frames": end, "motion_keys": sorted(policy.mem_buffer._history_feats_motion),
                        "raw_frame_keys": sorted(policy.mem_buffer._raw_frames)})
-        expected = demo_starts + ([] if cursor == 0 else [es] if cursor == es else [es, es + 32])
+        expected = demo_starts + list(range(es, max(es, end - 32), 32))
         if counts[-1]["motion_keys"] != expected or policy.exec_start_idx != es or policy.step_idx != end - 1:
             raise ValueError(f"原 pack_buffer 在线状态机不符: {counts[-1]}")
         cursor = end
-    if counts[1]["raw_frame_keys"] != [es + 32] or counts[2]["raw_frame_keys"] != [es + 64]:
+    if counts[2]["raw_frame_keys"] != [es + 32] or counts[4]["raw_frame_keys"] != [es + 64]:
         raise ValueError("连续 exec 批次未正确保留共享边界帧")
+    from mme_vla_suite.datastore.motion_adapter import motion_policy_spec
+    spec = motion_policy_spec(policy.config.motion)
+    packed = policy._prepare_history({})
+    total = int(policy.config.budget) + spec.budget
+    if (packed["static_image_emb"].shape != (512, policy.config.memory_feature.img.input_dim)
+            or packed["motion_emb"].shape != (spec.budget, spec.dim)
+            or packed["mem_order"].shape != (total,)
+            or not np.array_equal(np.sort(packed["mem_order"]), np.arange(total))):
+        raise ValueError("在线恢复记忆装配形状或mem_order置换错误")
     outputs = policy.infer({"observation/image": arrays["images"][-1],
                             "observation/wrist_image": arrays["wrist_image"],
                             "observation/state": arrays["states"][-1], "prompt": record["prompt"]})
@@ -443,6 +483,7 @@ def run_online(policy, record, arrays, online_gpu, inventory):
         raise ValueError("reset 未清空 episode 状态或重启了 sidecar")
     return {"online_infer": 1, "pack_buffer_source": "examples/robomme/utils.py", "batches": counts,
             "reset": 1, "sidecar_calls": calls, "gpu": gpu, "sidecar_provenance": identity,
+            "memory_tokens": total, "first_packet_frames": es + 1, "followup_frames": [16] * 4,
             "actions": {"shape": list(actions.shape), "dtype": str(actions.dtype),
                         "sha256": hashlib.sha256(actions.tobytes()).hexdigest()}}
 
@@ -457,7 +498,7 @@ def restore_and_check(args, report):
     if checkpoint.is_symlink() or checkpoint.resolve() != checkpoint or not checkpoint.is_dir():
         raise ValueError("checkpoint 必须为无符号链接的现存绝对实体目录")
     root = checkpoint.parent
-    step = 19 if args.mode == "smoke" else 60000
+    step = 19 if args.mode == "smoke" else args.delivery_step
     if checkpoint.name != str(step):
         raise ValueError(f"{args.mode} 只验收 step{step}，实际 {checkpoint.name}")
     report.update(checkpoint=str(checkpoint), step=step)
@@ -483,6 +524,7 @@ def restore_and_check(args, report):
                 or inference.get("sharding", {}).get("batch_size") != 1):
             raise ValueError("保存前参考精度、seed 或单卡分片合同不符")
     import jax
+    report["compilation_cache"] = configure_compilation_cache(jax.config)
     import jax.numpy as jnp
     from flax import nnx
     from mme_vla_suite.models.integration.history_observation import HistAugObservation
@@ -510,10 +552,26 @@ def restore_and_check(args, report):
     inventory = gpu_inventory()
     if 0 not in inventory or 1 not in inventory:
         raise ValueError("缺物理 GPU0/1")
-    train_config = config.get_config("mme_vla_suite_b128_80k")
+    label = (root / "history_config.txt").read_text().strip()
+    config_name = "mme_vla_suite_orig16_b128_60k" if label.endswith("-orig16.yaml") else "mme_vla_suite_b128_80k"
+    train_config = config.get_config(config_name)
+    # 交付恢复只读checkpoint携带的norm，不依赖原机器训练库或构建占位符。
+    train_config = dataclasses.replace(train_config, data=dataclasses.replace(train_config.data,
+        assets=dataclasses.replace(train_config.data.assets, assets_dir=str(checkpoint / "assets"))))
+    report["config_name"] = config_name
     resolved, enabled = policy_config._load_resolved_snapshot(root)
     if not enabled or resolved.motion.get("encoder_kind") != "stage2_pool4_concat":
         raise ValueError("恢复快照不是已开启的 stage2 encoder")
+    from mme_vla_suite.datastore.motion_adapter import motion_policy_spec
+    motion_spec = motion_policy_spec(resolved.motion)
+    if (motion_spec.readout not in ("stage2_pool4_concat_v1", "stage2_pool4_split_v1")
+            or motion_spec.window_budget != 96 or resolved.budget != 512 or resolved.token_per_image not in (16, 64)
+            or resolved.num_views != 1 or resolved.streaming_obs_horizon != 16
+            or resolved.motion.stride != 32 or resolved.motion.window_frames != 33
+            or resolved.memory_token_dim != {"context": 2048, "modulation": 1024}.get(resolved.integration_type)):
+        raise ValueError("恢复快照的帧、motion或融合合同不符")
+    report["memory"] = dict(tokens=512 + motion_spec.budget, readout=motion_spec.readout,
+                            integration=resolved.integration_type, dim=resolved.memory_token_dim)
     train_config = dataclasses.replace(train_config, model=dataclasses.replace(
         train_config.model, history_config=resolved, use_history=True))
     shape_model = nnx.eval_shape(train_config.model.create, jax.random.key(0))
@@ -572,7 +630,12 @@ def restore_and_check(args, report):
     if args.mode == "smoke":
         return ("SAVE_LOAD=PASS missing=0 extra=0 shape_mismatch=0 dtype_mismatch=0 "
                 "ema_mismatch=0 reference_output_max_abs=0 online_infer=1")
-    return "CKPT_60K_READY=PASS step=60000 root_complete=1 sha256_mismatch=0 strict_restore=1 online_infer=1"
+    return (f"{delivery_label(step)}=PASS step={step} root_complete=1 "
+            "sha256_mismatch=0 strict_restore=1 online_infer=1")
+
+
+def delivery_label(step):
+    return "CKPT_DELIVERY_READY" if step == 59999 else f"CKPT_{step // 1000}K_READY"
 
 
 def parse_args(argv=None):
@@ -581,6 +644,8 @@ def parse_args(argv=None):
     parser.add_argument("--checkpoint", required=True, type=Path)
     parser.add_argument("--reference", type=Path)
     parser.add_argument("--expected-manifest", type=Path)
+    parser.add_argument("--delivery-step", type=int, choices=(59999, 60000, 70000),
+                        help="交付验收步数，默认 60000；smoke 不接受此参数")
     parser.add_argument("--online-gpu", required=True, type=int)
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args(argv)
@@ -588,6 +653,10 @@ def parse_args(argv=None):
         parser.error("smoke 必须仅给 --reference")
     if args.mode == "delivery" and (args.expected_manifest is None or args.reference is not None):
         parser.error("delivery 必须仅给 --expected-manifest")
+    if args.mode == "smoke" and args.delivery_step is not None:
+        parser.error("smoke 只验收 step19，不能给 --delivery-step")
+    if args.mode == "delivery" and args.delivery_step is None:
+        args.delivery_step = 60000
     if args.out.resolve().is_relative_to(args.checkpoint.resolve().parent):
         parser.error("报告必须写在 checkpoint/run 根之外，避免污染交付文件")
     if any(path is not None and args.out.resolve() == path.resolve()
@@ -606,7 +675,8 @@ def main(argv=None):
         code = 0
     except Exception as error:
         report["error"] = f"{type(error).__name__}: {error}"
-        line = f"{'SAVE_LOAD' if args.mode == 'smoke' else 'CKPT_60K_READY'}=FAIL"
+        verdict = "SAVE_LOAD" if args.mode == "smoke" else delivery_label(args.delivery_step)
+        line = f"{verdict}=FAIL"
         report["verdict"] = line
         print(report["error"], file=sys.stderr)
         code = 1
