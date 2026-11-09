@@ -261,5 +261,15 @@ ssh greatlakes 'squeue -u hongzefu'
 <li><b>开工前一致性审查</b>：<code>PLAN_CONSISTENCY_REVIEW=FAIL base=77a14a4 findings=9 blocking=2</code>。F2（启动包装参数）及 F3–F9 为文字统一，已直接改：参数顺序固定为 7 个、run-worker.sh 放 run 名目录、冒烟目录改 <code>o16abl-&lt;N|S&gt;-smoke</code>、spec 在 A1 定稿、E0 不另做主会话合并提交、E0 worktree 先 checkout 到 <code>8b52210</code>、新提交占位份数由用户定、写明计划／档案／状态机各自的提交分支。F1（V5 的失败判据与 V6 的 errors=0 口径）涉及失败处理与验收，交用户裁决；用户选「推荐口径，V6 FAIL 照跑」，已写入 §三.2：只有重试后仍为 error 的局、B 份 Killed/OOM 判不可行，撞端口重起不算，Killed/OOM 优先于 1.15 倍；V6 仍要求 errors=0，未过如实记 FAIL、其余照跑。</li>
 </ul>
 
+<h2>实测结果（2026-11-09 美东追加）</h2>
+<p>6 次 800 局全部完成，`COMPUTE_DONE completed=800 missing=0 errors=0` ×6，`SEED_ECHO=PASS` ×6。三 seed 均值 ± std（ddof=1）：<b>N（noxyz）36.79 ± 2.06</b>（276／299／308，seed 42／7／0）；<b>S（nostate）34.50 ± 1.76</b>（263／291／274）。探索性参照 10-31 context split 38.42 ± 1.25。`LAYOUT_SPEED ratio=0.957 choose=1x`；`HOLDS_RELEASED=PASS cancelled=2`。详见 <code>docs/evaluation-doc/o16abl-3seed-1108/result.md</code>。</p>
+<h3>其余实施中调整（开工后，均已告知用户）</h3>
+<ul>
+<li>V1 原判 <code>EVAL_CODE=FAIL tests=325passed</code>：31 条既有失败与 <code>5fce5d3</code> 逐字节相同；经 <code>ADJUST_REVIEW=PASS scale=same</code> 改为定向测试 + 四个评估目录零差异。</li>
+<li>turbo 读写改在 sled-vail（aspen 读小文件 35 s／个）；远端比对由含权限的 <code>rsync -anc</code> 改为只比内容的 <code>-rlnc</code>。</li>
+<li>N-s7 期间 vail 访问 turbo 卡顿，控制器 <code>D</code> 态、两批 worker 超时退出；按用户「控制器挪到别的机器可以作为fallback 也可以自行启动cpu job 作为控制器 不要问我 尽可能跑完！」把控制器迁到占位 A 内 <code>srun --overlap</code>（<code>--slurm-host ""</code>）。GL 控制器也曾 <code>D</code> 态约 34 分钟，取消 step 重起并对 6 个已退出 worker 执行 <code>official_queue recover</code>。评估代码未改。</li>
+<li>换根链 kill tmux 停不掉 GL 控制器 step，每次换根后手动 <code>scancel</code> 上一轮控制器 step。</li>
+</ul>
+
 </body>
 </html>

@@ -1,0 +1,17 @@
+WORKER_START code=4d70b1a5a02e2e1b4cfda51e8b6d2573dc453d42 worker=ns7-a3-r1 job=65209321 step=32 host=gl1519.arc-ts.umich.edu gpu=3
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/releases/4d70b1a5a02e2e1b4cfda51e8b6d2573dc453d42/scripts/evaluation/resident_worker.py", line 201, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/releases/4d70b1a5a02e2e1b4cfda51e8b6d2573dc453d42/scripts/evaluation/resident_worker.py", line 197, in main
+    return worker.run()
+           ^^^^^^^^^^^^
+  File "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/releases/4d70b1a5a02e2e1b4cfda51e8b6d2573dc453d42/scripts/evaluation/resident_worker.py", line 147, in run
+    self.rpc("register", {"job_id": self.job_id, "step_id": self.step_id})
+  File "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/releases/4d70b1a5a02e2e1b4cfda51e8b6d2573dc453d42/scripts/evaluation/resident_worker.py", line 111, in rpc
+    raise TimeoutError(f"控制器响应未确认，保留请求编号：{request_id}")
+TimeoutError: 控制器响应未确认，保留请求编号：ns7-a3-r1-09f6fdf9544b4d1ebfd0c35265500ea0
+srun: error: gl1519: task 0: Exited with exit code 1
+EXIT_CODE=1

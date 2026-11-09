@@ -1,0 +1,14 @@
+COMPUTE_DONE run=N-s42 completed=800 missing=0 errors=0 uncertain=0 retries={}
+SEED_ECHO=PASS run=N-s42 seed=42 records=800 identity_mismatch=0 spec_seed=42
+COMPUTE_DONE run=N-s7 completed=800 missing=0 errors=0 uncertain=0 retries={"VideoPlaceButton:19": 1}
+SEED_ECHO=PASS run=N-s7 seed=7 records=800 identity_mismatch=0 spec_seed=7
+COMPUTE_DONE run=N-s0 completed=800 missing=0 errors=0 uncertain=0 retries={}
+SEED_ECHO=PASS run=N-s0 seed=0 records=800 identity_mismatch=0 spec_seed=0
+THREE_SEED=PASS model=N(noxyz) seeds=7,42,0 runs=3 overall=36.79±2.06 per_seed=s42:276/800,s7:299/800,s0:308/800
+COMPUTE_DONE run=S-s42 completed=800 missing=0 errors=0 uncertain=0 retries={}
+SEED_ECHO=PASS run=S-s42 seed=42 records=800 identity_mismatch=0 spec_seed=42
+COMPUTE_DONE run=S-s7 completed=800 missing=0 errors=0 uncertain=0 retries={}
+SEED_ECHO=PASS run=S-s7 seed=7 records=800 identity_mismatch=0 spec_seed=7
+COMPUTE_DONE run=S-s0 completed=800 missing=0 errors=0 uncertain=0 retries={}
+SEED_ECHO=PASS run=S-s0 seed=0 records=800 identity_mismatch=0 spec_seed=0
+THREE_SEED=PASS model=S(nostate) seeds=7,42,0 runs=3 overall=34.50±1.76 per_seed=s42:263/800,s7:291/800,s0:274/800
