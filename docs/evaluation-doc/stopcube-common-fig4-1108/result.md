@@ -254,6 +254,16 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
     - Action 方向偏向 concat，但 18 层里 10 层区间含 0。
   - 也就是说，「补上 `[t,N]` 之外的速度信息」是有 motion 与没有 motion 的差别；在两个 motion 变体之间，它不随成功率变化；Current 组上甚至是成功率较低的 concat 更强，方向与成功率相反。
 
+**固定层、换分折种子**：Text 读距按下 R² 在固定层、5 个分折种子下的范围（`records/diagnostics/three_model_fold_seed.py`、`records/explore/three_model_fold_seed.json`）：
+
+| 层 | FrameSamp | concat | split |
+| --- | --- | --- | --- |
+| 0 | 0.397–0.455 | 0.652–0.673 | 0.771–0.788 |
+| 8 | 0.469–0.509 | 0.518–0.554 | 0.662–0.689 |
+| 17 | 0.462–0.489 | 0.382–0.427 | 0.539–0.578 |
+
+第 0、8 层三者顺序在所有种子下都与成功率同序，取值范围互不重叠；第 17 层 concat 最低，顺序不成立。split 在三层都最高。
+
 **解释边界**：只有三个模型，是相关证据，不是因果。FrameSamp 的成功率来自论文、不是本轮评测，评测平台与 seed 也不同。split 和 concat 的差别同时涉及 motion 预算（384 对 96）与读出方式，分不开。
 
 ### K. PCA 维度稳健性
@@ -336,13 +346,13 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 
 ## 六、本轮 tmux 会话
 
-`cc-cf-explore1`、`cc-cf-smoke-ctx`、`cc-cf-smoke-mot`、`cc-cf-repro-1105`、`cc-cf-ctx`、`cc-cf-mot`、`cc-cf-beyond`、`cc-cf-fig4`、`cc-cf-explore-new`、`cc-cf-beyond-new`、`cc-cf-closedloop`、`cc-cf-beyond-new2`、`cc-cf-scale100`、`cc-cf-crossN`、`cc-cf-knn`、`cc-cf-clspeed`、`cc-cf-smoke-split`、`cc-cf-split-g0`、`cc-cf-split-g1`、`cc-cf-split-g1b`、`cc-cf-split-ana`、`cc-cf-pcadim`、`cc-cf-foldseed`、`cc-cf-shuffle`、`cc-cf-tnm`、`cc-cf-verify46`，全部自然退出。
+`cc-cf-explore1`、`cc-cf-smoke-ctx`、`cc-cf-smoke-mot`、`cc-cf-repro-1105`、`cc-cf-ctx`、`cc-cf-mot`、`cc-cf-beyond`、`cc-cf-fig4`、`cc-cf-explore-new`、`cc-cf-beyond-new`、`cc-cf-closedloop`、`cc-cf-beyond-new2`、`cc-cf-scale100`、`cc-cf-crossN`、`cc-cf-knn`、`cc-cf-clspeed`、`cc-cf-smoke-split`、`cc-cf-split-g0`、`cc-cf-split-g1`、`cc-cf-split-g1b`、`cc-cf-split-ana`、`cc-cf-pcadim`、`cc-cf-foldseed`、`cc-cf-shuffle`、`cc-cf-tnm`、`cc-cf-verify46`、`cc-cf-3fold`，全部自然退出。
 
 ## 七、归档
 
 - `records/fig4-tables/`：r2_by_layer.csv、fit_lines.csv、reference_lines.csv、summary.json
 - `records/explore/`：
-  - 共同轨迹：angles.json、breakdown.json、layers_by_N.json、near_decision.json、knn.json、cross_N.json、pca_dim.json、fold_seed.json、shuffle_control.json、beyond_tNM.json、speed_by_time.json、speed_within_episode.txt、closedloop_speed_vs_success.txt
+  - 共同轨迹：angles.json、breakdown.json、layers_by_N.json、near_decision.json、knn.json、cross_N.json、pca_dim.json、fold_seed.json、shuffle_control.json、beyond_tNM.json、speed_by_time.json、speed_within_episode.txt、closedloop_speed_vs_success.txt、three_model_fold_seed.json
   - oracle 增量：beyond_oracle.json（旧口径）、beyond_oracle_scale100.json（修正口径）
   - 闭环：closedloop_beyond_oracle.json、closedloop_beyond_oracle_scale100.json、closedloop_speed.json
   - split 加跑：split/
