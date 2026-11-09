@@ -254,7 +254,7 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
     - Action 方向偏向 concat，但 18 层里 10 层区间含 0。
   - 也就是说，「补上 `[t,N]` 之外的速度信息」是有 motion 与没有 motion 的差别；在两个 motion 变体之间，它不随成功率变化；Current 组上甚至是成功率较低的 concat 更强，方向与成功率相反。
 
-**固定层、换分折种子**：Text 读距按下 R² 在固定层、5 个分折种子下的范围（`records/diagnostics/three_model_fold_seed.py`、`records/explore/three_model_fold_seed.json`）：
+**固定层、换分折种子**：Text 读距按下 R² 在固定层、5 个分折种子下的范围（`records/diagnostics/three_model_fold_seed.py`、`records/explore/three_model_fold_seed.json、learning_curve.json`）：
 
 | 层 | FrameSamp | concat | split |
 | --- | --- | --- | --- |
@@ -330,6 +330,19 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 - **同一速度内部**：M=60 时成功局更准（+0.49，但只有 3 局成功对 8 局失败）；M=80 时约 0（5 对 17）；M=120 时方向不一（14 对 2）。整体关联主要来自 M 本身（M=120 局多数成功，也更容易读对），不能当作「读对速度导致成功」的证据。
 - FrameSamp 读速度本来就不高于多数类，它的负相关没有解释意义。
 
+### Q. 样本效率（学习曲线）
+
+做法：外层训练局按 `hover_probe.curve_filter` 取 25%、50%、100%（测试折不变），在 Text、History 组第 0、8、17 层重算读速度 M 和 `[t,N]` 之上的增量（修正口径）。脚本 `records/diagnostics/learning_curve.py`，结果 `records/explore/learning_curve.json`。
+
+- **速度 M（MotionMem − FrameSamp）**：
+  - 25% 训练局（约 20 局）时，Text 组已有 +0.139～+0.188，History 第 0、8 层 +0.214～+0.320，区间都不含 0；只有 History 第 17 层在 25% 时区间含 0（+0.038）。
+  - 50% 和 100% 时，各格区间都不含 0。
+- **`[t,N]` 之上的增量**：
+  - MotionMem 随训练局增多快速上升：25% 时 +6.6～+10.2 步，50% 时 +18.8～+24.5 步，100% 时 +22.1～+29.2 步。
+  - FrameSamp 一直只有 −1.7～+7.8 步。
+  - 跨模型差在 25% 时 +7.1～+9.1（History 第 17 层 +2.6，区间含 0），100% 时 +16.0～+26.7。
+- MotionMem 的速度信息用很少的训练局就能线性读出；而要把它和 `[t,N]` 组合起来读距按下，需要更多的局。
+
 ## 四、解释边界
 
 - B 节的「补上的信息」与 M 一致：MotionMem 的 Current／Action 组直接读 M 不比 FrameSamp 好，但在 `[t,N,M]` 之上同样几乎补不上（N 节），所以各组补上的都主要是速度信息。`[t,N,M]` 上限 0.926；MotionMem 读速度 M 的准确率为 0.89–0.93（motion 组、history 组），FrameSamp 为 0.57–0.71。这是相关证据，没有做干预。
@@ -346,7 +359,7 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 
 ## 六、本轮 tmux 会话
 
-`cc-cf-explore1`、`cc-cf-smoke-ctx`、`cc-cf-smoke-mot`、`cc-cf-repro-1105`、`cc-cf-ctx`、`cc-cf-mot`、`cc-cf-beyond`、`cc-cf-fig4`、`cc-cf-explore-new`、`cc-cf-beyond-new`、`cc-cf-closedloop`、`cc-cf-beyond-new2`、`cc-cf-scale100`、`cc-cf-crossN`、`cc-cf-knn`、`cc-cf-clspeed`、`cc-cf-smoke-split`、`cc-cf-split-g0`、`cc-cf-split-g1`、`cc-cf-split-g1b`、`cc-cf-split-ana`、`cc-cf-pcadim`、`cc-cf-foldseed`、`cc-cf-shuffle`、`cc-cf-tnm`、`cc-cf-verify46`、`cc-cf-3fold`，全部自然退出。
+`cc-cf-explore1`、`cc-cf-smoke-ctx`、`cc-cf-smoke-mot`、`cc-cf-repro-1105`、`cc-cf-ctx`、`cc-cf-mot`、`cc-cf-beyond`、`cc-cf-fig4`、`cc-cf-explore-new`、`cc-cf-beyond-new`、`cc-cf-closedloop`、`cc-cf-beyond-new2`、`cc-cf-scale100`、`cc-cf-crossN`、`cc-cf-knn`、`cc-cf-clspeed`、`cc-cf-smoke-split`、`cc-cf-split-g0`、`cc-cf-split-g1`、`cc-cf-split-g1b`、`cc-cf-split-ana`、`cc-cf-pcadim`、`cc-cf-foldseed`、`cc-cf-shuffle`、`cc-cf-tnm`、`cc-cf-verify46`、`cc-cf-3fold`、`cc-cf-curve`，全部自然退出。
 
 ## 七、归档
 
