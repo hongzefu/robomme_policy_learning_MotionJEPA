@@ -309,6 +309,12 @@ R² 的点估计逐层同序，但配对检验下：
 - FrameSamp 最差在各层都站得住：对 split 各层显著，对 concat 第 0–12 层显著。
 - concat < split 只在第 0、4 层显著，中后层两个 MotionMem 变体分不开。
 
+N≤3 的同样检验（`three_model_N3_paired.py`，结果 `records/explore/three_model_N3_paired.json`）：
+- FrameSamp 对 split：5 层区间都含 0（−1.5 ～ +4.4 步），即相当。
+- FrameSamp 对 concat：第 4–17 层 FrameSamp 显著更好（误差少 14.4–23.6 步），第 0 层区间含 0。
+- split 对 concat：第 4–17 层 split 显著更好（少 12.9–24.2 步）。
+- 方案 C 草稿「N≤3 时 FrameSamp 与两者相当或更好」与此一致：与 split 相当，比 concat 好。
+
 **解释边界**：只有三个模型，是相关证据，不是因果。FrameSamp 的成功率来自论文、不是本轮评测，评测平台与 seed 也不同。split 和 concat 的差别同时涉及 motion 预算（384 对 96）与读出方式，分不开。
 
 ### K. PCA 维度稳健性
