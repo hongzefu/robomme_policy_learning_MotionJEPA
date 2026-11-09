@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-08T23:48:17Z",
-    "America/New_York": "2026-11-08T18:48:17-05:00"
+    "utc": "2026-11-09T01:44:42Z",
+    "America/New_York": "2026-11-08T20:44:42-05:00"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "ad321ec68584d6860e981f4963971b7afc6f0cdf",
+    "base_head": "11264b19ce479e7281a3b427e64610d57d9ed43b",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -1500,7 +1500,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-11-08T16:55:44-05:00",
-      "state_reason": "执行代码 4d70b1a、执行副本与 8 个 run 根就绪，两模型 SMOKE2=PASS；N-s42 美东 18:46:42 起跑兼测速（A 每卡1、B 每卡2，共12 worker）",
+      "state_reason": "N-s42 完成 276/800=34.50%（COMPUTE_DONE errors=0，SEED_ECHO PASS）；LAYOUT_SPEED ratio=0.957 选每卡1 worker；后五次由 aspen tmux evab-chain 串行换根，S-s42 美东 20:42 起跑",
       "owner": {
         "session": "cc3c43d3-a0ab-4628-b8ac-dd31bccb44f6",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1543,93 +1543,71 @@
       "long_tail": [],
       "running_handles": [
         {
-          "tmux": "evab-ctl-o16abl-N-seed42",
+          "tmux": "evab-chain",
+          "host": "sled-aspen",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/chain-rest.log",
+          "done_line": "CHAIN_ALL_DONE"
+        },
+        {
+          "tmux": "evab-ctl-o16abl-S-seed42",
           "host": "sled-vail",
-          "log": "$E/v1-store/evaluation/o16abl-80k/o16abl-N-seed42/run800/queue/summary.json",
+          "log": "$E/v1-store/evaluation/o16abl-80k/o16abl-S-seed42/run800/queue/summary.json",
           "done_line": "compute_status=COMPUTE_DONE"
         },
         {
-          "tmux": "evab-w-ns42-a0",
+          "tmux": "evab-w-ss42-a0",
           "host": "sled-aspen",
           "jobid": "65209321",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-a0.log",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ss42-a0.log",
           "done_line": "EXIT_CODE="
         },
         {
-          "tmux": "evab-w-ns42-a1",
+          "tmux": "evab-w-ss42-a1",
           "host": "sled-aspen",
           "jobid": "65209321",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-a1.log",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ss42-a1.log",
           "done_line": "EXIT_CODE="
         },
         {
-          "tmux": "evab-w-ns42-a2",
+          "tmux": "evab-w-ss42-a2",
           "host": "sled-aspen",
           "jobid": "65209321",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-a2.log",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ss42-a2.log",
           "done_line": "EXIT_CODE="
         },
         {
-          "tmux": "evab-w-ns42-a3",
+          "tmux": "evab-w-ss42-a3",
           "host": "sled-aspen",
           "jobid": "65209321",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-a3.log",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ss42-a3.log",
           "done_line": "EXIT_CODE="
         },
         {
-          "tmux": "evab-w-ns42-b0x",
+          "tmux": "evab-w-ss42-b0",
           "host": "sled-aspen",
           "jobid": "65209330",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-b0x.log",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ss42-b0.log",
           "done_line": "EXIT_CODE="
         },
         {
-          "tmux": "evab-w-ns42-b0y",
+          "tmux": "evab-w-ss42-b1",
           "host": "sled-aspen",
           "jobid": "65209330",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-b0y.log",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ss42-b1.log",
           "done_line": "EXIT_CODE="
         },
         {
-          "tmux": "evab-w-ns42-b1x",
+          "tmux": "evab-w-ss42-b2",
           "host": "sled-aspen",
           "jobid": "65209330",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-b1x.log",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ss42-b2.log",
           "done_line": "EXIT_CODE="
         },
         {
-          "tmux": "evab-w-ns42-b1y",
+          "tmux": "evab-w-ss42-b3",
           "host": "sled-aspen",
           "jobid": "65209330",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-b1y.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "evab-w-ns42-b2x",
-          "host": "sled-aspen",
-          "jobid": "65209330",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-b2x.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "evab-w-ns42-b2y",
-          "host": "sled-aspen",
-          "jobid": "65209330",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-b2y.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "evab-w-ns42-b3x",
-          "host": "sled-aspen",
-          "jobid": "65209330",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-b3x.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "evab-w-ns42-b3y",
-          "host": "sled-aspen",
-          "jobid": "65209330",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ns42-b3y.log",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/ss42-b3.log",
           "done_line": "EXIT_CODE="
         }
       ],
@@ -1658,9 +1636,14 @@
       ],
       "next_steps": [
         {
-          "what": "N-s42 COMPUTE_DONE 后算 V5 测速、定后五次布局，按 S-s42→N-s7→S-s7→N-s0→S-s0 换根",
-          "command": "见计划 §四 runbook A3/A4",
-          "verdict_line": "LAYOUT_SPEED=PASS …；COMPUTE_DONE completed=800 …"
+          "what": "evab-chain 依次跑完 S-s42→N-s7→S-s7→N-s0→S-s0；每次换根前自动核占位余量",
+          "command": "tail -F /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16abl-3seed/chain-rest.log",
+          "verdict_line": "CHAIN_ALL_DONE；COMPUTE_DONE ×5"
+        },
+        {
+          "what": "全部完成后汇总三 seed、写 result.md、停最后一个控制器、逐个 scancel 两份占位",
+          "command": "见计划 A5",
+          "verdict_line": "THREE_SEED=PASS ×2；HOLDS_RELEASED=PASS cancelled=2"
         }
       ]
     }
