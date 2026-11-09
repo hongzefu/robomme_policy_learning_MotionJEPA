@@ -159,6 +159,25 @@ def test_specs_consistent_with_queues(generated, tmp_path):
     assert all(len(ws) == 1 for ws in run_roots.values())   # 同一 run_root 只归一个 worker
 
 
+def test_specs_profile_by_seed(generated):
+    """seed 42 的 spec 不带 profile/max_steps；其余 seed 恰为 testx/1300，且客户端命令带上对应参数。"""
+    from scripts.evaluation.resident_worker import client_command
+    specs = [json.loads(p.read_text()) for p in sorted((generated / "specs").glob("*.json"))]
+    assert any(s["model_seed"] == 42 for s in specs) and any(s["model_seed"] != 42 for s in specs)
+    for spec in specs:
+        if spec["model_seed"] == 42:
+            assert "profile" not in spec and "max_steps" not in spec
+        else:
+            assert spec["profile"] == "testx" and spec["max_steps"] == 1300
+    spec = next(s for s in specs if s["model_seed"] != 42)
+    spec = dict(spec, sim_python="py", run_identity_sha256="0" * 64, model_kind="k")
+    grant = generated / "grant.json"
+    grant.write_text(json.dumps({"chunk_id": "c0"}))
+    joined = " ".join(client_command(spec, grant, "out", "nonce", 1234, "drain"))
+    assert "--profile testx --max-steps 1300" in joined
+    assert f"--model-seed {spec['model_seed']}" in joined
+
+
 def test_env_and_plan(generated):
     env = (generated / "env.sh").read_text()
     assert "deadbeefcafe" in env and "HF_HUB_OFFLINE=1" in env and "--xla_gpu_deterministic_ops=true" in env
