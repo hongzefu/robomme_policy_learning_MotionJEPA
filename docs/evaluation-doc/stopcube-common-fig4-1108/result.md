@@ -285,6 +285,8 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 
 高记忆需求的局里，三者与成功率同序，而且 18 层逐层都是 FrameSamp < concat < split。低记忆需求的局里，平均上 FrameSamp 最好、split 与它相当（18 层里 FrameSamp 有 13 层最高，split 有 5 层高于 FrameSamp），concat 每一层都最低。图：[records/figures/three-models-by-N.png](records/figures/three-models-by-N.png)（`records/diagnostics/plot_three_models_by_N.py`）。
 
+换分折种子复核（`records/diagnostics/three_model_by_N_fold_seed.py`，结果 `records/explore/three_model_by_N_fold_seed.json`）：N≥4 时第 0–17 层 × 5 个种子共 90 格，**90/90** 都是 FrameSamp < concat < split。
+
 **解释边界**：只有三个模型，是相关证据，不是因果。FrameSamp 的成功率来自论文、不是本轮评测，评测平台与 seed 也不同。split 和 concat 的差别同时涉及 motion 预算（384 对 96）与读出方式，分不开。
 
 ### K. PCA 维度稳健性
