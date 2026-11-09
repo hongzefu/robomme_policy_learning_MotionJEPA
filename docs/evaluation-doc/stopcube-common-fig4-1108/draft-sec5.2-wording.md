@@ -25,6 +25,7 @@
 - 「at every layer」：修正口径下 MotionMem Text 第 0–17 层为 0.78–0.84，成立；FrameSamp Text 为 0.48–0.56（0.447 是 [t,N] 本身）。
 - 时间上的限定：O 节显示早期（t<80）MotionMem Text 读速度只有 0.55，与 FrameSamp 无显著差，之后上升到 0.95；同局对照里 FrameSamp Text 也会上升（+0.149），只是幅度较小。正文篇幅不够时不写，附录写。
 - 「16 steps lower error」来自同点配对差 +16.0 [12.1, 19.7]。
+- 可选的稳健性半句（附录或篇幅允许时）："The gain holds for episodes needing few or many target visits (7--16 and 22--36 steps lower MAE for $N\le3$ and $N\ge4$) and on each policy's own closed-loop rollouts." 数字出自 result.md 第三节 B「按 N 分档的同点配对差」与闭环分档；只对 Text、History 组成立，Current、Action 组只在 $N\ge4$ 成立。
 
 
 **方案 A 精简版**（按篇幅压缩；图注 54 词，正文段 142 词）：
