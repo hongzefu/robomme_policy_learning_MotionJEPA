@@ -4,11 +4,22 @@ bf16 的 policy 逐帧生成记忆（motion 模型走真实编码器），float3
 
 用法（公共参数相同；check 不写文件，--output 不使用）：
   python -m scripts.interpret.hover_replay run --points <hover_points.json> --h5 <H5> --ckpt <dir> --config <配置名> \
-    --label ctx|mot --output <根目录> --seed 42 [--stage2-python <解释器>] [--eval-target-contract <路径>] [--episodes 0 1 ...]
+    --label ctx|mot --output <根目录> --seed 42 [--stage2-python <解释器>] [--eval-target-contract <路径>] \
+    [--action-samples K] [--episodes 0 1 ...]
   python -m scripts.interpret.hover_replay check --points ... --h5 ... --ckpt ... --config ... --label ctx|mot \
-    --output <根目录> --seed 42 [--stage2-python <解释器>] [--eval-target-contract <路径>] --episode 0 --rollout-attn <某局 attn 目录>
+    --output <根目录> --seed 42 [--stage2-python <解释器>] [--eval-target-contract <路径>] [--action-samples K] \
+    [--prefix-reference <旧库根>] --episode 0 --rollout-attn <某局 attn 目录>
 
 --eval-target-contract 是运行契约（同 scripts/training/serve_policy.py），motion 模型用；基线不传。
+
+--action-samples K（缺省 0）：K>0 时每个取点再跑 K 次全路径 adapter.run(capture_hidden=True)，把 hidden_action
+(18,W_a) 在 K 份噪声上取平均，npz 多写 hidden_action 与 action_samples，指纹加入 action_samples 与 seed；
+第 j 份噪声的 key 为 fold_in(fold_in(fold_in(key(seed), episode), t), j)，再拆成 noise key 与采样 rng。
+K=0 时输出键与指纹和加这个参数之前逐位相同。check 在 K>0 时只对 16 的倍数的取点算动作，
+打印 ACTION_PARITY 与 HIDDEN_PRECISION group=action。
+
+--prefix-reference <库根>（只 check 用）：把本局回放的 hidden_prefix 与 <库根>/<label>/episode_<k>.npz 里同 t 的点比较，
+打印 PREFIX_MATCH。
 
 JAX 确定性环境变量由外部脚本给。
 """
@@ -103,10 +114,37 @@ def replay_group_masks(observation, layout, record, tokens_per_frame):
     return np.concatenate([hidden_masks, latest[None]])
 
 
-def replay_episode(policy, adapter, h5_episode, entry, batch_size, *, ts=None, on_point=None):
+def action_noise(seed, episode, t, j, shape):
+    """第 j 份噪声：(采样 rng, noise)。key 为 fold_in(fold_in(fold_in(key(seed), episode), t), j)，再拆成两份。"""
+    import jax
+    import jax.numpy as jnp
+
+    base = jax.random.fold_in(jax.random.fold_in(jax.random.fold_in(jax.random.key(int(seed)), int(episode)), int(t)), int(j))
+    noise_key, rng = jax.random.split(base)
+    return rng, jax.random.normal(noise_key, shape, jnp.float32)
+
+
+def action_hidden(adapter, observation, masks, *, seed, episode, t, samples):
+    """在 highest 精度下跑 samples 次全路径，返回 hidden_action (18,W_a) 在各份噪声上的平均，float32。"""
+    import jax
+
+    rows = []
+    with jax.default_matmul_precision("highest"):
+        for j in range(samples):
+            rng, noise = action_noise(seed, episode, t, j, (1, adapter.AH, adapter.AD))
+            output = adapter.run(rng, observation, noise=noise, num_steps=PRECISION_NUM_STEPS, out_f16=False,
+                                 capture_hidden=True, group_masks=masks)
+            rows.append(np.asarray(jax.device_get(output[-1])["hidden_action"], dtype=np.float64))
+    return np.mean(np.stack(rows), axis=0).astype(np.float32)
+
+
+def replay_episode(policy, adapter, h5_episode, entry, batch_size, *, ts=None, on_point=None,
+                   action_samples=0, seed=0, episode=0):
     """回放一局，在每个取点算一次前缀隐状态。
 
     ts 缺省取 entry 的全部取点。on_point(t, observation, masks, record, hidden) 在每个取点算完后调用。
+    action_samples>0 时每个取点再按 action_hidden 算动作隐状态，hidden 与返回值多出 hidden_action；
+    seed、episode 只用于噪声 key。
     """
     import jax
 
@@ -115,8 +153,8 @@ def replay_episode(policy, adapter, h5_episode, entry, batch_size, *, ts=None, o
         raise ValueError(f"取点必须落在批边界：batch_size={batch_size} ts={ts}")
     wanted = set(ts)
     tokens_per_frame = int(policy.config.token_per_image) * int(policy.config.num_views)
-    vision_seconds = prefix_seconds = 0.0
-    done, hidden_rows, token_rows = [], [], []
+    vision_seconds = prefix_seconds = action_seconds = 0.0
+    done, hidden_rows, token_rows, action_rows = [], [], [], []
     policy.reset()
     for start, stop in feed_batches(max(ts), batch_size):
         frames, states = read_steps(h5_episode, start, stop)
@@ -140,17 +178,30 @@ def replay_episode(policy, adapter, h5_episode, entry, batch_size, *, ts=None, o
         prefix_seconds += time.perf_counter() - started
         hidden = {"hidden_prefix": np.asarray(hidden["hidden_prefix"], dtype=np.float32),
                   "group_tokens": np.asarray(hidden["group_tokens"], dtype=np.int32)}
+        if action_samples > 0:
+            started = time.perf_counter()
+            hidden["hidden_action"] = action_hidden(adapter, observation, masks, seed=seed, episode=episode, t=t,
+                                                    samples=action_samples)
+            action_seconds += time.perf_counter() - started
+            action_rows.append(hidden["hidden_action"])
         done.append(t)
         hidden_rows.append(hidden["hidden_prefix"])
         token_rows.append(hidden["group_tokens"])
         if on_point is not None:
             on_point(t, observation, masks, record, hidden)
-    return {"t": np.asarray(done, dtype=np.int64), "hidden_prefix": np.stack(hidden_rows),
-            "group_tokens": np.stack(token_rows), "vision_seconds": vision_seconds, "prefix_seconds": prefix_seconds}
+    result = {"t": np.asarray(done, dtype=np.int64), "hidden_prefix": np.stack(hidden_rows),
+              "group_tokens": np.stack(token_rows), "vision_seconds": vision_seconds, "prefix_seconds": prefix_seconds,
+              "action_seconds": action_seconds}
+    if action_samples > 0:
+        result["hidden_action"] = np.stack(action_rows)
+    return result
 
 
-def episode_fingerprint(entry, ckpt, config):
+def episode_fingerprint(entry, ckpt, config, *, action_samples=0, seed=None):
+    """K=0 时 payload 与加动作捕获之前逐字相同；K>0 时再加 action_samples 与 seed。"""
     payload = {"entry": entry, "ckpt": str(ckpt), "config": config, "hidden_format": HIDDEN_FORMAT_VERSION}
+    if action_samples > 0:
+        payload.update(action_samples=int(action_samples), seed=int(seed))
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
@@ -165,15 +216,20 @@ def existing_points(path, fingerprint):
         return len(archive["t"])
 
 
-def write_episode(path, result, episode, label, fingerprint):
+def write_episode(path, result, episode, label, fingerprint, action_samples=0):
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.parent / f".{path.stem}.{uuid.uuid4().hex}.tmp.npz"
+    extra = {}
+    if action_samples > 0:     # K=0 时不写这两个键，键集合与旧版相同
+        extra = {"hidden_action": np.asarray(result["hidden_action"], dtype=np.float32),
+                 "action_samples": np.int64(action_samples)}
     np.savez(temporary, t=result["t"], hidden_prefix=result["hidden_prefix"], group_tokens=result["group_tokens"],
-             episode=np.int64(episode), label=np.str_(label), fingerprint=np.str_(fingerprint))
+             episode=np.int64(episode), label=np.str_(label), fingerprint=np.str_(fingerprint), **extra)
     os.replace(temporary, path)
 
 
-def run_episodes(policy, adapter, h5_file, points, *, output, label, ckpt, config, episodes=None, batch_size=REPLAY_BATCH):
+def run_episodes(policy, adapter, h5_file, points, *, output, label, ckpt, config, episodes=None, batch_size=REPLAY_BATCH,
+                 action_samples=0, seed=42):
     """逐局写 <output>/<label>/episode_<k>.npz，返回退出码。没有点的局不写。"""
     all_episodes = points["episodes"]
     ids = sorted(int(k) for k in all_episodes) if episodes is None else sorted(episodes)
@@ -184,17 +240,19 @@ def run_episodes(policy, adapter, h5_file, points, *, output, label, ckpt, confi
         if not entry["points"]:
             continue
         path = Path(output) / label / f"episode_{k}.npz"
-        fingerprint = episode_fingerprint(entry, ckpt, config)
+        fingerprint = episode_fingerprint(entry, ckpt, config, action_samples=action_samples, seed=seed)
         count = existing_points(path, fingerprint)
         if count is not None:
             total += count
             continue
         started = time.perf_counter()
-        result = replay_episode(policy, adapter, h5_file[f"episode_{k}"], entry, batch_size)
-        write_episode(path, result, k, label, fingerprint)
+        result = replay_episode(policy, adapter, h5_file[f"episode_{k}"], entry, batch_size,
+                                action_samples=action_samples, seed=seed, episode=k)
+        write_episode(path, result, k, label, fingerprint, action_samples)
         total += len(result["t"])
         print(f"REPLAY_EPISODE episode={k} points={len(result['t'])} seconds={time.perf_counter() - started:.1f} "
-              f"vision_seconds={result['vision_seconds']:.1f} prefix_seconds={result['prefix_seconds']:.1f}", flush=True)
+              f"vision_seconds={result['vision_seconds']:.1f} prefix_seconds={result['prefix_seconds']:.1f} "
+              f"action_seconds={result['action_seconds']:.1f}", flush=True)
     passed = total == expected
     print(f"REPLAY_RUN={'PASS' if passed else 'FAIL'} model={label} points={total} expected={expected}", flush=True)
     return 0 if passed else 1
@@ -253,8 +311,30 @@ def precision_readings(prefix, full, group_tokens, names=REPLAY_GROUPS):
     return readings
 
 
-def check_episode(policy, adapter, h5_episode, entry, rollout_attn, *, seed):
-    """REPLAY_PARITY 与 HIDDEN_PRECISION，返回退出码。"""
+def action_distance(actions):
+    """动作隐状态 (n,18,W_a) 相邻取点同层逐元素最大差，跨层与相邻对取中位数；不足两个点为 NaN。"""
+    actions = np.asarray(actions, dtype=np.float64)
+    if len(actions) < 2:
+        return float("nan")
+    return float(np.median(np.abs(actions[1:] - actions[:-1]).max(axis=-1)))
+
+
+def prefix_match(replay, reference_root, label, episode):
+    """(可比点数, 最大绝对差)：回放的 hidden_prefix 对 <库根>/<label>/episode_<k>.npz 中 t 相同的点；无可比点为 NaN。"""
+    path = Path(reference_root) / label / f"episode_{episode}.npz"
+    differences = []
+    if path.exists():
+        with np.load(path, allow_pickle=False) as archive:
+            reference = dict(zip(archive["t"].tolist(), archive["hidden_prefix"]))
+        for t, hidden in zip(replay["t"].tolist(), replay["hidden_prefix"]):
+            if t in reference:
+                differences.append(float(np.max(np.abs(hidden.astype(np.float64) - reference[t].astype(np.float64)))))
+    return len(differences), max(differences, default=float("nan"))
+
+
+def check_episode(policy, adapter, h5_episode, entry, rollout_attn, *, seed, action_samples=0, episode=0,
+                  prefix_reference=None, label=None):
+    """REPLAY_PARITY 与 HIDDEN_PRECISION；K>0 时加 ACTION_PARITY 与动作组精度，给了参考库时加 PREFIX_MATCH；返回退出码。"""
     import jax
     import jax.numpy as jnp
 
@@ -262,6 +342,7 @@ def check_episode(policy, adapter, h5_episode, entry, rollout_attn, *, seed):
     noise = jax.random.normal(rng, (1, adapter.AH, adapter.AD), jnp.float32)
     rollouts = rollout_steps(rollout_attn)
     kept, full_rows = {}, []
+    replay_actions, action_differences = {}, []
     compared = layout_mismatch = 0
 
     def on_replay(t, observation, masks, record, hidden):
@@ -273,6 +354,9 @@ def check_episode(policy, adapter, h5_episode, entry, rollout_attn, *, seed):
         if t % EVAL_BATCH:
             return
         kept[t] = (pack_observation(observation), hidden["hidden_prefix"])
+        if action_samples > 0:     # 只对批 16 能比较的点算动作
+            replay_actions[t] = action_hidden(adapter, observation, masks, seed=seed, episode=episode, t=t,
+                                              samples=action_samples)
         if t in rollouts:
             compared += 1
             differences = layout_differences(observation, record, rollouts[t])
@@ -288,6 +372,10 @@ def check_episode(policy, adapter, h5_episode, entry, rollout_attn, *, seed):
         differences.append(max(numeric_maxabs(pack_observation(observation), packed),
                                float(np.max(np.abs(hidden["hidden_prefix"].astype(np.float64)
                                                    - hidden_prefix.astype(np.float64))))))
+        if action_samples > 0:
+            action = action_hidden(adapter, observation, masks, seed=seed, episode=episode, t=t, samples=action_samples)
+            action_differences.append(float(np.max(np.abs(action.astype(np.float64)
+                                                          - replay_actions[t].astype(np.float64)))))
 
     if kept:
         replay_episode(policy, adapter, h5_episode, entry, EVAL_BATCH, ts=sorted(kept), on_point=on_eval)
@@ -304,7 +392,30 @@ def check_episode(policy, adapter, h5_episode, entry, rollout_attn, *, seed):
         precision &= passed
         print(f"HIDDEN_PRECISION={'PASS' if passed else 'FAIL'} group={name} min_dist_over_err={ratio:.6g} "
               f"path_maxabs={error:.9g}", flush=True)
-    return 0 if parity and precision else 1
+
+    action_ok = True
+    if action_samples > 0:
+        action_error = max(action_differences, default=float("nan"))     # 没有可比的点时为 NaN，判 FAIL
+        action_parity = action_error <= PARITY_TOL
+        print(f"ACTION_PARITY={'PASS' if action_parity else 'FAIL'} points={len(action_differences)} "
+              f"maxabs={action_error:.9g}", flush=True)
+        distance = action_distance([replay_actions[t] for t in sorted(replay_actions)])
+        if action_error == 0 and not np.isnan(distance):
+            ratio = float("inf")       # 两条路径逐位相同
+        else:
+            with np.errstate(divide="ignore", invalid="ignore"):
+                ratio = float(np.float64(distance) / np.float64(action_error))
+        action_precision = ratio >= PRECISION_MIN_RATIO    # NaN 判 FAIL
+        print(f"HIDDEN_PRECISION={'PASS' if action_precision else 'FAIL'} group=action min_dist_over_err={ratio:.6g} "
+              f"path_maxabs={action_error:.9g}", flush=True)
+        action_ok = action_parity and action_precision
+
+    prefix_ok = True
+    if prefix_reference is not None:
+        matched, prefix_error = prefix_match(replay, prefix_reference, label, episode)
+        prefix_ok = prefix_error <= PARITY_TOL       # 没有可比的点时为 NaN，判 FAIL
+        print(f"PREFIX_MATCH={'PASS' if prefix_ok else 'FAIL'} points={matched} maxabs={prefix_error:.9g}", flush=True)
+    return 0 if parity and precision and action_ok and prefix_ok else 1
 
 
 def build_models(args):
@@ -338,6 +449,7 @@ def main(argv=None):
     common.add_argument("--seed", type=int, default=42)
     common.add_argument("--stage2-python", default=None)
     common.add_argument("--eval-target-contract", type=Path, default=None)
+    common.add_argument("--action-samples", type=int, default=0)
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     commands = parser.add_subparsers(dest="command", required=True)
     run_parser = commands.add_parser("run", parents=[common])
@@ -345,7 +457,10 @@ def main(argv=None):
     check_parser = commands.add_parser("check", parents=[common])
     check_parser.add_argument("--episode", type=int, required=True)
     check_parser.add_argument("--rollout-attn", type=Path, required=True)
+    check_parser.add_argument("--prefix-reference", type=Path, default=None)
     args = parser.parse_args(argv)
+    if args.action_samples < 0:
+        parser.error("--action-samples 不能为负")
 
     points = json.loads(args.points.read_text(encoding="utf-8"))
     policy, adapter = build_models(args)
@@ -354,9 +469,11 @@ def main(argv=None):
         with h5py.File(args.h5, "r") as h5_file:
             if args.command == "run":
                 return run_episodes(policy, adapter, h5_file, points, output=args.output, label=args.label,
-                                    ckpt=args.ckpt.resolve(), config=args.config, episodes=args.episodes)
+                                    ckpt=args.ckpt.resolve(), config=args.config, episodes=args.episodes,
+                                    action_samples=args.action_samples, seed=args.seed)
             return check_episode(policy, adapter, h5_file[f"episode_{args.episode}"], points["episodes"][str(args.episode)],
-                                 args.rollout_attn, seed=args.seed)
+                                 args.rollout_attn, seed=args.seed, action_samples=args.action_samples,
+                                 episode=args.episode, prefix_reference=args.prefix_reference, label=args.label)
     finally:
         if client is not None:
             client.close()
