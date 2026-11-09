@@ -79,6 +79,6 @@ mot：`REPLAY_PARITY=PASS layout_mismatch=0 points=21 maxabs=0`；`HIDDEN_PRECIS
 
 - 目的：检验三个模型的表征强弱是否与 StopCube 成功率对应（result.md 第三节 J）。对抗验证 `ADJUST_REVIEW=PASS scale=same findings=3`。
 - 被跑对象：`orig100-ctx32x4x4-motion-s2split4x256-b128-60k` 59999，只读引用 turbo `robomme_policy_learning_MotionJEPA-eval/v1-store/assets/vla-o16ctx-59999-ada0653d…/59999`；运行合同 `official-stage2-1026/o16ctx-60k-seed42/contracts/runtime.json`；配置 `mme_vla_suite_orig16_b128_60k`。代码版本同上（`5f8a87b` 执行树）。
-- 脚本：`smoke-split.sh`、`run-split-g0.sh`、`run-split-g1.sh`、`run-split-g1b.sh`（GPU1 接手 GPU0 末尾 41–46 局）。产物 `replay-split/mot/`。
-- 时间线：04:00 前后冒烟，04:07 两卡全量起跑，约 05:31 全部结束。
+- 脚本：`smoke-split.sh`、`run-split-g0.sh`、`run-split-g1.sh`、`run-split-g1b.sh`（GPU1 跑完后接手重算局 41–46，与 GPU0 重复）。产物 `replay-split/mot/`。
+- 时间线：04:00 前后冒烟，04:07 两卡全量起跑，GPU1 主段约 05:30 完成，局 41–46 的重复计算到约 05:44 结束。
 - tmux 会话：`cc-cf-smoke-split`、`cc-cf-split-g0`、`cc-cf-split-g1`、`cc-cf-split-g1b`、`cc-cf-split-ana`，全部自然退出。

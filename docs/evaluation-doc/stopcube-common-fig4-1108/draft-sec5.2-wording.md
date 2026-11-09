@@ -14,12 +14,13 @@
 
 **正文段**（替换现有 5.2 第一段 “Task progress is central … uses this estimate.”）：
 
-> Task progress is central to temporal memory, and StopCube tests it most directly: the robot hovers over a button and must press it when a cube reaches the target on its $N$-th visit, the only time-sensitive RoboMME task and the one humans find hardest (78\%)~\cite{dai2026robomme}. To compare representations rather than behaviors, we replay the same 98 official demonstrations through both policies and probe the steps left to the correct window (\cref{fig:belief}). The true time step and target count alone give $R^2=0.45$; adding the true cube speed gives 0.93. Adding MotionMem's text tokens raises $R^2$ to 0.78--0.84 at every layer, whereas FrameSamp's stay at 0.45--0.56 (layer 17: 16 steps lower error, 95\% CI [12, 20]). The added information is the cube's speed, which MotionMem's text tokens encode from layer 0 on (accuracy 0.80 vs.\ 0.57), the layer at which they read motion tokens (\cref{sec:attn}). Decoding alone does not show that the policy uses it.
+> Task progress is central to temporal memory, and StopCube tests it most directly: the robot hovers over a button and must press it when a cube reaches the target on its $N$-th visit, the only time-sensitive RoboMME task and the one humans find hardest (78\%)~\cite{dai2026robomme}. To compare representations rather than behaviors, we replay the same 98 official demonstrations through both policies and probe the steps left to the correct window (\cref{fig:belief}). The true time step and target count alone give $R^2=0.45$; adding the true cube speed gives 0.93. Adding MotionMem's text tokens raises $R^2$ to 0.78--0.84 at every layer, whereas FrameSamp's stay at 0.48--0.56 (layer 17: 16 steps lower error, 95\% CI [12, 20]). The added information is the cube's speed, which MotionMem's text tokens encode from layer 0 on once enough motion windows have been seen (accuracy 0.80 vs.\ 0.57), the layer at which they read motion tokens (\cref{sec:attn}). Decoding alone does not show that the policy uses it.
 
 要点：
 - 「layer 0 from on」与 5.3 的 route B（language 只在第 0–1 层读 motion）互相印证。
 - 0.80 对 0.57 是全数据第 0 层的读数；训练折内选层的值为 0.807 对 0.599。正文用哪个数需统一，建议用后者（0.81 对 0.60）。
-- 「at every layer」：修正口径下 MotionMem Text 第 0–17 层为 0.78–0.84，成立。
+- 「at every layer」：修正口径下 MotionMem Text 第 0–17 层为 0.78–0.84，成立；FrameSamp Text 为 0.48–0.56（0.447 是 [t,N] 本身）。
+- 「once enough motion windows have been seen」：O 节显示早期（t<80）MotionMem Text 读速度只有 0.55，与 FrameSamp 无显著差，之后上升到 0.95。
 - 「16 steps lower error」来自同点配对差 +16.0 [12.1, 19.7]。
 
 ## 方案 B：只把原 Fig. 4 换成共同轨迹版
