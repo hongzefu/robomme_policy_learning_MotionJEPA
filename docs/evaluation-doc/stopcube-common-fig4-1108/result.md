@@ -291,7 +291,7 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 
 - 违例全部出在 16 维和 32 维，主要是 concat 掉到 FrameSamp 之下（例如第 8 层 16 维：FrameSamp 0.258，concat 0.140，split 0.456）。
 - 64 维和 128 维时 36 格全部同序。
-- split 在 32 维时各层仍高于 FrameSamp；在 16 维时第 0、1、2、17 层低于 FrameSamp。
+- split 低于 FrameSamp 的只有 5 格：16 维的第 0、1、2、17 层，以及 32 维的第 1 层；其余 67 格都是 split 高于 FrameSamp。
 
 所以「N≥4 时每一层都同序」依赖 PCA 维度：要 64 维以上，concat 的这部分信息才能被线性读出。低维时，只有 split 相对 FrameSamp 的优势基本保留。
 
