@@ -254,6 +254,14 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 - **读速度 M**（MotionMem − FrameSamp）：24 格里 23 格区间不含 0。唯一的例外是 Text 第 17 层 16 维，+0.046 [−0.001, 0.092]。
 - 维度越高，优势一般越大（例如 Text 第 8 层读速度：16 维 +0.065，128 维 +0.257），所以 64 维不是对 MotionMem 最有利的选择。
 
+### L. 分折种子稳健性
+
+外层 5 折与内层 4 折的按局哈希种子，除原值 42 外再取 1、7、123、2026，在 Text、History 组第 0、8、17 层重算（PCA 64，修正口径）。脚本 `records/diagnostics/fold_seed_robustness.py`，结果 `records/explore/fold_seed.json`。
+
+- **`[t,N]` + 表征读距按下的跨模型差**：30 格全部为正，+16.0 ～ +30.6 步，区间都不含 0。例如 Text 第 17 层在 5 个种子下为 +16.0 ～ +17.3。
+- **读速度 M 的跨模型差**：30 格全部为正，+0.088 ～ +0.374，区间都不含 0。
+- 结论不依赖某一次特定的按局分折。
+
 ## 四、解释边界
 
 - B 节的「补上的信息」与 M 一致，但只对 Text、History、Motion 组成立；MotionMem 的 Current／Action 组也能补上 17 步左右，而它们读 M 并不比 FrameSamp 好，补上的可能是别的信息：`[t,N,M]` 上限 0.926；MotionMem 读速度 M 的准确率为 0.89–0.93（motion 组、history 组），FrameSamp 为 0.57–0.71。这是相关证据，没有做干预。
@@ -270,13 +278,13 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 
 ## 六、本轮 tmux 会话
 
-`cc-cf-explore1`、`cc-cf-smoke-ctx`、`cc-cf-smoke-mot`、`cc-cf-repro-1105`、`cc-cf-ctx`、`cc-cf-mot`、`cc-cf-beyond`、`cc-cf-fig4`、`cc-cf-explore-new`、`cc-cf-beyond-new`、`cc-cf-closedloop`、`cc-cf-beyond-new2`、`cc-cf-scale100`、`cc-cf-crossN`、`cc-cf-knn`、`cc-cf-clspeed`、`cc-cf-smoke-split`、`cc-cf-split-g0`、`cc-cf-split-g1`、`cc-cf-split-g1b`、`cc-cf-split-ana`、`cc-cf-pcadim`，全部自然退出。
+`cc-cf-explore1`、`cc-cf-smoke-ctx`、`cc-cf-smoke-mot`、`cc-cf-repro-1105`、`cc-cf-ctx`、`cc-cf-mot`、`cc-cf-beyond`、`cc-cf-fig4`、`cc-cf-explore-new`、`cc-cf-beyond-new`、`cc-cf-closedloop`、`cc-cf-beyond-new2`、`cc-cf-scale100`、`cc-cf-crossN`、`cc-cf-knn`、`cc-cf-clspeed`、`cc-cf-smoke-split`、`cc-cf-split-g0`、`cc-cf-split-g1`、`cc-cf-split-g1b`、`cc-cf-split-ana`、`cc-cf-pcadim`、`cc-cf-foldseed`，全部自然退出。
 
 ## 七、归档
 
 - `records/fig4-tables/`：r2_by_layer.csv、fit_lines.csv、reference_lines.csv、summary.json
 - `records/explore/`：
-  - 共同轨迹：angles.json、breakdown.json、layers_by_N.json、near_decision.json、knn.json、cross_N.json、pca_dim.json
+  - 共同轨迹：angles.json、breakdown.json、layers_by_N.json、near_decision.json、knn.json、cross_N.json、pca_dim.json、fold_seed.json
   - oracle 增量：beyond_oracle.json（旧口径）、beyond_oracle_scale100.json（修正口径）
   - 闭环：closedloop_beyond_oracle.json、closedloop_beyond_oracle_scale100.json、closedloop_speed.json
   - split 加跑：split/
