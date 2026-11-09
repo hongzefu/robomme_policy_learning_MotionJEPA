@@ -2,7 +2,7 @@
 
 这份文件只是草稿。按计划红线「稿件措辞先贴全文给用户确认再写入」，本轮没有改稿件仓库的 tex。数字全部来自本目录的 [result.md](result.md)。
 
-篇幅约束：sources.md §54 记录正文已恰好排满 8 页、没有余量。所以两版草稿都按现有 5.2 正文段（约 150 词）和图注（约 55 词）的长度来写。
+篇幅约束：sources.md §54 记录正文已恰好排满 8 页、没有余量。所以三版草稿都按现有 5.2 正文段（约 150 词）和图注（约 55 词）的长度来写。
 
 ## 方案 A（推荐）：Fig. 4 换成「oracle 增量」图
 
@@ -14,13 +14,13 @@
 
 **正文段**（替换现有 5.2 第一段 “Task progress is central … uses this estimate.”）：
 
-> Task progress is central to temporal memory, and StopCube tests it most directly: the robot hovers over a button and must press it when a cube reaches the target on its $N$-th visit, the only time-sensitive RoboMME task and the one humans find hardest (78\%)~\cite{dai2026robomme}. To compare representations rather than behaviors, we replay the same 98 official demonstrations through both policies and probe the steps left to the correct window (\cref{fig:belief}). The true time step and target count alone give $R^2=0.45$; adding the true cube speed gives 0.93. Adding MotionMem's text tokens raises $R^2$ to 0.78--0.84 at every layer, whereas FrameSamp's stay at 0.48--0.56 (layer 17: 16 steps lower error, 95\% CI [12, 20]). The added information is the cube's speed, which MotionMem's text tokens encode from layer 0 on once enough motion windows have been seen (accuracy 0.80 vs.\ 0.57), the layer at which they read motion tokens (\cref{sec:attn}). Decoding alone does not show that the policy uses it.
+> Task progress is central to temporal memory, and StopCube tests it most directly: the robot hovers over a button and must press it when a cube reaches the target on its $N$-th visit, the only time-sensitive RoboMME task and the one humans find hardest (78\%)~\cite{dai2026robomme}. To compare representations rather than behaviors, we replay the same 98 official demonstrations through both policies and probe the steps left to the correct window (\cref{fig:belief}). The true time step and target count alone give $R^2=0.45$; adding the true cube speed gives 0.93. Adding MotionMem's text tokens raises $R^2$ to 0.78--0.84 at every layer, whereas FrameSamp's stay at 0.48--0.56 (layer 17: 16 steps lower error, 95\% CI [12, 20]). The added information is the cube's speed, which MotionMem's text tokens encode from layer 0 on (accuracy 0.81 vs.\ 0.60), the layer where they read motion tokens (\cref{sec:attn}). Decoding alone does not show that the policy uses it.
 
 要点：
 - 「layer 0 from on」与 5.3 的 route B（language 只在第 0–1 层读 motion）互相印证。
-- 0.80 对 0.57 是全数据第 0 层的读数；训练折内选层的值为 0.807 对 0.599。正文用哪个数需统一，建议用后者（0.81 对 0.60）。
+- 0.81 对 0.60 是训练折内选层的值（MotionMem 多选第 0 层，FrameSamp 选第 7–17 层）；全数据第 0 层为 0.80 对 0.57。方案 A、B 已统一用 0.81／0.60。
 - 「at every layer」：修正口径下 MotionMem Text 第 0–17 层为 0.78–0.84，成立；FrameSamp Text 为 0.48–0.56（0.447 是 [t,N] 本身）。
-- 「once enough motion windows have been seen」：O 节显示早期（t<80）MotionMem Text 读速度只有 0.55，与 FrameSamp 无显著差，之后上升到 0.95。
+- 时间上的限定：O 节显示早期（t<80）MotionMem Text 读速度只有 0.55，与 FrameSamp 无显著差，之后上升到 0.95；同局对照里 FrameSamp Text 也会上升（+0.149），只是幅度较小。正文篇幅不够时不写，附录写。
 - 「16 steps lower error」来自同点配对差 +16.0 [12.1, 19.7]。
 
 ## 方案 B：只把原 Fig. 4 换成共同轨迹版
@@ -33,7 +33,7 @@
 
 **正文段**：
 
-> … we replay the same 98 official demonstrations through both policies and fit linear probes from their hidden states to the steps left until the correct window (\cref{fig:belief}). Layer by layer, the two policies are close and both slightly above an oracle given the true time step and target count ($R^2=0.45$); at layer 17, MotionMem's text tokens read 0.38 against 0.49. The difference lies elsewhere: added to the oracle inputs, MotionMem's text tokens raise $R^2$ to 0.78 (FrameSamp: 0.55), because they encode the cube's speed (accuracy 0.81 vs.\ 0.60). Decoding alone does not show that the policy uses it.
+> … we replay the same 98 official demonstrations through both policies and fit linear probes from their hidden states to the steps left until the correct window (\cref{fig:belief}). Over layers 8--16 the two policies are close and slightly above an oracle given the true time step and target count ($R^2=0.45$); MotionMem's text tokens are higher at layer 0 (0.65 vs.\ 0.46) and lower at layer 17 (0.38 vs.\ 0.49). The difference lies elsewhere: added to the oracle inputs, MotionMem's text tokens raise $R^2$ to 0.78 (FrameSamp: 0.55), because they encode the cube's speed (accuracy 0.81 vs.\ 0.60). Decoding alone does not show that the policy uses it.
 
 ## 方案 C：Fig. 4 换成「按记忆需求分档」图
 
@@ -45,7 +45,7 @@
 
 **正文段**（替换现有 5.2 第一段）：
 
-> Task progress is central to temporal memory, and StopCube tests it most directly: the robot must press a button when a cube reaches the target on its $N$-th visit~\cite{dai2026robomme}. We replay the same 98 official demonstrations through each policy and probe the steps left to the correct window from the text tokens (\cref{fig:belief}). When the target is reached late ($N\ge4$), decodability orders as StopCube success does at every layer (FrameSamp 0.35, MotionMem with 96 and 384 motion tokens 0.52 and 0.64 on average); when it is reached early ($N\le3$), FrameSamp is on par or better. The added information is the cube's speed, absent from FrameSamp's tokens. Decoding alone does not show that the policy uses it.
+> Task progress is central to temporal memory, and StopCube tests it most directly: the robot must press a button when a cube reaches the target on its $N$-th visit~\cite{dai2026robomme}. We replay the same 98 official demonstrations through each policy and probe the steps left to the correct window from the text tokens (\cref{fig:belief}). When the target is reached late ($N\ge4$), text-token decodability is ordered FrameSamp $<$ MotionMem with 96 motion tokens $<$ with 384 tokens in every layer with 64-d PCA probes (0.35, 0.52 and 0.64 on average), in line with their StopCube success; when it is reached early ($N\le3$), FrameSamp is on par or better. The added information is mostly the cube's speed, much weaker in FrameSamp's tokens. Decoding alone does not show that the policy uses it.
 
 要点：
 - 数字来自 result.md 第三节 J 的分档表（第 0–17 层平均）。
@@ -65,9 +65,9 @@
 - 0.51／0.65／0.77 是训练折内选层的值。固定层时，第 0、8 层在 5 个分折种子下都同序，但第 17 层不成立（concat 0.38–0.43，低于 FrameSamp 0.46–0.49）。正文若用这句，需写明是「best layer」，或改用第 8 层的数字（0.47–0.51／0.52–0.55／0.66–0.69）。
 - 候选图 `paper/figures/candidates/belief_dose_common.pdf`（F3 已合入）。
 
-## 两版都必须保留的限定
+## 三版都必须保留的限定
 
 1. 回放是开环看专家轨迹；这些示教两个模型训练时都见过。
 2. 优势很可能来自 motion 输入通道（近期相邻帧运动），没有做 motion 通道消融，不写成「记忆更强」。
-3. 「距按下步数」上的优势依赖线性读法（kNN 下不成立）；速度 M 的优势在 kNN 下仍成立。
+3. 「距按下步数」上的优势依赖线性读法（concat 在 kNN 下不成立；split 只在 Text 第 8／12／17 层成立）；速度 M 的优势在 kNN 下对 Text 组成立，History 组只在第 4、8 层成立。
 4. 旧版「over 50 rollouts」「22 vs 7」「0.77 vs 0.51」「0.34/0.40」「0.55/0.62」这些数字要全部删掉或改写。旧图的差距主要来自两个策略访问的状态不同，不能再引用。
