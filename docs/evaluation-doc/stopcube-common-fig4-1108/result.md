@@ -114,6 +114,10 @@
 - N≤3（45 局）：+7.3 ～ +16.0 步，区间都不含 0。
 - N≥4（53 局）：+22.5 ～ +35.8 步，区间都不含 0。
 - 单独读距按下时，N=2 是 FrameSamp 更好（C 节）；但在给定 `[t,N]` 后，MotionMem 的速度信息在低记忆需求的局里同样有用。所以 C 节的 N=2 反例来自 MotionMem 对 t、N 本身的编码，不来自速度信息。
+- 闭环同样分档（各自轨迹、模型内增量，`closedloop_beyond_oracle_by_N.py`，输出 `closedloop_beyond_oracle_by_N.txt`）：
+  - FrameSamp 的 Text 第 9 层、History 第 8 层在两档都约为 0，区间含 0（−4.2 ～ +1.6 步）。
+  - MotionMem 的 Text 在 N≤3 时 +11.4 [4.4, 19.0]，N≥4 时 +24.0 [14.1, 33.6]；History 分别为 +12.7 [2.6, 23.1] 和 +31.2 [20.1, 42.5]。
+  - 走势与共同轨迹一致。
 
 修正后，FrameSamp 的增量在共同轨迹上是小的正值（Text、Current 区间不含 0，History 含 0）。在闭环上，表中列出的各层区间都含 0；但不是每一层都如此，例如 Current 输入层为 −7.9 [−14.7, −1.4]，History 第 0–2 层也为负且区间不含 0。MotionMem 修正前后基本不变。
 
