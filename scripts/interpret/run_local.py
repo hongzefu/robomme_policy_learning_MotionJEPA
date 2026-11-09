@@ -33,6 +33,17 @@ S8 motion 内容替换的可选键：
                   给出时每局单独成块（chunk_id = digest([episode_key])，与 --episodes 同法），服务端按块加
                   --swap-donor <供体局>：服务端在 reset 时只知道 nonce，单局成块后「本服务进程服务的局」即确定。
                   选中的每局都必须在 swap_map 里，否则启动前报错。
+plfull 口径（PatternLock 全因子交换，计划 1109 第二部分〇′）：
+  profile         "official"（缺省，旧行为逐字不变）或 "plfull"；plfull 时 plfull_metadata_dir 必填（自建 metadata 目录，
+                  含 record_dataset_<task>_metadata.json），model_seed 只能 42、1、2；客户端加
+                  --profile plfull --plfull-metadata-dir <目录>，局号允许 0–79；身份并入 profile 与 metadata 文件 sha256。
+                  plfull 下 swap_map 不再拆单局块：清单分块原样（每块 1–5 局），服务端加 --swap-map <整份映射>，
+                  客户端 reset 的 eval_rpc 带 episode_key，服务端 reset 时按它确定本局供体（--swap-donor 不再使用）。
+Wan 时间池化模型（model_kind=wan_fixedpool1024）：policy_config 与 motion 模型同为 mme_vla_suite_orig16_b128_60k，
+  checkpoint 目录的父目录须是 timepool 根快照（history_config.txt、motion_provenance.json 等）；sidecar 用 stage2_python
+  （mme-vla-wan-stage2 venv）起 scripts/dataset/wan_timepool/timepool_sidecar.py，保留 --motion-online-gpu；
+  不接受 target_contract（MotionEncoderClient 只允许 stage2 encoder 带评估目标合同），spec 里写 null / "" / "none" 均视为不传；
+  sidecar 从 MMEVLA_V1_STORE 找 cache/hf（Wan2.1 VAE），可由 spec 键 v1_store 给出，否则须已在环境里。
 save_attn（bool，缺省按 ablate 判定）：ablate 含 motion_swap: / motion_swap_exact: / motion_shift 时一律不写 infer_<seq>.npz，
 无需配置，显式给 true 报错；其他 ablate 默认写，显式 false 时服务端加 --no-save-attn 不写。不写时与 save_prefix、rollout_record、
 Oracle 模式互斥。
@@ -69,8 +80,16 @@ from scripts.evaluation import resident_worker as RW  # noqa: E402
 
 SERVER_MODULE, ATTN_MODULE = "scripts.training.serve_policy", "scripts.interpret.serve_policy_attn"
 # model_kind 合法值取自 src/mme_vla_suite/policies/policy_config.py 生成 metadata 处
-MODEL_KINDS = ("history", "stage2_pool4_concat")
+MODEL_KINDS = ("history", "stage2_pool4_concat", "wan_fixedpool1024")
 MOTION_MODEL_KIND = "stage2_pool4_concat"
+# Wan 时间池化 1024（与 mme_vla_suite.shared.wan_timepool.TIMEPOOL_ENCODER_KIND 同值，测试盯住）
+WAN_MODEL_KIND = "wan_fixedpool1024"
+# 带 motion token 的模型：保留 --motion-online-gpu，可做 motion 内容替换与录制
+MOTION_KINDS = (MOTION_MODEL_KIND, WAN_MODEL_KIND)
+# testx 由 resident_worker.client_command 原样处理（先导轮 pl_swap_prep 用），此处只放行，不改其行为
+PROFILES = ("official", "testx", "plfull")
+# 与 examples/robomme/eval.py::PLFULL_SEEDS 同值（测试盯住）
+PLFULL_SEEDS = (42, 1, 2)
 XLA_FLAGS = "--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0"
 REQUIRED_KEYS = ("repo", "policy_python", "sim_python", "stage2_python", "checkpoint", "policy_config", "model_kind",
                  "cuda", "attn_out", "run_root", "manifest", "xla_mem_fraction")
@@ -103,6 +122,23 @@ def load_spec(path):
     spec.setdefault("model_seed", 42)
     spec.setdefault("purpose", "validation")
     spec["cuda"] = str(spec["cuda"])
+    profile = spec.get("profile", "official")
+    if profile not in PROFILES:
+        raise SystemExit(f"spec: profile 只能是 {PROFILES}，得到 {profile!r}")
+    if profile == "plfull":
+        if not spec.get("plfull_metadata_dir") or not Path(spec["plfull_metadata_dir"]).is_dir():
+            raise SystemExit(f"spec: plfull 需要 plfull_metadata_dir 指向现存目录，得到 {spec.get('plfull_metadata_dir')!r}")
+        spec["plfull_metadata_dir"] = str(Path(spec["plfull_metadata_dir"]).resolve())
+        if type(spec["model_seed"]) is not int or spec["model_seed"] not in PLFULL_SEEDS:
+            raise SystemExit(f"spec: plfull 的 model_seed 只能是 {PLFULL_SEEDS}")
+        if spec.get("stopcube_mode") is not None or spec.get("movecube_force"):
+            raise SystemExit("spec: plfull 不接受 stopcube_mode、movecube_force")
+    elif spec.get("plfull_metadata_dir"):
+        raise SystemExit("spec: plfull_metadata_dir 只用于 profile=plfull")
+    if spec["model_kind"] == WAN_MODEL_KIND:
+        if spec.get("target_contract") not in (None, "", "none"):
+            raise SystemExit("spec: Wan 时间池化模型不接受 target_contract（只适用于 stage2 encoder），写 null 或 \"none\"")
+        spec.pop("target_contract", None)
     has_swap = any(part.strip().startswith(("motion_swap:", "motion_swap_exact:")) for part in ablate_of(spec).split("+"))
     if spec.get("swap_map") is not None:
         spec["swap_map"] = parse_swap_map(spec["swap_map"])
@@ -110,8 +146,8 @@ def load_spec(path):
         raise SystemExit("spec: ablate 含 motion_swap / motion_swap_exact 时必须给非空 swap_map，反之 swap_map 只能配这两者")
     uses_motion = has_swap or spec.get("record_motion") or any(
         part.strip() in ("motion_zero", "motion_shift") for part in ablate_of(spec).split("+"))
-    if uses_motion and spec["model_kind"] != MOTION_MODEL_KIND:
-        raise SystemExit(f"spec: motion_zero / motion_swap / motion_swap_exact / motion_shift / record_motion 只适用于 {MOTION_MODEL_KIND}")
+    if uses_motion and spec["model_kind"] not in MOTION_KINDS:
+        raise SystemExit(f"spec: motion_zero / motion_swap / motion_swap_exact / motion_shift / record_motion 只适用于 {MOTION_KINDS}")
     if spec.get("stopcube_mode") is not None:
         if spec["stopcube_mode"] not in ("normal", "hold_extended", "oracle_query", "oracle_calibrate") or not spec.get("stopcube_config"):
             raise SystemExit("spec: stopcube_mode 非法或未提供 stopcube_config")
@@ -245,6 +281,11 @@ def run_identity(spec, manifest):
     if spec.get("movecube_force"):
         ident.update(movecube_force=True, force_k=spec["force_k"],
                      force_table_sha256=hashlib.sha256(Path(spec["force_table"]).read_bytes()).hexdigest())
+    if spec.get("profile", "official") == "plfull":
+        # 只在 plfull 时并入；官方口径身份与改动前相同。
+        directory = Path(spec["plfull_metadata_dir"])
+        ident.update(profile="plfull", plfull_metadata_sha256={
+            path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in sorted(directory.glob("*.json"))})
     return M.digest(ident)
 
 
@@ -257,6 +298,10 @@ def replaces_motion(spec):
     """与 serve_policy_attn.replaces_motion 同判据（测试盯住）；驱动端不导入服务端模块。"""
     return any(part.strip() == "motion_shift" or part.strip().startswith(("motion_swap:", "motion_swap_exact:"))
                for part in ablate_of(spec).split("+"))
+
+
+def is_plfull(spec):
+    return spec.get("profile", "official") == "plfull"
 
 
 def saves_attn(spec):
@@ -304,7 +349,7 @@ def pick_port(start=0, tries=64):
 
 def build_server_command(spec, nonce, port, episodes=None):
     """resident_worker.server_command 原形 → 换模块、插 --attn-out、motion 关闭去掉 --motion-online-gpu。
-    swap_map 给出时 episodes 必须恰为 1 局，按映射加 --swap-donor。
+    swap_map 给出时：旧口径 episodes 必须恰为 1 局，按映射加 --swap-donor；plfull 加 --swap-map <整份映射>。
     movecube_force 不换模块、不插 --attn-out，只按模型去掉 --motion-online-gpu。"""
     previous = os.environ.get("CUDA_VISIBLE_DEVICES")
     os.environ["CUDA_VISIBLE_DEVICES"] = spec["cuda"]   # server_command 从环境读卡号
@@ -319,7 +364,7 @@ def build_server_command(spec, nonce, port, episodes=None):
         raise RuntimeError(f"server_command 形状变化: {command}")
     if not spec.get("movecube_force"):
         command[command.index(SERVER_MODULE)] = ATTN_MODULE
-    if spec["model_kind"] != MOTION_MODEL_KIND:
+    if spec["model_kind"] not in MOTION_KINDS:
         index = command.index("--motion-online-gpu")
         del command[index:index + 2]
     if spec.get("movecube_force"):
@@ -341,7 +386,14 @@ def build_server_command(spec, nonce, port, episodes=None):
         extra += ["--ablate", ablate_of(spec)]
     if spec.get("record_motion"):
         extra += ["--record-motion", str(spec["record_motion"])]
-    if spec.get("swap_map"):
+    if spec.get("swap_map") and is_plfull(spec):
+        # 多局块：整份映射交给服务端，按客户端 reset 带来的 episode_key 逐局取供体。
+        mapping = parse_swap_map(spec["swap_map"])
+        missing = [e["episode_key"] for e in episodes or () if _episode_key(e["episode_key"]) not in mapping]
+        if not episodes or missing:
+            raise ValueError(f"swap_map 没有局 {missing}" if missing else "plfull swap_map 需要本块局清单")
+        extra += ["--swap-map", ",".join(f"{k}={v}" for k, v in sorted(mapping.items()))]
+    elif spec.get("swap_map"):
         if not episodes or len(episodes) != 1:
             raise ValueError("swap_map 要求每块恰 1 局")
         key = episodes[0]["episode_key"]
@@ -357,12 +409,20 @@ def build_environment(spec):
     environment = RW.worker_environment(spec)
     environment.update(CUDA_VISIBLE_DEVICES=spec["cuda"], XLA_FLAGS=XLA_FLAGS,
                        XLA_PYTHON_CLIENT_MEM_FRACTION=str(spec["xla_mem_fraction"]))
+    if spec["model_kind"] == WAN_MODEL_KIND:
+        # timepool sidecar 从 MMEVLA_V1_STORE/cache/hf 离线读 Wan VAE；运行工作树下没有 v1-store 时必须显式给出。
+        if spec.get("v1_store"):
+            environment["MMEVLA_V1_STORE"] = str(spec["v1_store"])
+        if not environment.get("MMEVLA_V1_STORE"):
+            raise ValueError("Wan 模型需要 MMEVLA_V1_STORE（spec 键 v1_store 或运行环境变量）")
     return environment
 
 
 def build_client_command(spec, grant_path, output, nonce, port, drain_file):
     """默认命令逐字保留；仅显式 StopCube 模式、bin_trace、subgoal_trace 或 movecube_force 替换 interpret 客户端。"""
     command = RW.client_command(spec, grant_path, output, nonce, port, drain_file)
+    if is_plfull(spec):
+        command += ["--profile", "plfull", "--plfull-metadata-dir", str(spec["plfull_metadata_dir"])]
     if spec.get("bin_trace"):
         command[1] = str(Path(spec["repo"]) / "scripts/interpret/bin_trace_runner.py")
     if spec.get("subgoal_trace"):
@@ -652,7 +712,8 @@ def main(argv=None, popen=subprocess.Popen):
         Path(spec["attn_out"]).mkdir(parents=True, exist_ok=True)
     if spec.get("record_motion"):
         Path(spec["record_motion"]).mkdir(parents=True, exist_ok=True)
-    chunks = select_chunks(manifest, args.episodes, args.chunks, single=bool(spec.get("swap_map")))
+    # 旧口径 swap_map 每局单独成块；plfull 由服务端逐局取供体，清单分块原样。
+    chunks = select_chunks(manifest, args.episodes, args.chunks, single=bool(spec.get("swap_map")) and not is_plfull(spec))
     if spec.get("stopcube_mode") is not None and any(
             e["task_name"] != "StopCube" for _, episodes in chunks for e in episodes):
         raise SystemExit("stopcube_mode 只能选择 StopCube 局")
