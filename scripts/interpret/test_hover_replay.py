@@ -546,3 +546,209 @@ def test_run_prefix_rejects_batch_two(prefix_env):
     obs = jax.tree.map(lambda x: jnp.repeat(x, 2, axis=0) if x.ndim else x, prefix_env.obs)
     with pytest.raises(ValueError, match="batch=1"):
         prefix_env.adapter.run_prefix(obs, THR.GROUPS)
+
+
+# ---- 动作 token 捕获（--action-samples，计划 1108 B1 契约 1） ----
+
+W_A = 2
+
+
+class ActionAdapter(StubAdapter):
+    """全路径输出里多一个 hidden_action：取点步数 + 噪声和 + 固定偏移；记下每次调用的 rng 与噪声。drift 按回放遍数加偏。"""
+
+    def __init__(self, motion, *, policy=None, drift=0.0, **kwargs):
+        super().__init__(motion, **kwargs)
+        self.policy, self.drift = policy, drift
+        self.action_calls = []
+
+    def run(self, rng, observation, *, noise, num_steps, out_f16, capture_hidden, group_masks):
+        _, hidden = super().run(rng, observation, noise=noise, num_steps=num_steps, out_f16=out_f16,
+                                capture_hidden=capture_hidden, group_masks=group_masks)
+        step = float(observation.state[0, 0])
+        noise = np.asarray(noise)
+        self.action_calls.append((step, np.asarray(jax.random.key_data(rng)), noise))
+        offset = 0.0 if self.policy is None else self.drift * (self.policy.reset_calls - 2)
+        action = step + float(noise.sum()) + offset + np.arange(18 * W_A, dtype=np.float32).reshape(18, W_A)
+        return None, {**hidden, "hidden_action": jnp.asarray(action, jnp.float32)}
+
+
+def expected_noise(seed, episode, t, j):
+    base = jax.random.fold_in(jax.random.fold_in(jax.random.fold_in(jax.random.key(seed), episode), t), j)
+    noise_key, rng = jax.random.split(base)
+    return np.asarray(jax.random.key_data(rng)), np.asarray(jax.random.normal(noise_key, (1, 2, 2), jnp.float32))
+
+
+def test_k0_keys_and_fingerprint_unchanged(tmp_path, h5_path):
+    import hashlib
+
+    entry = make_entry([16, 32], 0)
+    old_payload = {"entry": entry, "ckpt": "/ckpt/79999", "config": "cfg", "hidden_format": HR.HIDDEN_FORMAT_VERSION}
+    old = hashlib.sha256(json.dumps(old_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+                         .encode("utf-8")).hexdigest()
+    assert HR.HIDDEN_FORMAT_VERSION == 1
+    assert HR.episode_fingerprint(entry, "/ckpt/79999", "cfg") == old
+    assert HR.episode_fingerprint(entry, "/ckpt/79999", "cfg", action_samples=0, seed=7) == old
+    adapter = ActionAdapter(False)
+    with h5py.File(h5_path) as h5_file:
+        result = HR.replay_episode(StubPolicy(False), adapter, h5_file["episode_0"], entry, 8)
+        assert HR.run_episodes(StubPolicy(False), adapter, h5_file, {"episodes": {"0": entry}}, action_samples=0,
+                               seed=7, **run_kwargs(tmp_path)) == 0
+    assert "hidden_action" not in result and result["action_seconds"] == 0.0
+    assert adapter.full_calls == []                  # K=0 不跑全路径
+    with np.load(tmp_path / "out" / "ctx" / "episode_0.npz", allow_pickle=False) as archive:
+        assert set(archive.files) == {"t", "hidden_prefix", "group_tokens", "episode", "label", "fingerprint"}
+        assert str(archive["fingerprint"]) == old
+
+
+def test_fingerprint_k_positive_has_samples_and_seed():
+    entry = make_entry([16], 0)
+    base = HR.episode_fingerprint(entry, "/c", "cfg")
+    k2 = HR.episode_fingerprint(entry, "/c", "cfg", action_samples=2, seed=42)
+    assert k2 != base
+    assert k2 != HR.episode_fingerprint(entry, "/c", "cfg", action_samples=3, seed=42)
+    assert k2 != HR.episode_fingerprint(entry, "/c", "cfg", action_samples=2, seed=43)
+    assert k2 == HR.episode_fingerprint(entry, "/c", "cfg", action_samples=2, seed=42)
+
+
+def test_k2_action_average_and_noise(tmp_path, h5_path, capsys):
+    points = {"episodes": {"0": make_entry([16, 32], 0), "1": make_entry([16], 1)}}
+    adapter = ActionAdapter(False)
+    with h5py.File(h5_path) as h5_file:
+        assert HR.run_episodes(StubPolicy(False), adapter, h5_file, points, action_samples=2, seed=5,
+                               **run_kwargs(tmp_path)) == 0
+    out = capsys.readouterr().out
+    assert "action_seconds=" in out
+    assert len(adapter.action_calls) == 6            # 3 个取点 × 2 份噪声
+    assert all(call == dict(num_steps=10, out_f16=False, capture_hidden=True) for call in adapter.full_calls)
+    # 噪声与 rng 照公式；j、t、episode 任一不同都不同
+    order = [(0, 16, 0), (0, 16, 1), (0, 32, 0), (0, 32, 1), (1, 16, 0), (1, 16, 1)]
+    for (episode, t, j), (step, rng, noise) in zip(order, adapter.action_calls):
+        want_rng, want_noise = expected_noise(5, episode, t, j)
+        assert step == t
+        np.testing.assert_array_equal(rng, want_rng)
+        np.testing.assert_array_equal(noise, want_noise)
+    noises = [call[2].tobytes() for call in adapter.action_calls]
+    assert len(set(noises)) == len(noises)
+    for k, ts in ((0, [16, 32]), (1, [16])):
+        path = tmp_path / "out" / "ctx" / f"episode_{k}.npz"
+        with np.load(path, allow_pickle=False) as archive:
+            assert set(archive.files) == {"t", "hidden_prefix", "group_tokens", "episode", "label", "fingerprint",
+                                          "hidden_action", "action_samples"}
+            action = archive["hidden_action"]
+            assert action.shape == (len(ts), 18, W_A) and action.dtype == np.float32
+            assert archive["action_samples"].dtype == np.int64 and int(archive["action_samples"]) == 2
+            assert str(archive["fingerprint"]) == HR.episode_fingerprint(points["episodes"][str(k)], "/ckpt/79999", "cfg",
+                                                                         action_samples=2, seed=5)
+        for i, t in enumerate(ts):
+            calls = [call for (episode, tt, _), call in zip(order, adapter.action_calls) if episode == k and tt == t]
+            assert len(calls) == 2
+            want = np.mean([t + float(c[2].sum()) + np.arange(18 * W_A, dtype=np.float32).reshape(18, W_A)
+                            for c in calls], axis=0)
+            np.testing.assert_allclose(action[i], want, rtol=1e-6, atol=1e-6)
+
+
+def test_k2_action_reproducible(h5_path):
+    entry = make_entry([16, 32], 3)
+    with h5py.File(h5_path) as h5_file:
+        def replay(episode):
+            return HR.replay_episode(StubPolicy(False), ActionAdapter(False), h5_file["episode_0"], entry, 8,
+                                     action_samples=2, seed=9, episode=episode)
+
+        first, second, other = replay(3), replay(3), replay(4)
+    np.testing.assert_array_equal(first["hidden_action"], second["hidden_action"])
+    assert not np.array_equal(first["hidden_action"], other["hidden_action"])
+    np.testing.assert_array_equal(first["hidden_prefix"], other["hidden_prefix"])     # 前缀不受动作捕获影响
+
+
+@pytest.mark.parametrize("motion", [False, True])
+def test_check_action_pass(tmp_path, h5_path, capsys, motion):
+    attn = tmp_path / "attn"
+    attn.mkdir()
+    adapter = ActionAdapter(motion)
+    with h5py.File(h5_path) as h5_file:
+        code = HR.check_episode(StubPolicy(motion), adapter, h5_file["episode_0"], make_entry([40, 48, 56, 64, 72]), attn,
+                                seed=42, action_samples=2, episode=0)
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "ACTION_PARITY=PASS points=2 maxabs=0" in out
+    assert "HIDDEN_PRECISION=PASS group=action min_dist_over_err=inf path_maxabs=0" in out
+    assert len(adapter.full_calls) == 5 + 2 * 2 * 2     # 5 次前缀精度全路径 + 两条路径各在 48、64 跑 2 份噪声
+
+
+def test_check_action_parity_fail(tmp_path, h5_path, capsys):
+    attn = tmp_path / "attn"
+    attn.mkdir()
+    policy = StubPolicy(False)
+    with h5py.File(h5_path) as h5_file:
+        code = HR.check_episode(policy, ActionAdapter(False, policy=policy, drift=0.01), h5_file["episode_0"],
+                                make_entry([48, 64]), attn, seed=42, action_samples=2)
+    out = capsys.readouterr().out
+    assert code == 1
+    assert "REPLAY_PARITY=PASS" in out and "ACTION_PARITY=FAIL points=2 maxabs=" in out
+
+
+def test_check_action_precision_needs_two_points(tmp_path, h5_path, capsys):
+    attn = tmp_path / "attn"
+    attn.mkdir()
+    with h5py.File(h5_path) as h5_file:
+        code = HR.check_episode(StubPolicy(False), ActionAdapter(False), h5_file["episode_0"], make_entry([40, 48]), attn,
+                                seed=42, action_samples=1)
+    out = capsys.readouterr().out
+    assert code == 1
+    assert "ACTION_PARITY=PASS points=1 maxabs=0" in out
+    assert "HIDDEN_PRECISION=FAIL group=action min_dist_over_err=nan" in out
+
+
+def test_check_k0_prints_no_action_lines(tmp_path, h5_path, capsys):
+    attn = tmp_path / "attn"
+    attn.mkdir()
+    with h5py.File(h5_path) as h5_file:
+        HR.check_episode(StubPolicy(False), ActionAdapter(False), h5_file["episode_0"], make_entry([48, 64]), attn, seed=42)
+    out = capsys.readouterr().out
+    assert "ACTION_PARITY" not in out and "group=action" not in out and "PREFIX_MATCH" not in out
+
+
+def test_check_prefix_reference(tmp_path, h5_path, capsys):
+    attn = tmp_path / "attn"
+    attn.mkdir()
+    reference = tmp_path / "out"
+    entry = make_entry([40, 48, 56, 64, 72])
+    with h5py.File(h5_path) as h5_file:
+        HR.run_episodes(StubPolicy(False), StubAdapter(False), h5_file, {"episodes": {"0": make_entry([48, 64, 72])}},
+                        **run_kwargs(tmp_path))
+        capsys.readouterr()
+
+        def check(label):
+            return HR.check_episode(StubPolicy(False), StubAdapter(False), h5_file["episode_0"], entry, attn, seed=42,
+                                    prefix_reference=reference, label=label, episode=0)
+
+        assert check("ctx") == 0
+        assert "PREFIX_MATCH=PASS points=3 maxabs=0" in capsys.readouterr().out
+        path = reference / "ctx" / "episode_0.npz"
+        with np.load(path, allow_pickle=False) as archive:
+            saved = {key: archive[key] for key in archive.files}
+        saved["hidden_prefix"] = saved["hidden_prefix"] + np.float32(0.5)
+        np.savez(path, **saved)
+        assert check("ctx") == 1
+        assert "PREFIX_MATCH=FAIL points=3 maxabs=0.5" in capsys.readouterr().out
+        assert check("mot") == 1                      # 参考库里没有这个文件
+        assert "PREFIX_MATCH=FAIL points=0 maxabs=nan" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("command", ["run", "check"])
+def test_main_passes_action_samples(tmp_path, h5_path, monkeypatch, command):
+    calls = []
+    monkeypatch.setattr(HR, "build_models", lambda args: (StubPolicy(False), StubAdapter(False)))
+    monkeypatch.setattr(HR, "run_episodes", lambda *a, **kw: calls.append(kw) or 0)
+    monkeypatch.setattr(HR, "check_episode", lambda *a, **kw: calls.append(kw) or 0)
+    points = tmp_path / "points.json"
+    points.write_text(json.dumps({"episodes": {"0": make_entry([16])}}), encoding="utf-8")
+    argv = [command, "--points", str(points), "--h5", str(h5_path), "--ckpt", str(tmp_path), "--config", "cfg",
+            "--label", "mot", "--output", str(tmp_path / "out"), "--seed", "7", "--action-samples", "4"]
+    if command == "check":
+        argv += ["--episode", "0", "--rollout-attn", str(tmp_path), "--prefix-reference", str(tmp_path / "ref")]
+    assert HR.main(argv) == 0
+    assert calls[0]["action_samples"] == 4 and calls[0]["seed"] == 7
+    if command == "check":
+        assert calls[0]["episode"] == 0 and calls[0]["label"] == "mot"
+        assert calls[0]["prefix_reference"] == tmp_path / "ref"
