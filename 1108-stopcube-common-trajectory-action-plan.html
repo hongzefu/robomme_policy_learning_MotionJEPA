@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StopCube 共同轨迹 Fig. 4 重跑（补动作 token）</title>
+<style>
+body { margin: 0; background: #f7f8f8; color: #1d2528; font: 16px/1.75 -apple-system, "Noto Sans CJK SC", "PingFang SC", sans-serif; }
+main { max-width: 980px; margin: 0 auto; padding: 36px 20px 72px; }
+h1 { font-size: 1.6rem; margin: 44px 0 14px; padding-top: 16px; border-top: 3px solid #1d2528; }
+h1.title { border-top: 0; margin-top: 0; padding-top: 0; font-size: 1.9rem; }
+h2 { font-size: 1.2rem; margin: 28px 0 8px; }
+code { font: 0.87em ui-monospace, Menlo, monospace; overflow-wrap: anywhere; }
+.note { background: #e9eef0; padding: 10px 14px; margin: 14px 0; }
+.tbl { overflow-x: auto; margin: 12px 0; }
+table { border-collapse: collapse; font-size: 0.9rem; width: 100%; background: #fff; }
+th, td { border: 1px solid #d3dbde; padding: 6px 9px; text-align: left; vertical-align: top; }
+th { background: #eef2f3; white-space: nowrap; }
+</style>
+</head>
+<body>
+<main>
+<h1 class="title">StopCube 共同轨迹 Fig. 4 重跑（补动作 token）</h1>
+<div class="note">
+<p><b>权威性</b>：本文件是稿件仓库 <code>probe/1108-stopcube-common-trajectory-probe-plan.html</code>（提交 <code>7007bc7</code>）在策略仓库的细化执行版。两者冲突时以本文件为准。</p>
+<p><b>代码锚点</b>：策略仓库 <code>v4.1-interpretMotion</code>，开工基线 <code>0a731eb</code>。工作副本 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code>（环境 A，sled-aspen，2 × RTX A6000）。</p>
+<p><b>授权</b>：用户 2026-11-08 美东原话「按推荐开工」。推荐项：FrameSamp 用 79999；冒烟 FAIL 停在冒烟，全量 FAIL 如实记录、跑到底；沿用 1105 取点（含经过点 ±2 步排除）；不登记状态机。随后用户追加目标：「尽可能找到角度找到优势 在明天8点不要停止 不要来问我」。</p>
+<p><b>commit 体例</b>：功能 <code>commitV4.1.&lt;n&gt;</code>，子代理 <code>sub/&lt;编号&gt;: </code>，留档 <code>docs:</code>。</p>
+</div>
+
+<h1>第一部分（给人看）</h1>
+<h2>一、要做什么</h2>
+<p>1105 悬停探针已经在官方示教 100 局上回放过两个模型：取点 2344 个，98 局有点，隐状态库在 <code>v1-store/evaluation/stopcube-hover-probe-1105/replay/</code>，判定行 <code>REPLAY_PARITY=PASS maxabs=0</code>。它的标签 <code>to_press = M·N − M//2 − t</code> 与 Fig. 4 的「距正确窗口步数」是同一个量。所以 Text、Current frame 两组在共同轨迹上的读数已经有了（Text：FrameSamp 0.46–0.52，MotionMem 0.36–0.55；oracle 两边都是 0.447）。</p>
+<p>唯一缺的是 <b>Action token</b>：1105 只做了前缀前向，没有去噪。本轮给回放入口加上动作捕获（每点 5 份噪声、10 步去噪，对 <code>hidden_action</code> 取平均），两个模型重新回放一遍；再用一个新的分析入口把 Fig. 4 需要的三张表按原列名导出，交给稿件仓库出图。</p>
+
+<h2>二、已定口径</h2>
+<div class="tbl"><table>
+<tr><th>编号</th><th>口径</th><th>依据</th></tr>
+<tr><td>K1</td><td>两个模型在同一批示教观测上前向，动作不执行；按局 5 折</td><td>1108 原计划 K1</td></tr>
+<tr><td>K2</td><td>只用官方示教 100 局，不新增数据</td><td>用户：「放弃新增数据 不要再提了」</td></tr>
+<tr><td>K3</td><td>取点直接用 1105 的 <code>hover_points.json</code>：到位后、T−30 前、t 能被 8 整除、离每次经过中心大于 2 步</td><td>推荐项 3，用户「按推荐开工」</td></tr>
+<tr><td>K4</td><td>动作 token：每点 5 份噪声，每份 10 步去噪，<code>hidden_action</code>（18 层）先在去噪步上平均（适配器已有），再在 5 份噪声上平均</td><td>用户：「action expert 5个够了」</td></tr>
+<tr><td>K5</td><td>分析方法沿用 <code>hover_probe.py</code>：训练折内标准化、PCA 到 64 维、内层按局 4 折选 λ、每局等权</td><td>1108 K5 / 1105 A5、A6</td></tr>
+<tr><td>K6</td><td>三组 Text、Current frame、Action token；层读数共 19 个（输入层 + 18 层），Action token 只有 18 个；下排为第 17 层拟合线</td><td>1108 K6</td></tr>
+<tr><td>K7</td><td>参考线 time-only <code>[t]</code> 与 oracle <code>[t,N]</code> 都报</td><td>1108 K7</td></tr>
+<tr><td>K8</td><td>FrameSamp 用官方 ctx512 第 79999 步，MotionMem 用 <code>o16cc</code> 第 59999 步，模型 seed 42</td><td>推荐项 1</td></tr>
+<tr><td>K9</td><td>冒烟 FAIL：不起全量，停下等用户；全量起跑后出现 FAIL：如实记录，不改判据，跑到底</td><td>推荐项 2</td></tr>
+</table></div>
+
+<h2>三、改动一览</h2>
+<div class="tbl"><table>
+<tr><th>文件</th><th>改什么</th><th>关闭态</th><th>开启态</th></tr>
+<tr><td><code>scripts/interpret/hover_replay.py</code></td><td>新增参数 <code>--action-samples K</code>，在每个取点额外用 <code>adapter.run(capture_hidden=True)</code> 跑 K 份噪声</td><td>K=0，输出与 1105 逐位相同（指纹不变）</td><td>npz 多出 <code>hidden_action (n,18,W_a)</code> 与 <code>action_samples</code>，指纹里加入 K</td></tr>
+<tr><td><code>scripts/interpret/analysis/common_traj_fig4.py</code>（新）</td><td>从回放库算各组逐层 to_press 的 R²／MAE、两条参考线、第 17 层拟合线，导出三张表</td><td>—</td><td>—</td></tr>
+</table></div>
+
+<h2>四、验收</h2>
+<div class="tbl"><table>
+<tr><th>查什么</th><th>怎么查</th><th>过了说明什么</th><th>判定行</th></tr>
+<tr><td>新分析入口复现 1105</td><td>用 1105 库（无动作）跑新入口，Text／Current／History 的 to_press R² 与 <code>hover-summary.json</code> 逐值比</td><td>新入口算法没漂</td><td><code>REPRO_1105=PASS maxabs=&lt;值&gt;</code>（阈值 1e-9）</td></tr>
+<tr><td>K=0 不变</td><td>单测：K=0 写出的键与指纹同旧版</td><td>旧库仍可续跑</td><td>pytest 全过</td></tr>
+<tr><td>前缀与 1105 一致</td><td>新库的 <code>hidden_prefix</code> 对 1105 库逐局比</td><td>同一份输入、同一模型</td><td><code>PREFIX_MATCH=PASS maxabs=&lt;值&gt;</code>（阈值 1e-3）</td></tr>
+<tr><td>动作路径一致</td><td><code>check</code>：回放批 8 与评测批 16 两条路径在同点同噪声下的 <code>hidden_action</code> 比较</td><td>回放节奏不改动作隐状态</td><td><code>ACTION_PARITY=PASS maxabs=&lt;值&gt;</code>（阈值 1e-3）</td></tr>
+<tr><td>动作精度</td><td>相邻取点距离中位数 ÷ 上一项误差</td><td>点间差异大于数值噪声</td><td><code>HIDDEN_PRECISION=PASS group=action</code>（≥10）</td></tr>
+<tr><td>取点相同</td><td>两份新库的（局，t）集合</td><td>共同轨迹成立</td><td><code>SAME_POINTS=PASS points=2344 diff=0</code></td></tr>
+<tr><td>无泄漏</td><td>每折训练局与测试局交集</td><td>—</td><td><code>GROUP_LEAK=PASS leak=0</code></td></tr>
+<tr><td>oracle 相等</td><td>两模型各算一次 <code>[t,N]</code></td><td>同点同折</td><td><code>ORACLE_EQUAL=PASS</code></td></tr>
+<tr><td>主读数</td><td>各组各层 R²</td><td>Fig. 4 全部数字</td><td><code>PROBE=PASS model= group= layer= r2= minus_time=</code></td></tr>
+</table></div>
+
+<h2>五、步骤</h2>
+<div class="tbl"><table>
+<tr><th>步</th><th>内容</th><th>判据</th></tr>
+<tr><td>0</td><td>本计划提交；派一个审查子代理查计划有没有自相矛盾</td><td><code>PLAN_CONSISTENCY_REVIEW</code></td></tr>
+<tr><td>1</td><td>W1、W2 两个写入子代理并行；合并前审查 → <code>--no-ff</code> 合入 → 合并后审查 → push</td><td>PRE／POST_MERGE_REVIEW、pytest</td></tr>
+<tr><td>2</td><td>W2 在 1105 库上复现</td><td><code>REPRO_1105</code></td></tr>
+<tr><td>3</td><td>两模型各冒烟 1 局（check + run），量单点耗时</td><td><code>ACTION_PARITY</code>、<code>HIDDEN_PRECISION group=action</code>、<code>PREFIX_MATCH</code></td></tr>
+<tr><td>4</td><td>全量：GPU0 跑 ctx，GPU1 跑 mot，各一个 detached tmux，每份日志挂一个 Monitor</td><td><code>REPLAY_RUN=PASS points=2344</code>、<code>EXIT_CODE=0</code></td></tr>
+<tr><td>5</td><td>分析并导出三张表</td><td><code>SAME_POINTS</code>、<code>GROUP_LEAK</code>、<code>ORACLE_EQUAL</code>、<code>PROBE</code></td></tr>
+<tr><td>6</td><td>稿件仓库：换数据表、重跑出图脚本，渲染位图目视复查；正文措辞等用户确认，本轮不改</td><td>图无重叠、无溢出</td></tr>
+<tr><td>7</td><td>留档 <code>docs/evaluation-doc/stopcube-common-fig4-1108/</code>，提交、推送</td><td>—</td></tr>
+</table></div>
+
+<h2>六、子代理分工与合并（简述）</h2>
+<p>拆成两块，文件不重叠，可以并行。W1 只改回放入口和它的测试；W2 新写分析入口和测试，只读 W1 约定好的 npz 格式。两块各在独立 worktree 里提交 <code>sub/W1</code>、<code>sub/W2</code>。主会话先合 W1 再合 W2：每次合并前派一个 sonnet 审查固定 sha 的 diff，合并后跑两份测试，通过就 push。冒烟、全量、分析由主会话自己起 tmux。</p>
+<p>逐文件细节、分配表、风险与盲区见第二部分。</p>
+
+<h1>第二部分（技术细节，供 agent 追踪）</h1>
+<h2>B0 红线</h2>
+<ol>
+<li><code>src/</code>、<code>third_party/</code>、<code>scripts/training/</code>、<code>scripts/evaluation/</code> 零改动。</li>
+<li>1105 的产物目录只读，新产物写到 <code>v1-store/evaluation/stopcube-common-fig4-1108/</code>。</li>
+<li>FAIL 不改判据（K9）。</li>
+<li>tmux 会话前缀 <code>cc-cf-</code>，清单记入 launch.md。</li>
+<li>稿件正文措辞本轮不写，只换数据和图。</li>
+</ol>
+
+<h2>B1 npz 契约（W1 写，W2 读）</h2>
+<p>键：<code>t (n,) int64</code>、<code>hidden_prefix (n,19,5,2048) float32</code>（第 2 维 0 为输入层，1–18 为各层输出；第 3 维顺序 <code>REPLAY_GROUPS = (历史视觉, motion, 当前视觉, 文字, 最近motion)</code>）、<code>group_tokens (n,5) int32</code>、<code>hidden_action (n,18,W_a) float32</code>（K&gt;0 时才有）、<code>action_samples () int64</code>（K&gt;0 时才有）、<code>episode</code>、<code>label</code>、<code>fingerprint</code>。</p>
+<p>噪声：第 j 份的 key 为 <code>jax.random.fold_in(jax.random.fold_in(jax.random.fold_in(jax.random.key(seed), episode), t), j)</code>，再拆成 noise key 与 sample rng。noise 形状 <code>(1, AH, AD)</code>，float32。<code>num_steps=10</code>，<code>out_f16=False</code>，在 <code>jax.default_matmul_precision("highest")</code> 内运行。</p>
+
+<h2>B2 逐文件改动</h2>
+<div class="tbl"><table>
+<tr><th>文件 / 锚点</th><th>改什么</th></tr>
+<tr><td><code>hover_replay.py::replay_episode</code></td><td>加关键字参数 <code>action_samples=0, seed, episode</code>；K&gt;0 时在每点跑 K 次 <code>adapter.run</code>，对 <code>output[-1]["hidden_action"]</code> 取平均；返回 <code>hidden_action</code> 和 <code>action_seconds</code></td></tr>
+<tr><td><code>episode_fingerprint</code>、<code>write_episode</code>、<code>run_episodes</code></td><td>K&gt;0 时指纹 payload 加 <code>action_samples</code>，写出新键，日志加 <code>action_seconds</code>；K=0 时与旧版逐位一致</td></tr>
+<tr><td><code>check_episode</code></td><td>K&gt;0 时在 on_replay 与 on_eval 两条路径都算同噪声的 hidden_action，打印 <code>ACTION_PARITY</code> 和 <code>HIDDEN_PRECISION group=action</code>；退出码纳入这两项</td></tr>
+<tr><td><code>main</code></td><td>run、check 都加 <code>--action-samples</code>（默认 0）；check 增加可选 <code>--prefix-reference &lt;1105 库根&gt;</code>，打印 <code>PREFIX_MATCH</code></td></tr>
+<tr><td><code>test_hover_replay.py</code></td><td>用现有替身补测试：K=0 键与指纹不变；K=2 时形状、平均、噪声 key 互不相同且可复现</td></tr>
+<tr><td><code>analysis/common_traj_fig4.py</code>（新）</td><td>复用 <code>hover_probe</code> 的 <code>load_samples</code>、<code>crossfit</code>、<code>time_features</code>、<code>fit_pca</code> 等函数与 <code>rollout_probe</code> 的 bootstrap。组：Text=列 3、Current frame=列 2、History frames=列 0、Motion=列 1（只有 mot）、Action token=hidden_action。层：<code>layer=input, layer_index=-1</code> 对应 prefix 第 0 项，<code>layer=k</code> 对应 prefix 第 k+1 项与 hidden_action 第 k 项。模型名映射 <code>ctx→baseline</code>、<code>mot→motion</code>。导出 <code>r2_by_layer.csv</code>（列 model,group,layer,layer_index,r2,mae_steps）、<code>fit_lines.csv</code>（列 model,group,r2,slope,slope_ci_low,slope_ci_high,intercept,n_points,n_episodes；第 17 层折外预测对真值的回归，斜率区间按局重采样，口径对齐 <code>rollout_probe</code> 的现有拟合线实现）、<code>reference_lines.csv</code>（列 model,reference,metric,target,value,ci_low,ci_high,note；行 time_only／time_and_target_count 的 r2）。另写 <code>summary.json</code> 和判定行</td></tr>
+<tr><td><code>analysis/test_common_traj_fig4.py</code>（新）</td><td>合成小库上的列名、层映射、缺 hidden_action 时跳过动作组、<code>SAME_POINTS</code>、<code>ORACLE_EQUAL</code></td></tr>
+</table></div>
+
+<h2>B3 子代理分配表</h2>
+<div class="tbl"><table>
+<tr><th>编号</th><th>目标</th><th>可写文件</th><th>禁触</th><th>依赖</th><th>合并顺序</th><th>验收</th><th>资源</th></tr>
+<tr><td>W1</td><td>回放加动作捕获</td><td><code>scripts/interpret/hover_replay.py</code>、<code>scripts/interpret/test_hover_replay.py</code></td><td>B0 第 1 条与其他一切文件</td><td>B1 契约</td><td>1</td><td><code>pytest scripts/interpret/test_hover_replay.py -q</code> 全过（worktree 内，CPU）</td><td>不用 GPU</td></tr>
+<tr><td>W2</td><td>Fig. 4 分析入口</td><td><code>scripts/interpret/analysis/common_traj_fig4.py</code>、<code>scripts/interpret/analysis/test_common_traj_fig4.py</code></td><td>同上</td><td>B1 契约</td><td>2</td><td>新测试全过；在 1105 库上 <code>REPRO_1105=PASS</code>（CPU，只读 1105 库）</td><td>CPU 8 进程</td></tr>
+<tr><td>主会话</td><td>冒烟、全量、分析、稿件出图、留档</td><td>运行产物、<code>docs/evaluation-doc/</code>、稿件仓库 <code>data/stopcube_belief/</code>、图</td><td>—</td><td>W1、W2 合入</td><td>—</td><td>四、验收各行</td><td>GPU0 ctx、GPU1 mot</td></tr>
+</table></div>
+
+<h2>B4 runbook</h2>
+<ol>
+<li>执行树：<code>git worktree add --detach v1-store/worktrees/stopcube-common-run &lt;合并后 HEAD&gt;</code>；env 脚本照 1105 <code>env.sh</code>，GPU0 配额 0.90（ctx），GPU1 配额 0.55（mot，另有编码器侧车）。</li>
+<li>冒烟：<code>check --episode 0 --action-samples 5 --prefix-reference &lt;1105 replay&gt; --rollout-attn &lt;同 1105&gt;</code>，再 <code>run --episodes 0 --action-samples 5</code>。</li>
+<li>全量：<code>run --action-samples 5 --output $O/replay</code>，会话 <code>cc-cf-ctx</code>、<code>cc-cf-mot</code>。</li>
+<li>分析：<code>python -m scripts.interpret.analysis.common_traj_fig4 --points &lt;1105 hover_points.json&gt; --replay-root $O/replay --output $O/fig4 --workers 8</code>。</li>
+</ol>
+
+<h2>B5 风险</h2>
+<div class="tbl"><table>
+<tr><th>风险</th><th>处置</th></tr>
+<tr><td>float32 全去噪显存不够（1105 中 ctx 自检在 0.45 时 OOM）</td><td>ctx 配额给 0.90；mot 仍 OOM 时把 batch 保持 1、按点释放；记入实施中调整</td></tr>
+<tr><td>耗时超预期</td><td>冒烟回填；超过 4 小时则 K 不变，按局分片两段</td></tr>
+<tr><td>结果对 MotionMem 不利</td><td>按实测写；另做探索性角度分析，标明探索性</td></tr>
+</table></div>
+
+<h2>B6 盲区</h2>
+<ul>
+<li>回放中模型是开环看专家轨迹，不代表闭环行为。</li>
+<li>两个模型训练时都见过这些示教局。</li>
+<li>动作 token 的拟合线口径须对齐旧实现，W2 需读 <code>rollout_probe.py</code> 确认。</li>
+</ul>
+
+<h2>B7 留档与 commit</h2>
+<p>运行留档写 <code>docs/evaluation-doc/stopcube-common-fig4-1108/</code>（launch.md、result.md、records/）。每次合并单独提交并推送；稿件仓库用 <code>build:</code> 提交数据与图。</p>
+</main>
+</body>
+</html>
