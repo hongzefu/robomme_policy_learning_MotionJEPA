@@ -201,6 +201,44 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 - 两个 motion 变体都是 N 越大成功率越高（concat 0.16 → 0.73，split 0.38 → 0.88），最慢的 M=120 最容易成功。H 节闭环 50 局里 FrameSamp 在 N=5 时 0/11，走势相反；但官方 FrameSamp 没有逐局数据，这个对比只能停在这里。
 - 若稿件用的是 concat，StopCube 的绝对成功率（43%）低于 split（66%）；正文如果引用 StopCube 成功率，需注明是哪个变体。
 
+### J. 三个模型的表征强弱与 StopCube 成功率的对应（加跑 split 变体）
+
+加跑的模型是 MotionMem 的 split 变体 `orig100-ctx32x4x4-motion-s2split4x256-b128-60k`（59999，motion 预算 384）。代码不变，同一批 2344 个点，`--action-samples 5`。
+
+- **对抗验证**：`ADJUST_REVIEW=PASS scale=same findings=3`。
+- **产物**：根目录 `replay-split/mot/`。label 复用为 mot，因为 `hover_replay --label` 只接受 ctx／mot；它实际是 split 变体，不要和 `replay/mot`（concat）混淆。
+- **冒烟判定行**：`REPLAY_PARITY=PASS points=21 maxabs=0`（没有 split 的闭环记录可比，`compared=0`，只证明批 8／批 16 两条路径一致），`ACTION_PARITY=PASS maxabs=0`，各组 `HIDDEN_PRECISION=PASS`。
+- **全量判定行**：两卡分局并行，后段由 GPU1 接手 GPU0 末尾 6 局；`REPLAY_RUN=PASS` 分别为 1164、1180、212 个点，合计 98 局、2344 个点，`EXIT_CODE=0`。
+- **比较方式**：v1-store 内建两个符号链接根 `cmp-split-vs-fs`、`cmp-split-vs-concat`，用 `explore_angles.py` 与 `beyond_oracle.py`（`ONEHOT_SCALE=100`）不改代码地比较。结果在 `records/explore/split/`。
+
+**三个模型的 StopCube 成功率**：FrameSamp 13.67%（论文 Table 3）< concat 43%（65/150）< split 66%（99/150）。训练折内选层后，下列读数按同样的顺序递增：
+
+| 读数 | FrameSamp | concat | split |
+| --- | ---: | ---: | ---: |
+| Text 读距按下步数 R² | 0.507 | 0.652 | 0.771 |
+| Text 读速度 M | 0.599 | 0.807 | 0.845 |
+| History 读速度 M | 0.710 | 0.891 | 0.954 |
+| History 读外观相同配对 | 0.467 | 0.648 | 0.916 |
+| Action 读外观相同配对 | 0.560 | 0.769 | 0.825 |
+| Action 读「该不该按」 | 0.866 | 0.892 | 0.944 |
+| motion 组读速度 M | — | 0.927 | 0.981 |
+
+不按这个顺序的：Current frame 读速度 M（0.574／0.660／0.592）、Action 读速度 M（0.623／0.639／0.609）、Current 读距按下（0.551／0.579／0.563）。
+
+**同点配对差**：
+
+- split − FrameSamp：Text 读距按下少 15.6 步 [9.4, 21.8]；速度 M +0.245 [0.178, 0.314]；History 外观相同配对 +0.449 [0.342, 0.552]。
+- split − concat：
+  - Text 读距按下少 9.0 步 [4.6, 13.3]；Action 读距按下少 4.5 步 [1.2, 8.0]。
+  - Action 读该不该按 +0.052 [0.032, 0.072]；History 外观相同配对 +0.268 [0.192, 0.339]。
+  - Current frame 读速度 M 为 −0.068 [−0.117, −0.021]，split 较差。
+- oracle 增量（修正口径）：
+  - split 对 FrameSamp：Text 第 0–16 层 +17 ～ +25 步，第 17 层 +13 [9, 17]；History +16 ～ +27 步。与 concat 对 FrameSamp 相近。
+  - split 对 concat：Text、History 约 0；Current 与 Action 多数层 concat 好 2–8 步。
+  - 也就是说，「补上 `[t,N]` 之外的速度信息」是有 motion 与没有 motion 的差别；在两个 motion 变体之间，它不随成功率变化。
+
+**解释边界**：只有三个模型，是相关证据，不是因果。FrameSamp 的成功率来自论文、不是本轮评测，评测平台与 seed 也不同。split 和 concat 的差别同时涉及 motion 预算（384 对 96）与读出方式，分不开。
+
 ## 四、解释边界
 
 - B 节的「补上的信息」与 M 一致：`[t,N,M]` 上限 0.926；MotionMem 读速度 M 的准确率为 0.89–0.93（motion 组、history 组），FrameSamp 为 0.57–0.71。这是相关证据，没有做干预。

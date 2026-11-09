@@ -74,3 +74,11 @@ python -m scripts.interpret.analysis.common_traj_fig4 --points $H1105/hover_poin
 ctx：`REPLAY_PARITY=PASS layout_mismatch=0 points=21 maxabs=0`；`HIDDEN_PRECISION=PASS`（历史视觉 2598、当前视觉 4216、文字 6578）；`ACTION_PARITY=PASS points=21 maxabs=0`；`HIDDEN_PRECISION=PASS group=action min_dist_over_err=inf path_maxabs=0`；`PREFIX_MATCH=PASS points=42 maxabs=0`；`REPLAY_RUN=PASS model=ctx points=42 expected=42`。
 
 mot：`REPLAY_PARITY=PASS layout_mismatch=0 points=21 maxabs=0`；`HIDDEN_PRECISION=PASS`（历史视觉 8625、motion 23951、当前视觉 5194、文字 6070、最近 motion 42693）；`ACTION_PARITY=PASS points=21 maxabs=0`；`HIDDEN_PRECISION=PASS group=action min_dist_over_err=inf path_maxabs=0`；`PREFIX_MATCH=PASS points=42 maxabs=0`；`REPLAY_RUN=PASS model=mot points=42 expected=42`。
+
+## 加跑：MotionMem split 变体（美东 2026-11-09）
+
+- 目的：检验三个模型的表征强弱是否与 StopCube 成功率对应（result.md 第三节 J）。对抗验证 `ADJUST_REVIEW=PASS scale=same findings=3`。
+- 被跑对象：`orig100-ctx32x4x4-motion-s2split4x256-b128-60k` 59999，只读引用 turbo `robomme_policy_learning_MotionJEPA-eval/v1-store/assets/vla-o16ctx-59999-ada0653d…/59999`；运行合同 `official-stage2-1026/o16ctx-60k-seed42/contracts/runtime.json`；配置 `mme_vla_suite_orig16_b128_60k`。代码版本同上（`5f8a87b` 执行树）。
+- 脚本：`smoke-split.sh`、`run-split-g0.sh`、`run-split-g1.sh`、`run-split-g1b.sh`（GPU1 接手 GPU0 末尾 41–46 局）。产物 `replay-split/mot/`。
+- 时间线：04:00 前后冒烟，04:07 两卡全量起跑，约 05:31 全部结束。
+- tmux 会话：`cc-cf-smoke-split`、`cc-cf-split-g0`、`cc-cf-split-g1`、`cc-cf-split-g1b`、`cc-cf-split-ana`，全部自然退出。
