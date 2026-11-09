@@ -1,6 +1,6 @@
 """motion 离线表：格式常量、motion_index 契约、MotionMeta、只读 MotionStore、起点查表公式。
 
-对应 0901-motion-memory-plan.md 第二部分一节 1.1（离线 motion 表格式契约）。体例照 ``framesamp_store.py``：
+对应 docs/root-archive/0901-motion-memory-plan.md 第二部分一节 1.1（离线 motion 表格式契约）。体例照 ``framesamp_store.py``：
 本文件是格式层唯一实现——打包工具（scripts/dataset/pack_motion_store.py）、FrameSampDataset（S2）、
 在线侧（S3）与对拍工具一律从这里 import，绝不复制；``framesamp_store.py`` 一字不动（两套索引公式不同，
 帧路按 ``row_of()`` 逐帧、运动路按段内网格，混放会互相污染）。
@@ -40,6 +40,16 @@ import re
 import numpy as np
 
 from mme_vla_suite.datastore.manifest import load_manifest
+from mme_vla_suite.shared.wan_timepool import (
+    POOL_CONTRACT,
+    POOL_VERSION,
+    TIMEPOOL_ENCODER_KIND,
+    TIMEPOOL_LAYOUT,
+    TIMEPOOL_PARAMETER_COUNT,
+    TIMEPOOL_READOUT,
+    TIMEPOOL_SHAPE,
+    pool_source_sha256,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +69,10 @@ STAGE2_G2_WAIVER_SAMPLES_SHA256 = "4cb05b6b3097b22a8594576def1505957399a924d4189
 STAGE2_G2_WAIVER_FAILURE_SHA256 = "88cc88fb69827f00763b5499e3aa3d39bdb411db3e186660eed596716d6dce72"
 META_SCHEMA = 1
 INDEX_SCHEMA = 1
+TIMEPOOL_PROVENANCE_SCHEMA = "wan-timepool-provenance-v1"
+TIMEPOOL_WINDOW_MAP_SCHEMA = "wan-timepool-window-map-v1"
+TIMEPOOL_WINDOW_MAP_RELPATH = "meta/timepool_window_map.json"
+TIMEPOOL_VALIDATION_ROLES = ("DATA_LINEAGE", "WAN_RESTORE_EQ", "WINDOW_EQ", "POOL_CONTRACT", "POOL_TABLE_EQ")
 
 MOTION_KEY = "motion_token"
 MOTION_ROW_SHAPE = (8, 256)
@@ -97,6 +111,8 @@ class LayoutSpec:
     demo_tail_pad: str
     row_shape: tuple[int, ...] = (768,)
     grid_stride: int = 16
+    # 窗口数字相同的不同来源（stage2 与 fixed pool）靠它保持不等，防止按 spec 相等分派时串到 stage2 路径。
+    family: str = dataclasses.field(default="", repr=False)
 
     @property
     def row_bytes(self) -> int:
@@ -119,8 +135,12 @@ LAYOUT_SPECS = {
     "motion-v10-8x256-grid16-demopad17-v1": LayoutSpec(17, 33, "repeat_last", (8, 256)),
     STAGE2_LAYOUT: LayoutSpec(17, 33, "repeat_last", (1, 1024), grid_stride=32),
 }
+# fixed pool 布局单独登记：LAYOUT_SPECS 只列 learned / legacy 布局，读写校验一律查 KNOWN_LAYOUT_SPECS。
+TIMEPOOL_LAYOUT_SPEC = LayoutSpec(17, 33, "repeat_last", TIMEPOOL_SHAPE, grid_stride=32, family="wan_timepool")
+KNOWN_LAYOUT_SPECS = {**LAYOUT_SPECS, TIMEPOOL_LAYOUT: TIMEPOOL_LAYOUT_SPEC}
+_STRICT_TYPED_LAYOUTS = (STAGE2_LAYOUT, TIMEPOOL_LAYOUT)
 if LAYOUT not in LAYOUT_SPECS or any(
-    f"-grid{spec.grid_stride}-" not in name or not name.endswith("-v1") for name, spec in LAYOUT_SPECS.items()
+    f"-grid{spec.grid_stride}-" not in name or not name.endswith("-v1") for name, spec in KNOWN_LAYOUT_SPECS.items()
 ):
     raise RuntimeError(f"motion 布局名与 GRID_STRIDE={GRID_STRIDE} 不符")
 
@@ -132,9 +152,9 @@ DEMO_TAIL_PAD = LAYOUT_SPECS[LAYOUT].demo_tail_pad
 def layout_spec(raw: dict, ctx: str) -> LayoutSpec:
     """新布局要求三键齐备；历史布局允许三键全缺，部分缺失或错值一律拒绝。"""
     name = raw.get("layout")
-    if name not in LAYOUT_SPECS:
+    if name not in KNOWN_LAYOUT_SPECS:
         raise ValueError(f"{ctx} 未知 layout={name!r}")
-    spec = LAYOUT_SPECS[name]
+    spec = KNOWN_LAYOUT_SPECS[name]
     fields = spec.fields()
     present = {key for key in fields if key in raw}
     if not present and name == "motion-768-grid16-v1":
@@ -763,6 +783,179 @@ def validate_stage2_encoder_validation(summary, provenance, *, total_rows=None,
     return record
 
 
+def _require_keys(value, keys, ctx: str) -> None:
+    if not isinstance(value, dict) or set(value) != set(keys):
+        got = sorted(value) if isinstance(value, dict) else type(value).__name__
+        raise ValueError(f"{ctx} 字段必须恰为 {sorted(keys)}，得到 {got}")
+
+
+def _same_json(a, b) -> bool:
+    return canonical_json_bytes(a) == canonical_json_bytes(b)
+
+
+def validate_timepool_provenance(provenance, *, status: str = "verified", manifest_sha256=None,
+                                 table_sha256=None, index_sha256=None, num_rows=None) -> None:
+    """严格校验 fixed pool 来源记录。字段集合必须恰好相等，因此 stage2 来源不可能通过本函数。
+
+    ``status="packed"`` 时 ``validation`` 必须为 null，``"verified"`` 时必须带全部闸门记录；
+    其余关键字参数给定时再与当前表身份逐项比对。只校验身份，不依赖建库机器的绝对路径。
+    """
+    if status not in ("packed", "verified"):
+        raise ValueError(f"timepool provenance 未知 status={status!r}")
+    _require_keys(provenance, ("schema", "layout", "readout", "encoder_kind", "encoder_ckpt", "parameter_count",
+                               "output_shape", "pool", "source_h5", "manifests", "wan_cache", "published",
+                               "routes", "window_map", "wan", "output", "validation", "train_head"),
+                  "timepool provenance")
+    fixed = dict(schema=TIMEPOOL_PROVENANCE_SCHEMA, layout=TIMEPOOL_LAYOUT, readout=TIMEPOOL_READOUT,
+                 encoder_kind=TIMEPOOL_ENCODER_KIND, encoder_ckpt=None, parameter_count=TIMEPOOL_PARAMETER_COUNT,
+                 output_shape=list(TIMEPOOL_SHAPE))
+    for key, want in fixed.items():
+        if not _same_json(provenance[key], want):
+            raise ValueError(f"timepool provenance.{key}={provenance[key]!r} 必须为 {want!r}")
+
+    pool = provenance["pool"]
+    _require_keys(pool, ("version", "source_sha256", "contract"), "timepool pool")
+    if pool["version"] != POOL_VERSION or not _same_json(pool["contract"], dict(POOL_CONTRACT)):
+        raise ValueError("timepool 池化版本或数值合同不符")
+    require_sha256(pool["source_sha256"], "pool.source_sha256")
+
+    files = provenance["source_h5"]
+    if not isinstance(files, list) or not files:
+        raise ValueError("timepool 源 H5 清单为空")
+    names = set()
+    for item in files:
+        _require_keys(item, ("name", "bytes", "sha256"), "timepool source_h5 条目")
+        name = item["name"]
+        if (not isinstance(name, str) or pathlib.PurePosixPath(name).name != name
+                or re.fullmatch(r"record_dataset_.+\.h5", name) is None or name in names
+                or type(item["bytes"]) is not int or item["bytes"] <= 0):
+            raise ValueError(f"timepool 源 H5 文件名、字节或唯一性不符: {name!r}")
+        require_sha256(item["sha256"], f"source_h5.{name}")
+        names.add(name)
+
+    for group, keys in (("manifests", ("episode_manifest_sha256", "episode_manifest_file_sha256",
+                                       "input_manifest_sha256")),
+                        ("wan_cache", ("plan_file_sha256", "plan_canonical_sha256", "import_receipt_file_sha256",
+                                       "restored_receipt_file_sha256")),
+                        ("output", ("motion_table_sha256", "motion_index_sha256"))):
+        _require_keys(provenance[group], keys, f"timepool {group}")
+        for key in keys:
+            require_sha256(provenance[group][key], f"{group}.{key}")
+
+    published = provenance["published"]
+    _require_keys(published, ("repo", "revision"), "timepool published")
+    if (not isinstance(published["repo"], str) or re.fullmatch(r"[^/\s]+/[^/\s]+", published["repo"]) is None
+            or not isinstance(published["revision"], str)
+            or re.fullmatch(r"[0-9a-f]{40}", published["revision"]) is None):
+        raise ValueError("timepool 发布 repo 或 40 位 revision 不符")
+
+    routes = provenance["routes"]
+    _require_keys(routes, ("counts", "numeric_modes"), "timepool routes")
+    counts = routes["counts"]
+    _require_keys(counts, ("windows", "copy", "fill"), "timepool routes.counts")
+    if (any(type(v) is not int or v < 0 for v in counts.values()) or counts["windows"] <= 0
+            or counts["windows"] != counts["copy"] + counts["fill"]):
+        raise ValueError("timepool copy/fill 计数不自洽")
+    modes = routes["numeric_modes"]
+    _require_keys(modes, ("copy", "fill"), "timepool routes.numeric_modes")
+    if any(not isinstance(v, dict) or not v for v in modes.values()):
+        raise ValueError("timepool 必须分别记录 copy/fill 实际数值模式")
+
+    window_map = provenance["window_map"]
+    _require_keys(window_map, ("schema", "relpath", "sha256", "rows", "source_grid_stride", "target_grid_stride"),
+                  "timepool window_map")
+    require_sha256(window_map["sha256"], "window_map.sha256")
+    if (window_map["schema"] != TIMEPOOL_WINDOW_MAP_SCHEMA or window_map["relpath"] != TIMEPOOL_WINDOW_MAP_RELPATH
+            or type(window_map["rows"]) is not int or window_map["rows"] != counts["windows"]
+            or not _same_json(window_map["source_grid_stride"], 16)
+            or not _same_json(window_map["target_grid_stride"], TIMEPOOL_LAYOUT_SPEC.grid_stride)):
+        raise ValueError("timepool 逐窗映射的 schema、路径、行数或网格不符")
+
+    wan = provenance["wan"]
+    _require_keys(wan, ("vae_id", "latent_mode", "vae_state_sha256", "adapter_sha256", "dependency_lock_sha256",
+                        "preprocess"), "timepool wan")
+    if (wan["vae_id"] != "Wan-AI/Wan2.1-T2V-1.3B-Diffusers" or wan["latent_mode"] != "mode"
+            or not _same_json(wan["preprocess"], dict(frame_size=256, input_dtype="uint8", input_layout="THWC",
+                                                      window_frames=WINDOW_FRAMES, augmentation="none"))):
+        raise ValueError("timepool Wan 模型、latent_mode 或预处理不符")
+    for key in ("vae_state_sha256", "adapter_sha256", "dependency_lock_sha256"):
+        require_sha256(wan[key], f"wan.{key}")
+
+    head = provenance["train_head"]
+    if not isinstance(head, str) or re.fullmatch(r"[0-9a-f]{40}", head) is None:
+        raise ValueError("timepool train_head 必须为 40 位提交")
+
+    validation = provenance["validation"]
+    if status == "packed":
+        if validation is not None:
+            raise ValueError("packed 阶段 timepool validation 必须为 null")
+    else:
+        _require_keys(validation, TIMEPOOL_VALIDATION_ROLES, "timepool validation")
+        for role, record in validation.items():
+            _require_keys(record, ("path", "sha256", "verdict"), f"timepool validation.{role}")
+            if not isinstance(record["path"], str) or not record["path"]:
+                raise ValueError(f"timepool validation.{role} 缺记录路径")
+            require_sha256(record["sha256"], f"validation.{role}.sha256")
+            if not isinstance(record["verdict"], str) or not record["verdict"].startswith(f"{role}=PASS"):
+                raise ValueError(f"timepool validation.{role} 判定行不是 PASS")
+
+    for label, got, want in (("manifest_sha256", provenance["manifests"]["episode_manifest_sha256"], manifest_sha256),
+                             ("table_sha256", provenance["output"]["motion_table_sha256"], table_sha256),
+                             ("index_sha256", provenance["output"]["motion_index_sha256"], index_sha256),
+                             ("num_rows", window_map["rows"], num_rows)):
+        if want is not None and got != want:
+            raise ValueError(f"timepool provenance 的 {label} 与当前表不同")
+    try:
+        canonical_json_bytes(provenance)
+    except TypeError as exc:
+        raise ValueError("timepool provenance 含不可序列化的值") from exc
+
+
+def validate_timepool_window_map(payload, provenance, entries) -> None:
+    """逐行核对映射与索引的对应关系：行序、段键、偶数源格 m→m//2、起点、补尾与 copy/fill 计数。"""
+    _require_keys(payload, ("schema", "layout", "source_grid_stride", "target_grid_stride", "counts", "windows"),
+                  "timepool 逐窗映射")
+    expected = dict(schema=TIMEPOOL_WINDOW_MAP_SCHEMA, layout=TIMEPOOL_LAYOUT, source_grid_stride=16,
+                    target_grid_stride=TIMEPOOL_LAYOUT_SPEC.grid_stride,
+                    counts=provenance["routes"]["counts"])
+    for key, want in expected.items():
+        if not _same_json(payload[key], want):
+            raise ValueError(f"timepool 逐窗映射 {key} 与来源记录不同")
+    windows = payload["windows"]
+    counts = dict(windows=0, copy=0, fill=0)
+    row = 0
+    stride = TIMEPOOL_LAYOUT_SPEC.grid_stride
+    if not isinstance(windows, list):
+        raise ValueError("timepool 逐窗映射 windows 必须为列表")
+    for entry in entries:
+        for segment in SEGMENTS:
+            info = getattr(entry, segment)
+            seg_start = 0 if segment == "demo" else entry.exec_start_idx
+            for m in range(info.num_grid):
+                if row >= len(windows):
+                    raise ValueError(f"timepool 逐窗映射缺行 {row}")
+                window = windows[row]
+                _require_keys(window, ("row", "key", "segment", "m", "source_m", "route", "start_frame",
+                                       "real_frames", "pad_frames", "input_frames_sha256", "raw_latent_sha256",
+                                       "pooled_sha256"), f"timepool 逐窗映射第 {row} 行")
+                real = min(WINDOW_FRAMES, info.seg_len - stride * m)
+                want = dict(row=row, key=segment_key(entry.h5_file, entry.raw_ep_idx, segment), segment=segment,
+                            m=m, source_m=2 * m, start_frame=seg_start + stride * m, real_frames=real,
+                            pad_frames=WINDOW_FRAMES - real)
+                for key, value in want.items():
+                    if not _same_json(window[key], value):
+                        raise ValueError(f"timepool 逐窗映射第 {row} 行 {key}={window[key]!r}，应为 {value!r}")
+                if window["route"] not in ("copy", "fill"):
+                    raise ValueError(f"timepool 逐窗映射第 {row} 行 route 非法")
+                for key in ("input_frames_sha256", "raw_latent_sha256", "pooled_sha256"):
+                    require_sha256(window[key], f"window_map[{row}].{key}")
+                counts[window["route"]] += 1
+                counts["windows"] += 1
+                row += 1
+    if row != len(windows) or counts != provenance["routes"]["counts"]:
+        raise ValueError(f"timepool 逐窗映射行数或 copy/fill 计数不符: {counts}，索引 {row} 行")
+
+
 def task_of_h5(h5_file: str) -> str:
     """``record_dataset_<Task>.h5`` → ``<Task>``。"""
     name = os.path.basename(h5_file)
@@ -858,7 +1051,7 @@ def build_index_entries(manifest: dict, spec: LayoutSpec) -> list[IndexEntry]:
     打包器写、MotionMeta 校验、oracle 重算三方都从这里派生。
     """
     entries: list[IndexEntry] = []
-    if spec not in LAYOUT_SPECS.values():
+    if spec not in KNOWN_LAYOUT_SPECS.values():
         raise ValueError(f"未支持的窗口契约 {spec}")
     cursor = 0
     for g, ep in enumerate(manifest["episodes"]):
@@ -889,7 +1082,7 @@ def index_totals(entries: list[IndexEntry]) -> dict[str, int]:
 def index_payload(manifest: dict, entries: list[IndexEntry], *, spec: LayoutSpec, layout: str,
                   mj_repo_commit: str) -> dict:
     """motion_index.json 的完整内容（不含任何运行时字段，可重算比对）。"""
-    if LAYOUT_SPECS.get(layout) != spec or any(e.spec != spec for e in entries):
+    if KNOWN_LAYOUT_SPECS.get(layout) != spec or any(e.spec != spec for e in entries):
         raise ValueError("writer 的布局名、窗口契约与索引条目不一致")
     def seg(s: SegmentInfo) -> dict:
         return {"row_base": s.row_base, "num_grid": s.num_grid, "num_chunks": s.num_chunks,
@@ -927,7 +1120,7 @@ def parse_index(raw: dict, ctx: str = "motion_index.json") -> list[IndexEntry]:
     for key, want in (("grid_stride", spec.grid_stride), ("window_frames", WINDOW_FRAMES),
                       ("grid_origin", GRID_ORIGIN), ("window_direction", WINDOW_DIRECTION),
                       ("truncation_policy", TRUNCATION_POLICY)):
-        if need(key) != want or (raw["layout"] == STAGE2_LAYOUT and type(raw[key]) is not type(want)):
+        if need(key) != want or (raw["layout"] in _STRICT_TYPED_LAYOUTS and type(raw[key]) is not type(want)):
             raise ValueError(f"{ctx} {key}={raw[key]!r} != 格式常量 {want!r}")
     entries: list[IndexEntry] = []
     cursor = 0
@@ -1029,14 +1222,14 @@ class MotionMeta:
         if int(need("schema")) != META_SCHEMA:
             raise ValueError(f"schema={raw['schema']} != {META_SCHEMA}")
         spec = layout_spec(raw, str(meta_path))
-        if raw["layout"] in (LAYOUT, STAGE2_LAYOUT) and need("manifest_scope") != "full":
+        if raw["layout"] in (LAYOUT, *_STRICT_TYPED_LAYOUTS) and need("manifest_scope") != "full":
             raise ValueError("raw8 motion 表必须完整覆盖绑定清单（manifest_scope=full）")
         if need("byte_order") != BYTE_ORDER or need("array_order") != ARRAY_ORDER:
             raise ValueError("byte_order/array_order 与格式常量不符")
         for key, want in (("grid_stride", spec.grid_stride), ("window_frames", WINDOW_FRAMES),
                           ("grid_origin", GRID_ORIGIN), ("window_direction", WINDOW_DIRECTION),
                           ("truncation_policy", TRUNCATION_POLICY), ("frame_size", FRAME_SIZE)):
-            if need(key) != want or (raw["layout"] == STAGE2_LAYOUT and type(raw[key]) is not type(want)):
+            if need(key) != want or (raw["layout"] in _STRICT_TYPED_LAYOUTS and type(raw[key]) is not type(want)):
                 raise ValueError(f"store_meta {key}={raw[key]!r} != 格式常量 {want!r}")
         status = need("status")
         if status not in ("packed", "verified"):
@@ -1081,6 +1274,11 @@ class MotionMeta:
                 validate_stage2_encoder_validation(provenance["stage2_compat"]["encoder_validation"], provenance,
                                                    total_rows=num_rows, table_sha256=t.get("sha256"),
                                                    index_sha256=raw["motion_index_sha256"])
+        elif raw["layout"] == TIMEPOOL_LAYOUT:
+            # 表 sha 缺失时关键字比对会被跳过，所以先要求它存在。
+            validate_timepool_provenance(provenance, status=status, manifest_sha256=need("manifest_sha256"),
+                                         table_sha256=require_sha256(t.get("sha256"), "tables.motion_token.sha256"),
+                                         index_sha256=raw["motion_index_sha256"], num_rows=num_rows)
         return cls(root=root, raw=raw, status=status, num_rows=num_rows,
                    manifest_sha256=need("manifest_sha256"), manifest_path=need("manifest_path"),
                    motion_index_sha256=raw["motion_index_sha256"], table_sha256=t.get("sha256"),
@@ -1110,6 +1308,27 @@ def run_full_checks(meta: MotionMeta) -> None:
     got = sha256_file(meta.root / MOTION_TABLE_RELPATH)
     if got != meta.table_sha256:
         raise ValueError(f"motion 表 sha256 不符（full 档）: {got[:16]}…")
+    if meta.raw["layout"] == TIMEPOOL_LAYOUT:
+        _run_timepool_full_checks(meta)
+
+
+def _run_timepool_full_checks(meta: MotionMeta) -> None:
+    """fixed pool 专属 full 档：当前池化源码、逐窗映射文件及其与索引、逐行表字节的对应。"""
+    provenance = meta.provenance
+    if provenance["pool"]["source_sha256"] != pool_source_sha256():
+        raise ValueError("当前 wan_timepool.py 与建表时的池化源码 SHA 不同")
+    path = meta.root / TIMEPOOL_WINDOW_MAP_RELPATH
+    if not path.is_file():
+        raise FileNotFoundError(f"timepool 逐窗映射缺失: {path}")
+    data = path.read_bytes()
+    if sha256_bytes(data) != provenance["window_map"]["sha256"]:
+        raise ValueError("timepool 逐窗映射 sha256 与来源记录不符")
+    payload = json.loads(data.decode("utf-8"))
+    validate_timepool_window_map(payload, provenance, meta.entries)
+    with open(meta.root / MOTION_TABLE_RELPATH, "rb") as table:
+        for window in payload["windows"]:
+            if sha256_bytes(table.read(meta.row_bytes)) != window["pooled_sha256"]:
+                raise ValueError(f"timepool 第 {window['row']} 行表字节与逐窗映射不符")
 
 
 def require_verified(meta: MotionMeta) -> None:

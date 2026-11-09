@@ -6,4 +6,4 @@ CPU从2026-09-21T03:29:35Z启动，正常退出；结束时间按日志mtime留�
 
 官方compare_fixture_dumps.py判定原文见[对拍日志](records/comparison.summary.log)。原记录与压缩回读SHA见[归档清单](records/archive_manifest.json)。本档只证明同配置输入交付不变；训练状态由对应20+1步回归另行证明。
 
-用户明确选择「保持原计划，完整取证（推荐）」。环境为AWS 8×A100-SXM4-80GB，底层 `/dev/md0` XFS本地NVMe RAID；依赖锁未改。执行口径见[实施计划](../../../0920-32frame-8x8-modul-2048-plan.md)，实际版本、时刻与退出记录见[运行记录](records/launch.actual.json)。
+用户明确选择「保持原计划，完整取证（推荐）」。环境为AWS 8×A100-SXM4-80GB，底层 `/dev/md0` XFS本地NVMe RAID；依赖锁未改。执行口径见[实施计划](../../root-archive/0920-32frame-8x8-modul-2048-plan.md)，实际版本、时刻与退出记录见[运行记录](records/launch.actual.json)。

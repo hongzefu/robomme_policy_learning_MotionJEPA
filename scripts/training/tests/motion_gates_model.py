@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""motion memory S2 开启态正确性闸 M1–M5（0901-motion-memory-plan.md 第一部分 5.3 / 第二部分四节表一、五节）。
+"""motion memory S2 开启态正确性闸 M1–M5（docs/root-archive/0901-motion-memory-plan.md 第一部分 5.3 / 第二部分四节表一、五节）。
 
 数据与公式档可在 CPU 跑；context M3/M4 保留 dummy 对照。modulation M3/M4 须显式设
 `JAX_PLATFORMS=cuda`，采用真实 pi05 配置、1024 维 memory 与 18 层 action expert，
@@ -979,7 +979,7 @@ def main():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# T3 真实训练链路四层（0901-motion-memory-plan.md 5.3 / 2.10）：t3common / t3trace / t3mechanism / t3phase
+# T3 真实训练链路四层（docs/root-archive/0901-motion-memory-plan.md 5.3 / 2.10）：t3common / t3trace / t3mechanism / t3phase
 # 复用 bench_train_steps 的两把哈希尺子（_leaf_sha256 / _canonical_sha256），不复制 hash 实现。
 # ══════════════════════════════════════════════════════════════════════════════
 

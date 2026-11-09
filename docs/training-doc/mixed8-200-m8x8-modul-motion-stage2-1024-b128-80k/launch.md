@@ -1,6 +1,8 @@
 # mixed8 阶段二单 token VLA：实施与起跑档案
 
-当前处于实施阶段，G0已通过，正式训练尚未启动。计划为根目录 `1026-vla-stage2-memory-1024-train-plan.md`，开工锚点 `1383aba0fd77b259f0b32eadb47ea7792190145e`。实际训练 Beta、完整命令和启动时间将在通过 G0–G7 后填写，不能以本档案创建时间代替起跑时间。
+**数据来源错配：** 事后对比完整来源记录，encoder来自原版RoboMME 16×100，VLA来自本地mixed8-200；16个同名H5的记录SHA全部不同，集合交集为0。原启动审查漏掉了跨encoder/VLA同源比较，本轮不满足P-LINEAGE，不作WAIVE。70k以历史实验保留；严格恢复PASS仅说明交付文件及真实推理可恢复。比较证据见`records/data-lineage-posthoc.json`，本次未重读原始H5。
+
+本轮已按用户指令于美东2026-10-27 12:17:53停止，以完整70000 checkpoint为最终交付；14份checkpoint保留，70k远端回读及严格在线恢复已通过，最终全量备份核验进行中。原80k配置和run名保持历史身份，真实训练退出143。计划为根目录 `1026-vla-stage2-memory-1024-train-plan.md`，开工锚点 `1383aba0fd77b259f0b32eadb47ea7792190145e`。以下按时间保留实施及起跑记录，最新结论见`result.md`。
 
 ## 用户授权与范围
 
@@ -159,3 +161,31 @@ uv run --frozen --no-sync --project "$P/scripts/dataset/wan_stage2" python \
 `commitV11.51Beta` 固定本次抽样续接版本；只运行已有表上的 `compare_stage2.py --scope sampled --batch 1 --device cuda:0`（其余store/latents/ckpt/SHA同上），随后主环境 `pack_motion_store.py verify --store "$D/motion-stage2-1024" --resume --check-padding`。不再次执行pack或抽取。入口 `v1-store/logs/vla-s2-20261026/run-sampled-verify.sh`，调用方显式传完整 `STAGE2_VERIFY_HEAD`；tmux仍用已结束可复用的 `cc-vla-s2-pack`，新日志为 `sampled-verify.log`，保留旧pack.log。
 
 CPU全量memcmp表与所有S1 token并核文件/metadata/sidecar/latent SHA，最多4个散列线程；GPU只计算1024个选中窗口。分别出 `PACKED_TOKEN_BYTES=PASS compared=65419` 与 `ENCODER_SAMPLE_BITEXACT=PASS compared=1024 total=65419`；认证明确scope=sampled，原文/SHA/覆盖随stage2_compat进入run与交付，不能宣称全表encoder数值一致。verify仍全表padding/行摘要，原pack死进程锁只用resume接管。沿用原2小时总验证上限，不扩大预算；首错停止，不自动重试。
+
+## G4与首次G7实测（美东2026-10-26）
+
+G4在`50805050ef0b940cb75417028a9ff24abc59a704`通过，64窗同latent与端到端最大误差均0，真实握手、4096字节响应、连续exec和reset均通过，耗时129秒。原uv启动器PID误判已修正，首次失败证据保留。
+
+G7诊断run `cc-vla-s2-smoke-10261649-a` 从相同clean HEAD在美东16:51:08启动，20步训练417秒成功退出，step0 loss0.08711，后19步loss均值0.088020629且全部有限。W&B实际账号hongzefu、entity `hongzefu-university-of-michigan`、run `3gfhbs34`。step19保存完整；首次独立恢复65叶原始EMA逐字节一致，但动作输出最大差0.0048828125，`SAVE_LOAD=FAIL`，美东16:59:37结束。总耗时509秒计入原30分钟预算。训练未重跑，checkpoint及保存前参考保留；仅复验恢复检查，正式训练尚未启动。
+
+## G7通过与正式训练冻结
+
+首次恢复没有消费训练自定义的JAX编译缓存变量。原始权重无差异；输入往返及两种BF16转换CPU核验均无差异。在同一`5080505`、同一step19及原保存前参考下，仅显式设置标准`JAX_COMPILATION_CACHE_DIR`为训练缓存，复验于美东17:04:34–17:06:33完成：`SAVE_LOAD=PASS missing=0 extra=0 shape_mismatch=0 dtype_mismatch=0 ema_mismatch=0 reference_output_max_abs=0 online_infer=1`。20步没有重跑，G7累计628秒，未放宽阈值。此逐位结论限定同一编译缓存，不声称冷缓存或异机必定逐位相同。
+
+正式Beta固定80,000步、B128、W16、8卡FSDP8、pi05_base、motion96×1024、帧路512、EMA0.999及原学习率。正式入口不设MAX_STEPS，不从短测checkpoint续训。W&B使用hongzefu、entity `hongzefu-university-of-michigan`、project `robomme-framesamp`。源码只读锁覆盖git跟踪的src/scripts实体文件，原权限清单在`v1-store/logs/vla-s2-20261026/formal-readonly-modes.json`；冻结标记保存正式Beta完整SHA，运行期状态在`-temp`开发分支维护。
+
+完整启动命令，SHA在调用时替换为真实正式Beta，包装器强制核对clean HEAD：
+
+```bash
+STAGE2_FORMAL_HEAD=<正式Beta完整SHA> bash v1-store/logs/vla-s2-20261026/run-formal80k.sh
+# 包装器调用以下正式入口；外层timeout上限108000秒
+RUN_NAME=mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k TRAIN_HEAD=<正式Beta完整SHA> FINAL_RECORD_DIR=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/stage2-memory/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/final-record bash scripts/training/run_mixed8_stage2_1024_80k.sh
+# 独立CPU会话先上传根快照，随后每5000步增量上传
+bash scripts/dataset/hf_export/run_mixed8_stage2_1024_ckpt_inc.sh
+```
+
+正式会话`cc-vla-s2-train`，训练日志`v1-store/logs/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k.log`；增量会话`cc-vla-s2-inc`，日志`v1-store/logs/vla-s2-20261026/vla-inc.log`。实际完整Beta、进程和时间由日志及冻结开发副本状态记录。首次有限loss才报告正式起跑；训练上限30小时，G12 GPU恢复等训练释放8卡后执行。
+
+## 正式起跑实测
+
+正式Beta为`5730a0cfc7a62036585362a03a8c922f14b4d94f`，已同步GitHub。美东2026-10-26 17:08:59启动，实际Python PID2780633，tmux `cc-vla-s2-train`；首个loss在17:13:20为0.0871，梯度有限。W&B正式ID `al3p8t77`，账号hongzefu。`cc-vla-s2-inc`在17:09:19启动，根17文件上传及匿名回读PASS。432份跟踪源码/脚本已只读冻结。启动后两路独立只读审计均PASS，完整现场记录见`records/startup-audit.json`；5k/60k/80k产物尚未到达验收时机。

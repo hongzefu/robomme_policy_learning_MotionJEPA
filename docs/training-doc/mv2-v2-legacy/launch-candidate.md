@@ -1,6 +1,6 @@
 # 旧 YAML 与旧表的交付对拍：候选侧起跑准备
 
-用户原话「开始实施 有问题尽早问用户」。本轮按 [0916 计划](../../../0916-motion-modul-8x8-plan.md) 步骤 2d 执行；改前 BASE 固定为 `2126b1b1c436166662ff89a629985ecd4524fc42`。候选 CAND 为完成生产与验证工具两个提交后的 clean HEAD，运行前显式传入完整 SHA；起跑记录另写 `v1-store/bench/mv2/v2-candidate-launch.json`，不把事后提交冒充启动版本。
+用户原话「开始实施 有问题尽早问用户」。本轮按 [0916 计划](../../root-archive/0916-motion-modul-8x8-plan.md) 步骤 2d 执行；改前 BASE 固定为 `2126b1b1c436166662ff89a629985ecd4524fc42`。候选 CAND 为完成生产与验证工具两个提交后的 clean HEAD，运行前显式传入完整 SHA；起跑记录另写 `v1-store/bench/mv2/v2-candidate-launch.json`，不把事后提交冒充启动版本。
 
 ## 口径与判据
 

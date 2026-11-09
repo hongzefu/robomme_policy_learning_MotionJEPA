@@ -53,6 +53,7 @@ from mme_vla_suite.datastore.motion_adapter import (
     split_stage2_tokens,
 )
 from mme_vla_suite.shared.sampling import MEM_ORDER_SENTINEL, even_sampling_indices, memory_order, pad_times
+from mme_vla_suite.shared.wan_timepool import TIMEPOOL_ENCODER_KIND, TIMEPOOL_READOUT
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +65,7 @@ _NONE_KEYS = (
     "static_state_emb",
     "static_mask",
     "prompt",
-    # motion memory 四键（0901-motion-memory-plan.md 2.6；关闭态恒 None，与 compute_norm_stats._NONE_KEYS 同 commit 同步）
+    # motion memory 四键（docs/root-archive/0901-motion-memory-plan.md 2.6；关闭态恒 None，与 compute_norm_stats._NONE_KEYS 同 commit 同步）
     "motion_emb",
     "motion_pos",
     "motion_mask",
@@ -75,10 +76,27 @@ _NONE_KEYS = (
 def check_motion_contract(mcfg, meta: ms.MotionMeta):
     """核对落盘原始形状与训练消费合同；新四对必须绑定确定的 encoder 身份。"""
     spec = motion_policy_spec(mcfg)
+    if mcfg.get("encoder_kind") == TIMEPOOL_ENCODER_KIND and spec.readout != TIMEPOOL_READOUT:
+        raise ValueError(f"encoder_kind={TIMEPOOL_ENCODER_KIND} 只能配 readout={TIMEPOOL_READOUT}")
     if meta.raw["layout"] not in spec.layouts or meta.row_shape != spec.source_shape:
         raise ValueError(
             f"motion 配置要求 layout∈{spec.layouts}、原始形状 {spec.source_shape}，"
             f"实际表为 {meta.raw['layout']!r}、{meta.row_shape}")
+    if spec.readout == TIMEPOOL_READOUT:
+        # 零参数池化没有 encoder 权重：YAML 不得携带 learned encoder 身份，来源记录必须已回填全部闸门。
+        if mcfg.get("encoder_kind") != TIMEPOOL_ENCODER_KIND:
+            raise ValueError(f"Wan timepool motion.encoder_kind 必须为 {TIMEPOOL_ENCODER_KIND}")
+        stale = [key for key in ("source_run", "checkpoint_sha256") if key in mcfg]
+        if stale:
+            raise ValueError(f"Wan timepool motion 不得携带 {stale}")
+        if not isinstance(mcfg.get("store_path"), str) or not mcfg.get("store_path"):
+            raise ValueError("Wan timepool motion.store_path 必须指向池化库")
+        if meta.status != "verified":
+            raise ValueError(f"Wan timepool 表 status={meta.status!r}，未 verified 不可消费")
+        ms.validate_timepool_provenance(meta.provenance, status="verified", manifest_sha256=meta.manifest_sha256,
+                                        table_sha256=meta.table_sha256, index_sha256=meta.motion_index_sha256,
+                                        num_rows=meta.num_rows)
+        return spec
     enc = meta.provenance.get("encoder", {})
     if spec.readout == PAIRING:
         sha = mcfg.get("checkpoint_sha256")
@@ -159,7 +177,7 @@ class FrameSampDataset(Dataset):
              f"memory_feature.pos.input_dim={hc.memory_feature.pos.input_dim} != 768")
         _req(hc.use_state_emb is False, f"use_state_emb={hc.use_state_emb!r} 必须为 False")
 
-        # ── motion memory（0901-motion-memory-plan.md 2.1 / 2.6）：关闭态只判 enabled、不判子键（旧 yaml 缺整节照跑）──
+        # ── motion memory（docs/root-archive/0901-motion-memory-plan.md 2.1 / 2.6）：关闭态只判 enabled、不判子键（旧 yaml 缺整节照跑）──
         mcfg = getattr(hc, "motion", None)
         self._motion_enabled = bool(mcfg is not None and mcfg.get("enabled", False))
         if self._motion_enabled:
@@ -405,7 +423,7 @@ class FrameSampDataset(Dataset):
             mstore = self._ensure_motion_store()
             # ②′ 先查原始窗口，再只配对一次；时间码仍取起点帧 pos 第 0 行前 pos_dim 维。
             memb = mstore.rows(rows_m) if k else np.zeros((0,) + self._motion_meta.row_shape, np.float32)
-            if self._motion_readout == STAGE2_READOUT:
+            if self._motion_readout in (STAGE2_READOUT, TIMEPOOL_READOUT):
                 memb = memb.reshape(k, 1024)
             elif self._motion_readout == STAGE2_SPLIT_READOUT:
                 memb = split_stage2_tokens(memb)

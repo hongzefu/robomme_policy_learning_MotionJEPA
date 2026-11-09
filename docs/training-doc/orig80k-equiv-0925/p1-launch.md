@@ -1,6 +1,6 @@
 # 原版80k P1入口两步验证：正式起跑前记录（未运行）
 
-**P1尚未运行，也没有P1通过结论。** 两组正式CPU输入已在真实INPUT_HEAD `3a1582db39c723c735e04752e5027bfe40ecc3e1` 完成并分别通过，具体证据如下。依据[主计划C节](../../../0925-orig-80k-full-counting-4plus4-plan.md)，接下来准备两库各自A/B的两步入口验证；本文件与[100步起跑档案](train100-launch.md)及工具补齐须先共同形成clean Beta，之后将其完整40位字面量填入 `TRAIN_HEAD`。当前不预填未来Beta、P1标签、会话或运行结果，也不把INPUT_HEAD冒称为P1启动版本。
+**P1尚未运行，也没有P1通过结论。** 两组正式CPU输入已在真实INPUT_HEAD `3a1582db39c723c735e04752e5027bfe40ecc3e1` 完成并分别通过，具体证据如下。依据[主计划C节](../../root-archive/0925-orig-80k-full-counting-4plus4-plan.md)，接下来准备两库各自A/B的两步入口验证；本文件与[100步起跑档案](train100-launch.md)及工具补齐须先共同形成clean Beta，之后将其完整40位字面量填入 `TRAIN_HEAD`。当前不预填未来Beta、P1标签、会话或运行结果，也不把INPUT_HEAD冒称为P1启动版本。
 
 用户已明确「允许仅对拍关闭 W&B」；本P1两侧均使用既有驱动的 `--no-wandb-enabled`，五标量和全部参数/EMA/优化器/step叶摘要留本地。只把 `num_train_steps` 覆盖为2、log_interval为1、save_interval为50；保留b64/fsdp4/workers4/seed42、modul 512/4×4、原warmup/lr/EMA/keep参数。本阶段不调用任何judge，不产生100步baseline，不宣称A/B轨迹逐位等价，也不替代后续100步、单跑/并跑、300步perf或80k。
 

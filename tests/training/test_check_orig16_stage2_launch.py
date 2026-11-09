@@ -1,0 +1,573 @@
+"""新启动合同：完整缓存证据小库、真实CLI解析及实际shell边界。"""
+import dataclasses
+import importlib.util
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+from types import SimpleNamespace
+
+import pytest
+
+CR_SCALARS = ("loss", "grad_norm", "llm_grad_norm", "param_norm", "mem_enc_norm")
+REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tests/dataset"))
+sys.path.insert(0, str(REPO / "scripts/dataset"))
+spec = importlib.util.spec_from_file_location("orig16_launch", REPO / "scripts/training/check_orig16_stage2_launch.py")
+launch = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = launch
+spec.loader.exec_module(launch)
+# 旧split串行入口固定的两条运行名；RUNS已按(融合,读法)四项映射。
+SPLIT_RUNS = {fusion: launch.RUNS[fusion, launch.SPLIT] for fusion in ("context", "modulation")}
+
+
+def dump(path, value):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value))
+
+
+def make_fixture(root):
+    """全部读取都绑定临时根；不查主检出产物、真实模型或网络。"""
+    from test_pack_motion_stage2_cached import cached_fx, pack, verify_args
+    from mme_vla_suite.datastore import motion_store as ms
+    with pytest.MonkeyPatch.context() as patch:
+        source = cached_fx.__wrapped__(root, patch)
+        pack.cmd_pack(source.args)
+        pack.cmd_verify(verify_args(source))
+    parent = root / "v1-store/datasets/fixture"
+    (parent / "meta").mkdir(parents=True)
+    shutil.copyfile(source.fx.manifest_path, parent / "meta/episode_manifest.json")
+    shutil.copyfile(source.fx.manifest_path.parent / "input_manifest.json", parent / "meta/input_manifest.json")
+    shutil.copytree(source.args.out, parent / "motion-stage2-1024")
+    (parent / "source/data").mkdir(parents=True)
+    for layout in ("4x4", "8x8"):
+        dump(parent / f"framesamp-{layout}/meta/store_meta.json", dict(layout=f"framesamp-{layout}-v1",
+            status="verified", manifest_scope="full", manifest_sha256=source.fx.manifest["sha256"]))
+    norm = root / "v1-store/train-assets/mme_vla_suite/fixture/robomme/norm_stats.json"
+    dump(norm, dict(norm_stats={}))
+    inputs = json.loads((parent / "meta/input_manifest.json").read_text())["files"]
+    encoder = root / "v1-store/external/motionjepa" / source.fx.enc_dir.name
+    shutil.copytree(source.fx.enc_dir, encoder)
+    training_source = root / "encoder-training-source"
+    dump(training_source / "control/build_spec.json", dict(identity=dict(source_pin=dict(sha256="e" * 64,
+        files=[dict(path=name, bytes=value["size"], sha256=value["sha256"]) for name, value in inputs.items()]))))
+    (encoder / "config.yaml").write_text(f"data:\n  data_root: {training_source}\n")
+    meta_path = parent / "motion-stage2-1024" / ms.META_RELPATH
+    meta = json.loads(meta_path.read_text())
+    meta["provenance"]["encoder"]["config_sha256"] = launch.sha256_file(encoder / "config.yaml")
+    dump(meta_path, meta)
+    mj = root / "mj-source.json"
+    dump(mj, dict(files={name: dict(h5=dict(file=name, **value)) for name, value in inputs.items()}))
+    contract = launch.Contract(library="fixture", encoder_run=source.fx.enc_dir.name,
+        encoder_sha256=source.fx.ckpt_sha, norm_sha256=launch.sha256_file(norm),
+        episode_manifest_sha256=launch.sha256_file(parent / "meta/episode_manifest.json"),
+        input_manifest_sha256=launch.sha256_file(parent / "meta/input_manifest.json"),
+        canonical_manifest_sha256=source.fx.manifest["sha256"], motion_rows=64, train_max=4,
+        mj_source_manifest=str(mj), episodes=16, tasks=16)
+    return SimpleNamespace(root=root, parent=parent, contract=contract)
+
+
+def arguments(fx, name, *, steps=20):
+    c = fx.contract
+    h = launch.load_yaml(REPO, name)
+    h["motion"].update(store_path=c.parent_rel + "/motion-stage2-1024", checkpoint_sha256=c.encoder_sha256,
+                       source_run=f"{c.encoder_run}/checkpoint_epoch_105.pt#model")
+    layout = "framesamp-4x4" if h["token_per_image"] == 16 else "framesamp-8x8"
+    run = "o16-smoke-fixture" if steps == 20 else launch.RUNS[h["integration_type"], h["motion"]["readout"]]
+    argv = [launch.CONFIG_NAME, "--exp-name", run,
+        "--dataset-path", str(fx.parent / layout), "--assets-base-dir", str(fx.root / "v1-store/train-assets"),
+        "--data.assets.assets-dir", str(fx.root / c.assets_rel), "--data.assets.asset-id", "robomme",
+        "--checkpoint-base-dir", str(fx.root / "v1-store/train-runs"),
+        "--weight-loader.params-path", str(fx.root / c.pi05_rel), "--model.use-history",
+        "--model.history-config", name, "--no-wandb-enabled"]
+    if steps == 20:
+        argv += ["--num-train-steps", "20"]
+    env = dict(OPENPI_DATA_HOME=str(fx.root / "v1-store/models"), CUDA_VISIBLE_DEVICES=c.gpus,
+        XLA_PYTHON_CLIENT_PREALLOCATE="false", MMEVLA_FRAMESAMP_SOURCE=str(fx.parent / "source"),
+        MMEVLA_FRAMESAMP_MANIFEST=str(fx.parent / "meta/episode_manifest.json"),
+        TRAIN_FINAL_RECORD_DIR=str(fx.root / "v1-store/validation/final-record"),
+        TRAIN_RECORD_DIR=str(fx.root / "v1-store/validation/train-record"))
+    args = SimpleNamespace(repo=REPO, store_root=fx.root, steps=steps)
+    return args, argv, env, h
+
+
+def run_contract(fx, name, *, fault=None):
+    args, argv, env, h = arguments(fx, name)
+    c = fx.contract
+    if fault == "fusion": h["memory_token_dim"] = 17
+    if fault == "readout": h["motion"]["num_tokens"] = 2
+    if fault == "gpu": env["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
+    if fault == "steps": args.steps = 60001
+    if fault == "placeholder": c = dataclasses.replace(c, train_max=launch.PLACEHOLDER)
+    from mme_vla_suite.training import config
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(config, "OPENPI_DATA_HOME", env["OPENPI_DATA_HOME"])
+        return launch.core(args, argv, contract=c, env=env, history=h)
+
+
+@pytest.fixture(scope="module")
+def fx(tmp_path_factory):
+    return make_fixture(tmp_path_factory.mktemp("o16-contract"))
+
+
+@pytest.mark.parametrize("name", launch.HISTORIES)
+def test_all_eight_real_cli_and_fixture_contracts(fx, name):
+    assert not run_contract(fx, name).failed
+
+
+@pytest.mark.parametrize("fault", ["fusion", "readout", "gpu", "steps", "placeholder"])
+def test_contract_negatives(fx, fault):
+    assert run_contract(fx, launch.HISTORIES[0], fault=fault).failed
+
+
+@pytest.mark.parametrize("fault", ["layout", "g2_missing", "lineage"])
+def test_disk_identity_failures(fx, fault):
+    if fault == "layout":
+        path = fx.parent / "framesamp-4x4/meta/store_meta.json"
+        before = path.read_bytes()
+        value = json.loads(before); value["layout"] = "framesamp-8x8-v1"
+        path.write_text(json.dumps(value))
+    elif fault == "lineage":
+        path = Path(fx.contract.mj_source_manifest); before = path.read_bytes()
+        value = json.loads(before); next(iter(value["files"].values()))["h5"]["sha256"] = "0" * 64
+        path.write_text(json.dumps(value))
+    else:
+        meta = json.loads((fx.parent / "motion-stage2-1024/meta/store_meta.json").read_text())
+        path = Path(meta["provenance"]["stage2_compat"]["evidence"]["G2"]["path"])
+        before = path.read_bytes(); path.unlink()
+    try:
+        assert run_contract(fx, launch.HISTORIES[0]).failed
+    finally:
+        path.write_bytes(before)
+
+
+def shell_tree(tmp_path):
+    root = tmp_path / "repo"
+    scripts = root / "scripts/training"
+    scripts.mkdir(parents=True)
+    for name in ("run_orig16_stage2_60k.sh", "run_orig16_ctx_then_modul_60k.sh",
+                 "check_orig16_stage2_launch.py", "check_mixed8_stage2_1024_launch.py", "final_record.py"):
+        shutil.copyfile(REPO / "scripts/training" / name, scripts / name)
+    return root
+
+
+@pytest.mark.parametrize("checker_exit", [0, 7])
+@pytest.mark.parametrize("wandb", [False, True])
+def test_actual_shell_dry_run_creates_no_log_run_or_cache(tmp_path, checker_exit, wandb):
+    root = shell_tree(tmp_path)
+    secret = "test-only-wandb-key"
+    if wandb:
+        path = root / "v1-store/secrets/wandb.env"
+        path.parent.mkdir(parents=True)
+        path.write_text(f"WANDB_API_KEY='{secret}'\n")
+    py = root / ".venv/bin/python"; py.parent.mkdir(parents=True)
+    py.write_text(f'''#!/usr/bin/env bash
+if [[ "$*" == *--print-library* ]]; then echo fixture; exit 0; fi
+[[ "$1" == scripts/training/check_orig16_stage2_launch.py ]] || exit 91
+[[ "$JAX_PLATFORMS" == cpu && "$*" == *--num-train-steps* ]] || exit 92
+if [[ {int(wandb)} == 1 ]]; then
+  [[ "$*" != *--no-wandb-enabled* && "$WANDB_API_KEY" == {secret} ]] || exit 93
+else
+  [[ "$*" == *--no-wandb-enabled* ]] || exit 94
+fi
+echo CONTRACT_INVOKED=1
+exit {checker_exit}
+'''); py.chmod(0o755)
+    before = {str(p.relative_to(root)) for p in root.rglob("*")}
+    env = dict(os.environ, CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7", DRY_RUN="1", MAX_STEPS="20",
+        RUN_NAME="o16-smoke-shell", HISTORY=launch.HISTORIES[0], TRAIN_HEAD="a" * 40,
+        FINAL_RECORD_DIR=str(root / "v1-store/validation/final-record"))
+    result = subprocess.run(["bash", str(root / "scripts/training/run_orig16_stage2_60k.sh")], env=env,
+                            capture_output=True, text=True)
+    assert result.returncode == checker_exit, result.stdout + result.stderr
+    assert "TRAIN_CMD=" in result.stdout and "CONTRACT_INVOKED=1" in result.stdout
+    assert ("--no-wandb-enabled" in result.stdout) != wandb
+    assert secret not in result.stdout + result.stderr
+    assert {str(p.relative_to(root)) for p in root.rglob("*")} == before
+
+
+@pytest.mark.parametrize("fault", ["exit", "checkpoint", "log", "missing_log", "nan", "grad_inf", "oom",
+                                   "tail_nonfinite", "ema_nonfinite", "missing_final", "nan_and_tail", None]
+                                  + [f"cr_{key}" for key in CR_SCALARS])
+def test_serial_driver_requires_exit_log_and_59999(tmp_path, fault):
+    cr_field = fault[3:] if fault and fault.startswith("cr_") else None
+    root = shell_tree(tmp_path)
+    py = root / ".venv/bin/python"; py.parent.mkdir(parents=True); py.symlink_to(sys.executable)
+    for run in SPLIT_RUNS.values():
+        final = final_fixture(run, steps=60000)
+        if run == SPLIT_RUNS["context"]:
+            if fault in ("tail_nonfinite", "nan_and_tail"): final["tail"][-1]["scalars"]["loss"]["finite"] = False
+            if fault == "ema_nonfinite": final["ema_leaves"]["weight"]["finite"] = False
+            if fault == "missing_final": continue
+        dump(root / "v1-store/validation" / run / "final-record/final.json", final)
+    child = root / "scripts/training/run_orig16_stage2_60k.sh"
+    child.write_text(f'''#!/usr/bin/env bash
+ROOT=$(cd "$(dirname "$0")/../.." && pwd)
+echo "$RUN_NAME" >> "$ROOT/calls"
+[[ {fault!s} != exit ]] || exit 9
+[[ {fault!s} != missing_log ]] || exit 0
+mkdir -p "$ROOT/v1-store/logs"
+printf 'RUN=%s\\ninference nan_count=0 bloom NaN/Inf说明\\nStep 59999: loss=0.25, grad_norm=0.5\\nEXIT_CODE=%s\\n' "$RUN_NAME" {'3' if fault == 'log' else '0'} > "$ROOT/v1-store/logs/$RUN_NAME.log"
+if [[ {fault!s} == nan || {fault!s} == nan_and_tail ]]; then printf 'Step 59999: loss=nan\\nEXIT_CODE=0\\n' >> "$ROOT/v1-store/logs/$RUN_NAME.log"; fi
+if [[ {cr_field is not None} == True ]]; then printf '\\r\\rStep 59900: {cr_field}=nan\\nEXIT_CODE=0\\n' >> "$ROOT/v1-store/logs/$RUN_NAME.log"; fi
+if [[ {fault!s} == grad_inf ]]; then printf 'Step 59999: loss=0.2, llm_grad_norm=inf\\nEXIT_CODE=0\\n' >> "$ROOT/v1-store/logs/$RUN_NAME.log"; fi
+if [[ {fault!s} == oom ]]; then printf 'RESOURCE_EXHAUSTED: failed to allocate\\nEXIT_CODE=0\\n' >> "$ROOT/v1-store/logs/$RUN_NAME.log"; fi
+[[ {fault!s} == checkpoint ]] || mkdir -p "$ROOT/v1-store/train-runs/{launch.CONFIG_NAME}/$RUN_NAME/59999"
+exit 0
+''')
+    env = dict(os.environ, TRAIN_HEAD="a" * 40, FINAL_ROOT=str(root / "v1-store/validation"))
+    env.pop("MAX_STEPS", None); env.pop("DRY_RUN", None)
+    result = subprocess.run(["bash", str(root / "scripts/training/run_orig16_ctx_then_modul_60k.sh")],
+                            env=env, capture_output=True, text=True)
+    calls = (root / "calls").read_text().splitlines()
+    objective_failure = fault in ("exit", "checkpoint", "log", "missing_log")
+    assert calls == [SPLIT_RUNS["context"]] + ([] if objective_failure else [SPLIT_RUNS["modulation"]])
+    assert (result.returncode == 0) != objective_failure, result.stdout + result.stderr
+    if objective_failure:
+        assert "CHAIN=STOP" in result.stdout
+        if fault == "exit": assert result.returncode == 9
+    else:
+        assert result.stdout.count("TRAIN_FINAL_RECORD=") == 2
+        assert "CHAIN=STOP" not in result.stdout
+        if fault is not None:
+            assert "DIAGNOSTIC=FAIL" in result.stdout and "action=record_only reason=user_decision" in result.stdout
+        if fault in ("tail_nonfinite", "ema_nonfinite", "missing_final", "nan_and_tail"):
+            assert "TRAIN_FINAL_RECORD=FAIL" in result.stdout
+            assert "CHAIN_DIAGNOSTIC=FAIL check=final_record" in result.stdout
+        if fault in ("nan", "grad_inf", "oom", "nan_and_tail") or cr_field:
+            assert "CHAIN_DIAGNOSTIC=FAIL check=train_numerics" in result.stdout
+    if cr_field:
+        assert f"\r\rStep 59900: {cr_field}=nan".encode() in (root / f"v1-store/logs/{SPLIT_RUNS['context']}.log").read_bytes()
+        assert "CHAIN_DIAGNOSTIC=FAIL check=train_numerics" in result.stdout
+
+
+
+def final_fixture(run="o16-smoke-shell", *, steps=20):
+    scalars = {"loss", "grad_norm", "llm_grad_norm", "param_norm", "mem_enc_norm"}
+    return dict(run_name=run, head="a" * 40, num_train_steps=steps, state_step=steps,
+        loop_step=steps - 1, checkpoint_step=steps - 1, log_interval=100,
+        tail=[dict(step=index, scalars={name: dict(finite=True) for name in scalars})
+              for index in range((steps - 1) // 100 * 100 + 1, steps)],
+        ema_leaves=dict(weight=dict(finite=True)))
+
+
+@pytest.mark.parametrize("fault", ["missing", "tail_step", "tail_scalar", "tail_nonfinite", "ema_flag", "ema_nonfinite", "run", None])
+def test_final_record_fails_closed(tmp_path, fault):
+    record = final_fixture(SPLIT_RUNS["context"], steps=60000)
+    if fault == "tail_step": record["tail"].pop()
+    if fault == "tail_scalar": del record["tail"][-1]["scalars"]["loss"]
+    if fault == "tail_nonfinite": record["tail"][-1]["scalars"]["loss"]["finite"] = False
+    if fault == "ema_flag": del record["ema_leaves"]["weight"]["finite"]
+    if fault == "ema_nonfinite": record["ema_leaves"]["weight"]["finite"] = False
+    if fault == "run": record["run_name"] = "another-run"
+    path = tmp_path / "final.json"
+    if fault != "missing": dump(path, record)
+    code = launch.main(["--check-final-record", str(path), "--run", SPLIT_RUNS["context"],
+                        "--steps", "60000", "--train-head", "a" * 40])
+    assert code == int(fault is not None)
+
+
+@pytest.mark.parametrize("fault", ["missing_final", "tail_nonfinite", "ema_nonfinite", "cr_and_tail", "program_exit", "contract_exit", None]
+                                  + [f"cr_{key}" for key in CR_SCALARS])
+def test_single_entry_records_diagnostics_and_keeps_program_exit(tmp_path, fault):
+    cr_field = "loss" if fault == "cr_and_tail" else fault[3:] if fault and fault.startswith("cr_") else None
+    root = shell_tree(tmp_path)
+    (root / "v1-store/logs").mkdir(parents=True)
+    record = final_fixture()
+    if fault in ("tail_nonfinite", "cr_and_tail"): record["tail"][-1]["scalars"]["loss"]["finite"] = False
+    if fault == "ema_nonfinite": record["ema_leaves"]["weight"]["finite"] = False
+    if fault != "missing_final": dump(root / "fixture-final.json", record)
+    py = root / ".venv/bin/python"; py.parent.mkdir(parents=True)
+    py.write_text(f'''#!{sys.executable}
+import os
+from pathlib import Path
+import shutil
+import sys
+if "--print-library" in sys.argv:
+    print("fixture")
+elif "--check-final-record" in sys.argv:
+    os.execv({sys.executable!r}, [{sys.executable!r}, *sys.argv[1:]])
+elif sys.argv[1] == "scripts/training/train.py":
+    source = Path("fixture-final.json")
+    if source.exists():
+        final = Path(os.environ["TRAIN_FINAL_RECORD_DIR"]) / "final.json"
+        final.parent.mkdir(parents=True)
+        shutil.copyfile(source, final)
+    print("\\r\\rStep 0: loss=0.2, grad_norm=0.1")
+    if {cr_field is not None}:
+        print("\\r\\rStep 0: {cr_field}=nan")
+    sys.exit({9 if fault == "program_exit" else 0})
+else:
+    sys.exit({7 if fault == "contract_exit" else 0})
+''')
+    py.chmod(0o755)
+    env = dict(os.environ, CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7", DRY_RUN="0", MAX_STEPS="20",
+        RUN_NAME="o16-smoke-shell", HISTORY=launch.HISTORIES[0], TRAIN_HEAD="a" * 40,
+        FINAL_RECORD_DIR=str(root / "v1-store/validation/final-record"))
+    result = subprocess.run(["bash", str(root / "scripts/training/run_orig16_stage2_60k.sh")],
+                            env=env, capture_output=True, text=True)
+    log = (root / "v1-store/logs/o16-smoke-shell.log").read_text()
+    expected_code = {"program_exit": 9, "contract_exit": 7}.get(fault, 0)
+    assert result.returncode == expected_code, result.stdout + result.stderr + log
+    assert log.splitlines()[-1] == f"EXIT_CODE={expected_code}"
+    assert log.count("TRAIN_FINAL_RECORD=") == 1
+    final_fails = fault in ("missing_final", "tail_nonfinite", "ema_nonfinite", "cr_and_tail", "contract_exit")
+    assert f"TRAIN_FINAL_RECORD={'FAIL' if final_fails else 'PASS'}" in log
+    if final_fails:
+        assert "TRAIN_DIAGNOSTIC=FAIL check=final_record action=record_only reason=user_decision" in log
+    if cr_field:
+        assert f"\r\rStep 0: {cr_field}=nan".encode() in (root / "v1-store/logs/o16-smoke-shell.log").read_bytes()
+        assert "TRAIN_NUMERICS=FAIL reason=nonfinite_or_oom" in log
+        assert "TRAIN_DIAGNOSTIC=FAIL check=train_numerics action=record_only reason=user_decision" in log
+
+
+@pytest.mark.parametrize("enabled", [False, True])
+def test_wandb_real_cli_matches_entry_choice(tmp_path, monkeypatch, enabled):
+    from mme_vla_suite.training import config
+    contract = launch.Contract(library="fixture")
+    fx = SimpleNamespace(root=tmp_path, parent=tmp_path / contract.parent_rel, contract=contract)
+    args, argv, env, history = arguments(fx, launch.HISTORIES[0])
+    if enabled: argv.remove("--no-wandb-enabled")
+    monkeypatch.setattr(config, "OPENPI_DATA_HOME", env["OPENPI_DATA_HOME"])
+    cfg, base = launch.parse_cli(argv)
+    assert cfg.wandb_enabled is enabled
+    record = launch.Recorder()
+    launch.check_config(record, cfg, base, store=fx.root, contract=contract, steps=args.steps,
+                        history_name=launch.HISTORIES[0], history=history)
+    assert not record.failed
+
+
+CONCAT_CTX = launch.pair_name("ctx", "1x1024")
+CONCAT_MOD = launch.pair_name("modul", "1x1024")
+
+
+def formal_contract(fx, name, *, run=None, attempt=None, mutate=None, train_head="a" * 40):
+    """正式60k合同：可替换运行名、history字段与ATTEMPT_MANIFEST。"""
+    args, argv, env, h = arguments(fx, name, steps=60000)
+    args.train_head = train_head
+    if run is not None:
+        argv[argv.index("--exp-name") + 1] = run
+    if mutate:
+        mutate(h)
+    if attempt is not None:
+        env["ATTEMPT_MANIFEST"] = str(attempt)
+    from mme_vla_suite.training import config
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(config, "OPENPI_DATA_HOME", env["OPENPI_DATA_HOME"])
+        return launch.core(args, argv, contract=fx.contract, env=env, history=h)
+
+
+def test_runs_are_four_explicit_formal_names():
+    assert launch.RUNS == {
+        ("context", launch.SPLIT): "orig100-ctx32x4x4-motion-s2split4x256-b128-60k",
+        ("modulation", launch.SPLIT): "orig100-m32x4x4-modul-motion-s2split4x256-b128-60k",
+        ("context", launch.CONCAT): "orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k",
+        ("modulation", launch.CONCAT): "orig100-m32x4x4-modul-motion-s2concat1x1024-b128-60k"}
+    assert set(launch.BUCKETS) == set(launch.RUNS.values())
+
+
+@pytest.mark.parametrize("name", [CONCAT_CTX, CONCAT_MOD, launch.pair_name("ctx", "4x256"),
+                                  launch.pair_name("modul", "4x256")])
+def test_formal_60k_positive_for_all_four(fx, name, capsys):
+    rec = formal_contract(fx, name)
+    assert not rec.failed
+    out = capsys.readouterr().out
+    if "1x1024" in name:
+        fusion = name.split("-")[2]
+        assert (f"NOSPLIT_CONFIG=PASS fusion={fusion} "
+                "diff_keys=motion.readout,motion.num_tokens,motion.dim,motion.budget") in out
+        assert "MOTION_LAYOUT=PASS readout=concat tokens_per_window=1 budget=96 total_tokens=608" in out
+    else:
+        assert not any(line.startswith("NOSPLIT_CONFIG=") for line in out.splitlines())
+
+
+def test_concat_yaml_with_split_run_name_fails(fx):
+    rec = formal_contract(fx, CONCAT_CTX, run=launch.RUNS["context", launch.SPLIT])
+    assert rec.failed == ["CFG_RUN"]
+
+
+def test_fusion_and_run_mismatch_fails(fx):
+    rec = formal_contract(fx, CONCAT_CTX, run=launch.RUNS["modulation", launch.CONCAT])
+    assert rec.failed == ["CFG_RUN"]
+
+
+def test_concat_budget_384_with_one_token_fails(fx):
+    rec = formal_contract(fx, CONCAT_CTX, mutate=lambda h: h["motion"].update(budget=384))
+    assert "MOTION_READOUT" in rec.failed or "HISTORY" in rec.failed
+
+
+def test_formal_8x8_concat_fails(fx):
+    name = "perceptual-framesamp-ctx-8frame-8x8-motion-stage2-1x1024-orig16.yaml"
+    rec = formal_contract(fx, name, run=launch.RUNS["context", launch.CONCAT])
+    assert rec.failed == ["CFG_RUN"]
+
+
+def attempt_files(tmp_path, *, base=None, nn="02", allowed=True, **override):
+    base = base or launch.RUNS["context", launch.CONCAT]
+    run = f"{base}-attempt{nn}"
+    decision = tmp_path / "decisions/evt-1.json"
+    dump(decision, dict(allowed_runs=[run] if allowed else []))
+    manifest = dict(base_run=base, run=run, history=CONCAT_CTX, train_head="a" * 40, decision=str(decision),
+                    bucket=launch.BUCKETS[base] + f"-attempt{nn}")
+    manifest.update(override)
+    path = tmp_path / "attempt.json"
+    dump(path, manifest)
+    return path, run
+
+
+def test_registered_attempt_passes(fx, tmp_path, capsys):
+    path, run = attempt_files(tmp_path)
+    rec = formal_contract(fx, CONCAT_CTX, run=run, attempt=path)
+    assert not rec.failed
+    assert f"ATTEMPT=PASS run={run}" in capsys.readouterr().out
+
+
+def test_unregistered_attempt_name_fails(fx):
+    rec = formal_contract(fx, CONCAT_CTX, run=launch.RUNS["context", launch.CONCAT] + "-attempt02")
+    assert rec.failed == ["CFG_RUN"]
+
+
+@pytest.mark.parametrize("fault", ["not_allowed", "nn01", "bucket", "head", "history", "base_readout",
+                                   "missing_decision", "extra_key"])
+def test_attempt_manifest_faults_fail(fx, tmp_path, fault):
+    kwargs = {}
+    if fault == "not_allowed": kwargs["allowed"] = False
+    if fault == "nn01": kwargs["nn"] = "01"
+    if fault == "bucket": kwargs["bucket"] = launch.BUCKETS[launch.RUNS["context", launch.CONCAT]] + "-attempt03"
+    if fault == "head": kwargs["train_head"] = "b" * 40
+    if fault == "history": kwargs["history"] = launch.pair_name("ctx", "4x256")
+    if fault == "base_readout": kwargs["base"] = launch.RUNS["context", launch.SPLIT]
+    if fault == "missing_decision": kwargs["decision"] = str(tmp_path / "nope.json")
+    if fault == "extra_key": kwargs["note"] = "x"
+    path, run = attempt_files(tmp_path, **kwargs)
+    rec = formal_contract(fx, CONCAT_CTX, run=run, attempt=path)
+    assert "ATTEMPT" in rec.failed
+
+
+CONCAT_RUNS = {fusion: launch.RUNS[fusion, launch.CONCAT] for fusion in ("context", "modulation")}
+
+
+def concat_chain(tmp_path, fault=None, *, start_role=None, setup=None, attempt_ctx=None):
+    """以假单条入口驱动concat串行脚本；fault只作用于context条。"""
+    root = shell_tree(tmp_path)
+    shutil.copyfile(REPO / "scripts/training/run_orig16_concat_ctx_then_modul_60k.sh",
+                    root / "scripts/training/run_orig16_concat_ctx_then_modul_60k.sh")
+    py = root / ".venv/bin/python"; py.parent.mkdir(parents=True); py.symlink_to(sys.executable)
+    final_root = root / "v1-store/validation/orig16-concat-60k"
+    ctx = attempt_ctx[1] if attempt_ctx else CONCAT_RUNS["context"]
+    for run in (ctx, CONCAT_RUNS["modulation"]):
+        dump(final_root / run / "final-record/final.json", final_fixture(run, steps=60000))
+    (root / "scripts/training/run_orig16_stage2_60k.sh").write_text(f'''#!/usr/bin/env bash
+ROOT=$(cd "$(dirname "$0")/../.." && pwd)
+echo "$RUN_NAME $HISTORY ${{ATTEMPT_MANIFEST:-none}}" >> "$ROOT/calls"
+f={fault!s}
+[[ "$RUN_NAME" == {ctx} ]] || f=None
+[[ $f != exit ]] || exit 9
+mkdir -p "$ROOT/v1-store/logs"
+printf 'RUN=%s\\nSTEPS=60000\\nTRAIN_HEAD=%s\\nStep 59999: loss=0.25, grad_norm=0.5\\n' "$RUN_NAME" "$TRAIN_HEAD" > "$ROOT/v1-store/logs/$RUN_NAME.log"
+[[ $f != nan ]] || printf 'Step 59999: loss=nan\\n' >> "$ROOT/v1-store/logs/$RUN_NAME.log"
+printf 'EXIT_CODE=0\\n' >> "$ROOT/v1-store/logs/$RUN_NAME.log"
+[[ $f == checkpoint ]] || mkdir -p "$ROOT/v1-store/train-runs/{launch.CONFIG_NAME}/$RUN_NAME/59999"
+exit 0
+''')
+    if setup:
+        setup(root, final_root)
+    env = dict(os.environ, TRAIN_HEAD="a" * 40, FINAL_ROOT=str(final_root))
+    for key in ("MAX_STEPS", "DRY_RUN", "START_ROLE", "ATTEMPT_MANIFEST", "ATTEMPT_MANIFEST_CTX", "ATTEMPT_MANIFEST_MODUL"):
+        env.pop(key, None)
+    if start_role: env["START_ROLE"] = start_role
+    if attempt_ctx: env["ATTEMPT_MANIFEST_CTX"] = str(attempt_ctx[0])
+    result = subprocess.run(["bash", str(root / "scripts/training/run_orig16_concat_ctx_then_modul_60k.sh")],
+                            env=env, capture_output=True, text=True)
+    calls = (root / "calls").read_text().splitlines() if (root / "calls").exists() else []
+    return result, [line.split()[0] for line in calls], root, final_root, calls
+
+
+def test_concat_chain_two_runs_pass(tmp_path):
+    result, runs, _, final_root, calls = concat_chain(tmp_path)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert runs == [CONCAT_RUNS["context"], CONCAT_RUNS["modulation"]]
+    assert calls[0].split()[1:] == [CONCAT_CTX, "none"] and calls[1].split()[1:] == [CONCAT_MOD, "none"]
+    assert "CHAIN=PASS runs=2" in result.stdout and "WAIT_USER_DECISION" not in result.stdout
+    assert not (final_root / "pending").exists()
+
+
+@pytest.mark.parametrize("fault,stage,code", [("exit", "train_exit", 9), ("nan", "train_numerics", 3),
+                                              ("checkpoint", "missing_59999", 3)])
+def test_concat_chain_failure_waits_user_and_stops(tmp_path, fault, stage, code):
+    result, runs, _, final_root, _ = concat_chain(tmp_path, fault)
+    ctx = CONCAT_RUNS["context"]
+    assert result.returncode == code, result.stdout + result.stderr
+    assert runs == [ctx]
+    assert f"WAIT_USER_DECISION run={ctx} stage={stage} evidence=" in result.stdout
+    assert "CHAIN=PASS" not in result.stdout and "CHAIN_RUN=PASS" not in result.stdout
+    pending = json.loads((final_root / f"pending/{ctx}-{stage}.json").read_text())
+    assert pending["run"] == ctx and pending["stage"] == stage and pending["train_head"] == "a" * 40
+    assert pending["evidence"] and pending["utc"].endswith("Z")
+    assert not (final_root / "decisions").exists()
+
+
+def test_concat_chain_final_record_fail_waits(tmp_path):
+    def setup(root, final_root):
+        path = final_root / CONCAT_RUNS["context"] / "final-record/final.json"
+        record = json.loads(path.read_text()); record["ema_leaves"]["weight"]["finite"] = False
+        dump(path, record)
+    result, runs, *_ = concat_chain(tmp_path, setup=setup)
+    assert result.returncode == 3 and runs == [CONCAT_RUNS["context"]]
+    assert f"WAIT_USER_DECISION run={CONCAT_RUNS['context']} stage=final_record" in result.stdout
+
+
+def completed_context(root, final_root, *, head="a" * 40):
+    ctx = CONCAT_RUNS["context"]
+    log = root / f"v1-store/logs/{ctx}.log"
+    log.parent.mkdir(parents=True, exist_ok=True)
+    log.write_text(f"RUN={ctx}\nTRAIN_HEAD={head}\nStep 59999: loss=0.25\nTRAIN_FINAL_RECORD=PASS\nEXIT_CODE=0\n")
+    (root / f"v1-store/train-runs/{launch.CONFIG_NAME}/{ctx}/59999").mkdir(parents=True)
+
+
+@pytest.mark.parametrize("state", ["complete", "pending", "decided", "head", "no_59999"])
+def test_concat_chain_start_modul(tmp_path, state):
+    ctx = CONCAT_RUNS["context"]
+
+    def setup(root, final_root):
+        completed_context(root, final_root, head="b" * 40 if state == "head" else "a" * 40)
+        if state == "no_59999":
+            (root / f"v1-store/train-runs/{launch.CONFIG_NAME}/{ctx}/59999").rmdir()
+        if state in ("pending", "decided"):
+            dump(final_root / f"pending/{ctx}-train_numerics.json", dict(run=ctx))
+        if state == "decided":
+            dump(final_root / f"decisions/{ctx}-train_numerics.json", dict(allowed_runs=[]))
+    result, runs, *_ = concat_chain(tmp_path, start_role="modul", setup=setup)
+    if state in ("complete", "decided"):
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert runs == [CONCAT_RUNS["modulation"]]
+        assert f"CHAIN_RUN=PASS run={ctx} step=59999 resumed=1" in result.stdout
+        assert "CHAIN=PASS runs=2" in result.stdout
+    else:
+        assert result.returncode == 3 and runs == []
+        assert f"WAIT_USER_DECISION run={ctx} stage=resume_check" in result.stdout
+
+
+def test_concat_chain_attempt_manifest_passed_to_single_entry(tmp_path):
+    base = CONCAT_RUNS["context"]
+    run = base + "-attempt02"
+    manifest = tmp_path / "attempt-ctx.json"
+    dump(manifest, dict(base_run=base, run=run, history=CONCAT_CTX, train_head="a" * 40,
+                        decision=str(tmp_path / "d.json"), bucket=launch.BUCKETS[base] + "-attempt02"))
+    result, runs, _, _, calls = concat_chain(tmp_path / "t", attempt_ctx=(manifest, run))
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert runs == [run, CONCAT_RUNS["modulation"]]
+    assert calls[0].split()[2] == str(manifest) and calls[1].split()[2] == "none"
+
+
+@pytest.mark.parametrize("bad", [dict(MAX_STEPS="20"), dict(DRY_RUN="0"), dict(START_ROLE="x")])
+def test_concat_chain_rejects_non_formal(tmp_path, bad):
+    root = shell_tree(tmp_path)
+    shutil.copyfile(REPO / "scripts/training/run_orig16_concat_ctx_then_modul_60k.sh",
+                    root / "scripts/training/run_orig16_concat_ctx_then_modul_60k.sh")
+    env = dict(os.environ, TRAIN_HEAD="a" * 40, FINAL_ROOT=str(tmp_path / "f"), **bad)
+    result = subprocess.run(["bash", str(root / "scripts/training/run_orig16_concat_ctx_then_modul_60k.sh")],
+                            env=env, capture_output=True, text=True)
+    assert result.returncode == 2 and not (root / "calls").exists()

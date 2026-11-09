@@ -1,4 +1,4 @@
-"""context 2048（32 帧 × 8×8，无 motion）mixed8-200 训练前后核对（1018-mixed8-2048-context-modul-plan.md 第二部分 §3 G2–G5）。
+"""context 2048（32 帧 × 8×8，无 motion）mixed8-200 训练前后核对（docs/root-archive/1018-mixed8-2048-context-modul-plan.md 第二部分 §3 G2–G5）。
 
 照 check_32frame_modul.py 的写法，YAML 换成 perceptual-framesamp-context-32frame-8x8.yaml，数据换 mixed8 库。四个子命令，
 各自末行打印判定行：

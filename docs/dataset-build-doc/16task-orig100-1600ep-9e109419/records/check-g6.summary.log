@@ -1,0 +1,25 @@
+CHECK_HEAD=bd4bad0957e5162073f9bbfec0e4c985c3f830bc
+STAGE=g6
+START_UTC=2026-10-28T07:47:34Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+TRAIN_ES_BOUND_NOTE source_map=/scratch/hongze/dataset-original-robomme-16x100-wan21-v1/source/h5 部分或全部 episode 找不到源文件映射，记为 unknown
+TRAIN_ES_BOUND_TASK task=VideoPlaceOrder episodes=100 max_windows=44 worst=4/unknown demo=1118 exec=293
+TRAIN_ES_BOUND_TASK task=VideoPlaceButton episodes=100 max_windows=33 worst=4/unknown demo=803 exec=286
+TRAIN_ES_BOUND_TASK task=BinFill episodes=100 max_windows=32 worst=63/unknown demo=0 exec=1044
+TRAIN_ES_BOUND_TASK task=PickXtimes episodes=100 max_windows=32 worst=27/unknown demo=0 exec=1025
+TRAIN_ES_BOUND_TASK task=VideoRepick episodes=100 max_windows=32 worst=3/unknown demo=214 exec=813
+TRAIN_ES_BOUND_TASK task=RouteStick episodes=100 max_windows=21 worst=15/unknown demo=350 exec=350
+TRAIN_ES_BOUND_TASK task=PickHighlight episodes=100 max_windows=20 worst=3/unknown demo=0 exec=652
+TRAIN_ES_BOUND_TASK task=InsertPeg episodes=100 max_windows=18 worst=20/unknown demo=291 exec=293
+TRAIN_ES_BOUND_TASK task=StopCube episodes=100 max_windows=18 worst=13/unknown demo=0 exec=579
+TRAIN_ES_BOUND_TASK task=SwingXtimes episodes=100 max_windows=18 worst=1/unknown demo=0 exec=608
+TRAIN_ES_BOUND_TASK task=VideoUnmaskSwap episodes=100 max_windows=18 worst=3/unknown demo=216 exec=370
+TRAIN_ES_BOUND_TASK task=ButtonUnmaskSwap episodes=100 max_windows=17 worst=3/unknown demo=0 exec=555
+TRAIN_ES_BOUND_TASK task=PatternLock episodes=100 max_windows=17 worst=87/unknown demo=284 exec=284
+TRAIN_ES_BOUND_TASK task=MoveCube episodes=100 max_windows=16 worst=70/unknown demo=277 exec=240
+TRAIN_ES_BOUND_TASK task=ButtonUnmask episodes=100 max_windows=14 worst=3/unknown demo=0 exec=452
+TRAIN_ES_BOUND_TASK task=VideoUnmask episodes=100 max_windows=12 worst=3/unknown demo=66 exec=333
+TRAIN_ES_BOUND_WORST task=VideoPlaceOrder output_index=4 source=unknown g=1204 demo_len=1118 exec_len=293 demo_windows=35 exec_windows=9 windows=44
+TRAIN_ES_BOUND=PASS episodes=1600 tasks=16 max_windows=44 budget=96 headroom=52
+END_UTC=2026-10-28T07:47:35Z
+EXIT_CODE=0

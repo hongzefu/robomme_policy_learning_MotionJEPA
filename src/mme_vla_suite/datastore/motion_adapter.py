@@ -8,6 +8,8 @@ from numbers import Integral
 
 import numpy as np
 
+from mme_vla_suite.shared.wan_timepool import TIMEPOOL_LAYOUT, TIMEPOOL_READOUT, TIMEPOOL_SHAPE
+
 RAW_SHAPE = (8, 256)
 PAIR_SHAPE = (4, 512)
 PAIRING = "adjacent_pair_v1"
@@ -66,6 +68,20 @@ def motion_policy_spec(cfg: Mapping) -> MotionPolicySpec:
     """解析 motion 节；新读法显式声明形状键，旧配置保持单个 768 维槽。"""
     if not isinstance(cfg, Mapping):
         raise TypeError("motion 配置必须为映射")
+    if cfg.get("readout") == TIMEPOOL_READOUT:
+        required = {"source_shape", "num_tokens", "dim", "budget"}
+        if required - cfg.keys():
+            raise ValueError(f"Wan timepool motion 缺字段 {sorted(required - cfg.keys())}")
+        try:
+            shape = tuple(cfg["source_shape"])
+        except TypeError as exc:
+            raise ValueError("Wan timepool motion.source_shape 必须为 [1,1024]") from exc
+        budget = _integer(cfg, "budget", 96)
+        if (any(isinstance(v, bool) or not isinstance(v, Integral) for v in shape)
+                or shape != TIMEPOOL_SHAPE or _integer(cfg, "num_tokens", 1) != 1
+                or _integer(cfg, "dim", 1024) != 1024 or budget <= 0):
+            raise ValueError("Wan timepool motion 必须为 source_shape=[1,1024]、num_tokens=1、dim=1024、budget>0")
+        return MotionPolicySpec(TIMEPOOL_SHAPE, TIMEPOOL_READOUT, 1, 1024, budget, budget, (TIMEPOOL_LAYOUT,))
     if cfg.get("readout") == STAGE2_SPLIT_READOUT:
         required = {"source_shape", "num_tokens", "dim", "budget"}
         if required - cfg.keys():

@@ -6,4 +6,4 @@
 
 修复将input_function与act的权重改为显式参数。先做保留源与SHA的[探索性诊断](../m2048-func-probe1/result.md)，再提交 `31d4bd0b03cc1031eee04b95a69cd6a8aa6a1222`，从clean提交[正式重测](../m2048-func-retry1/result.md)全通过，问题已闭合。本run原失败状态不改写。
 
-用户明确选择「保持原计划，完整取证（推荐）」。环境为AWS 8×A100-SXM4-80GB，底层 `/dev/md0` XFS本地NVMe RAID；依赖锁未改。执行口径见[实施计划](../../../0920-32frame-8x8-modul-2048-plan.md)，实际版本、时刻与退出记录见[运行记录](records/launch.actual.json)。
+用户明确选择「保持原计划，完整取证（推荐）」。环境为AWS 8×A100-SXM4-80GB，底层 `/dev/md0` XFS本地NVMe RAID；依赖锁未改。执行口径见[实施计划](../../root-archive/0920-32frame-8x8-modul-2048-plan.md)，实际版本、时刻与退出记录见[运行记录](records/launch.actual.json)。

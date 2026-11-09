@@ -4,7 +4,7 @@
 # config 快照与 provenance、清洗后的训练日志上传到**公开** HF bucket
 # HongzeFu/robomme-vla-mixed8-200-context-2048-80k-v1，做「上传前 / 上传后」两遍独立 sha256 逐行对照验收。
 #
-# 计划：1018-mixed8-2048-context-modul-plan.md 第二部分 §1 S2 表；蓝本 run_mixed8_200_vla_512_80k_ckpt_export.sh
+# 计划：docs/root-archive/1018-mixed8-2048-context-modul-plan.md 第二部分 §1 S2 表；蓝本 run_mixed8_200_vla_512_80k_ckpt_export.sh
 # （只换 run 身份：RUN_NAME、BUCKET_ID、EXPORT_NAME、ALLOWLIST、README_SRC、DRIVER_NAME）。全部阶段在
 # _mixed8_200_vla_ckpt_export_common.sh，与其余 mixed8-200 VLA 驱动共用；本文件只钉死这一条 run 的身份。
 # 训练起跑 runner：scripts/dataset/hf_export/mixed8_200_runner/train-ctx2048-80k.sh

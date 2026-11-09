@@ -99,7 +99,7 @@ def init_wandb(
         wandb.run.log_code(epath.Path(__file__).parent.parent.parent)
 
 def init_history_config(config: _config.TrainConfig, resolved_history_config=None, framesamp_root=None):
-    """run 根写三样（0901-motion-memory-plan.md 2.1，红线 16）：
+    """run 根写三样（docs/root-archive/0901-motion-memory-plan.md 2.1，红线 16）：
     - history_config.txt：只作源文件名标签（旧口径，评估侧兼容路径仍读它）；
     - history_config.resolved.yaml + .sha256：训练实际使用的完整解析结果与原始字节 sha256；
     - motion_provenance.json：motion.enabled、framesamp manifest sha256；open run 另填 motion 侧 manifest / index sha / store meta sha /
@@ -149,7 +149,12 @@ def init_history_config(config: _config.TrainConfig, resolved_history_config=Non
             if mm.raw["layout"] == _ms.STAGE2_LAYOUT:
                 _ms.validate_stage2_provenance(mm.provenance)
                 prov.update({key: copy.deepcopy(mm.provenance[key]) for key in _ms.STAGE2_GROUPS})
+                prov.update({key: mm.provenance[key] for key in ("source_grid_sha256", "latents_metadata_sha256")})
                 write_stage2_motion_snapshot(pathlib.Path(ckpt_root), prov)
+                return
+            if mm.raw["layout"] == _ms.TIMEPOOL_LAYOUT:
+                prov["timepool"] = copy.deepcopy(mm.provenance)
+                write_timepool_motion_snapshot(pathlib.Path(ckpt_root), prov)
                 return
     (ckpt_root / "motion_provenance.json").write_text(_json.dumps(prov, ensure_ascii=False, indent=1, default=str) + "\n")
 
@@ -170,6 +175,47 @@ def _atomic_stage2_file(path: pathlib.Path, data: bytes) -> None:
         os.close(fd)
 
 
+def _load_online_restore_inputs(validation_root, label):
+    """读取并校验可携带在线输入（schema 与形制由 stage2 和 timepool 共用），返回待发布的 (文件名, 字节) 两项。"""
+    from mme_vla_suite.datastore import motion_store as ms
+    validation_root = pathlib.Path(validation_root)
+    portable_path = validation_root / "online_restore_inputs.json"
+    portable_blob = portable_path.read_bytes()
+    portable = json.loads(portable_blob)
+    payload = portable.get("payload", {})
+    es = portable.get("exec_start_idx")
+    tokenizer = portable.get("tokenizer", {})
+    if (portable.get("schema") != "stage2-online-restore-inputs-v1"
+            or payload.get("path") != "online_restore_inputs.npz"
+            or type(es) is not int or es < 17 or portable.get("exec_batch_lengths") not in ([33, 32], [1, 16, 16, 16, 16])
+            or not isinstance(portable.get("prompt"), str) or not portable["prompt"]
+            or not isinstance(portable.get("sources"), list) or not portable["sources"]
+            or tokenizer.get("uri") != "gs://big_vision/paligemma_tokenizer.model"):
+        raise ValueError(f"{label} 可携带在线输入合同不完整")
+    ms.require_sha256(tokenizer.get("sha256"), "online_inputs.tokenizer")
+    for source in portable["sources"]:
+        if not isinstance(source, dict) or not isinstance(source.get("path"), str) or not source["path"]:
+            raise ValueError(f"{label} 可携带在线输入缺原始来源引用")
+        ms.require_sha256(source.get("sha256"), "online_inputs.source")
+    arrays_blob = (validation_root / payload["path"]).read_bytes()
+    if ms.sha256_bytes(arrays_blob) != payload.get("sha256"):
+        raise ValueError(f"{label} 可携带在线输入 NPZ SHA 不符")
+    expected_arrays = {"images": ([es + 65, 256, 256, 3], "uint8"),
+                       "states": ([es + 65, 8], "float32"), "wrist_image": ([256, 256, 3], "uint8")}
+    if not isinstance(portable.get("arrays"), dict) or set(portable["arrays"]) != set(expected_arrays):
+        raise ValueError(f"{label} 可携带在线输入数组清单不符")
+    with np.load(io.BytesIO(arrays_blob), allow_pickle=False) as arrays:
+        if set(arrays.files) != set(expected_arrays):
+            raise ValueError(f"{label} 可携带在线输入 NPZ 键集合不符")
+        for key, (shape, dtype) in expected_arrays.items():
+            value, identity = arrays[key], portable["arrays"][key]
+            if (list(value.shape) != shape or str(value.dtype) != dtype or not np.isfinite(value).all()
+                    or identity.get("shape") != shape or identity.get("dtype") != dtype
+                    or ms.sha256_bytes(np.ascontiguousarray(value).tobytes()) != identity.get("sha256")):
+                raise ValueError(f"{label} 可携带在线输入 {key} 形制或逐数组 SHA 不符")
+    return [(portable_path.name, portable_blob), (payload["path"], arrays_blob)]
+
+
 def write_stage2_motion_snapshot(ckpt_root, provenance, *, registered_root=None):
     """复制封口证据，列出实体 encoder 依赖，最后原子发布完整根快照。"""
     from mme_vla_suite.datastore import motion_store as ms
@@ -181,45 +227,11 @@ def write_stage2_motion_snapshot(ckpt_root, provenance, *, registered_root=None)
     prov = copy.deepcopy(provenance)
     files = {}
     validation_root = pathlib.Path(prov["stage2_compat"]["evidence"]["G0"]["path"]).parent
-    portable_path = validation_root / "online_restore_inputs.json"
-    portable_blob = portable_path.read_bytes()
-    portable = json.loads(portable_blob)
-    payload = portable.get("payload", {})
-    es = portable.get("exec_start_idx")
-    tokenizer = portable.get("tokenizer", {})
-    if (portable.get("schema") != "stage2-online-restore-inputs-v1"
-            or payload.get("path") != "online_restore_inputs.npz"
-            or type(es) is not int or es < 17 or portable.get("exec_batch_lengths") != [33, 32]
-            or not isinstance(portable.get("prompt"), str) or not portable["prompt"]
-            or not isinstance(portable.get("sources"), list) or not portable["sources"]
-            or tokenizer.get("uri") != "gs://big_vision/paligemma_tokenizer.model"):
-        raise ValueError("stage2 可携带在线输入合同不完整")
-    ms.require_sha256(tokenizer.get("sha256"), "online_inputs.tokenizer")
-    for source in portable["sources"]:
-        if not isinstance(source, dict) or not isinstance(source.get("path"), str) or not source["path"]:
-            raise ValueError("stage2 可携带在线输入缺原始来源引用")
-        ms.require_sha256(source.get("sha256"), "online_inputs.source")
-    arrays_blob = (validation_root / payload["path"]).read_bytes()
-    if ms.sha256_bytes(arrays_blob) != payload.get("sha256"):
-        raise ValueError("stage2 可携带在线输入 NPZ SHA 不符")
-    expected_arrays = {"images": ([es + 65, 256, 256, 3], "uint8"),
-                       "states": ([es + 65, 8], "float32"), "wrist_image": ([256, 256, 3], "uint8")}
-    if not isinstance(portable.get("arrays"), dict) or set(portable["arrays"]) != set(expected_arrays):
-        raise ValueError("stage2 可携带在线输入数组清单不符")
-    with np.load(io.BytesIO(arrays_blob), allow_pickle=False) as arrays:
-        if set(arrays.files) != set(expected_arrays):
-            raise ValueError("stage2 可携带在线输入 NPZ 键集合不符")
-        for key, (shape, dtype) in expected_arrays.items():
-            value, identity = arrays[key], portable["arrays"][key]
-            if (list(value.shape) != shape or str(value.dtype) != dtype or not np.isfinite(value).all()
-                    or identity.get("shape") != shape or identity.get("dtype") != dtype
-                    or ms.sha256_bytes(np.ascontiguousarray(value).tobytes()) != identity.get("sha256")):
-                raise ValueError(f"stage2 可携带在线输入 {key} 形制或逐数组 SHA 不符")
-    for name, blob in ((portable_path.name, portable_blob), (payload["path"], arrays_blob)):
+    for name, blob in _load_online_restore_inputs(validation_root, "stage2"):
         _atomic_stage2_file(ckpt_root / name, blob)
         files[name] = ms.sha256_bytes(blob)
     for label, item in prov["stage2_compat"]["evidence"].items():
-        if label not in ("G0", "G2", "G3", "restore_receipt", "SOURCE_PIN"):
+        if label not in ms.stage2_evidence_roles(prov):
             raise ValueError(f"未知 stage2 证据来源: {label}")
         source = pathlib.Path(item["path"])
         blob = source.read_bytes()
@@ -257,6 +269,59 @@ def write_stage2_motion_snapshot(ckpt_root, provenance, *, registered_root=None)
         raise ValueError("stage2 来源记录与解析配置不同步")
     ms.validate_stage2_provenance(prov)
     payload = {"schema": "stage2-motion-snapshot-v1", "files": files}
+    _atomic_stage2_file(ready, ms.canonical_json_bytes(payload) + b"\n")
+    return payload
+
+
+def write_timepool_motion_snapshot(ckpt_root, provenance_payload):
+    """零参数池化的 run 根快照：复制闸门记录、逐窗映射和在线输入，最后原子发布 ready；没有 encoder 依赖。
+
+    消费端是 motion_client.verify_timepool_snapshot。timepool 段原样保留库内来源（含建库机器路径），
+    副本身份只靠 SHA；train_head 是建库时 HEAD，不在此与当前 HEAD 比较，由起跑检查器核祖先与零差异。
+    """
+    from mme_vla_suite.datastore import motion_store as ms
+    from mme_vla_suite.policies import motion_client as mc
+    ckpt_root = pathlib.Path(ckpt_root)
+    ready = ckpt_root / "motion_snapshot.ready.json"
+    if ready.exists():
+        raise FileExistsError(f"timepool 根快照已发布，拒绝覆盖: {ready}")
+    prov = copy.deepcopy(provenance_payload)
+    if set(prov) != mc.TIMEPOOL_SNAPSHOT_PROV_KEYS:
+        raise ValueError("timepool 快照来源键集合不符")
+    if prov["motion_enabled"] is not True or prov["vae"] is not None or prov["encoder"] is not None:
+        raise ValueError("timepool 快照必须 motion_enabled=true 且 vae/encoder 为 null")
+    timepool = prov["timepool"]
+    ms.validate_timepool_provenance(timepool, status="verified")
+    for key, expected in (("motion_manifest_sha256", timepool["manifests"]["episode_manifest_sha256"]),
+                          ("motion_table_sha256", timepool["output"]["motion_table_sha256"]),
+                          ("motion_index_sha256", timepool["output"]["motion_index_sha256"])):
+        if prov[key] != expected:
+            raise ValueError(f"timepool 快照 {key} 与来源记录不同")
+    files = {}
+    validation_root = pathlib.Path(timepool["validation"]["DATA_LINEAGE"]["path"]).parent
+    for name, blob in _load_online_restore_inputs(validation_root, "timepool"):
+        _atomic_stage2_file(ckpt_root / name, blob)
+        files[name] = ms.sha256_bytes(blob)
+    copies = [(f"motion_evidence/{role}.json", pathlib.Path(timepool["validation"][role]["path"]),
+               timepool["validation"][role]["sha256"], f"{role} 证据") for role in ms.TIMEPOOL_VALIDATION_ROLES]
+    copies.append((mc.TIMEPOOL_WINDOW_MAP_COPY, pathlib.Path(prov["motion_root"]) / timepool["window_map"]["relpath"],
+                   timepool["window_map"]["sha256"], "逐窗映射"))
+    for relative, source, expected, label in copies:
+        blob = source.read_bytes()
+        if ms.sha256_bytes(blob) != expected:
+            raise ValueError(f"timepool {label}在快照前已变动: {source}")
+        _atomic_stage2_file(ckpt_root / relative, blob)
+        files[relative] = expected
+    blob = ms.canonical_json_bytes(prov) + b"\n"
+    _atomic_stage2_file(ckpt_root / "motion_provenance.json", blob)
+    files["motion_provenance.json"] = ms.sha256_bytes(blob)
+    for name in ("history_config.txt", "history_config.resolved.yaml", "history_config.resolved.sha256"):
+        files[name] = ms.sha256_file(ckpt_root / name)
+    if (ckpt_root / "history_config.resolved.sha256").read_text().strip() != files["history_config.resolved.yaml"]:
+        raise ValueError("timepool 解析配置与摘要文件不同步")
+    if prov["resolved_sha256"] != files["history_config.resolved.yaml"]:
+        raise ValueError("timepool 来源记录与解析配置不同步")
+    payload = {"schema": mc.TIMEPOOL_SNAPSHOT_SCHEMA, "files": files}
     _atomic_stage2_file(ready, ms.canonical_json_bytes(payload) + b"\n")
     return payload
 
@@ -348,6 +413,14 @@ def write_stage2_pre_save_reference(record_root, config, train_state, observatio
               "inputs": input_meta, "outputs": output_meta}
     _atomic_stage2_file(manifest_path, ms.canonical_json_bytes(record) + b"\n")
     return record
+
+def _wants_pre_save_reference(num_train_steps, reference_root, motion_config) -> bool:
+    """只有 20 步短测且 readout 属于 stage2 或固定池化时，才在 step19 写保存前参考。"""
+    from mme_vla_suite.shared.wan_timepool import TIMEPOOL_READOUT
+    return bool(num_train_steps == 20 and reference_root and motion_config is not None
+                and motion_config.get("enabled", False)
+                and motion_config.get("readout") in ("stage2_pool4_concat_v1", "stage2_pool4_split_v1", TIMEPOOL_READOUT))
+
 
 def _load_weights_and_validate(
     loader: _weight_loaders.WeightLoader, params_shape: at.Params
@@ -599,7 +672,7 @@ def main(config: _config.TrainConfig):
     if os.environ.get("TRAIN_FINAL_RECORD_DIR"):
         import final_record
         final_record_handle = final_record.begin(config, wandb)
-    # 两侧 enabled 同源（0901-motion-memory-plan.md 2.1 / 2.9）：只按 CLI 文件名解析一次，同一个 DictConfig 对象装入
+    # 两侧 enabled 同源（docs/root-archive/0901-motion-memory-plan.md 2.1 / 2.9）：只按 CLI 文件名解析一次，同一个 DictConfig 对象装入
     # model config 并直接传给 dataloader，禁止两侧再次按文件名重读（数据侧给了、模型侧不消费会让 n_keys 悄悄变而训练照跑）
     history_config_name = config.model.history_config
     resolved_history_config = get_history_config(history_config_name)
@@ -633,8 +706,7 @@ def main(config: _config.TrainConfig):
     reference_observation = None
     reference_root = os.environ.get("TRAIN_FINAL_RECORD_DIR") or os.environ.get("FINAL_RECORD_DIR")
     motion_config = getattr(resolved_history_config, "motion", None)
-    if (config.num_train_steps == 20 and reference_root and motion_config is not None
-            and motion_config.get("enabled", False) and motion_config.get("readout") == "stage2_pool4_concat_v1"):
+    if _wants_pre_save_reference(config.num_train_steps, reference_root, motion_config):
         reference_observation = jax.tree.map(lambda x: np.asarray(jax.device_get(x[:1])).copy(), batch[0])
     logging.info(
         f"Initialized data loader:\n{training_utils.array_tree_to_info(batch)}"

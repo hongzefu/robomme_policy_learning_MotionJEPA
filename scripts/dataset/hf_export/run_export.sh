@@ -4,7 +4,7 @@
 #
 # **环境 A（GreatLakes / turbo）专用**：下面的 /data/hongzefu 暂存根与 4task-gl* 两个库
 # 在环境 B（AWS 单机）都不存在，本脚本在环境 B 下跑必挂。保留它是因为它是 480 GB 那次导出
-# 的唯一执行记录，根目录 HF-EXPORT-robomme-vla-motionjepa-v1.md 正文直接引用其命令行。
+# 的唯一执行记录，docs/root-archive/HF-EXPORT-robomme-vla-motionjepa-v1.md 正文直接引用其命令行。
 # 环境 B 的数据集导出走同目录 run_dataset400ep_export.sh。
 #
 # 注意：pack_and_hash.py 原来把这三个路径藏在模块级常量里（SRC_PACKED / SRC_SOURCE /

@@ -142,11 +142,12 @@
     "mixed8-vla-stage2-1024-train": {
       "plan": {
         "file": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1026-vla-stage2-memory-1024-train-plan.md",
+        "current_file": "docs/root-archive/1026-vla-stage2-memory-1024-train-plan.md",
         "sha": "1383aba0fd77b259f0b32eadb47ea7792190145e"
       },
-      "state": "running",
-      "state_changed_at": "2026-10-26T19:23:32Z",
-      "state_reason": "用户批准CPU全量完整性+encoder1024窗并继续。原全量比较按指令停止130，packed表保留。抽样消费合同和比较器两份合前审查PASS，准备解除当前冻结合入CPU复测；真实索引跨主/torch环境得到相同1024样本SHA、16任务各64、demo332/exec692/pad68。G2例外/G3保持，正式VLA未起跑。",
+      "state": "done",
+      "state_changed_at": "2026-10-27T16:52:31Z",
+      "state_reason": "按用户要求停止并以70k交付：训练/inc真实143，14份完整checkpoint保留；70k远端37文件匿名回读及65叶严格恢复/真实在线infer全部PASS，交接前5项全部pass，所有GPU任务退出。432文件权限/HOLD已恢复，R13旧测速119已删除，W&B注明用户主动停止。依原计划G9可留长尾，最终14份全量匿名备份核验仍在cc-vla-s2-ckptup运行；此时done而非closed，不能声称最终G9已通过。 事后同源核对FAIL：encoder原版16×100与VLA本地16×200，16个同名源H5记录SHA全部不同。done仅表示用户停止后的历史归档/技术恢复完成，不表示训练数据合规，不得复用旧go继续训练。",
       "owner": {
         "session": "",
         "host": "Codex@ip-10-242-11-177.us-west-2.compute.internal"
@@ -168,27 +169,27 @@
         },
         {
           "what": "G0至G6建库与在线对拍",
-          "evidence": "G0/G1及全量4995段65419窗PASS；G2原FAIL由用户「可以忽略 继续做」明确接受，来源例外记录待生成；EMA_SOURCE=PASS leaves=65 state_key=model exact=1 live_negative_rejected=1；EXPORT_PARITY=PASS windows=32 seed=0 max_abs=0 geometry_all_true=1；G3退出0，G4至G6待运行。",
+          "evidence": "G0/G1/G3/G4/G5/G6 PASS；G2原FAIL保留并按用户精确WAIVED。G4 windows64 encoder_max_abs0 e2e_max_abs0；G5 CPU65419行与GPU抽样1024窗 mismatch0；G6 train_max62 eval_max79 budget96。",
           "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "G7八卡短测与严格保存回读",
-          "evidence": "",
-          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/stage2-memory/smoke/",
-          "status": "pending"
+          "evidence": "LAUNCH_CONTRACT=PASS checks=77 failed=0；SMOKE_TRAIN_EXIT=0 steps=20；SAVE_LOAD=PASS missing=0 extra=0 shape_mismatch=0 dtype_mismatch=0 ema_mismatch=0 reference_output_max_abs=0 online_infer=1；总628秒。",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/stage2-memory/smoke/restore-cache.json",
+          "status": "pass"
         },
         {
-          "what": "G8正式80k训练及16份checkpoint",
-          "evidence": "",
-          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/",
-          "status": "pending"
+          "what": "用户提前停止于70k终点并保留14份完整checkpoint",
+          "evidence": "USER_STOP=CONFIRMED terminal_checkpoint=70000 saved=14 last_logged_step=70900；训练和增量真实EXIT_CODE=143，原80k完成门按用户终点变更取消，不伪写PASS。",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/stage2-memory/user-stop-70000.json",
+          "status": "pass"
         },
         {
-          "what": "G12远端60k依赖回读及严格恢复",
-          "evidence": "",
-          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/",
-          "status": "pending"
+          "what": "70k最终交付远端回读及严格恢复（替代原60k交付门）",
+          "evidence": "CKPT_70K_READY=PASS step=70000 root_complete=1 sha256_mismatch=0 strict_restore=1 online_infer=1",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/stage2-memory/close70-remote-20261027/restore-70000.json",
+          "status": "pass"
         }
       ],
       "long_tail": [
@@ -199,6 +200,13 @@
           "done_line": "MJ_CKPT_UPLOAD=PASS source_runs=2 files=35 bytes=7545592817 sha256_mismatch=0 public=1",
           "status": "pass",
           "evidence": "2026-10-26T18:21:20Z最外层EXIT_CODE=0，tmux自然退出；bucket=HongzeFu/motionjepa-stage2-pool4-3decoder-1025-v1"
+        },
+        {
+          "what": "用户70k终点最终全量匿名SHA核验",
+          "tmux": "cc-vla-s2-ckptup",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/close70-export.log",
+          "done_line": "CKPT_UPLOAD=PASS steps=14 root_files=17 sha256_mismatch=0 public=1 training_status=stopped_by_user final_step=70000 training_exit_code=143",
+          "status": "running"
         }
       ],
       "running_handles": [],
@@ -232,26 +240,59 @@
           "date": "2026-10-26",
           "quote": "同意继续",
           "scope": "按上述CPU全量+GPU1024窗方案继续原主run，无需重复确认。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-26",
+          "quote": "注意你的wandb 不要用tri的账号 用hongzefu的账号 正式训练",
+          "scope": "正式训练使用hongzefu账号；现有凭据API viewer已核hongzefu，配置entity为hongzefu-university-of-michigan，project为robomme-framesamp。凭据不写入日志或git。"
+        },
+        {
+          "kind": "adjust",
+          "date": "2026-10-27",
+          "quote": "停止现在的training 收尾 70k够了",
+          "scope": "立即停止训练及增量循环，以已完整保存70000为最终交付，保留5000至70000共14份，最终导出和严格恢复改验70000，保留真实143和原80k配置；完成收尾、解锁、R13清理与GitHub同步。"
         }
       ],
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "完成sampled比较器/消费合同合审并合入；仅恢复sampled→verify，不再次启动run-pack.sh",
-          "command": "合同主仓validation/stage2-memory/sampled-g5-contract.md；固定seed0/16任务每64/总1024；SAMPLED_G5_DESIGN_REVIEW=PASS",
-          "verdict_line": "PACKED_TOKEN_BYTES=PASS compared=65419；ENCODER_SAMPLE_BITEXACT=PASS compared=1024 total=65419；VERIFY_MOTION=PASS"
+          "what": "继续查看G9长尾；实际PASS+EXIT_CODE=0后归档最终发布清单并将本任务closed，失败则保留done并按规则记录长尾失败",
+          "command": "tail -F v1-store/logs/vla-s2-20261026/close70-export.log",
+          "verdict_line": "CKPT_UPLOAD=PASS steps=14 root_files=17 sha256_mismatch=0 public=1 training_status=stopped_by_user final_step=70000 training_exit_code=143；EXIT_CODE=0"
         },
         {
-          "what": "保留packed表和原中断日志；抽样认证随stage2_compat完整传递；完成后绑定yaml SHA、注册encoder并G6/G4",
-          "command": "table SHA=8de36e670d58c60859d48b37f29c989f2eed45344f5cd5fb2f7a96126394ee5c；index SHA=de388cb42f1fbb27e39dc429a6252cd755d6f67324c4eb8f236c4f60bf68e1ec；G4剩7126秒",
-          "verdict_line": "TRAIN_ES_BOUND=PASS；ONLINE_OFFLINE_PARITY=PASS"
-        },
-        {
-          "what": "G6、G4、20步与保存恢复通过后才正式80k；G2的用户例外须完整随快照和交付传递",
-          "command": "按原计划主run，备选B和benchmark不启动",
-          "verdict_line": "TRAIN_ES_BOUND=PASS；ONLINE_OFFLINE_PARITY=PASS；SMOKE_TRAIN=PASS；SAVE_LOAD=PASS"
+          "what": "本历史run来源错配，不得续训；新VLA任务须另按P-LINEAGE获得真实同源PASS后才可建库/起跑",
+          "command": "当前仅归档，不执行新的训练命令",
+          "verdict_line": "历史DATA_LINEAGE=FAIL不可WAIVE"
         }
-      ]
+      ],
+      "pre_start_self_check": [
+        {
+          "what": "启动后全链只读审查",
+          "evidence": "STARTUP_CONFIG_AUDIT=PASS blocking=0；STARTUP_DATA_SNAPSHOT_AUDIT=PASS blocking=0；ROOT_UPLOAD=PASS files=17",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/docs/training-doc/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/records/startup-audit.json",
+          "status": "pass"
+        },
+        {
+          "what": "事后补查原启动遗漏的数据同源强约束",
+          "evidence": "DATA_LINEAGE=FAIL encoder_ckpt=27daa832 encoder_source_pin=31d6ab0f845336e76dc25db64170a0bc4ac59ecf366c161025b9800285c74467 vla_input_pin=d7dd651edb8cb9652fa647a73a2d0d3c4be64d6876e1d7a186a5e8c75b02aafb files=16 mismatches=16",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/stage2-memory/data-lineage-posthoc.json",
+          "status": "fail"
+        }
+      ],
+      "monitoring": {
+        "mode": "当前仅CPU/网络最终导出，GPU任务全部结束",
+        "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/close70-export.log"
+      },
+      "data_lineage": {
+        "status": "FAIL",
+        "verdict": "DATA_LINEAGE=FAIL encoder_ckpt=27daa832 encoder_source_pin=31d6ab0f845336e76dc25db64170a0bc4ac59ecf366c161025b9800285c74467 vla_input_pin=d7dd651edb8cb9652fa647a73a2d0d3c4be64d6876e1d7a186a5e8c75b02aafb files=16 mismatches=16",
+        "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/stage2-memory/data-lineage-posthoc.json",
+        "waived": false,
+        "raw_h5_rehashed": false,
+        "disposition": "历史归档；任何新建库或起跑须重新满足P-LINEAGE"
+      }
     },
     "paired4-training-smoke": {
       "plan": {
@@ -1503,6 +1544,675 @@
           "verdict_line": "MERGE_TESTS=PASS"
         }
       ]
+    },
+    "orig16-vla-build": {
+      "plan": {
+        "file": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md",
+        "sha": "d5fe05d647a899e016bc513aa5fba03485a9b398"
+      },
+      "state": "closed",
+      "state_changed_at": "2026-10-30T19:24:30.215579+00:00",
+      "state_reason": "本地建库及全部起跑验收通过；训练库481对象932722720466字节公开上传及匿名全量读回PASS，零失配/退出0，长尾结束。两条正式60k与交付完成，主副本已按原权限解冻。",
+      "owner": {
+        "session": "",
+        "host": "Codex@AWS"
+      },
+      "depends_on": [],
+      "pre_handoff": [
+        {
+          "what": "固定版本计划审查、代码合入与定向验证",
+          "evidence": "PLAN_CONSISTENCY_REVIEW=PASS findings=2 blocking=0；全部合前合后审查PASS；S7合后261项及S5合后66项通过；MECH_MATRIX=PASS combos=8 contract_ok=8 forward_ok=8",
+          "where": "docs/dataset-build-doc/16task-orig100-1600ep-9e109419/launch.md；58d3b5c47731f68fd085b81f68595e641b5ec6fc",
+          "status": "pass"
+        },
+        {
+          "what": "官方16×100同源、双帧表、缓存导入与motion全量验收",
+          "evidence": "DATA_LINEAGE=PASS files=16 mismatches=0；1600集/768897帧/476857样本；双帧表各VERIFY_PACK=PASS scanned=768897 mismatches=0；WAN_CACHE_IMPORT=PASS copied42404 filled2824；VERIFY_MOTION=PASS scanned23253 mismatches0 nonfinite0；各阶段最终EXIT_CODE=0",
+          "where": "docs/dataset-build-doc/16task-orig100-1600ep-9e109419/records/",
+          "status": "pass"
+        },
+        {
+          "what": "G0至G6、八组合CPU验证与契约常量回填",
+          "evidence": "G0/G2/G3/G6、全表split、真实常量回填、最终CPU矩阵8/8、G4 ctx/mod各64窗输入差0/nonfinite0/退出0均PASS；PAIRED_CONFIG=PASS diff_keys=integration_type,memory_token_dim",
+          "where": "v1-store/validation/orig16-stage2",
+          "status": "pass"
+        }
+      ],
+      "long_tail": [
+        {
+          "what": "已授权完整训练库公开导出及全量匿名读回，与原GPU检查并行",
+          "tmux": "o16-trainset-up",
+          "started_at_utc": "2026-10-28T08:04:35Z",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261028/trainset-export.log",
+          "done_line": "HF_VERIFY=PASS及真实EXIT_CODE",
+          "status": "pass",
+          "evidence": "HF_VERIFY=PASS bucket=HongzeFu/robomme-16task-orig100-1600ep-trainset-20261028-v1 objects=481 bytes=932722720466 mismatches=0；EXIT_CODE=0",
+          "completed_at_utc": "2026-10-28T17:04:43Z"
+        }
+      ],
+      "running_handles": [],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-10-27",
+          "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md 开工 有问题问用户 尽可能不要阻塞 所有subagent全部astra high",
+          "scope": "按固定计划实施三机制、官方16×100建库、全部验收后两条8卡60k串行训练及公开上传；不做评估，不扩大清理范围。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-27",
+          "quote": "登记三项任务（推荐）",
+          "scope": "登记建库、context 60k、modulation 60k，依赖按计划。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-27",
+          "quote": "训练前尽可能不要阻塞 先跑起来 明天上午用户再来决策",
+          "scope": "夜间持续推进可执行事项并记录实际结果；下条明确仍须执行原步骤。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-27",
+          "quote": "不要后置任何步骤 该做的还是做 但是失败了只记录 让用户决策",
+          "scope": "所有原步骤不跳过、不后置；失败真实记FAIL及证据，不伪改PASS，继续技术上可执行的后续工作，交用户决策；数据、模型、seed、批量、步数和两条顺序不变。撤回未实施的后置方案。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-30",
+          "quote": "训练完了为什么不解冻合并branch",
+          "scope": "核实训练、上传与恢复结束，按原权限恢复主副本并将冻结期开发分支完整合回v4-256concat1，完成留档及状态收尾；不启动新计划。"
+        }
+      ],
+      "pending_decisions": [
+        {
+          "what": "按用户要求保留原失败供明早复核：两张帧表verify首次因不支持--layout返回2，检查当时未执行；接口已最小修正且后续真实全量verify均PASS，数据及判据未变。",
+          "evidence": "原frames-4x4.log/frames-8x8.log EXIT_CODE=2；新verify-frames-4x4.log/verify-frames-8x8.log各VERIFY_PACK=PASS scanned=768897 mismatches=0 EXIT_CODE=0",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261028/",
+          "status": "recorded_resolved"
+        },
+        {
+          "what": "占位负例依赖默认DATASET，真实回填后误进入本地打包；已精确中断、保留原退出2及产物，测试修复已合入，原三文件完整重测106项通过；未上传、未改源数据。",
+          "evidence": "原75 passed后KeyboardInterrupt，EXIT_CODE=2，163.37s；e8e517b测试修复合前合后审查PASS；完整重测106 passed/34.18s/退出0",
+          "where": "docs/dataset-build-doc/16task-orig100-1600ep-9e109419/records/build-pins-test-incident.json",
+          "status": "recorded_resolved"
+        }
+      ],
+      "next_steps": []
+    },
+    "orig16-vla-train-ctx32x4x4-split4-60k": {
+      "plan": {
+        "file": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md",
+        "sha": "d5fe05d647a899e016bc513aa5fba03485a9b398"
+      },
+      "state": "closed",
+      "state_changed_at": "2026-10-30T19:24:30.215579+00:00",
+      "state_reason": "正式60000步结束、59999已保存，退出0；训练墙钟146038秒。12份checkpoint全量公开上传与匿名读回通过，零失配；G12严格恢复和真实在线推理通过。档案完成，自有后台任务均退出，主副本原权限已恢复。",
+      "owner": {
+        "session": "",
+        "host": "Codex@AWS"
+      },
+      "depends_on": [
+        {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA",
+          "branch": "v4-256concat1",
+          "task": "orig16-vla-build",
+          "gate": "本地数据及全部原起跑检查已PASS；训练库公开上传属于独立长尾，不等待任务整体done。"
+        }
+      ],
+      "pre_handoff": [
+        {
+          "what": "同源、配对配置、两条短测与保存恢复通过",
+          "evidence": "DATA_LINEAGE与配对配置PASS；G0至G6、矩阵8/8、两条LAUNCH_CONTRACT49/49与8卡20步/严格SAVE_LOAD均PASS，参考输出最大差0，退出0",
+          "where": "docs/dataset-build-doc/16task-orig100-1600ep-9e109419/result.md",
+          "status": "pass"
+        },
+        {
+          "what": "context正式训练退出0且59999已保存，满足modulation即时接续条件",
+          "evidence": "TRAIN_FINAL_RECORD=PASS run=orig100-ctx32x4x4-motion-s2split4x256-b128-60k tail_steps=99 ema_leaves=59；state_step=60000 checkpoint_step=59999；EXIT_CODE=0",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/docs/training-doc/orig100-ctx32x4x4-motion-s2split4x256-b128-60k/records/completion.json",
+          "status": "pass"
+        },
+        {
+          "what": "两条训练结束后完成context 59999严格恢复与交付",
+          "evidence": "CKPT_DELIVERY_READY=PASS step=59999 root_complete=1 sha256_mismatch=0 strict_restore=1 online_infer=1；DELIVERY_EXIT_CODE code=0；result.md与records已归档",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/docs/training-doc/orig100-ctx32x4x4-motion-s2split4x256-b128-60k/result.md；/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/orig16-stage2/G12-ctx.json",
+          "status": "pass"
+        }
+      ],
+      "long_tail": [
+        {
+          "what": "context增量12份与最终全量匿名读回",
+          "tmux": "o16-backup-ctx",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261028/checkpoint-backup-ctx.log",
+          "done_line": "CKPT_UPLOAD=PASS steps=12及真实EXIT_CODE",
+          "status": "pass",
+          "evidence": "HF_VERIFY=PASS bucket=HongzeFu/robomme-vla-orig100-ctx32x4x4-motion-s2split-60k-v1 objects=277 bytes=139382203051 mismatches=0；CKPT_UPLOAD=PASS steps=12；EXIT_CODE=0",
+          "completed_at_utc": "2026-10-30T03:05:21Z"
+        }
+      ],
+      "running_handles": [],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-10-27",
+          "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md 开工 有问题问用户 尽可能不要阻塞 所有subagent全部astra high",
+          "scope": "计划全部前置通过后自动开始context 60k，公开增量上传12份checkpoint。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-27",
+          "quote": "登记三项任务（推荐）",
+          "scope": "登记串行训练任务。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-27",
+          "quote": "不要后置任何步骤 该做的还是做 但是失败了只记录 让用户决策",
+          "scope": "原验证及20步保存恢复仍执行，不后置；失败原样留证，继续可执行事项，用户明早决策，不擅自改实验。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-30",
+          "quote": "训练完了为什么不解冻合并branch",
+          "scope": "核实训练、上传与恢复结束，按原权限恢复主副本并将冻结期开发分支完整合回v4-256concat1，完成留档及状态收尾；不启动新计划。"
+        }
+      ],
+      "pending_decisions": [],
+      "next_steps": []
+    },
+    "orig16-vla-train-modul32x4x4-split4-60k": {
+      "plan": {
+        "file": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md",
+        "sha": "d5fe05d647a899e016bc513aa5fba03485a9b398"
+      },
+      "state": "closed",
+      "state_changed_at": "2026-10-30T19:24:30.215579+00:00",
+      "state_reason": "正式60000步结束、59999已保存，退出0；训练墙钟58731秒。12份checkpoint全量公开上传与匿名读回通过，零失配；G12严格恢复和真实在线推理通过。档案完成，自有后台任务均退出，主副本原权限已恢复。",
+      "owner": {
+        "session": "",
+        "host": "Codex@AWS"
+      },
+      "depends_on": [
+        {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA",
+          "branch": "v4-256concat1",
+          "task": "orig16-vla-train-ctx32x4x4-split4-60k",
+          "gate": "仅等待正式训练EXIT_CODE=0及59999已保存；不等待任务done、上传或G12。"
+        }
+      ],
+      "pre_handoff": [
+        {
+          "what": "modulation正式训练退出0且59999已保存",
+          "evidence": "TRAIN_FINAL_RECORD=PASS run=orig100-m32x4x4-modul-motion-s2split4x256-b128-60k tail_steps=99 ema_leaves=65；state_step=60000 checkpoint_step=59999；EXIT_CODE=0",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/docs/training-doc/orig100-m32x4x4-modul-motion-s2split4x256-b128-60k/records/completion.json",
+          "status": "pass"
+        },
+        {
+          "what": "59999严格恢复、交付与档案完成",
+          "evidence": "CKPT_DELIVERY_READY=PASS step=59999 root_complete=1 sha256_mismatch=0 strict_restore=1 online_infer=1；DELIVERY_EXIT_CODE code=0；result.md与records已归档",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/docs/training-doc/orig100-m32x4x4-modul-motion-s2split4x256-b128-60k/result.md；/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/orig16-stage2/G12-modul.json",
+          "status": "pass"
+        }
+      ],
+      "long_tail": [
+        {
+          "what": "第二条实际起跑后增量12份与最终全量匿名读回",
+          "tmux": "o16-backup-modul",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261028/checkpoint-backup-modul.log",
+          "done_line": "CKPT_UPLOAD=PASS steps=12及真实EXIT_CODE",
+          "status": "pass",
+          "evidence": "HF_VERIFY=PASS bucket=HongzeFu/robomme-vla-orig100-m32x4x4-modul-motion-s2split-60k-v1 objects=284 bytes=142989332560 mismatches=0；CKPT_UPLOAD=PASS steps=12；EXIT_CODE=0",
+          "completed_at_utc": "2026-10-30T19:17:45Z"
+        }
+      ],
+      "running_handles": [],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-10-27",
+          "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md 开工 有问题问用户 尽可能不要阻塞 所有subagent全部astra high",
+          "scope": "context满足计划接续条件后立即开始同配置modulation 60k，公开增量上传12份checkpoint；两条只差融合方式及对应memory_token_dim。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-27",
+          "quote": "登记三项任务（推荐）",
+          "scope": "登记串行训练任务。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-27",
+          "quote": "不要后置任何步骤 该做的还是做 但是失败了只记录 让用户决策",
+          "scope": "保留原验证顺序；诊断失败原样记录交用户决策，能执行的工作继续，实验配置与串行顺序不变。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-30",
+          "quote": "训练完了为什么不解冻合并branch",
+          "scope": "核实训练、上传与恢复结束，按原权限恢复主副本并将冻结期开发分支完整合回v4-256concat1，完成留档及状态收尾；不启动新计划。"
+        }
+      ],
+      "pending_decisions": [],
+      "next_steps": []
+    },
+    "policy-worktree-consolidation-20261027": {
+      "plan": {
+        "file": null,
+        "sha": null
+      },
+      "state": "closed",
+      "state_changed_at": "2026-10-27T19:41:40Z",
+      "state_reason": "按用户指令将评估分支合入主目录并删除本机-temp/-eval工作树，完整保留源提交历史与主v1-store；必要289项CPU测试通过。扩展测试的一项NFS缺失失败及两份旧测试收集错误已如实留档。",
+      "owner": {
+        "session": "",
+        "host": "Codex@AWS"
+      },
+      "depends_on": [],
+      "pre_handoff": [
+        {
+          "what": "合并兼容性与内容保全审查",
+          "evidence": "POST_MERGE_REVIEW=PASS tree=cb08d8971294b1f21677641eba02a98daf57b7f1 findings=0 blocking=0",
+          "where": "docs/maintenance/1027-policy-worktree-consolidation.md",
+          "status": "pass"
+        },
+        {
+          "what": "合并必要CPU测试",
+          "evidence": "REQUIRED_CPU_TESTS=PASS passed=289 failed=0 skipped=0 seconds=38.00 EXIT_CODE=0",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/maintenance/policy-consolidation-20261027/required-tests.log",
+          "status": "pass"
+        },
+        {
+          "what": "本地重复工作树清理",
+          "evidence": "WORKTREE_CONSOLIDATION=PASS copies_removed=2 unique_history_preserved=1 main_store_preserved=1",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/maintenance/policy-consolidation-20261027/after-cleanup.json",
+          "status": "pass"
+        },
+        {
+          "what": "合并提交已同步远端",
+          "evidence": "6126d494a7488a2f597054d9706d6007df854d3f",
+          "where": "origin/v4-256concat1",
+          "status": "pass"
+        }
+      ],
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-10-27",
+          "quote": "你现在policy learning有3个repo 你看一下是否可以合并 然后删除另外两个copy的",
+          "scope": "检查并合并三个本地policy工作目录，保留主目录，删除-temp与-eval重复副本；保全历史和独有内容。"
+        }
+      ],
+      "pending_decisions": [],
+      "next_steps": []
+    },
+    "orig16-vla-train-ctx32x4x4-concat1x1024-60k": {
+      "plan": {
+        "file": "1030-orig16-context-modul-nosplit-60k-plan.md",
+        "sha": "1fe56c6"
+      },
+      "state": "closed",
+      "state_changed_at": {
+        "utc": "2026-11-01T04:30:36+00:00",
+        "america_new_york": "2026-11-01T00:30:36-04:00"
+      },
+      "owner": {
+        "session": "https://claude.ai/code/session_01WvPQiT7q62diEc2dNrQP9U",
+        "host": "Claude@AWS"
+      },
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-10-30",
+          "quote": "「我希望开工的时候只有一份仓库和一份temp」「和上次一样」「同意计划更新」「规则可以更新」「登记你也可以确认」「其他你来决策」「开工」；计划内既定授权：「同意增量上传诊断失败后就问用户 改写md」",
+          "scope": "1030 计划全部：代码最小改动、两条20步短测、context→modulation 串行60k、两条各12份增量公开上传与最终匿名回读、G12恢复；诊断失败即停并询问用户；HF验收后删本地stage"
+        },
+        {
+          "kind": "scope",
+          "date": "2026-10-31",
+          "quote": "「modulation concat不训练放弃 context训练完毕就收尾」",
+          "scope": "context 训练完毕即收尾"
+        }
+      ],
+      "pending_decisions": [],
+      "long_tail": [],
+      "running_handles": [],
+      "state_reason": "60000步完成退出0（31h10m47s，1.9 s/步）；12份公开上传全量匿名回读零失配；G12严格恢复与在线推理PASS；本地stage/cache按用户规则删除；后台会话全部退出、HOLD已解除。modulation concat 已由用户放弃。",
+      "depends_on": [
+        "orig16-vla-build"
+      ],
+      "pre_handoff": [
+        {
+          "what": "20步短测",
+          "evidence": "SMOKE_ALL=PASS runs=2 train_head=6cd4d6cd11ab6e718d05af5b8dc9cda8c656599c",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-concat-20261030/smoke.log",
+          "status": "pass"
+        },
+        {
+          "what": "正式60k训练 EXIT_CODE=0 且 TRAIN_FINAL_RECORD=PASS",
+          "evidence": "TRAIN_FINAL_RECORD=PASS run=orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k tail_steps=99 ema_leaves=59; EXIT_CODE=0",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k.log",
+          "status": "pass"
+        },
+        {
+          "what": "G12 CKPT_DELIVERY_READY=PASS step=59999",
+          "evidence": "CKPT_DELIVERY_READY=PASS step=59999 root_complete=1 sha256_mismatch=0 strict_restore=1 online_infer=1",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-concat-20261030/delivery-restore-ctx.log",
+          "status": "pass"
+        },
+        {
+          "what": "12份增量+最终 HF_VERIFY=PASS CKPT_UPLOAD=PASS steps=12",
+          "evidence": "HF_VERIFY=PASS bucket=HongzeFu/robomme-vla-orig100-ctx32x4x4-motion-s2concat1x1024-60k-v1 objects=273 bytes=139451480655 mismatches=0; CKPT_UPLOAD=PASS steps=12",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-concat-20261030/checkpoint-backup-ctx.log",
+          "status": "pass"
+        }
+      ],
+      "next_steps": []
+    },
+    "orig16-vla-train-modul32x4x4-concat1x1024-60k": {
+      "plan": {
+        "file": "1030-orig16-context-modul-nosplit-60k-plan.md",
+        "sha": "1fe56c6"
+      },
+      "state": "closed",
+      "state_changed_at": {
+        "utc": "2026-11-01T02:21:46+00:00",
+        "america_new_york": "2026-10-31T22:21:46-04:00"
+      },
+      "owner": {
+        "session": "https://claude.ai/code/session_01WvPQiT7q62diEc2dNrQP9U",
+        "host": "Claude@AWS"
+      },
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-10-30",
+          "quote": "「我希望开工的时候只有一份仓库和一份temp」「和上次一样」「同意计划更新」「规则可以更新」「登记你也可以确认」「其他你来决策」「开工」；计划内既定授权：「同意增量上传诊断失败后就问用户 改写md」",
+          "scope": "1030 计划全部：代码最小改动、两条20步短测、context→modulation 串行60k、两条各12份增量公开上传与最终匿名回读、G12恢复；诊断失败即停并询问用户；HF验收后删本地stage"
+        },
+        {
+          "kind": "stop",
+          "date": "2026-10-31",
+          "quote": "「modulation concat不训练放弃 context训练完毕就收尾」",
+          "scope": "放弃 modulation concat 训练与备份"
+        }
+      ],
+      "pending_decisions": [],
+      "long_tail": [],
+      "running_handles": [],
+      "state_reason": "用户 2026-10-31 美东 22:2x 原话「modulation concat不训练放弃 context训练完毕就收尾」：未训练即放弃。已停 o16-concat-backup-modul-10301615（仅等待、未上传任何对象），并在其日志路径放 ABANDONED_BY_USER 占位，串行入口接 modulation 时被单条入口 noclobber 拒绝（退出2、不占GPU、不建run），由链写 WAIT_USER_DECISION 留证。无 checkpoint、无 bucket。",
+      "depends_on": [
+        "orig16-vla-build",
+        "orig16-vla-train-ctx32x4x4-concat1x1024-60k"
+      ],
+      "pre_handoff": [
+        {
+          "what": "20步短测",
+          "evidence": "SMOKE_ALL=PASS runs=2 train_head=6cd4d6cd11ab6e718d05af5b8dc9cda8c656599c",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-concat-20261030/smoke.log",
+          "status": "pass"
+        },
+        {
+          "what": "正式60k训练 EXIT_CODE=0 且 TRAIN_FINAL_RECORD=PASS",
+          "evidence": "",
+          "where": "v1-store/logs/orig100-m32x4x4-modul-motion-s2concat1x1024-b128-60k.log",
+          "status": "abandoned_by_user"
+        },
+        {
+          "what": "G12 CKPT_DELIVERY_READY=PASS step=59999",
+          "evidence": "",
+          "where": "",
+          "status": "abandoned_by_user"
+        },
+        {
+          "what": "12份增量+最终 HF_VERIFY=PASS CKPT_UPLOAD=PASS steps=12",
+          "evidence": "",
+          "where": "",
+          "status": "abandoned_by_user"
+        }
+      ],
+      "next_steps": []
+    },
+    "orig16-context-wan-timepool1024-60k": {
+      "plan": {
+        "file": "1106-orig16-context-wan-timepool1024-60k-plan.html",
+        "sha": "ed5714c389cefbae0035f0d878718f5145e04c94"
+      },
+      "state": "running",
+      "state_changed_at": "2026-11-07T04:12:48.124325+00:00",
+      "state_reason": "建库与 G0–G8 通过，正式 60k 起跑；主检出 HOLD 冻结，训练结束前不再提交。",
+      "owner": {
+        "session": "https://claude.ai/code/session_01WvPQiUrxBxra275CF71Wtx",
+        "host": "Claude@AWS"
+      },
+      "depends_on": [
+        "orig16-vla-build",
+        "orig16-vla-train-ctx32x4x4-concat1x1024-60k"
+      ],
+      "pre_handoff": [
+        {
+          "what": "计划参数与数据链路独立审查",
+          "evidence": "参数/训练不变量审查：修正文件SHA与canonical SHA标签后PASS；数据/缓存/时序审查PASS；两h1、锚点、自包含HTML和浏览器渲染检查通过。新模型/建库/训练闸门均未执行。",
+          "where": "1106-orig16-context-wan-timepool1024-60k-plan.html",
+          "status": "pass"
+        },
+        {
+          "what": "开工前计划一致性审查",
+          "evidence": "PLAN_CONSISTENCY_REVIEW=FAIL base=e823f4c findings=9 blocking=2；裁决与文字修订已落入 ed5714c，用户再次同意",
+          "where": "ed5714c commit body",
+          "status": "pass"
+        },
+        {
+          "what": "恢复与全表闸门 G0–G4",
+          "evidence": "DATA_LINEAGE=PASS files=16 mismatches=0；WAN_RESTORE_EQ=PASS windows=45228 input_mismatches=0 latent_mismatches=0；WINDOW_EQ=PASS windows=23253；POOL_CONTRACT=PASS；POOL_TABLE_EQ=PASS rows=23253 mismatches=0 nonfinite=0 bytes=95244288；VERIFY_MOTION=PASS status=verified gate_records=5",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig16-wan-timepool1024/build.log",
+          "status": "pass"
+        },
+        {
+          "what": "训练不变量 G5、同 latent G6",
+          "evidence": "VLA_PARAM_EQ=PASS total=3363663120 trainable=2948859424 frozen=414803696 leaves=59 trainable_leaves=36；VLA_INIT_EQ=PASS；TRAIN_CONFIG_EQ=PASS；NON_MOTION_EQ=PASS mismatches=0；POOL_SHARED_EQ=PASS max_abs=0 bitwise_equal=1",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig16-wan-timepool1024/build.log",
+          "status": "pass"
+        },
+        {
+          "what": "短测 G7、G8",
+          "evidence": "SMOKE_TRAIN_EXIT=0；ONLINE_WINDOW_EQ=PASS windows=64 input_mismatches=0 cross_window_state=0；ONLINE_NUMERICS=RECORDED；首次 SAVE_LOAD=FAIL（缺编译缓存环境，max_abs=0.0195）保留；补环境后同 checkpoint SAVE_LOAD=PASS checkpoint_step=19 state_step=20",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig16-wan-timepool1024/smoke-11062246.log；/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig16-wan-timepool1024/save-load-retry-11062246.log",
+          "status": "pass"
+        },
+        {
+          "what": "正式 60k 与 G9",
+          "evidence": "TRAIN_FINAL_RECORD=PASS state_step=60000 checkpoint_step=59999；CKPT_INVENTORY=PASS steps=12；RESTORE_POOL=PASS；EXIT_CODE=0",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx32x4x4-wan-timepool8x8-b128-60k.log",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [],
+      "running_handles": [
+        {
+          "tmux": "o16-tp-train-11062312",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx32x4x4-wan-timepool8x8-b128-60k.log",
+          "done_line": "EXIT_CODE=0 且 TRAIN_FINAL_RECORD=PASS"
+        }
+      ],
+      "authorizations": [
+        {
+          "kind": "decision",
+          "date": "2026-11-06T20:43:30.183287-05:00",
+          "quote": "给出重新训到方案 按照时间优先\t8→1取均值\t32×32→8×8\t[1,16,8,8]\t1024的机制 相当于替换我们的encoder 其他全部保持一致 都是context b128 60k 参数量也是完全一致的？写html",
+          "scope": "只撰写重训HTML方案；不授权代码实现、下载、建库、训练或评估。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-06T20:43:30.183287-05:00",
+          "quote": "然后输入改为和encoder一样的输入 就是完全一致33帧率  只做pooling 不要用接续的wan",
+          "scope": "相同33帧像素窗口独立Wan编码；窗口间不续接VAE缓存。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-06T20:43:30.183287-05:00",
+          "quote": "仍去掉首帧，只平均后 8 个（沿用刚才机制）",
+          "scope": "独立33帧产生9个latent，保留RGB首帧输入，排除第0号latent后对其余8个做raw固定池化。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-06T20:43:30.183287-05:00",
+          "quote": "登记为 planned，便于后续会话接手",
+          "scope": "仅登记计划状态planned，不构成实施go授权。"
+        },
+        {
+          "kind": "go",
+          "date": "2026-11-06T20:47:41.613777-05:00",
+          "quote": "robomme_policy_learning_MotionJEPA/1106-orig16-context-wan-timepool1024-60k-plan.html 开工",
+          "scope": "计划全部阶段 0-5：代码实现、固定 revision 恢复下载（约 388GB）、建库、8 卡 20 步短测、8 卡 60k 正式训练、12 份 checkpoint 公开备份与读回；不含策略成功率评估。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-06T20:53:03.273543-05:00",
+          "quote": "全归 E 一个脚本；并入 smoke 句柄",
+          "scope": "PLAN_CONSISTENCY_REVIEW 两个阻塞项裁决，已修入 ed5714c。"
+        },
+        {
+          "kind": "go",
+          "date": "2026-11-06T20:53:03.273543-05:00",
+          "quote": "同意",
+          "scope": "针对 ed5714c 修订后计划及所列两处差异（16 路下载；从当前 HEAD 建分支 v9-ctx-wan-timepool1024-60k）；范围同计划阶段 0-5，不含策略评估。"
+        }
+      ],
+      "pending_decisions": [],
+      "next_steps": [
+        {
+          "what": "60k 结束后跑 G9 final（带该 run 编译缓存环境），备份 12 份 checkpoint 并读回，写 result.md",
+          "command": "check_orig16_timepool.py final；checkpoint 备份见计划 11.3",
+          "verdict_line": "RESTORE_POOL=PASS；CKPT_UPLOAD=PASS steps=12"
+        }
+      ]
+    },
+    "ctx-wan-timepool1024-3seed-eval": {
+      "plan": {
+        "file": "1107-ctx-wan-timepool1024-3seed-eval-plan.html",
+        "sha": "17dfb4cc20fa03c1b68f9a45a18277cfef164966"
+      },
+      "state": "done",
+      "state_changed_at": "2026-11-08T15:22:44.838877+00:00",
+      "state_reason": "THREE_SEED=PASS seeds=7,42,0 overall=35.46±0.79；档案 docs/evaluation-doc/ctx-wan-timepool1024-3seed-1107/result.md（069ccae）。",
+      "owner": {
+        "session": "https://claude.ai/code/session_01WvPQiRHq3Pxv6peBZdBWos",
+        "host": "Claude@AWS"
+      },
+      "depends_on": [
+        {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA",
+          "branch": "v9-ctx-wan-timepool1024-60k",
+          "task": "orig16-context-wan-timepool1024-60k",
+          "gate": "仅等训练日志末行 EXIT_CODE=0 且 59999 存在；不等 G9、备份或任务 done。"
+        }
+      ],
+      "pre_handoff": [
+        {
+          "what": "开工前计划审查与调整",
+          "evidence": "PLAN_CONSISTENCY_REVIEW=FAIL base=17dfb4c findings=1 blocking=1；ADJUST_REVIEW=PASS scale=same findings=0",
+          "where": "a7eee52 commit body",
+          "status": "pass"
+        },
+        {
+          "what": "E1 移植与审查",
+          "evidence": "LOCAL_EVAL_TESTS=PASS failed=0；PRE_MERGE_REVIEW=PASS base=bb2ade6 tip=012adb8；POST_MERGE_REVIEW=PASS base=bb2ade6 tip=ffb307c；合并后 53 passed",
+          "where": "ffb307c",
+          "status": "pass"
+        },
+        {
+          "what": "三 seed 评估",
+          "evidence": "THREE_SEED=PASS seeds=7,42,0 overall=35.46±0.79；EXIT_CODE=0",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/ctx-wan-timepool1024-3seed-1107/simple-chain.log",
+          "status": "pass"
+        }
+      ],
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-11-07T15:37:18.348299-05:00",
+          "quote": "同意开始",
+          "scope": "按 1107 计划（17dfb4c）移植本机评估代码、布触发链、训练结束后跑官方 800 局 seed 42/7/0、写档案；不补 concat 对照，不上传视频。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-07T15:37:18.348299-05:00",
+          "quote": "你需要强制隔一段时间唤醒一次 以免时间到了没被唤醒 注意我说的是claude agent 不是代码的唤醒！",
+          "scope": "用 CronCreate 每 20 分钟唤醒 Claude 会话核查状态。"
+        }
+      ],
+      "pending_decisions": [],
+      "next_steps": []
+    },
+    "ctx-concat1x1024-3seed-eval": {
+      "plan": {
+        "file": "1108-ctx-concat1x1024-3seed-local-eval-plan.html",
+        "sha": "83f3d2103f4db182e96057ae691ea9556ef9a8cf"
+      },
+      "state": "closed",
+      "state_changed_at": "2026-11-08T15:22:44.838877+00:00",
+      "state_reason": "用户放弃（11-08 美东 10:20）；seed 42 停在 674/800，不构成成绩；会话与残留进程已停，GPU 归零；部分产物与 59999 保留未删。",
+      "owner": {
+        "session": "https://claude.ai/code/session_01WvPQiRHq3Pxv6peBZdBWos",
+        "host": "Claude@AWS"
+      },
+      "depends_on": [
+        "ctx-wan-timepool1024-3seed-eval"
+      ],
+      "pre_handoff": [
+        {
+          "what": "开工审查",
+          "evidence": "PLAN_CONSISTENCY_REVIEW=PASS base=83f3d21 findings=2 blocking=0",
+          "where": "dcf23da commit body",
+          "status": "pass"
+        },
+        {
+          "what": "checkpoint 下载校验",
+          "evidence": "VLA_VERIFY=PASS step=59999 files=21 bytes=11587512853 sha_mismatch=0",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/ctx-concat1x1024-3seed-1108/fetch.log",
+          "status": "pass"
+        },
+        {
+          "what": "E2 代码",
+          "evidence": "PRE_MERGE_REVIEW=PASS base=83f3d21 tip=371a599；POST_MERGE_REVIEW=PASS merge=dcf23da tests=56passed files=2",
+          "where": "dcf23da",
+          "status": "pass"
+        },
+        {
+          "what": "三 seed 评估",
+          "evidence": "用户放弃，未完成（seed 42 674/800）",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/ctx-concat1x1024-3seed-1108/simple-chain.log",
+          "status": "abandoned"
+        }
+      ],
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-11-08T08:33:01.450763-05:00",
+          "quote": "同意开始",
+          "scope": "按 1108 计划（83f3d21）下载 concat 59999、加 --profile、timepool 结束后本机评 seed 42/7/0、写档案。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-08T08:33:01.450763-05:00",
+          "quote": "跑完了之后立刻骑我们自己的那个context No Split Motion 的那个 model，就是我在 Great Lakes 上 eval 是三十七的成功率的那那一份。 / 也是3seed",
+          "scope": "被评模型 orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k 59999，三 seed。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-08T10:22:44.838877-05:00",
+          "quote": "你把你现在的这个 timepool 一零二四 context 的结果归档，然后 concat 不用再跑了，放弃。",
+          "scope": "停止 concat 评估并归档 timepool 结果；不删除已有产物。"
+        }
+      ],
+      "pending_decisions": [],
+      "next_steps": []
     }
   }
 }

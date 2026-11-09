@@ -14,7 +14,7 @@
 
 ## 已核实的输入与资产
 
-以下路径均以主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA` 为根。两库 source/framesamp 是实体目录，4×4 packed metadata 均为 `verified`。前置结果已在数据组完整提交 `ec6c9e35784a96f636a587dd737dffa294b616ad` 归档：[公开16任务库](../../dataset-build-doc/16task-pub-1600ep/README.md)、[counting四任务库及严格子集检查](../../dataset-build-doc/4task-counting-pub-400ep/README.md)、[full20真实保存/恢复](../smoke-orig80k-full-0925/README.md)、[count20真实保存/恢复](../smoke-orig80k-count-0925/README.md)。这些已验收的数据/产物范围与本次正式输入结果分开，也不自动补齐历史最外终态的独立证据；原始记录保持不变。阶段关系遵循[原版80k计划](../../../0925-orig-80k-full-counting-4plus4-plan.md)，本次CPU取证按用户允许补记该边界后的决定执行。
+以下路径均以主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA` 为根。两库 source/framesamp 是实体目录，4×4 packed metadata 均为 `verified`。前置结果已在数据组完整提交 `ec6c9e35784a96f636a587dd737dffa294b616ad` 归档：[公开16任务库](../../dataset-build-doc/16task-pub-1600ep/README.md)、[counting四任务库及严格子集检查](../../dataset-build-doc/4task-counting-pub-400ep/README.md)、[full20真实保存/恢复](../smoke-orig80k-full-0925/README.md)、[count20真实保存/恢复](../smoke-orig80k-count-0925/README.md)。这些已验收的数据/产物范围与本次正式输入结果分开，也不自动补齐历史最外终态的独立证据；原始记录保持不变。阶段关系遵循[原版80k计划](../../root-archive/0925-orig-80k-full-counting-4plus4-plan.md)，本次CPU取证按用户允许补记该边界后的决定执行。
 
 | 组 | 库路径（相对 `v1-store/datasets/`） | 总帧 / 执行样本 | manifest 内嵌 SHA256 |
 |---|---|---|---|

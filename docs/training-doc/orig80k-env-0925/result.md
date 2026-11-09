@@ -16,7 +16,7 @@ P0起跑时的用户原话：「开始实现该计划 有问题立刻问用户 �
 
 **三样本取证后的最新用户原话：「允许这四键缺失与 None 等价」。** 仅对`MOTION_NONE_KEYS`中的`motion_emb`、`motion_pos`、`motion_mask`、`mem_order`应用该规则：键缺失或值严格为None时可在比较投影中排除；False、零数组等任何非None值和其他键的新增/缺失仍失败。原始`raw_all/transformed_all/inputs_all`继续保留所有字段，真正输入不补键、不改值，训练标量与状态仍须bitwise相同。此项事后授权不篡改上述三样本原始严格失败或P0记录。
 
-当前工具协议使用`schema=2`和`metadata.contract.input_comparison=host_numeric_exact_motion_none_v1`，并在`metadata.contract.equivalent_motion_none_keys`完整登记四键白名单，替代此前仅数值等价阶段的`host_numeric_exact_signed_zero_v1`。数值叶另记`numeric`的编码、元素数、字节数及SHA256，原始array描述完整保留。规范编码仍为`exact-real-sign-u64-exp2-i16-le-v1`，每元素11字节；整数不经浮点转换，避免64位整数丢精度。接口与判据详见[根计划§1.2](../../../0925-orig-80k-full-counting-4plus4-plan.md#12-两条输入链先比较交付内容再比较训练)，旧schema、缺摘要或不匹配的白名单契约不得回退通过。精确数值口径曾通过123项针对测试；加入获准的四None键规则后，输入工具与训练判定器合测128项通过、12.32秒。上述测试不替代正式两库的完整输入取证或100步训练对拍。
+当前工具协议使用`schema=2`和`metadata.contract.input_comparison=host_numeric_exact_motion_none_v1`，并在`metadata.contract.equivalent_motion_none_keys`完整登记四键白名单，替代此前仅数值等价阶段的`host_numeric_exact_signed_zero_v1`。数值叶另记`numeric`的编码、元素数、字节数及SHA256，原始array描述完整保留。规范编码仍为`exact-real-sign-u64-exp2-i16-le-v1`，每元素11字节；整数不经浮点转换，避免64位整数丢精度。接口与判据详见[根计划§1.2](../../root-archive/0925-orig-80k-full-counting-4plus4-plan.md#12-两条输入链先比较交付内容再比较训练)，旧schema、缺摘要或不匹配的白名单契约不得回退通过。精确数值口径曾通过123项针对测试；加入获准的四None键规则后，输入工具与训练判定器合测128项通过、12.32秒。上述测试不替代正式两库的完整输入取证或100步训练对拍。
 
 ## 版本与实际启动
 

@@ -134,3 +134,4 @@
 - **Monitor 过滤词表补充**：训练 / 建库作业的缺陷特征行 `nan`、`NaN`、`CUDA out of memory`、`Killed`；完成行 `EXIT_CODE=`、`Epoch`。
 - **plan mode 只读核实清单**：当前环境（A / B）与工作副本落点；`v1-store/` 是实体目录还是可写 symlink（开发副本例外）；`.venv` 是否独立；`paths.sh` 的 `v1_prepare_dirs` 定义在 `scripts/training/paths.sh` 还是 `scripts/dataset/paths.sh`；计划文件现名（`MMDD-` 前缀）。
 - Agent 工具子代理与 Workflow 的用法以标记块为准，本仓库无额外约定。
+- **P-LINEAGE 的 Claude Code 落地（2026-10-27）**：规则本体见 `AGENTS.md`「项目专属规则」P-LINEAGE（encoder 与 VLA 必须同一数据集、逐文件 sha256 相同，不得 WAIVE、不得写成风险项继续）。主会话在派发任何 VLA 建库／起跑子代理**之前**，先自己跑或派只读代理跑 `DATA_LINEAGE` 检查，把判定行 `DATA_LINEAGE=PASS|FAIL encoder_ckpt=<sha8> encoder_source_pin=<sha> vla_input_pin=<sha> files=<n> mismatches=<k>` 原样贴进当轮汇报；FAIL 或缺判定行即不派发、交用户。同批并行多条 run 同时贴 `PAIRED_RUNS_SAME_LIB=PASS`。审查代理的 `PRE_MERGE_REVIEW` 凡涉及起跑脚本／契约的改动，必须核对其中存在该闸门且 FAIL 即停工，缺失即判 `PRE_MERGE_REVIEW=FAIL`。

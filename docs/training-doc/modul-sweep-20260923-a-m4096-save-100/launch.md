@@ -4,7 +4,7 @@
 
 ## 用户决定与范围
 
-用户原话：「/scratch/hongze/robomme_policy_learning_MotionJEPA/0922-4096-1024-8gpu-training-plan.md 开始做 有问题立刻问用户 起泡后给出预计的时间」。据此执行[0922计划](../../../0922-4096-1024-8gpu-training-plan.md)；4096完整验收后才开始1024的GPU验证与训练。
+用户原话：「/scratch/hongze/robomme_policy_learning_MotionJEPA/0922-4096-1024-8gpu-training-plan.md 开始做 有问题立刻问用户 起泡后给出预计的时间」。据此执行[0922计划](../../root-archive/0922-4096-1024-8gpu-training-plan.md)；4096完整验收后才开始1024的GPU验证与训练。
 
 ## 版本、环境与启动
 

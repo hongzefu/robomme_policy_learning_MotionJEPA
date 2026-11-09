@@ -1,0 +1,31 @@
+{
+  "status": "PASS",
+  "runs": [
+    {
+      "role": "ctx",
+      "run": "o16-smoke-ctx-10280431",
+      "fusion": "context",
+      "head": "491340dfb210acb0e399f9105d8283b8a2bc66f7",
+      "train_exit": 0,
+      "restore_exit": 0,
+      "seconds_per_progress_step": 2.4062999963760374,
+      "observed_peak_mib": 42045.0,
+      "save_load_reference_max_abs": 0.0
+    },
+    {
+      "role": "modul",
+      "run": "o16-smoke-modul-10280431",
+      "fusion": "modulation",
+      "head": "491340dfb210acb0e399f9105d8283b8a2bc66f7",
+      "train_exit": 0,
+      "restore_exit": 0,
+      "seconds_per_progress_step": 0.921738559549505,
+      "observed_peak_mib": 25661.0,
+      "save_load_reference_max_abs": 0.0
+    }
+  ],
+  "paired_config_diff_keys": [
+    "integration_type",
+    "memory_token_dim"
+  ]
+}

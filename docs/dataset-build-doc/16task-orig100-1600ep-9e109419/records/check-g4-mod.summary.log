@@ -1,0 +1,22 @@
+CHECK_HEAD=297a036f7ce3b66dcfca69ec2016bd005a63cdf7
+STAGE=g4-mod
+START_UTC=2026-10-28T08:20:55Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+warning: `VIRTUAL_ENV=.venv` does not match the project environment path `v1-store/venvs/wan-stage2` and will be ignored; use `--active` to target the active environment instead
+/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/venvs/wan-stage2/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+STAGE2_LATENT_PARITY=NOT_REQUIRED reason=user_decision_same_input
+warning: `VIRTUAL_ENV=.venv` does not match the project environment path `v1-store/venvs/wan-stage2` and will be ignored; use `--active` to target the active environment instead
+/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/venvs/wan-stage2/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+Cannot initialize model with low cpu memory usage because `accelerate` was not found in the environment. Defaulting to `low_cpu_mem_usage=False`. It is strongly recommended to install `accelerate` for faster and less memory-intense model loading. You can do so with:
+```
+pip install accelerate
+```
+.
+/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/wan_motion_infer.py:250: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:206.)
+  f = torch.from_numpy(frames_window).permute(0, 3, 1, 2).float().to(device)   # 🔒 (33,3,256,256) 0..255
+warning: `VIRTUAL_ENV=.venv` does not match the project environment path `v1-store/venvs/wan-stage2` and will be ignored; use `--active` to target the active environment instead
+ONLINE_INPUT_IDENTITY=PASS windows=64 handshake=1 input_sha_mismatch=0 nonfinite=0
+END_UTC=2026-10-28T08:36:15Z
+EXIT_CODE=0

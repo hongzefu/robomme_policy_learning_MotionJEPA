@@ -4,7 +4,7 @@
 # （5000…75000 共 15 份 + 79999）、run 根下的 config 快照与 provenance、清洗后的训练日志上传到**公开** HF bucket
 # HongzeFu/robomme-vla-mixed8-200-context-motion-80k-v1，做「上传前 / 上传后」两遍独立 sha256 逐行对照验收。
 #
-# 计划：1019-mixed8-ctx512-motion-plan.md（第二部分 §2）。全部阶段在 _mixed8_200_vla_ckpt_export_common.sh，
+# 计划：docs/root-archive/1019-mixed8-ctx512-motion-plan.md（第二部分 §2）。全部阶段在 _mixed8_200_vla_ckpt_export_common.sh，
 # 与同库其余几条 VLA run 共用；本文件只钉死这一条 run 的身份。公开、private==false 断言、公开前体检、
 # 回读前 df 断言、完成信号在最后等行为见共用体文件头。
 #

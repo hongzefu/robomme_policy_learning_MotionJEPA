@@ -433,6 +433,139 @@ def test_local_smoke_and_final_flow(export, snapshot, tmp_path, monkeypatch, cap
     assert len(list((root / "logs/uploaded").glob("*.done"))) == 18
 
 
+@pytest.fixture
+def stopped_snapshot(export, snapshot, tmp_path, monkeypatch):
+    """复现已有根身份、14份上传标记及真实143外层退出的最小交付。"""
+    e = export
+    monkeypatch.setattr(e, "REPO", snapshot.repo)
+    monkeypatch.setattr(e, "validate_store", lambda *args: None)
+    target = snapshot.repo / "scripts/dataset/hf_export"
+    for name in ("stage2_vla_bucket_README.md", "stage2_vla_TERMINATION_70000.md",
+                 "hygiene_allowlist_stage2_vla.json"):
+        path = target / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes((COMMON.parent / name).read_bytes())
+    for step in e.STOP_STEPS:
+        add_step(snapshot.run, step)
+    training = write(snapshot.repo / "v1-store/logs" / f"{e.RUN}.log",
+                     f"RUN={e.RUN}\nTRAIN_HEAD={e.STOP_BETA}\nStep 70900: loss=0.0019\n")
+    stopped_at = "2026-10-27T16:17:53Z"
+    control = write(snapshot.repo / e.STOP_LOG,
+                    f"FORMAL_HEAD={e.STOP_BETA}\n{training.read_text()}FORMAL_END_UTC={stopped_at}\nEXIT_CODE=143\n")
+    incremental = write(snapshot.repo / "v1-store/logs/vla-s2-20261026/vla-inc.log", "EXIT_CODE=143\n")
+    root = tmp_path / "export"
+    (root / "stage").mkdir(parents=True)
+    e.run_vla("incremental", True, root)
+    stage = root / "stage"
+    p = publisher(e, root)
+    p.identity["root_manifest_sha256"] = digest(stage / "manifests/root.json")
+    write(root / "owner.json", p.identity)
+    root_files = {**e.json_file(stage / "manifests/root.json")["files"],
+                  "manifests/root.json": e.file_info(stage / "manifests/root.json")}
+    p.transfer("root", stage, root_files)
+    for step in e.STOP_STEPS:
+        name = f"manifests/step-{step}.json"
+        files = {k: v for k, v in e.json_file(stage / name)["files"].items() if k.startswith(f"{step}/")}
+        p.transfer(str(step), stage, {**files, name: e.file_info(stage / name)})
+    receipt = {"schema": "stage2-user-stop-v1", "beta": e.STOP_BETA, "run": e.RUN,
+               "user_quote": e.STOP_QUOTE, "accepted_final_checkpoint": 70000, "terminal_step": 70000,
+               "training_status": "stopped_by_user", "status": "STOPPED_BY_USER", "signal": "SIGTERM",
+               "processes_exited": True, "completed_steps": list(e.STOP_STEPS),
+               "requested_at": "2026-10-27T16:17:53.656119+00:00", "stopped_at": stopped_at,
+               "publisher_owner": p.identity,
+               "terminal_checkpoint_metadata_sha256": digest(snapshot.run / "70000/_CHECKPOINT_METADATA"),
+               "terminal_uploaded_marker_sha256": digest(root / "logs/uploaded/70000.done"),
+               "logs": {key: {"path": path.relative_to(snapshot.repo).as_posix(), **e.file_info(path), "exit_code": code}
+                        for key, path, code in (("training", training, None), ("control", control, 143),
+                                                ("incremental", incremental, 143))}}
+    receipt_path = write(snapshot.repo / e.STOP_RECEIPT, receipt)
+    return types.SimpleNamespace(root=root, stage=stage, publisher=p, receipt=receipt, receipt_path=receipt_path,
+                                 control=control, run=snapshot.run)
+
+
+def test_user_stop_final_preserves_published_identity_and_reuses_markers(export, stopped_snapshot, monkeypatch, capsys):
+    e, s = export, stopped_snapshot
+    preserved = [s.root / "owner.json", s.stage / "README.md", s.stage / "manifests/root.json",
+                 *s.root.glob("logs/uploaded/*.done")]
+    original = {path: path.read_bytes() for path in preserved}
+    monkeypatch.setattr(e.io, "load_hf_token", lambda *a: pytest.fail("停止SMOKE触碰凭据"))
+    e.run_vla("final70", True, s.root)
+    assert "SMOKE=PASS kind=vla mode=final70 steps=14" in capsys.readouterr().out
+    before_uploads = len(s.publisher.bucket.uploads)
+    before_downloads = len(s.publisher.bucket.downloads)
+    monkeypatch.setattr(e, "Publisher", lambda *args: s.publisher)
+    e.run_vla("final70", False, s.root)
+    output = capsys.readouterr().out
+    assert "CKPT_UPLOAD=PASS steps=14" in output and "training_status=stopped_by_user final_step=70000 training_exit_code=143" in output
+    assert set(s.publisher.bucket.uploads[before_uploads:]) == {
+        "TERMINATION.md", "_run-meta/stop_receipt.json", "_run-meta/train.log", "delivery_manifest.json"}
+    final = e.json_file(s.stage / "delivery_manifest.json")
+    assert final["training_status"] == "stopped_by_user" and final["final_step"] == 70000
+    assert final["training_exit_code"] == 143 and final["steps"] == list(range(5000, 70001, 5000))
+    assert set(final["files"]) | {"delivery_manifest.json"} == set(s.publisher.bucket.data)
+    assert set(s.publisher.bucket.downloads[before_downloads:]) == set(s.publisher.bucket.data)
+    assert (s.stage / "_run-meta/train.log").read_text().endswith("EXIT_CODE=143\n")
+    public = e.json_file(s.stage / "_run-meta/stop_receipt.json")
+    assert public["source_receipt"]["sha256"] == digest(s.receipt_path)
+    assert public["export_owner"] == s.publisher.identity
+    assert all(path.read_bytes() == value for path, value in original.items())
+    assert len(list(s.root.glob("logs/uploaded/*.done"))) == 16
+    assert e.STEPS == tuple(range(5000, 80000, 5000)) + (79999,)
+    with pytest.raises(ValueError, match="退出失败"):
+        e.strict_final(s.run, s.control)
+
+
+@pytest.mark.parametrize("fault", ["quote", "beta", "run", "accepted_step", "terminal_step", "steps", "status",
+                                   "signal", "processes", "log_sha", "exit_zero", "log_run", "log_beta", "end_time",
+                                   "checkpoint_sha", "marker_sha", "owner", "missing_step", "extra_step", "tmp"])
+def test_user_stop_rejects_bad_authorization_or_evidence_before_network(export, stopped_snapshot, monkeypatch, fault):
+    e, s = export, stopped_snapshot
+    mutations = {"quote": ("user_quote", "差不多就行"), "beta": ("beta", "a" * 40), "run": ("run", "别的运行"),
+                 "accepted_step": ("accepted_final_checkpoint", 75000), "terminal_step": ("terminal_step", 75000),
+                 "steps": ("completed_steps", list(e.STEPS)), "status": ("training_status", "completed"),
+                 "signal": ("signal", "SIGKILL"), "processes": ("processes_exited", False),
+                 "checkpoint_sha": ("terminal_checkpoint_metadata_sha256", "0" * 64),
+                 "marker_sha": ("terminal_uploaded_marker_sha256", "0" * 64)}
+    if fault in mutations:
+        key, value = mutations[fault]
+        s.receipt[key] = value
+    elif fault == "log_sha":
+        s.receipt["logs"]["control"]["sha256"] = "0" * 64
+    elif fault in ("exit_zero", "log_run", "log_beta", "end_time"):
+        old, new = {"exit_zero": ("EXIT_CODE=143", "EXIT_CODE=0"),
+                    "log_run": (f"RUN={e.RUN}", "RUN=另一个运行"),
+                    "log_beta": (f"FORMAL_HEAD={e.STOP_BETA}", "FORMAL_HEAD=" + "a" * 40),
+                    "end_time": ("FORMAL_END_UTC=2026-10-27T16:17:53Z", "FORMAL_END_UTC=2026-10-27T16:18:53Z")}[fault]
+        s.control.write_text(s.control.read_text().replace(old, new))
+        s.receipt["logs"]["control"].update(e.file_info(s.control))
+    elif fault == "owner":
+        s.receipt["publisher_owner"] = {**s.receipt["publisher_owner"], "root_manifest_sha256": "0" * 64}
+    elif fault == "missing_step":
+        (s.run / "5000").rename(s.run / "missing")
+    elif fault == "extra_step":
+        add_step(s.run, 75000)
+    else:
+        (s.run / "saving.tmp").mkdir()
+    write(s.receipt_path, s.receipt)
+    monkeypatch.setattr(e, "Publisher", lambda *a: pytest.fail("拒绝停止收据前触碰网络"))
+    monkeypatch.setattr(e.io, "load_hf_token", lambda *a: pytest.fail("拒绝停止收据前触碰凭据"))
+    with pytest.raises(ValueError):
+        e.run_vla("final70", False, s.root)
+
+
+def test_user_stop_smoke_binds_receipt_and_requires_committed_steps(export, stopped_snapshot, monkeypatch):
+    e, s = export, stopped_snapshot
+    monkeypatch.setattr(e, "Publisher", lambda *a: pytest.fail("SMOKE身份变化后触碰网络"))
+    e.run_vla("final70", True, s.root)
+    s.receipt["requested_at"] = "2026-10-27T16:17:53.700000+00:00"
+    write(s.receipt_path, s.receipt)
+    with pytest.raises(ValueError, match="SMOKE=1"):
+        e.run_vla("final70", False, s.root)
+    add_step(s.run, 65000, committed=False)
+    with pytest.raises(ValueError, match="尚未提交"):
+        e.run_vla("final70", True, s.root)
+
+
 def test_incremental_contract_failure_never_touches_network(export, snapshot, tmp_path, monkeypatch):
     e = export
     monkeypatch.setattr(e, "REPO", snapshot.repo)

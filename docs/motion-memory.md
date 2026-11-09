@@ -1,6 +1,6 @@
 # motion memory：MotionJEPA motion token 接入 MME-VLA HistoryPi0
 
-本文件是现行正本；`0901-motion-memory-plan.md` 与 `motion-memory-interleave.md` 保留为过程档案，冲突以本文为准。
+本文件是现行正本；`docs/root-archive/0901-motion-memory-plan.md` 与 `docs/root-archive/motion-memory-interleave.md` 保留为过程档案，冲突以本文为准。
 
 > **适用环境**：本文正文默认**环境 B**（AWS 单机 8 × A100-SXM4-80GB，仓库工作副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`，判定口径见 [`../AGENTS.md`](../AGENTS.md) 「运行环境判定」）。凡引用环境 A（GreatLakes / turbo + 2 × RTX 6000 Ada）的数字，句子里一律显式标注「环境 A 历史」，且**不与环境 B 数字放同一张表**。
 > **代码锚点写法**：全文引用代码只写 `文件::类/函数/配置键`，不写行号（`AGENTS.md` 第 9 条）。
@@ -23,7 +23,7 @@
 
 ## 一、结论先行
 
-**2026-09-18 modulation 8×8 补充。** 现行代码支持 context 与 modulation 两种 motion 接入；下文原有的 96/608/1184/1204、40ep/400ep 数据和三 seed 成功率属于历史 context 口径。modulation 使用 8 帧 × 64 token 的 512 位帧记忆，加 budget=160 的 motion 记忆，合计 672 位、宽 1024；主干图像与文本 prefix 仍为 576 位，加入 20 个动作后为 596 位。新增参数为 1,771,264 个。新具名配置 `mme_vla_suite_b128_80k` 使用 batch 128、8 卡、16 worker；本轮参数、数据和验证承诺见 [0916 计划](../0916-motion-modul-8x8-plan.md)。历史 context 评估结论只适用于对应 run，modulation 的 motion 内容作用须由后续同权重、同 budget 的全遮消融评估确认。
+**2026-09-18 modulation 8×8 补充。** 现行代码支持 context 与 modulation 两种 motion 接入；下文原有的 96/608/1184/1204、40ep/400ep 数据和三 seed 成功率属于历史 context 口径。modulation 使用 8 帧 × 64 token 的 512 位帧记忆，加 budget=160 的 motion 记忆，合计 672 位、宽 1024；主干图像与文本 prefix 仍为 576 位，加入 20 个动作后为 596 位。新增参数为 1,771,264 个。新具名配置 `mme_vla_suite_b128_80k` 使用 batch 128、8 卡、16 worker；本轮参数、数据和验证承诺见 [0916 计划](root-archive/0916-motion-modul-8x8-plan.md)。历史 context 评估结论只适用于对应 run，modulation 的 motion 内容作用须由后续同权重、同 budget 的全遮消融评估确认。
 
 新布局 `motion-768-grid16-demopad17-v1` 保留段内 stride 16 和 33 帧编码包；demo 从最少 33 个真实帧改为 17，尾部重复 demo 最后一帧补满，exec 继续要求完整 33 帧。旧 YAML 的 demo 两键同缺时仍采用 `(33, none)`，缺一项或与布局不符立即拒绝。新库 1600 集、605611 个执行样本，验收窗口数为 demo 35913 + exec 35403 = 71316，其中 1600 个补帧窗；建库状态及完整验收见 [建库档案](dataset-build-doc/4task-v2-1600ep-motion-demopad17/result.md)。
 
@@ -905,11 +905,11 @@ PARAM_TREE_EXACT=PASS config=mme_vla_suite history_config=perceptual-framesamp-c
 |---|---|---|
 | 二章 2.2 | stride 16 = 一个 action chunk 执行长度 | `examples/robomme/eval.py::get_action_chunk`、`examples/robomme/utils.py::check_args`、`scripts/training/train.py` 的断言 |
 | 二章 2.3 | 16 任务全集 1600 ep / 476,857 exec 样本 / 44,328 窗（demo 16,944 + exec 27,384）；逐任务最大窗数 15 项；`es > 544` 命中 200/1600 | [`dataset-build-doc/16task-h5-scan/`](dataset-build-doc/16task-h5-scan/)（commit `c704bf5`，纯离线只读扫描，`EXIT_CODE=0`） |
-| 二章 2.3 | 截断率表（N=32/48/64/80/85/96）、P25 8 / 中位 15 / 最大 85 / 均值 19.01 / 零起点 4.72% | `0901-motion-memory-plan.md` 2.3（环境 A 2026-09-02 实测），已在环境 B 用公开集清单逐格复算命中 |
+| 二章 2.3 | 截断率表（N=32/48/64/80/85/96）、P25 8 / 中位 15 / 最大 85 / 均值 19.01 / 零起点 4.72% | `docs/root-archive/0901-motion-memory-plan.md` 2.3（环境 A 2026-09-02 实测），已在环境 B 用公开集清单逐格复算命中 |
 | 二章 2.4 | 4 任务 400 ep：均值 10.08 / 中位 9 / 最大 34 / 零起点 6.48% | 同上；400 ep 库实测 `k_mean 10.31 / k_median 9.0 / zero_frac 0.0633 / fill_rate 0.107` 见 [`dataset-build-doc/4task-motion-400ep/`](dataset-build-doc/4task-motion-400ep/) 的 `[m1 real]` 行 |
 | 二章 2.7 | `first_raise_es=289` / `k_at_288=96` / `k_at_289=97` / `real_max_k=92` / `headroom_min=4` / `τ_max = es + 1296` / `infer_calls=82` | `scripts/training/tests/eval_rhythm_gates.py` 的 `ES_BOUNDARY` / `TAU_LONG` / `EVAL_TERMINATION` 三条判定行（2026-09-07，环境 B，CPU） |
 | 二章 2.6 | `es ∈ {0, 66, 114, 168, 216}`、全集 max 1145 | `16task-h5-scan/records/memory_axis_16task.json`；40 ep 库的 es 分布见 [`training-doc/motion-p5-online/`](training-doc/motion-p5-online/)（环境 A 历史） |
-| 五章 | 四个交付键的形状 dtype、608 / 1184 / 1204、3.35 M 新参数、+386 KiB/样本 | 源码 `training/framesamp_dataset.py::FrameSampDataset.__getitem__`、`models/integration/history_pi0.py::{embed_memory,embed_prefix}`、`models/representation/percep_mem.py::PerceptualMemory`；影响面表见 `0901-motion-memory-plan.md` 第二部分十节 |
+| 五章 | 四个交付键的形状 dtype、608 / 1184 / 1204、3.35 M 新参数、+386 KiB/样本 | 源码 `training/framesamp_dataset.py::FrameSampDataset.__getitem__`、`models/integration/history_pi0.py::{embed_memory,embed_prefix}`、`models/representation/percep_mem.py::PerceptualMemory`；影响面表见 `docs/root-archive/0901-motion-memory-plan.md` 第二部分十节 |
 | 六章 | 协议 payload 6,488,064 B / 响应 3,072 B、`MAGIC=b"MMEMOT01"`、超时 60 s | `src/mme_vla_suite/policies/motion_protocol.py` 的模块常量 |
 | 七章 | 40 ep 772 行（exec 658 + demo 114，2,371,584 B）；400 ep 6,832 行（exec 5,707 + demo 1,125，20,987,904 B） | [`dataset-build-doc/4task-motion-40ep-aws/`](dataset-build-doc/4task-motion-40ep-aws/)、[`4task-motion-400ep/`](dataset-build-doc/4task-motion-400ep/) 的 `A10_ROWS` / `VERIFY_MOTION` 行 |
 | 七章 | VAE `vae_state_sha256=9980d252…`；encoder `checkpoint_sha256=bae96037…`、77 张量清单；`SOURCE_PIN` `source_sha256=af67fdd9…`、`mj_repo_commit=2a484ad9…` | `<lib>/motion/meta/store_meta.json` 的 `provenance`，摘录在 400 ep 留档 `records/motion.store_meta.json` |
@@ -917,7 +917,7 @@ PARAM_TREE_EXACT=PASS config=mme_vla_suite history_config=perceptual-framesamp-c
 | 九章 9.1 | 28 h 33 min / 2.569 s/step / util 71.94% / loss 里程碑 / 50.6 epoch | [`training-doc/awsprod40k-b128-motion/`](training-doc/awsprod40k-b128-motion/) |
 | 九章 9.2 | 28.0% 与 24.0% 两条 `EVAL_*=DONE` 行、Vulkan 27 集上限 | [`training-doc/eval-awsprod40k-b128-motion/`](training-doc/eval-awsprod40k-b128-motion/)、[`eval-official-framesamp-context/`](training-doc/eval-official-framesamp-context/) |
 | 九章 9.3 | 三 seed 24.2% ± 1.3 vs 24.5% ± 0.5、逐集翻转率、`SEED_AGG=DONE` | [`training-doc/eval-3seed-context-vs-motion/`](training-doc/eval-3seed-context-vs-motion/)（**环境 A，2 × RTX 6000 Ada**） |
-| 十章 | 盲区 1–13 | `0901-motion-memory-plan.md` 第二部分八节「盲区诚实清单」与七节风险登记 R1–R23，按环境 B 实况更新 |
+| 十章 | 盲区 1–13 | `docs/root-archive/0901-motion-memory-plan.md` 第二部分八节「盲区诚实清单」与七节风险登记 R1–R23，按环境 B 实况更新 |
 
 ### 11.2 关键 commit
 
@@ -941,6 +941,6 @@ PARAM_TREE_EXACT=PASS config=mme_vla_suite history_config=perceptual-framesamp-c
 
 ### 11.4 过程档案（冲突以本文为准）
 
-- `0901-motion-memory-plan.md`（仓库根，2,240 行）：权威计划的过程档案。第一部分讲窗口 / 链路 / 对齐 / model 改动 / 在线侧，第二部分是实现细节与「对拍闸门总表」（D1–D3 / T1–T3 / M1–M5 / P1–P5 与 A1–A23 的判据原文），末尾「环境 B 复刻」节记 2026-09-04 的结果。**其正文数字多为环境 A 口径**（含 `/data/hongzefu`、`/nfs/turbo` 路径与「4env400ep 26,777 行」这类环境 A 历史私有数据集的数字），引用前先按本文第七章 7.4 的说明分辨。
-- `motion-memory-interleave.md`（仓库根，434 行）：交错方案从 dataloader 到 gemma 内部的逐函数数值推导（576 → 1088 → 1184 → 1204 三层链，每一跳的形状与 dtype）。其示例数字按 stride 20 / 预算 80 写的部分已随主计划换档，以本文为准。
+- `docs/root-archive/0901-motion-memory-plan.md`（已归档，2,240 行）：权威计划的过程档案。第一部分讲窗口 / 链路 / 对齐 / model 改动 / 在线侧，第二部分是实现细节与「对拍闸门总表」（D1–D3 / T1–T3 / M1–M5 / P1–P5 与 A1–A23 的判据原文），末尾「环境 B 复刻」节记 2026-09-04 的结果。**其正文数字多为环境 A 口径**（含 `/data/hongzefu`、`/nfs/turbo` 路径与「4env400ep 26,777 行」这类环境 A 历史私有数据集的数字），引用前先按本文第七章 7.4 的说明分辨。
+- `docs/root-archive/motion-memory-interleave.md`（已归档，434 行）：交错方案从 dataloader 到 gemma 内部的逐函数数值推导（576 → 1088 → 1184 → 1204 三层链，每一跳的形状与 dtype）。其示例数字按 stride 20 / 预算 80 写的部分已随主计划换档，以本文为准。
 - 图与产物：[`motion-memory-mask-axis.svg`](archive/motion-memory-mask-axis.svg)、[`motion-memory-online-timeline.svg`](archive/motion-memory-online-timeline.svg)、[`eval-success-by-task-length.png`](archive/eval-success-by-task-length.png)。

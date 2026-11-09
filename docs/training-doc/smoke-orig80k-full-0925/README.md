@@ -141,7 +141,7 @@ driver中训练及正文tee退出0，采样器以`reason=driver_stop`正常收�
 
 ## 9. 用户决定记录
 
-本run沿用[原计划](../../../0925-orig-80k-full-counting-4plus4-plan.md)中的用户原话：「给出方案跑完整的80k 和80k纯counting任务 完全参照原版训练 4卡+4卡 先做对拍测试」，以及后续「恢复计划中的建库，严格按前置闸门推进」。正式库完成后的20步可读性、真实保存和加载检查已在预建launch中明确，本次使用原版统计量和原版W&B开启状态。
+本run沿用[原计划](../../root-archive/0925-orig-80k-full-counting-4plus4-plan.md)中的用户原话：「给出方案跑完整的80k 和80k纯counting任务 完全参照原版训练 4卡+4卡 先做对拍测试」，以及后续「恢复计划中的建库，严格按前置闸门推进」。正式库完成后的20步可读性、真实保存和加载检查已在预建launch中明确，本次使用原版统计量和原版W&B开启状态。
 
 用户允许「主机 dtype 不同，但要求数值一致且训练标量/状态逐位一致」，并明确「允许这四键缺失与 None 等价」。四键仅为`motion_emb/motion_pos/motion_mask/mem_order`，其非None值或其他键不能顺带豁免；主机原始dtype/raw SHA仍留证，精确数值和signed zero要求保留。该输入比较许可不把本run变成已经完成的正式输入或训练对拍。
 

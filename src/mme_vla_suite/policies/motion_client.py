@@ -1,4 +1,4 @@
-"""`MotionEncoderClient`：policy 进程内的 sidecar 客户端（0901-motion-memory-plan.md 第二部分三节）。
+"""`MotionEncoderClient`：policy 进程内的 sidecar 客户端（docs/root-archive/0901-motion-memory-plan.md 第二部分三节）。
 
 - 进程：复制 `os.environ` 为 child env，设 `UV_LINK_MODE=copy`、`UV_PROJECT_ENVIRONMENT=$V1_STORE/venvs/wan`、`HF_HOME`、`HF_HUB_OFFLINE=1`、
   `CUDA_VISIBLE_DEVICES=<motion.online_gpu>`；argv 固定 `["uv","run","--project",scripts/dataset/wan,"--no-sync","python",motion_sidecar.py,"--fd",N,...]`
@@ -26,6 +26,7 @@ import time
 import numpy as np
 
 from mme_vla_suite.policies import motion_protocol as P
+from mme_vla_suite.shared import wan_timepool as _timepool
 
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 
@@ -42,6 +43,46 @@ PROV_SAME_ENC = ("checkpoint", "checkpoint_sha256", "checkpoint_epoch", "arch", 
 
 STAGE2_KIND = "stage2_pool4_concat"
 STAGE2_GROUPS = ("encoder", "encoder_state_sha256", "source_pin", "numerics", "stage2_compat", "vae")
+TIMEPOOL_KIND = _timepool.TIMEPOOL_ENCODER_KIND
+# 独立会话、进程归属、4096 字节响应这一套 worker 管理由阶段二与固定池化共用。
+SESSION_KINDS = (STAGE2_KIND, TIMEPOOL_KIND)
+TIMEPOOL_WAN_KEYS = ("vae_id", "vae_state_sha256", "adapter_sha256", "dependency_lock_sha256")
+TIMEPOOL_SNAPSHOT_SCHEMA = "wan-timepool-motion-snapshot-v1"
+TIMEPOOL_WINDOW_MAP_COPY = "timepool_window_map.json"
+TIMEPOOL_ONLINE_RECORD = "online_restore_inputs.json"
+TIMEPOOL_ONLINE_PAYLOAD = "online_restore_inputs.npz"
+TIMEPOOL_ONLINE_SCHEMA = "stage2-online-restore-inputs-v1"
+# run 根 motion_provenance.json 的完整键集合（init_history_config 基础键 + timepool 段）。
+TIMEPOOL_SNAPSHOT_PROV_KEYS = frozenset((
+    "history_config_name", "motion_enabled", "resolved_sha256", "framesamp_root", "framesamp_manifest_sha256",
+    "framesamp_store_meta_sha256", "motion_root", "motion_manifest_sha256", "motion_index_sha256",
+    "motion_store_meta_sha256", "motion_table_sha256", "vae", "encoder", "timepool"))
+_ENCODER_FIELD = re.compile(r"(^|_)(encoder|ckpt|checkpoint)(_|$)")
+
+
+def _reject_encoder_fields(value, path: str = "握手") -> None:
+    """固定池化没有 encoder：除身份键 encoder_kind 外，任意层级不得出现 encoder 或权重字段。"""
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key != "encoder_kind" and _ENCODER_FIELD.search(str(key)):
+                raise ValueError(f"固定池化{path}不得带 encoder 字段: {key}")
+            _reject_encoder_fields(item, f"{path}.{key}")
+    elif isinstance(value, list):
+        for item in value:
+            _reject_encoder_fields(item, path)
+
+
+def _live_process(pid: int) -> tuple[int, int]:
+    """读取 Linux 进程父 PID 与启动时钟；退出、僵尸和非法 PID 均不算存活。"""
+    if type(pid) is not int or pid <= 0:
+        raise ValueError("阶段二 worker 进程身份必须为正整数 PID")
+    try:
+        fields = pathlib.Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()
+        if fields[0] in ("Z", "X", "x"):
+            raise ValueError("阶段二 worker 进程身份已退出")
+        return int(fields[1]), int(fields[19])
+    except (OSError, IndexError) as exc:
+        raise ValueError("阶段二 worker 进程身份不存在或不可读") from exc
 
 
 def _live_process(pid: int) -> tuple[int, int]:
@@ -160,6 +201,59 @@ def validate_stage2_evidence(provenance: dict, root: pathlib.Path | None) -> Non
             raise ValueError("阶段二 G3 证据未覆盖完整 EMA 核验")
 
 
+def verify_timepool_snapshot(run_root: str | pathlib.Path) -> dict:
+    """核 run 根 ``motion_snapshot.ready.json`` 的每个文件 SHA 与身份绑定，返回 ``motion_provenance.json`` 内容。
+
+    只读主会话 ``write_timepool_motion_snapshot`` 发布的快照；文件集合必须与合同恰好相等，因此 stage2 快照
+    （带 ``encoder_dependencies.json``）不可能通过。不读取任何 stage2 encoder 路径或 checkpoint。
+    """
+    from mme_vla_suite.datastore import motion_store as ms
+    root = pathlib.Path(run_root)
+    ready_path = root / "motion_snapshot.ready.json"
+    if not ready_path.is_file():
+        raise ValueError(f"timepool 恢复缺 motion_snapshot.ready.json: {root}")
+    ready = json.loads(ready_path.read_text(encoding="utf-8"))
+    files = ready.get("files") if isinstance(ready, dict) else None
+    if not isinstance(ready, dict) or ready.get("schema") != TIMEPOOL_SNAPSHOT_SCHEMA or not isinstance(files, dict):
+        raise ValueError("timepool 快照 ready schema 不符")
+    evidence = {role: f"motion_evidence/{role}.json" for role in ms.TIMEPOOL_VALIDATION_ROLES}
+    expected = {"history_config.txt", "history_config.resolved.yaml", "history_config.resolved.sha256",
+                "motion_provenance.json", TIMEPOOL_WINDOW_MAP_COPY, TIMEPOOL_ONLINE_RECORD, TIMEPOOL_ONLINE_PAYLOAD,
+                *evidence.values()}
+    if set(files) != expected:
+        raise ValueError(f"timepool 快照文件清单不符: 缺 {sorted(expected - set(files))}，多 {sorted(set(files) - expected)}")
+    for relative, sha in files.items():
+        path = root / relative
+        if not path.is_file() or _sha256(path) != sha:
+            raise ValueError(f"timepool 快照文件 SHA 不符: {relative}")
+    prov = json.loads((root / "motion_provenance.json").read_text(encoding="utf-8"))
+    if not isinstance(prov, dict) or set(prov) != TIMEPOOL_SNAPSHOT_PROV_KEYS:
+        raise ValueError("timepool motion_provenance.json 键集合不符")
+    if prov["motion_enabled"] is not True or prov["vae"] is not None or prov["encoder"] is not None:
+        raise ValueError("timepool motion_provenance.json 必须 motion_enabled=true 且 vae/encoder 为 null")
+    if (prov["resolved_sha256"] != files["history_config.resolved.yaml"]
+            or (root / "history_config.resolved.sha256").read_text().split()[:1] != [prov["resolved_sha256"]]):
+        raise ValueError("timepool 来源记录与解析配置不同步")
+    timepool = prov["timepool"]
+    ms.validate_timepool_provenance(timepool, status="verified")
+    for key, expected_sha in (("motion_manifest_sha256", timepool["manifests"]["episode_manifest_sha256"]),
+                              ("motion_table_sha256", timepool["output"]["motion_table_sha256"]),
+                              ("motion_index_sha256", timepool["output"]["motion_index_sha256"])):
+        if prov[key] != expected_sha:
+            raise ValueError(f"timepool 快照 {key} 与来源记录不同")
+    if files[TIMEPOOL_WINDOW_MAP_COPY] != timepool["window_map"]["sha256"]:
+        raise ValueError("timepool 逐窗映射副本与来源记录不同")
+    for role, relative in evidence.items():
+        if files[relative] != timepool["validation"][role]["sha256"]:
+            raise ValueError(f"timepool 证据副本与来源记录不同: {role}")
+    online = json.loads((root / TIMEPOOL_ONLINE_RECORD).read_text(encoding="utf-8"))
+    payload = online.get("payload") if isinstance(online, dict) else None
+    if (not isinstance(online, dict) or online.get("schema") != TIMEPOOL_ONLINE_SCHEMA or not isinstance(payload, dict)
+            or payload.get("path") != TIMEPOOL_ONLINE_PAYLOAD or payload.get("sha256") != files[TIMEPOOL_ONLINE_PAYLOAD]):
+        raise ValueError("timepool 在线恢复输入记录与 NPZ 不同步")
+    return prov
+
+
 def resolve_stage2_dependencies(run_root: pathlib.Path, provenance: dict) -> pathlib.Path | None:
     """交付包只凭相对路径定位 encoder 两实体，拒绝越界与身份漂移。"""
     dependency_path = run_root / "encoder_dependencies.json"
@@ -210,8 +304,15 @@ class MotionEncoderClient:
                  stage2_python: str | None = None, eval_target_contract: str | pathlib.Path | None = None):
         self.encoder_kind = encoder_kind
         self._eval_target_contract = eval_target_contract
-        if encoder_kind != STAGE2_KIND and (stage2_python or eval_target_contract):
+        # stage2_python 名字不改以免破坏旧调用方，在固定池化下同样表示 sidecar 解释器。
+        if encoder_kind not in SESSION_KINDS and stage2_python or encoder_kind != STAGE2_KIND and eval_target_contract:
             raise ValueError("阶段二评估选项不能用于其他encoder")
+        if encoder_kind == TIMEPOOL_KIND:
+            if encoder_run_dir is not None or source_run is not None or expected_ckpt_sha256 is not None:
+                raise ValueError("固定池化没有 encoder：不得传 encoder_run_dir、source_run 或 expected_ckpt_sha256")
+            self._init_timepool(online_gpu=online_gpu, store_provenance=store_provenance, stub=stub, v1_store=v1_store,
+                                handshake_timeout=handshake_timeout, stage2_python=stage2_python)
+            return
         if encoder_kind == STAGE2_KIND:
             self._init_stage2(online_gpu=online_gpu, encoder_run_dir=encoder_run_dir,
                              expected_ckpt_sha256=expected_ckpt_sha256, store_provenance=store_provenance,
@@ -315,6 +416,37 @@ class MotionEncoderClient:
                 raise ValueError(f"阶段二本地文件不符合 SOURCE_PIN: {key}")
         if not self.stub and store_provenance["source_pin"] != local_pin:
             raise ValueError("阶段二 store 与当前 SOURCE_PIN 不同源")
+        script_args = ["--stub"] if self.stub else [
+            "--ckpt", str(expected_dir / checkpoint), "--expected-sha256", expected_ckpt_sha256,
+            "--expected-vae-sha256", store_provenance["vae"]["vae_state_sha256"]]
+        self._spawn_session_worker(project=project, script=project / "stage2_sidecar.py", script_args=script_args,
+                                   v1=v1, online_gpu=online_gpu, stage2_python=stage2_python)
+        self._complete_session_handshake(label="阶段二", expected={"encoder_kind": STAGE2_KIND},
+                                         store_provenance=store_provenance, handshake_timeout=handshake_timeout)
+
+    def _init_timepool(self, *, online_gpu, store_provenance, stub, v1_store, handshake_timeout, stage2_python) -> None:
+        """固定池化：不依赖任何 encoder 路径或 checkpoint，进程管理与阶段二共用。"""
+        self._lock = threading.Lock()
+        self.stub = bool(stub)
+        self._online_gpu = str(online_gpu)
+        if not self.stub:
+            if store_provenance is None:
+                raise ValueError("真实固定池化必须提供完整 store_provenance")
+            from mme_vla_suite.datastore.motion_store import validate_timepool_provenance
+            validate_timepool_provenance(store_provenance, status="verified")
+        v1 = pathlib.Path(v1_store or os.environ.get("MMEVLA_V1_STORE") or (_REPO_ROOT / "v1-store")).resolve()
+        script_args = ["--stub"] if self.stub else [
+            "--expected-vae-sha256", store_provenance["wan"]["vae_state_sha256"]]
+        self._spawn_session_worker(project=_REPO_ROOT / "scripts/dataset/wan_stage2",
+                                   script=_REPO_ROOT / "scripts/dataset/wan_timepool/timepool_sidecar.py",
+                                   script_args=script_args, v1=v1, online_gpu=online_gpu, stage2_python=stage2_python)
+        self._complete_session_handshake(
+            label="固定池化", store_provenance=store_provenance, handshake_timeout=handshake_timeout,
+            expected={"encoder_kind": TIMEPOOL_KIND,
+                      "pool": {"version": _timepool.POOL_VERSION, "source_sha256": _timepool.pool_source_sha256()}})
+
+    def _spawn_session_worker(self, *, project, script, script_args, v1, online_gpu, stage2_python) -> None:
+        """在独立会话里启动 sidecar，argv 与 socket 身份留给后续进程归属核验。"""
         child_env = dict(os.environ)
         child_env.update(UV_LINK_MODE="copy", UV_PROJECT_ENVIRONMENT=str(v1 / "venvs/wan-stage2"),
                          UV_CACHE_DIR=str(v1 / "cache/uv"),
@@ -337,12 +469,7 @@ class MotionEncoderClient:
         self._sock = parent_sock
         self._stage2_socket_identity = (child_sock.fileno(), os.fstat(child_sock.fileno()).st_ino)
         self._stage2_script_argv_offset = len(argv)
-        argv += [str(project / "stage2_sidecar.py"), "--fd", str(child_sock.fileno())]
-        if self.stub:
-            argv.append("--stub")
-        else:
-            argv += ["--ckpt", str(expected_dir / checkpoint), "--expected-sha256", expected_ckpt_sha256,
-                     "--expected-vae-sha256", store_provenance["vae"]["vae_state_sha256"]]
+        argv += [str(script), "--fd", str(child_sock.fileno()), *script_args]
         self.argv = argv
         try:
             self._proc = subprocess.Popen(argv, env=child_env, pass_fds=[child_sock.fileno()], cwd=str(_REPO_ROOT),
@@ -357,15 +484,20 @@ class MotionEncoderClient:
             raise
         finally:
             child_sock.close()
+
+    def _complete_session_handshake(self, *, label, expected, store_provenance, handshake_timeout) -> None:
+        """核握手固定字段与 worker 归属；真实模式再核离线来源，任一失败都清理进程。"""
         try:
             self.provenance = P.recv_handshake(self._sock, time.monotonic() + handshake_timeout)
             if "error" in self.provenance:
-                raise RuntimeError(f"阶段二 sidecar 启动失败: {self.provenance['error']}")
-            expected = {"encoder_kind": STAGE2_KIND, "dtype": "float32", "shape": [1024],
-                        "response_bytes": 4096, "stub": self.stub, "protocol_sha256": P.protocol_sha256()}
-            for key, value in expected.items():
+                raise RuntimeError(f"{label} sidecar 启动失败: {self.provenance['error']}")
+            fixed = {"dtype": "float32", "shape": [1024], "response_bytes": 4096, "stub": self.stub,
+                     "protocol_sha256": P.protocol_sha256(), **expected}
+            for key, value in fixed.items():
                 if type(self.provenance.get(key)) is not type(value) or self.provenance[key] != value:
-                    raise RuntimeError(f"阶段二握手 {key} 不匹配")
+                    raise RuntimeError(f"{label}握手 {key} 不匹配")
+            if self.encoder_kind == TIMEPOOL_KIND:
+                _reject_encoder_fields(self.provenance)
             self._worker_identity = self._stage2_worker_identity()
             if not self.stub:
                 self.check_provenance(store_provenance)
@@ -423,7 +555,7 @@ class MotionEncoderClient:
     @property
     def worker_pid(self) -> int:
         """返回经归属、脚本与启动时钟复核的实际阶段二 worker PID。"""
-        if self.encoder_kind != STAGE2_KIND:
+        if self.encoder_kind not in SESSION_KINDS:
             raise ValueError("worker_pid 仅用于阶段二客户端")
         return self._stage2_worker_identity()[0]
 
@@ -452,16 +584,47 @@ class MotionEncoderClient:
             compare_runtime(software_runtime(store_prov["stage2_compat"]["online_vae"]), software_runtime(self.provenance.get("online_vae")))
         elif self.provenance.get("online_vae") != store_prov["stage2_compat"]["online_vae"]:
             raise ValueError("阶段二真实 VAE 与兼容合同的 online_vae 不同")
+        self._check_session_worker()
+
+    def _check_session_worker(self) -> None:
         worker_pid = self.worker_pid
         if (worker_pid != self.provenance.get("pid")
                 or not self.provenance.get("gpu_uuid") or not self.provenance.get("cuda_visible_devices")
                 or self.provenance["cuda_visible_devices"] != self._online_gpu):
             raise ValueError("阶段二真实握手缺实际进程或 GPU 身份")
 
+    def _check_timepool_provenance(self, store_prov: dict) -> None:
+        """握手与离线来源逐项比对；stage2 来源因字段集合不同，过不了 validate_timepool_provenance。"""
+        from mme_vla_suite.datastore.motion_store import validate_timepool_provenance
+        validate_timepool_provenance(store_prov, status="verified")
+        identity = self.provenance
+        _reject_encoder_fields(identity)
+        pool = {"version": store_prov["pool"]["version"], "source_sha256": store_prov["pool"]["source_sha256"]}
+        if identity.get("pool") != pool:
+            raise ValueError("固定池化握手的 pool 身份与离线来源不同")
+        wan = identity.get("wan")
+        if not isinstance(wan, dict) or set(wan) != set(TIMEPOOL_WAN_KEYS):
+            raise ValueError("固定池化握手的 wan 字段不完整")
+        for key in TIMEPOOL_WAN_KEYS:
+            if wan[key] != store_prov["wan"][key]:
+                raise ValueError(f"固定池化握手的 wan.{key} 与离线来源不同")
+        numerics = identity.get("numerics")
+        flags = numerics.get("flags") if isinstance(numerics, dict) else None
+        if (not isinstance(flags, dict) or numerics.get("dtype") != "float32" or numerics.get("autocast") is not False
+                or numerics.get("batch") != 1 or flags.get("matmul_allow_tf32") is not False
+                or flags.get("cudnn_allow_tf32") is not False):
+            raise ValueError("固定池化握手的数值开关不是 fp32、B=1、TF32=false")
+        if not isinstance(identity.get("environment"), dict) or not identity["environment"]:
+            raise ValueError("固定池化握手缺环境指纹")
+        self._check_session_worker()
+
     def check_provenance(self, store_prov: dict) -> None:
-        if self.encoder_kind == STAGE2_KIND:
+        if self.encoder_kind in SESSION_KINDS:
             try:
-                self._check_stage2_provenance(store_prov)
+                if self.encoder_kind == STAGE2_KIND:
+                    self._check_stage2_provenance(store_prov)
+                else:
+                    self._check_timepool_provenance(store_prov)
             except Exception:
                 self.close()
                 raise
@@ -486,7 +649,7 @@ class MotionEncoderClient:
                 raise RuntimeError(f"sidecar 已退出（rc={self._proc.returncode}）")
             deadline = time.monotonic() + P.REQUEST_TIMEOUT_S
             t0 = time.perf_counter()
-            if self.encoder_kind == STAGE2_KIND:
+            if self.encoder_kind in SESSION_KINDS:
                 try:
                     P.send_all(self._sock, P.encode_request(start_frame, payload))
                     raw = P.recv_response(self._sock, deadline, response_bytes=4096)
@@ -501,7 +664,7 @@ class MotionEncoderClient:
         return np.frombuffer(raw, dtype=np.float32).copy()
 
     def close(self) -> None:
-        if getattr(self, "encoder_kind", None) == STAGE2_KIND:
+        if getattr(self, "encoder_kind", None) in SESSION_KINDS:
             self._close_stage2()
             return
         try:
