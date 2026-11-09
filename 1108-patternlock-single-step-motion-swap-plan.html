@@ -28,6 +28,7 @@
 <div class="note">
 <p><b>状态：</b>只规划，未实施。须用户对本计划不改而直接认可后才开工（AGENTS.md 开工授权条）。</p>
 <p><b>修订：</b>第二版（美东 2026-11-08）。用户选定「最小够用」方案，相对第一版（<code>187e278</code>）改了三处：每对与每局都跑 5 个模型 seed；加原样对照组 N 和示范窗口置零组 Z；写明 C 条件要和 B 一起读。</p>
+<p><b>第三版（美东 2026-11-08，开工审查后）：</b>开工审查 <code>PLAN_CONSISTENCY_REVIEW=FAIL base=9bbccea findings=4 blocking=1</code>。用户裁决（AskUserQuestion，均选推荐项）：「冒烟先录 5 和 20」「全是[0,0]且次数对得上」「修订后直接开工」。据此：冒烟改为先原样录局 5、20 再做交换与置零；<code>SWAP_SCOPE</code> 判据改为次数对得上；补 F4 依据；预算改按每局单独一块；seed 42、1 的 N 组跑完先做 <code>SEED_EFFECT</code> 中间检查。</p>
 <p><b>范围：</b>只做 PatternLock；只用只有 1 个子目标（单步）的局；只用 motion 模型原本成功的局；只换示范段那一个 motion 窗口。三种交换条件：位置与方向都相同、位置相同方向不同、位置不同方向相同。</p>
 <p><b>代码锚点：</b>本仓库 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code>，分支 <code>v4.1-interpretMotion</code>，计划基线 <code>48332cfcc009c98a082dc000d74e07d5d2a4f3ca</code>；benchmark gitlink <code>856bc3a189d4172f3f47dbee4424d585f8d78db3</code>，不改。环境 A（sled-aspen，2 × RTX A6000）。</p>
 <p><b>样本来源：</b>1106 子目标 rollout 档案 <code>docs/evaluation-doc/subgoal-rollout-attn-seed42-1106/</code>，运行产物 <code>v1-store/evaluation/subgoal-rollout-attn-seed42-1106/</code>（只读）。</p>
@@ -39,7 +40,7 @@
 
 <h2>一、要做什么（总览与已定口径）</h2>
 <p>PatternLock 先放一段示范：杆尖从起点格走到下一格。随后机械臂回到起点，要按同样的路线重走一遍。文字指令是固定的一句话，不含路径，所以往哪走只能从记忆里读。记忆里有两路：示范帧（frame memory）和示范 motion token。本计划只把示范段的 motion token 换成另一局（供体局）的，或者置零；帧记忆、文字、seed 全部不动，然后看机械臂往哪走。</p>
-<p>easy 档是 3×3 盘，格子编号 = 行 × 3 + 列（行增加为 +x，列增加为 +y，源码 <code>PatternLock._load_scene</code>）。motion 模型在官方 50 局里有 <b>8 局只有 1 个子目标，seed 42 下全部成功</b>。它们的示范只有 25–37 帧，正好只占 1 个 motion 窗口（起点为第 0 帧，窗长 33）。下表的路径是按每局 <code>env_seed</code> 用 <code>_load_scene</code> 的同一段随机数逻辑复算的，路径长度与 1106 记录的子目标数 m 逐局一致（2026-11-08 只读实测）。</p>
+<p>easy 档是 3×3 盘，格子编号 = 行 × 3 + 列（行增加为 +x，列增加为 +y，源码 <code>PatternLock._load_scene</code>）。motion 模型在官方 50 局里有 <b>8 局只有 1 个子目标，seed 42 下全部成功</b>。它们的示范只有 25–37 帧，正好只占 1 个 motion 窗口（起点为第 0 帧，窗长 33；依据是 1106 各局终局记录 <code>budget.demo_windows</code>，8 局都为 1，37 帧的局 5、28、32 也是 1）。下表的路径是按每局 <code>env_seed</code> 用 <code>_load_scene</code> 的同一段随机数逻辑复算的，路径长度与 1106 记录的子目标数 m 逐局一致（2026-11-08 只读实测）。</p>
 <div class="tbl"><table>
 <tr><th>局</th><th>env_seed</th><th>路径</th><th>起点格</th><th>方向</th><th>示范帧数</th></tr>
 <tr><td>5</td><td>650500</td><td>1→5</td><td>1</td><td>右下斜（+1 行，+1 列）</td><td>37</td></tr>
@@ -118,7 +119,7 @@
 <tr><td>原样复现</td><td>seed 42 的 N 组不换 token，8 局应全部成功，与 1106 一致</td><td><code>RECORD_REPRO=PASS eps=8 success=8</code></td></tr>
 <tr><td>seed 生效</td><td>N 组中至少一局，5 个 seed 的杆尖轨迹不完全相同；全相同说明 seed 没传到采样，5 个 seed 就是同一局复制 5 次</td><td><code>SEED_EFFECT=PASS seeds=5 eps_differ=&lt;n&gt;</code>（n ≥ 1）</td></tr>
 <tr><td>供体与置零文件</td><td>每个 npz 恰好 1 行、<code>start_frame=0</code>；供体 emb 与原文件第 0 帧那行逐位相等，置零文件 emb 全 0 且维数与原文件相同</td><td><code>DONOR_TRIM=PASS donors=7 zeros=8 rows=1 maxabs=0</code></td></tr>
-<tr><td>只动了示范窗口</td><td>A/B/C/Z 每局 <code>episode.json</code> 的 <code>motion_content.n_replaced</code> 为 1，<code>replace_log</code> 只有 <code>[0, 0]</code></td><td><code>SWAP_SCOPE=PASS runs=90 replaced_each=1</code></td></tr>
+<tr><td>只动了示范窗口</td><td>A/B/C/Z 每局 <code>episode.json</code> 的 <code>motion_content.replace_log</code> 每条都是 <code>[0, 0]</code>（只动了示范窗口），且 <code>n_replaced</code> 等于该局录制 npz 中第 0 帧窗口的 <code>counts</code>（示范窗口可能被编码调用多次，按调用次数核对；接收局自己的录制在 N 组 seed 42）</td><td><code>SWAP_SCOPE=PASS runs=90 log_all_00=1 count_mismatch=0</code></td></tr>
 <tr><td>交换读数</td><td>130 局全部有终局记录且都读出到达类别；基础设施重试与无效局另计</td><td><code>PL_SWAP=PASS runs=130 invalid=&lt;n&gt; N=&lt;s/40&gt; Z=&lt;s/40&gt; A=&lt;s/10&gt; B_donor=&lt;n/15&gt; C_own=&lt;n/25&gt; C_donor=&lt;n/25&gt;</code></td></tr>
 </table></div>
 
@@ -126,14 +127,15 @@
 <div class="tbl"><table>
 <tr><th>阶段</th><th>内容</th><th>判据</th></tr>
 <tr><td>0</td><td>开工审查（一个只读审查子代理）；写两个脚本和测试（一个写入型子代理），合并前后各审一次</td><td><code>PLAN_CONSISTENCY_REVIEW</code>、<code>PRE_MERGE_REVIEW</code>、<code>POST_MERGE_REVIEW</code>、<code>PL_PATHS</code></td></tr>
-<tr><td>1</td><td>冒烟：seed 42 下局 20 录 motion 1 局，再做 20←5 交换 1 局、局 20 置零 1 局；量单局耗时</td><td>3 局都写出 trace 与 <code>motion_content</code>，交换与置零局 <code>n_replaced=1</code></td></tr>
-<tr><td>2</td><td>seed 42 的 N 组（8 局，录 motion）；生成供体与置零文件</td><td><code>RECORD_REPRO</code>、<code>DONOR_TRIM</code></td></tr>
-<tr><td>3</td><td>其余 122 局分成 4 个队列（每卡 2 个 worker），按 seed 跑完 N、Z、A、B、C</td><td>各日志 <code>EXIT_CODE=0</code>、<code>SWAP_SCOPE</code>、<code>SEED_EFFECT</code></td></tr>
+<tr><td>1</td><td>冒烟：seed 42 下原样录局 5、20 的 motion（这 2 局计入 N 组）；只为这 2 局生成供体与置零文件；再跑 seed 42 的 20←5 交换（计入 B 组）和局 20 置零（计入 Z 组）各 1 局；量单局耗时</td><td>4 局都写出 trace；交换与置零局 <code>replace_log</code> 全为 <code>[0,0]</code> 且次数对得上</td></tr>
+<tr><td>2</td><td>seed 42 的 N 组其余 6 局（录 motion）；生成全部供体与置零文件</td><td><code>RECORD_REPRO</code>、<code>DONOR_TRIM</code></td></tr>
+<tr><td>3a</td><td>seed 1 的 N 组 8 局；与 seed 42 比轨迹（中间检查）</td><td><code>SEED_EFFECT</code>（不过即停）</td></tr>
+<tr><td>3b</td><td>其余 112 局分成 4 个队列（每卡 2 个 worker），按 seed 跑完 N、Z、A、B、C</td><td>各日志 <code>EXIT_CODE=0</code>、<code>SWAP_SCOPE</code></td></tr>
 <tr><td>4</td><td>读数、写档案 <code>docs/evaluation-doc/pl-single-step-swap-1108/</code></td><td><code>PL_SWAP</code></td></tr>
 </table></div>
 
 <h2>七、预算</h2>
-<p>1106 实测：单局 rollout 约 20–35 秒，每块（5 局）连起服务端约 5–7 分钟，所以起一次服务端约 2–3 分钟。有 <code>swap_map</code> 时每块只能 1 局，A/B/C/Z 的 90 局每局约 3 分钟；N 组 40 局按每块 8 局跑，约 10 块。合计约 90 × 3 + 10 × 6 ≈ 330 worker·分钟，4 个 worker 并行约 <b>1.5 小时</b>运行。加上写脚本与两次审查约 50 分钟、读数与留档约 20 分钟，总计约 <b>2.5–3 小时</b>。冒烟后按实测单局耗时重估，运行部分超过 2 小时就停下问用户，不自行减 seed 或减组。</p>
+<p>1106 实测：单局 rollout 约 20–35 秒，每块（5 局）连起服务端约 5–7 分钟，所以起一次服务端约 2–3 分钟。本计划全部用 <code>run_local --episodes</code> 逐局跑，每局单独一块、单独起服务端（有 <code>swap_map</code> 时也只能 1 局 1 块），130 局每局约 3 分钟，合计约 390 worker·分钟，4 个 worker 并行约 <b>1.6–1.8 小时</b>运行（冒烟、阶段 2、3a 的局也分到 4 个 worker 上）。加上写脚本与两次审查约 50 分钟、读数与留档约 20 分钟，总计约 <b>2.5–3 小时</b>。冒烟后按实测单局耗时重估，运行部分超过 2 小时就停下问用户，不自行减 seed 或减组。</p>
 
 <h2>八、子代理分工与合并（简述）</h2>
 <p>只有三个新文件，归一个写入型子代理在独立 worktree 里写：一个准备脚本（复算路径、生成所有 spec 与 4 个队列、裁剪供体、写置零文件），一个读数脚本（读 trace 与 <code>episode.json</code>，出表和判定行），一份测试。合并前在它的 worktree 里跑短测，并派一个只读审查子代理审范围与接口；合并后再跑一遍短测、确认 <code>src/</code>、<code>third_party/</code> 零改动，再 push。运行由主会话在干净的分离工作树里起 tmux，每份日志挂一个 Monitor。细节见第二部分。</p>
@@ -156,10 +158,10 @@
 <code>replay_path(env_seed, difficulty)</code>：按 <code>PatternLock._load_scene</code> 的顺序（<code>torch.Generator().manual_seed(seed)</code>，循环 <code>randperm(G*G)[:2]</code> + <code>robomme.robomme_env.utils.adjacent.find_path_0_to_8(diagonals=True)</code> 直到长度落在档位区间）复算路径，在 official-sim 解释器里运行，写 <code>paths.json</code> 并打印 <code>PL_PATHS</code>。<br>
 <code>EPISODES</code> 写死 8 局，<code>SEEDS=(42,1,2,3,4)</code>，<code>CONDITIONS</code> 写死第一部分第三节的 A/B/C 10 对。<br>
 <code>write_specs</code>：字段沿用 1106 <code>gen_specs.py</code>（<code>subgoal_trace=True</code>，<code>rollout_record=False</code>），另设 <code>model_seed</code>、<code>save_attn=False</code>。每个 seed 生成 N spec（seed 42 加 <code>record_motion</code>）、Z spec（<code>ablate="motion_swap_exact:&lt;O&gt;/zero"</code>，自映射）、A/B/C 各一个 spec（<code>ablate="motion_swap_exact:&lt;O&gt;/donor_trim"</code>）。各 spec 的 <code>attn_out</code>、<code>run_root</code> 按 <code>&lt;O&gt;/&lt;组&gt;/seed&lt;s&gt;/</code> 分开。<br>
-<code>write_queues</code>：把 seed 42 的 N 之外的全部 (spec, 局) 均分到 4 个队列（GPU0、GPU1 各两个，显存比例 0.30，同 1106 K8），写 <code>queue-&lt;g&gt;&lt;k&gt;.sh</code>：先核对工作树 HEAD 与 clean，再逐个 <code>python -m scripts.interpret.run_local &lt;spec&gt; --episodes &lt;局&gt;</code>。<br>
-<code>make_donors</code>：读 <code>record/PatternLock_ep&lt;id&gt;.npz</code>，只保留 <code>start_frames == 0</code> 的行写到 <code>donor_trim/</code>，同形状全零写到 <code>zero/</code>，打印 <code>DONOR_TRIM</code></td></tr>
+<code>write_queues</code>：按阶段写队列：冒烟（seed 42 N 局 5、20，随后 B 的 20←5 与 Z 的局 20）、阶段 2（seed 42 N 其余 6 局）、阶段 3a（seed 1 N 8 局）、阶段 3b（其余 112 局，已在冒烟跑过的 2 局不重复）；每个阶段的 (spec, 局) 均分到 4 个队列（GPU0、GPU1 各两个，显存比例 0.30，同 1106 K8），写 <code>queue-&lt;g&gt;&lt;k&gt;.sh</code>：先核对工作树 HEAD 与 clean，再逐个 <code>python -m scripts.interpret.run_local &lt;spec&gt; --episodes &lt;局&gt;</code>。<br>
+<code>make_donors [--episodes 5,20]</code>：只处理已录到的局（冒烟时只有 5、20），读 <code>record/PatternLock_ep&lt;id&gt;.npz</code>，只保留 <code>start_frames == 0</code> 的行写到 <code>donor_trim/</code>，同形状全零写到 <code>zero/</code>，打印 <code>DONOR_TRIM</code></td></tr>
 <tr><td><code>scripts/interpret/analysis/pl_swap_readout.py</code>（新）</td><td><code>button_xy</code>、<code>first_reached</code>、<code>classify</code>、<code>summarize</code></td><td>读每局 <code>step_trace.jsonl</code> 的 <code>tcp_after</code>、<code>episode.json</code> 的 <code>motion_content</code>、run_local 结果的 <code>success</code>；按第一部分第四节判据求到达格并分四类；余弦距离用 <code>record/</code> 里接收局与供体的第 0 帧窗口编码计算；局级重采样 2000 次（种子 20261108）。输出 <code>readout.json</code>、<code>readout.md</code>，打印 <code>RECORD_REPRO</code>、<code>SEED_EFFECT</code>、<code>SWAP_SCOPE</code>、<code>PL_SWAP</code></td></tr>
-<tr><td><code>scripts/interpret/test_pl_swap.py</code>（新）</td><td>—</td><td>钉住：8 局复算路径等于第一部分的表；10 对满足各自条件的位置 / 方向关系；spec 总局数 130、每个队列只含本卡 worker；裁剪只留 1 行、置零维数一致；合成 trace 的到达格分类（含「其他格」「未到」）</td></tr>
+<tr><td><code>scripts/interpret/test_pl_swap.py</code>（新）</td><td>—</td><td>钉住：8 局复算路径等于第一部分的表；10 对满足各自条件的位置 / 方向关系；各阶段队列合计 130 局且不重复、每个队列只含本卡 worker；裁剪只留 1 行、置零维数一致；合成 trace 的到达格分类（含「其他格」「未到」）</td></tr>
 </table></div>
 
 <h2>二 子代理分配表</h2>
@@ -171,7 +173,7 @@
 <p>审查用 sonnet，钉死 <code>REVIEW_BASE</code> / <code>REVIEW_TIP</code>。运行量小、全是同一入口，不另派运行型子代理，由主会话起 tmux 并挂 Monitor。</p>
 
 <h2>三 闸门总表</h2>
-<p>顺序：<code>PLAN_CONSISTENCY_REVIEW</code> → <code>PRE_MERGE_REVIEW</code> → <code>POST_MERGE_REVIEW</code> → <code>PL_PATHS</code> → 冒烟 3 局 → <code>RECORD_REPRO</code> → <code>DONOR_TRIM</code> → 4 个队列 → <code>SEED_EFFECT</code>、<code>SWAP_SCOPE</code> → <code>PL_SWAP</code>。<code>RECORD_REPRO</code> 或 <code>SEED_EFFECT</code> 不过时停下报用户，不换局、不补跑。</p>
+<p>顺序：<code>PLAN_CONSISTENCY_REVIEW</code> → <code>PRE_MERGE_REVIEW</code> → <code>POST_MERGE_REVIEW</code> → <code>PL_PATHS</code> → 冒烟 4 局 → <code>RECORD_REPRO</code> → <code>DONOR_TRIM</code> → 阶段 3a → <code>SEED_EFFECT</code> → 阶段 3b → <code>SWAP_SCOPE</code> → <code>PL_SWAP</code>。<code>RECORD_REPRO</code> 或 <code>SEED_EFFECT</code> 不过时停下报用户，不换局、不补跑。</p>
 
 <h2>四 Runbook</h2>
 <pre>W=/data/hongzefu/robomme_policy_learning_MotionJEPA
