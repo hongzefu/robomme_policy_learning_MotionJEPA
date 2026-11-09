@@ -85,19 +85,6 @@ def _live_process(pid: int) -> tuple[int, int]:
         raise ValueError("阶段二 worker 进程身份不存在或不可读") from exc
 
 
-def _live_process(pid: int) -> tuple[int, int]:
-    """读取 Linux 进程父 PID 与启动时钟；退出、僵尸和非法 PID 均不算存活。"""
-    if type(pid) is not int or pid <= 0:
-        raise ValueError("阶段二 worker 进程身份必须为正整数 PID")
-    try:
-        fields = pathlib.Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()
-        if fields[0] in ("Z", "X", "x"):
-            raise ValueError("阶段二 worker 进程身份已退出")
-        return int(fields[1]), int(fields[19])
-    except (OSError, IndexError) as exc:
-        raise ValueError("阶段二 worker 进程身份不存在或不可读") from exc
-
-
 def _sha256(path: pathlib.Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
