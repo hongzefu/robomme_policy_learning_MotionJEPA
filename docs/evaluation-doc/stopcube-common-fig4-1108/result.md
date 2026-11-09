@@ -262,6 +262,13 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 - **读速度 M 的跨模型差**：30 格全部为正，+0.088 ～ +0.374，区间都不含 0。
 - 结论不依赖某一次特定的按局分折。
 
+### M. 阴性对照：整局打乱 (M, N)
+
+做法：每局的 M、N 换成另一局的（t 不变），按 `hover_points.point_labels` 重算距按下步数，`[t,N]` 特征也换成打乱后的 N。比较「`[t,N_shuf]` + 组特征」与「只用 `[t,N_shuf]`」，打乱 5 次。脚本 `records/diagnostics/shuffle_control.py`，结果 `records/explore/shuffle_control.json`。
+
+- 两个模型的 Text、History 组，在第 8、17 层的增量均值都在 −2.3 ～ 0.0 步之间，单次范围 −6.4 ～ +1.8 步。
+- 真实标签下，MotionMem 的同项增量是 22–30 步（B 节）。所以 B 节的增量来自表征里与真实 (M, N) 相关的信息，不是多加维度造成的过拟合。
+
 ## 四、解释边界
 
 - B 节的「补上的信息」与 M 一致，但只对 Text、History、Motion 组成立；MotionMem 的 Current／Action 组也能补上 17 步左右，而它们读 M 并不比 FrameSamp 好，补上的可能是别的信息：`[t,N,M]` 上限 0.926；MotionMem 读速度 M 的准确率为 0.89–0.93（motion 组、history 组），FrameSamp 为 0.57–0.71。这是相关证据，没有做干预。
@@ -278,13 +285,13 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 
 ## 六、本轮 tmux 会话
 
-`cc-cf-explore1`、`cc-cf-smoke-ctx`、`cc-cf-smoke-mot`、`cc-cf-repro-1105`、`cc-cf-ctx`、`cc-cf-mot`、`cc-cf-beyond`、`cc-cf-fig4`、`cc-cf-explore-new`、`cc-cf-beyond-new`、`cc-cf-closedloop`、`cc-cf-beyond-new2`、`cc-cf-scale100`、`cc-cf-crossN`、`cc-cf-knn`、`cc-cf-clspeed`、`cc-cf-smoke-split`、`cc-cf-split-g0`、`cc-cf-split-g1`、`cc-cf-split-g1b`、`cc-cf-split-ana`、`cc-cf-pcadim`、`cc-cf-foldseed`，全部自然退出。
+`cc-cf-explore1`、`cc-cf-smoke-ctx`、`cc-cf-smoke-mot`、`cc-cf-repro-1105`、`cc-cf-ctx`、`cc-cf-mot`、`cc-cf-beyond`、`cc-cf-fig4`、`cc-cf-explore-new`、`cc-cf-beyond-new`、`cc-cf-closedloop`、`cc-cf-beyond-new2`、`cc-cf-scale100`、`cc-cf-crossN`、`cc-cf-knn`、`cc-cf-clspeed`、`cc-cf-smoke-split`、`cc-cf-split-g0`、`cc-cf-split-g1`、`cc-cf-split-g1b`、`cc-cf-split-ana`、`cc-cf-pcadim`、`cc-cf-foldseed`、`cc-cf-shuffle`，全部自然退出。
 
 ## 七、归档
 
 - `records/fig4-tables/`：r2_by_layer.csv、fit_lines.csv、reference_lines.csv、summary.json
 - `records/explore/`：
-  - 共同轨迹：angles.json、breakdown.json、layers_by_N.json、near_decision.json、knn.json、cross_N.json、pca_dim.json、fold_seed.json
+  - 共同轨迹：angles.json、breakdown.json、layers_by_N.json、near_decision.json、knn.json、cross_N.json、pca_dim.json、fold_seed.json、shuffle_control.json
   - oracle 增量：beyond_oracle.json（旧口径）、beyond_oracle_scale100.json（修正口径）
   - 闭环：closedloop_beyond_oracle.json、closedloop_beyond_oracle_scale100.json、closedloop_speed.json
   - split 加跑：split/
