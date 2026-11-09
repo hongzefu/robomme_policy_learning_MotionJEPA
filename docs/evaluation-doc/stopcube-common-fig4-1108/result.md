@@ -221,7 +221,7 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 - **对抗验证**：`ADJUST_REVIEW=PASS scale=same findings=3`。
 - **产物**：根目录 `replay-split/mot/`。label 复用为 mot，因为 `hover_replay --label` 只接受 ctx／mot；它实际是 split 变体，不要和 `replay/mot`（concat）混淆。
 - **冒烟判定行**：`REPLAY_PARITY=PASS points=21 maxabs=0`（没有 split 的闭环记录可比，`compared=0`，只证明批 8／批 16 两条路径一致），`ACTION_PARITY=PASS maxabs=0`，各组 `HIDDEN_PRECISION=PASS`。
-- **全量判定行**：两卡分局并行，GPU0 `REPLAY_RUN=PASS points=1180`（局 0–46），GPU1 `REPLAY_RUN=PASS points=1164`（局 47–99），合计 98 局、2344 个点。GPU1 跑完后又接手重算局 41–46（`points=212`）。GPU0 也自己算完了这几局，所以两边重复；同名文件由后写者覆盖（文件时间 05:33–05:44），不计入合计。两次结果是否逐位相同没有对拍，未验证（XLA 已开确定性选项）。各会话 `EXIT_CODE=0`。
+- **全量判定行**：两卡分局并行，GPU0 `REPLAY_RUN=PASS points=1180`（局 0–46），GPU1 `REPLAY_RUN=PASS points=1164`（局 47–99），合计 98 局、2344 个点。GPU1 跑完后又接手重算局 41–46（`points=212`）。GPU0 也自己算完了这几局，所以两边重复；同名文件由后写者覆盖（文件时间 05:33–05:44），不计入合计。事后单独重算第 46 局（`verify-split-ep46.sh`，tmux `cc-cf-verify46`），与库内文件全部键逐位相等（`records/split-ep46-rerun-compare.txt`），确定性成立。各会话 `EXIT_CODE=0`。
 - **比较方式**：v1-store 内建两个符号链接根 `cmp-split-vs-fs`、`cmp-split-vs-concat`，用 `explore_angles.py` 与 `beyond_oracle.py`（`ONEHOT_SCALE=100`）不改代码地比较。结果在 `records/explore/split/`。
 
 **三个模型的 StopCube 成功率**：FrameSamp 13.67%（论文 Table 3）< concat 43%（65/150）< split 66%（99/150）。训练折内选层后，下面这些挑选出来的读数按同样的顺序递增（不是所有读数都如此，表后列出部分反例）：
@@ -336,7 +336,7 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 
 ## 六、本轮 tmux 会话
 
-`cc-cf-explore1`、`cc-cf-smoke-ctx`、`cc-cf-smoke-mot`、`cc-cf-repro-1105`、`cc-cf-ctx`、`cc-cf-mot`、`cc-cf-beyond`、`cc-cf-fig4`、`cc-cf-explore-new`、`cc-cf-beyond-new`、`cc-cf-closedloop`、`cc-cf-beyond-new2`、`cc-cf-scale100`、`cc-cf-crossN`、`cc-cf-knn`、`cc-cf-clspeed`、`cc-cf-smoke-split`、`cc-cf-split-g0`、`cc-cf-split-g1`、`cc-cf-split-g1b`、`cc-cf-split-ana`、`cc-cf-pcadim`、`cc-cf-foldseed`、`cc-cf-shuffle`、`cc-cf-tnm`，全部自然退出。
+`cc-cf-explore1`、`cc-cf-smoke-ctx`、`cc-cf-smoke-mot`、`cc-cf-repro-1105`、`cc-cf-ctx`、`cc-cf-mot`、`cc-cf-beyond`、`cc-cf-fig4`、`cc-cf-explore-new`、`cc-cf-beyond-new`、`cc-cf-closedloop`、`cc-cf-beyond-new2`、`cc-cf-scale100`、`cc-cf-crossN`、`cc-cf-knn`、`cc-cf-clspeed`、`cc-cf-smoke-split`、`cc-cf-split-g0`、`cc-cf-split-g1`、`cc-cf-split-g1b`、`cc-cf-split-ana`、`cc-cf-pcadim`、`cc-cf-foldseed`、`cc-cf-shuffle`、`cc-cf-tnm`、`cc-cf-verify46`，全部自然退出。
 
 ## 七、归档
 
