@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>RouteStick 两步示范 motion 交换：全因子 + Frozen Wan 对比计划</title>
+<style>
+body{font-family:-apple-system,"PingFang SC","Noto Sans CJK SC",sans-serif;max-width:1040px;margin:24px auto;padding:0 16px;line-height:1.65;color:#1c1c1c;background:#fff}
+h1{border-bottom:2px solid #333;padding-bottom:6px;margin-top:40px}
+h2{margin-top:30px;border-left:4px solid #3b6ea5;padding-left:10px}
+table{border-collapse:collapse;width:100%;margin:12px 0;font-size:14px}
+th,td{border:1px solid #bbb;padding:5px 8px;vertical-align:top;text-align:left}
+th{background:#eef2f7}
+td.n{text-align:right}
+code{background:#f3f3f3;padding:1px 4px;border-radius:3px;font-size:13px}
+pre{background:#f6f6f6;padding:10px;overflow-x:auto;font-size:13px;border-radius:4px}
+blockquote{border-left:4px solid #999;margin:10px 0;padding:4px 12px;background:#fafafa}
+.warn{background:#fff6e0;border:1px solid #e0b040;padding:8px 12px;border-radius:4px}
+</style>
+</head>
+<body>
+
+<p><strong>RouteStick 两步示范 motion 交换：全因子 + Frozen Wan 对比计划</strong></p>
+<blockquote>
+<p>第一版（美东 2026-11-09）。<strong>只规划、不实施</strong>；开工须用户对本文件不改而直接认可。</p>
+<p>代码锚点：分支 <code>v4.2-plswap-full</code> @ <code>b9ff7a5</code>（PatternLock 全因子轮的执行代码 <code>efc3a19</code>，<code>commitV4.2.3</code>，已含 plfull 口径、多局逐局供体交换、Wan <code>wan_fixedpool1024</code> 接入）。工作副本：sled-aspen <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code>，2 × RTX A6000。</p>
+<p>上一轮：<a href="docs/evaluation-doc/pl-swap-full-1109/result.md"><code>docs/evaluation-doc/pl-swap-full-1109/result.md</code></a>（PatternLock，MotionMem <code>B_donor=136/150</code>、<code>D_dir=147/378</code>；Wan 交换 0 局跟供体），计划 <code>1109-patternlock-swap-full-factorial-wan-plan.html</code>。</p>
+<p>commit 体例：功能合并 <code>commitV4.2.&lt;n&gt;:</code>，子代理 <code>sub/&lt;编号&gt;:</code>，文档 <code>docs:</code>，交接 <code>handoff:</code>。继续在 <code>v4.2-plswap-full</code> 上做。</p>
+</blockquote>
+
+<h1>第一部分（给人看）</h1>
+
+<h2>一、要做什么（总览与已定口径）</h2>
+<p><strong>一句话方案</strong>：在 RouteStick easy 档「恰好两步」的局上，按（起点、两步左右方向、两步绕杆方向）的 32 种路线类型，把<strong>整段示范的 motion 窗口</strong>在接收局与供体局之间交换，两个只差编码器的 orig100 模型（MotionMem、Frozen Wan pooling）各跑一遍，逐步读出「走到了哪个目标、绕杆是顺时针还是逆时针」跟谁走。每个模型约 860 局。</p>
+
+<p><strong>RouteStick 和 PatternLock 不一样的三点</strong>（2026-11-09 只读核实 <code>third_party/robomme_benchmark/src/robomme/robomme_env/RouteStick.py</code>）：</p>
+<ol>
+<li><strong>场景</strong>：一排 9 格（整体随机转 −30°～30°），路线目标在第 0、2、4、6、8 格，第 1、3、5、7 格是立柱。每一步是「绕着中间那根立柱，摆到左边或右边相邻的目标」，绕向 <code>clockwise</code> / <code>counterclockwise</code> 每步独立随机。走错绕向（<code>direction_fail</code>，按杆尖轨迹相对前后目标连线的平均叉积符号判定）或碰到别的目标（<code>_wrong_button_touch</code>）都算失败。</li>
+<li><strong>没有单步局</strong>：easy 档 <code>length=[2,3]</code>、不许回头（到端点时被迫回头），每局至少 2 步。所以本轮的单位是「两步路线」。</li>
+<li><strong>示范占多个 motion 窗口</strong>：11-06 本机 RouteStick 官方 50 局里，<code>budget.demo_windows</code> 为 3～11（两步局约 3 个）。PatternLock 的「只换唯一示范窗口」在这里不成立，本轮改为<strong>整段示范的全部窗口一起换</strong>，并要求接收局与供体局的示范窗口起点帧列表完全相同（否则不配对）。</li>
+</ol>
+
+<p><strong>已定口径（用户原话逐字保留）</strong>：</p>
+<table>
+<tr><th>编号</th><th>口径</th><th>依据</th></tr>
+<tr><td>K1</td><td>换成 RouteStick 再测一遍</td><td>「给出方案 再测一下routestick任务」</td></tr>
+<tr><td>K2</td><td>沿用上一轮口径：只探索接收局原样成功的局、受控交换示范 motion、不存注意力、只用真实 token 交换（另加置零 / 同范数随机作对照，同上一轮）</td><td>11-08 原话「只探索成功任务」；记忆「替换实验不存注意力」「motion token 只能换真实 token」</td></tr>
+<tr><td>K3</td><td>按用户「尽可能不要问我自己决策」「一路做到底」，本计划的推荐值由主代理定，开工后执行中的同规模调整不再请示</td><td>11-09 原话</td></tr>
+</table>
+<p>以下是我给的推荐值，认可本计划即视为同意：① 两个模型都跑（RouteStick 官方三 seed 两者几乎相同：MotionMem concat 30.67 ± 1.15、Wan 31.33 ± 1.15，正好检验「分数一样，是否都在读 motion」）；② 只用 easy 档恰好两步的局，不做三步、medium、hard；③ 整段示范窗口一起换，不做「只换第一步对应窗口」（窗口与步的对应需要额外对齐，下一轮再做）；④ 主 seed 42，seed 1、2 只抽 60 对复核。</p>
+
+<h2>二、局池与分组</h2>
+<p><strong>32 种路线类型</strong>：起点 0、4（端点）各只有 1 条两步路径，起点 1、2、3 各 2 条，共 8 条路径；每条路径两步各有顺/逆两种绕向，8 × 4 = 32。按左右方向序列分：RR（起点 0、1、2）、LL（起点 2、3、4）、LR（起点 1，第二步被迫回头）、RL（起点 3，被迫回头）。</p>
+<p><strong>局从哪来</strong>：新扫 env_seed 1400000 起、步长 100、共 4000 个，跳过 RouteStick train / test / val 三套清单；用复算函数 <code>replay_route</code>（按 <code>_load_scene</code> 的随机数顺序：转角 1 次 → 4 根立柱颜色各 3 个 → 步数 → 起点与每步选邻居 → 每步绕向）得到路线，只留 <code>steps == 2</code> 的局。每种类型取 env_seed 最小的 4 局：第 1 局进接收集 R（32 局），第 2～4 局进供体集 S（96 局，多备两局，用来找示范窗口对得上的供体）。复算函数先在 20 个 seed 上与真实环境 <code>task_list</code> 对拍（判定行 <code>RS_REPLAY</code>）。</p>
+
+<table>
+<tr><th>组</th><th>接收局 ← 供体</th><th class="n">配对</th><th>回答什么</th></tr>
+<tr><td>N 原样</td><td>R 32 + S 96，同时录 motion</td><td class="n">128</td><td>原样成功率；筛接收局；记录每局示范窗口起点帧</td></tr>
+<tr><td>Z 置零</td><td>R，示范全部窗口置零</td><td class="n">32</td><td>去掉示范 motion 会怎样</td></tr>
+<tr><td>Rnd 随机</td><td>R，每个示范窗口换成同范数随机向量</td><td class="n">32</td><td>缺信息还是分布外</td></tr>
+<tr><td>A 同类型</td><td>同起点、同路径、同绕向的另一局</td><td class="n">32</td><td>换 token 操作本身的副作用</td></tr>
+<tr><td>Bsw 只换绕向</td><td>同起点、同路径，绕向序列不同</td><td class="n">96</td><td>绕向是否跟 token 走（帧记忆与 token 冲突）</td></tr>
+<tr><td>Bside 只换路径</td><td>同起点，路径不同（任意绕向）</td><td class="n">96</td><td>左右方向是否跟 token 走</td></tr>
+<tr><td>C 同模式异起点</td><td>起点不同，左右序列与绕向序列都相同</td><td class="n">48</td><td>路线模式能否跨起点搬运</td></tr>
+<tr><td>D1 同左右异绕向</td><td>起点不同、左右序列相同、绕向不同</td><td class="n">144</td><td>跨起点时绕向单独是否搬运</td></tr>
+<tr><td>D2 全不同</td><td>起点与左右序列都不同（608 对里固定随机种子 0 抽 150）</td><td class="n">150</td><td>区分「供体相对方向」「供体绝对目标」「自己目标」</td></tr>
+<tr><td>seed 复核</td><td>A、Bsw、Bside、C、D1、D2 各抽 10 对，加跑 seed 1、2</td><td class="n">120</td><td>seed 对到达与绕向的影响</td></tr>
+<tr><td colspan="2"><strong>合计每个模型</strong>（另有官方 RouteStick 50 局重评）</td><td class="n">878</td><td>接收局原样失败、或找不到示范窗口对得上的供体时，该对不跑，实际只会更少</td></tr>
+</table>
+
+<h2>三、读数与验收</h2>
+<p><strong>每局按两步分别读</strong>（用逐步轨迹 <code>tcp_after</code> 与复算出的目标、立柱坐标）：</p>
+<ul>
+<li><strong>到达</strong>：从上一目标出发后第一次水平距离 &lt; 0.03 m 的其他目标格，归入 own（自己该去的）/ donor_dir（从自己当前位置按供体这一步的左右方向推出的格）/ donor_abs（供体这一步的绝对目标格）/ other / none，重合时按 own &gt; donor_dir &gt; donor_abs 归。</li>
+<li><strong>绕向</strong>：照环境 <code>direction_fail</code> 的算法，在「离开上一目标到第一次到达」这段轨迹上算平均叉积符号，得到实际绕向，归入 own_swing / donor_swing（两者相同时记 own）。</li>
+<li>第二步只在第一步到达了某个目标时才读。</li>
+</ul>
+
+<table>
+<tr><th>查什么</th><th>怎么查</th><th>过了说明什么</th><th>判定行</th></tr>
+<tr><td>复算对</td><td>20 个 seed 复算路线、绕向与真实环境 <code>task_list</code> / <code>swing_directions</code> 逐项相同</td><td>局池与配对表建在正确的场景上</td><td><code>RS_REPLAY=PASS seeds=20 mismatches=0</code></td></tr>
+<tr><td>局池</td><td>32 种类型各 4 局，steps 全为 2，seed 与三套清单不相交</td><td>覆盖完整</td><td><code>RS_POOL=PASS eps=128 types=32 overlap=0</code></td></tr>
+<tr><td>模型装对</td><td>官方 RouteStick 50 局 seed 42 重评：MotionMem 与 11-06 本机逐局记录比（16/50），Wan 与 AWS seed 42 比局数（32%）</td><td>合并后的代码没改模型行为</td><td><code>MODEL_REPRO=PASS model=&lt;m&gt; eps=50 mismatch=&lt;n&gt; succ_diff=&lt;d&gt;</code>（口径同上一轮〇′ F4）</td></tr>
+<tr><td>窗口对齐</td><td>每对交换的接收与供体示范窗口起点帧列表相同</td><td>整段示范被完整替换，不残留自己的窗口</td><td><code>RS_WINDOW_MATCH=PASS pairs=&lt;n&gt; dropped=&lt;k&gt;</code></td></tr>
+<tr><td>只动示范</td><td>每局 <code>replace_log</code> 的起点帧全在示范段内、<code>n_replaced</code> 等于示范窗口数</td><td>执行段 motion 未被替换</td><td><code>SWAP_SCOPE=PASS model=&lt;m&gt; runs=&lt;n&gt; count_mismatch=0</code></td></tr>
+<tr><td>多局服务端</td><td>12 个交换局一局一服务端与连跑各跑一次，逐局相同</td><td>连跑没改结果</td><td><code>MULTI_SWAP_EQ=PASS runs=12 differ=0</code></td></tr>
+<tr><td>供体</td><td>S 集示范编码两两不同</td><td>不出现逐位相同的供体</td><td><code>DONOR_DISTINCT=PASS donors=96 identical_pairs=0</code></td></tr>
+<tr><td>总读数</td><td>每个模型一行，另加交集一行</td><td>—</td><td><code>RS_SWAP_FULL=PASS model=&lt;m&gt; runs=&lt;n&gt; invalid=0 N=&lt;a&gt;/128 Z=… Rnd=… A=… Bsw_swing=… Bside_dir=… C_own=… D1_swing=… D2_dir=… D2_abs=…</code></td></tr>
+</table>
+<p>不设成功率及格线；各类占比是读数，PASS 只表示数据完整、无效局 0。Wan 的接收局原样成功不足 8 局（R 的 1/4）时只跑 N、Z、Rnd 并判 <code>RS_SWAP_FULL=PARTIAL reason=few_success</code>，任务仍算完成；MotionMem 不设门槛。</p>
+
+<h2>四、步骤</h2>
+<table>
+<tr><th>阶段</th><th>内容</th><th>判据</th></tr>
+<tr><td>S0 只读核实</td><td>确认 eval.py plfull 口径、<code>subgoal_trace</code>、多行供体 <code>motion_swap_exact</code> 对 RouteStick 是否需要改；确认 RouteStick 逐步轨迹能取到绕杆判定所需字段</td><td>写出「需改 / 不需改」清单；需改 <code>third_party/</code> 即停</td></tr>
+<tr><td>S1 写脚本</td><td>W1 写 <code>rs_full_prep.py</code>、<code>rs_full_readout.py</code> 与单测；W2（仅 S0 判定需要时）做 run_local / eval.py 的最小适配</td><td><code>RS_REPLAY</code>、<code>RS_PAIRS</code>、单测 PASS；合并前后两次审查 PASS</td></tr>
+<tr><td>S2 冒烟</td><td>每个模型 N 2 局 + 交换 2 局 + 置零 1 局</td><td><code>SWAP_SCOPE</code>、<code>RS_WINDOW_MATCH</code> PASS；量单局耗时</td></tr>
+<tr><td>S3 MotionMem</td><td>官方 50 局重评 → N 128 → donors → multieq → 交换 → seed 复核</td><td><code>MODEL_REPRO</code>、<code>RS_SWAP_FULL model=motion</code></td></tr>
+<tr><td>S4 Wan</td><td>同上，按 8 局门槛决定交换规模；按 worker 空出逐个接替 MotionMem，与 S3 交叠</td><td><code>RS_SWAP_FULL model=wan</code>（PASS 或 PARTIAL）</td></tr>
+<tr><td>S5 读数与留档</td><td>两份读数 + 交集表；<code>docs/evaluation-doc/rs-swap-full-1109/</code> 三件套</td><td>commit 并 push，handoff</td></tr>
+</table>
+<p><strong>耗时估计</strong>：RouteStick 两步局单局 rollout 估 30～60 秒（比 PatternLock 单步局长，S2 实测后重估），每个模型约 880 局 / 4 worker ≈ 2～3.5 小时；官方 50 局重评每个模型约 1 小时（与上一轮同量级）。两个模型合计约 6～8 小时，写代码与审查约 1.5 小时。运行部分合计超过 12 小时停下报告。</p>
+
+<h2>五、交接顺序与状态机登记</h2>
+<ul>
+<li>任务 id：<code>rs-swap-full-1109</code>。</li>
+<li>交接前必须完成：<code>RS_SWAP_FULL</code> 两行（Wan 可为 PARTIAL）、留档 commit 已 push、本轮全部 <code>rsf-</code> tmux 会话已退出。</li>
+<li>长尾：无。上游依赖：<code>pl-swap-full-1109</code>（done，复用其代码与资产）。下游：稿件仓库。</li>
+<li>是否登记进 <code>docs/handoff/current.json</code>：待用户回答（推荐登记）。</li>
+</ul>
+
+<h2>六、子代理分工与合并（简述）</h2>
+<p>写一块新脚本（W1，独立 worktree）：RouteStick 的复算、局池、配对、spec/队列、供体裁剪（整段示范窗口）与两步读数，尽量 import 上一轮 <code>pl_full_prep</code> 里与任务无关的 spec、队列、launch 生成函数，不改它们。只有 S0 发现 run_local / eval.py 对 RouteStick 有硬编码时才派 W2 做最小适配。每块合并前派一个只读审查子代理，合并后主会话跑短测再 push。运行与监听全由主会话在分离工作树里起 tmux。细节见第二部分。</p>
+
+<h1>第二部分（技术细节，供 agent 追踪）</h1>
+
+<h2>〇、前置声明与红线</h2>
+<ul>
+<li>R1 现有能力（<code>b9ff7a5</code>）：<code>eval.py</code> profile <code>plfull</code>（局号 &lt; 80、seed ∈ {42,1,2}、<code>--plfull-metadata-dir</code>）；<code>run_local</code> 多局 <code>--swap-map</code>；<code>serve_policy_attn</code> 逐局供体、<code>motion_swap_exact</code> 只替换起点帧在供体中精确存在的窗口；<code>subgoal_trace_runner</code> 允许 PatternLock、RouteStick；步轨迹字段含 <code>tcp_before</code>/<code>tcp_after</code>、<code>task_index_before/after</code>。未验证：plfull 下 RouteStick 能否直接跑；多行供体文件的替换计数是否与 <code>SWAP_SCOPE</code> 判法一致。</li>
+<li>R2 不改 <code>third_party/</code>；不改上一轮的 <code>pl_full_prep.py</code>、<code>pl_full_readout.py</code> 行为；不动 <code>v1-store/evaluation/pl-swap-full-1109/</code>（只读）。</li>
+<li>R3 只在 aspen 本机跑，不提交集群作业；GPU 0 上他人常驻进程不动。</li>
+<li>R4 正常任务失败不重试；基础设施故障每局最多重试 1 次并记录；无效局计入 invalid。</li>
+<li>R5 tmux 会话前缀 <code>rsf-</code>，只按精确会话名逐个处理；中途停止 run_local 时连同服务端与 sidecar 按精确 PID 清理。</li>
+<li>R6 不下载任何东西：两个模型的 59999 已在 <code>v1-store/assets/</code>（<code>ASSETS=PASS</code> 已于上一轮完成）。</li>
+</ul>
+
+<h2>一、逐文件改动清单</h2>
+<table>
+<tr><th>文件</th><th>锚点</th><th>改什么</th></tr>
+<tr><td><code>scripts/interpret/rs_full_prep.py</code>（新）</td><td><code>replay_route</code>、<code>route_type</code>、<code>scan_pool</code>、<code>build_pairs</code>、<code>write_specs</code>、<code>make_donors</code></td><td>子命令 <code>replay-check</code>（official-sim 解释器内，用真实环境构建 20 个 seed 与复算对拍）、<code>pool</code>（扫 4000 个 seed，写 pool.json、metadata、manifest、pairs.json，<code>RS_POOL</code>、<code>RS_PAIRS</code>）、<code>specs</code>（repro / smoke / multieq / n 阶段，队列、env.sh、launch_stage.sh，会话前缀 <code>rsf-</code>）、<code>donors</code>（读 N 录制：只留 <code>start_frames &lt; demo_frames</code> 的全部行写 donor_trim/、同形全零写 zero/、逐行同范数随机写 random/；按 N 成败与示范窗口起点帧列表相等为每对选供体，写 swap / seeds 阶段 spec；<code>--wan-gate 8</code>）。spec、队列、launch 生成尽量 import <code>pl_full_prep</code> 中任务无关的函数</td></tr>
+<tr><td><code>scripts/interpret/analysis/rs_full_readout.py</code>（新）</td><td><code>step_segments</code>、<code>swing_side</code>、<code>classify_target</code>、<code>summarize</code>、<code>intersect</code></td><td>按 <code>task_index</code> 或到达事件切两步；绕向照 <code>RouteStick.direction_fail</code> 的平均叉积算法；分组、分层（起点差、左右模式、绕向模式）出表；判定行 <code>SWAP_SCOPE</code>（示范窗口数等于 <code>n_replaced</code>）、<code>RS_WINDOW_MATCH</code>、<code>MULTI_SWAP_EQ</code>、<code>RS_SWAP_FULL</code>、<code>RS_SWAP_INTERSECT</code></td></tr>
+<tr><td><code>scripts/interpret/test_rs_full.py</code>（新）</td><td>—</td><td>32 种类型与配对计数（A 32 / Bsw 96 / Bside 96 / C 48 / D1 144 / D2 608→150）、绕向判定符号、到达归类、窗口对齐筛选、多行供体裁剪的单测（不依赖仿真）</td></tr>
+<tr><td><code>scripts/interpret/run_local.py</code>、<code>examples/robomme/eval.py</code></td><td>plfull 分支</td><td>仅当 S0 发现对 PatternLock 有硬编码时做最小放开；默认不改</td></tr>
+</table>
+
+<h2>二、子代理分配表</h2>
+<table>
+<tr><th>编号</th><th>目标</th><th>可写文件集合</th><th>禁触</th><th>依赖</th><th>合并顺序</th><th>验收（worktree 内，CPU）</th><th>资源</th></tr>
+<tr><td>W1</td><td>RouteStick 准备与读数脚本</td><td>上表三个新文件</td><td>其余全部（尤其 <code>pl_full_*</code>、<code>third_party/</code>）</td><td>S0 结论</td><td>1</td><td><code>uv run python -m pytest scripts/interpret/test_rs_full.py -q</code>；official-sim 解释器跑 <code>replay-check</code> 与 <code>pool</code>（输出写临时目录）：<code>RS_REPLAY=PASS seeds=20 mismatches=0</code>、<code>RS_POOL=PASS eps=128 types=32 overlap=0</code>、<code>RS_PAIRS=PASS A=32 Bsw=96 Bside=96 C=48 D1=144 D2=150</code></td><td>CPU，无 GPU</td></tr>
+<tr><td>W2（条件）</td><td>plfull 对 RouteStick 的最小适配</td><td><code>run_local.py</code>、<code>eval.py</code>、对应测试</td><td><code>src/</code>、<code>third_party/</code>、W1 文件</td><td>S0 判定需要</td><td>2</td><td>改动后失败集合 ⊆ BASE 失败集合；新增测试覆盖 RouteStick plfull</td><td>CPU</td></tr>
+<tr><td>—</td><td>S0、运行、读数、留档</td><td colspan="6">主会话自做（运行需要主检出环境与产物；监听、清理归主会话）</td></tr>
+</table>
+<p>模型：写入型 opus + 独立 worktree；审查 sonnet 只读；探索 haiku。GPU 验收只在合并后由主会话跑。</p>
+
+<h2>三、闸门总表</h2>
+<p><code>PLAN_CONSISTENCY_REVIEW</code>（开工时）→ <code>PRE_MERGE_REVIEW</code> / <code>POST_MERGE_REVIEW</code>（W1，及条件 W2）→ <code>RS_REPLAY</code> → <code>RS_POOL</code> / <code>RS_PAIRS</code> → <code>MODEL_REPRO</code> × 2 → <code>SWAP_SCOPE</code> / <code>RS_WINDOW_MATCH</code>（冒烟）→ <code>DONOR_DISTINCT</code> × 2 → <code>MULTI_SWAP_EQ</code> × 2 → <code>RS_SWAP_FULL</code> × 2 → <code>RS_SWAP_INTERSECT</code>。任一 FAIL 记证据；按用户「一路做到底」，不影响后续结论的 FAIL 照跑并如实报告，影响后续结论的停下。</p>
+
+<h2>四、runbook</h2>
+<pre>W=/data/hongzefu/robomme_policy_learning_MotionJEPA
+T=$W/v1-store/worktrees/rs-full-run            # 分离工作树，钉在合并后的 commit
+O=$W/v1-store/evaluation/rs-swap-full-1109     # 产物根；其下 motion/ 与 wan/
+# official-sim 解释器：PYTHONPATH=$T:$W/third_party/robomme_benchmark/src $W/v1-store/envs/official-sim/bin/python
+python -m scripts.interpret.rs_full_prep replay-check
+python -m scripts.interpret.rs_full_prep pool --out $O
+python -m scripts.interpret.rs_full_prep specs --out $O/motion --model motion --commit &lt;sha&gt; --run-tree $T
+python -m scripts.interpret.rs_full_prep specs --out $O/wan --model wan --commit &lt;sha&gt; --run-tree $T \
+  --checkpoint $W/v1-store/assets/vla-o16wan/vla59k-8bf3feb9…/59999 --policy-config mme_vla_suite_orig16_b128_60k \
+  --model-kind wan_fixedpool1024 --target-contract none
+bash $O/&lt;M&gt;/launch_stage.sh smoke | repro | n
+python -m scripts.interpret.rs_full_prep donors --out $O/&lt;M&gt; [--wan-gate 8]     # 注意 env.sh 会覆盖 O，donors/readout 一律写显式路径
+bash $O/&lt;M&gt;/launch_stage.sh multieq | swap | seeds
+python -m scripts.interpret.analysis.rs_full_readout --root $O/&lt;M&gt;
+python -m scripts.interpret.analysis.rs_full_readout --root $O --intersect motion,wan</pre>
+<p>tmux 会话名 <code>rsf-&lt;模型&gt;-&lt;阶段&gt;-&lt;worker&gt;</code>，模板同上一轮（<code>set -o pipefail</code>、<code>tee</code>、<code>EXIT_CODE=</code> 尾行），每卡 2 worker、<code>XLA_PYTHON_CLIENT_MEM_FRACTION=0.30</code>。一次只放一个模型的 4 个 worker，worker 空出时逐个接替。Monitor 过滤词：<code>ENV_CHECK=FAIL|rc=[1-9]|PLF_QUEUE|EXIT_CODE=|Traceback|out of memory|Killed|ContractError</code>。</p>
+
+<h2>五、风险</h2>
+<table>
+<tr><th>风险</th><th>处置</th></tr>
+<tr><td>复算随机数顺序与环境不一致</td><td><code>RS_REPLAY</code> FAIL 即停，不建局池</td></tr>
+<tr><td>同类型局的示范窗口起点帧不一致，找不到对齐的供体</td><td>S 集每类型备 3 局；仍不足时该对丢弃并计入 <code>dropped</code>；某组丢弃超过一半时扩到每类型 6 局重跑 N 的增量部分（同规模调整，事后告知）</td></tr>
+<tr><td>两步局 MotionMem 原样成功率低，接收局不足</td><td>如实报，不停</td></tr>
+<tr><td>绕向判定落在连线上（叉积为 0）</td><td>该步绕向记 <code>none</code>，不计入跟随率分母，计数单列</td></tr>
+<tr><td>plfull 对 RouteStick 有隐藏硬编码</td><td>S0 查清；需动 <code>third_party/</code> 即停</td></tr>
+</table>
+
+<h2>六、盲区</h2>
+<ul>
+<li>只覆盖 easy 档恰好两步的局；三步、medium、hard（含回头）不涉及。</li>
+<li>整段示范一起换，分不出 token 里「第一步」与「第二步」各自的信息落在哪个窗口；逐窗口对齐交换留到下一轮。</li>
+<li>新 env_seed 不是官方评测局，原样成功率不与主表 RouteStick 列直接比。</li>
+<li>两步局示范窗口数估为约 3 个（来自 11-06 全难度 50 局的分布），实际以 N 组记录为准。</li>
+</ul>
+
+<h2>七、留档与 commit 纪律</h2>
+<p>起跑前建 <code>docs/evaluation-doc/rs-swap-full-1109/</code>，<code>launch.md</code> 记版本、命令、tmux 会话清单；跑完写 <code>result.md</code> 与 <code>records/</code>（读数、清单、配对表、清洗后日志）。只 <code>git add</code> 逐个明确路径；每次 commit 后立即 push。根目录未跟踪文件 <code>TODO_RoboMME_Qwen3VL_FrameSamp_Context.en (1).html</code> 不属本轮，不碰。</p>
+
+</body>
+</html>
