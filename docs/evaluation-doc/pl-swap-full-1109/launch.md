@@ -57,8 +57,13 @@ python -m scripts.interpret.analysis.pl_full_readout --root $O --intersect motio
 | 会话 | 用途 | 起止（美东） |
 |---|---|---|
 | `plf-fetch-wan` | Wan 59999 下载 | 11-09 11:1x – 已退出，EXIT_CODE=0 |
-| `plf-motion-smoke-w00` | motion 冒烟 | 11-09 12:03 – |
-| `plf-wan-smoke-w00` | Wan 冒烟 | 11-09 12:03 – |
+| `plf-motion-smoke-w00`、`plf-wan-smoke-w00` | 两模型冒烟 | 11-09 12:03 – 12:06 |
+| `plf-motion-{repro,n,multieq,swap}-{w00,w01,w10,w11}` | MotionMem 官方重评、N、多局等价、交换 | 12:06 – 14:18 |
+| `plf-wan-repro-{w00,w01,w10,w11}` | Wan 官方重评（接替 MotionMem 交换空出的 worker） | 14:13 – 14:3x |
+| `plf-motion-seeds-{w00,w01,w10,w11}` | MotionMem seed 复核 | 14:2x – 14:35 |
+| `plf-wan-{n,multieq,swap,seeds}-{w00,w01,w10,w11}` | Wan N、多局等价、交换、seed 复核 | 14:2x – 15:15 |
+
+全部 42 个 plf- 队列会话均已自行退出，日志末行 `EXIT_CODE=0`；`tmux ls` 中无 plf- 会话残留。
 
 ## ⑨ 盯盘项
 

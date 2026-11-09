@@ -239,5 +239,15 @@ python -m scripts.interpret.analysis.pl_full_readout --root $O --intersect motio
 <h2>七、留档与 commit 纪律</h2>
 <p>起跑前建 <code>docs/evaluation-doc/pl-swap-full-1109/</code>，<code>launch.md</code> 记版本、命令、tmux 会话清单；跑完写 <code>result.md</code> 与 <code>records/</code>（readout、清单、配对表、清洗后日志）。只 <code>git add</code> 逐个明确路径；每次 commit 后立即 push。仓库根目录现有未跟踪文件 <code>TODO_RoboMME_Qwen3VL_FrameSamp_Context.en (1).html</code> 不属本轮，不碰。</p>
 
+<h2>八、实施中调整与实测结果（追加，美东 2026-11-09）</h2>
+<table>
+<tr><th>调整</th><th>旧 → 新</th><th>理由</th><th>审查</th></tr>
+<tr><td>motion 资产</td><td>从 bucket 下载 → 复用本地 <code>vla-o16cc-59999</code></td><td>同一 bucket、run_name，38 个文件 sha256 一致</td><td><code>ADJUST_REVIEW=PASS scale=smaller findings=2</code></td></tr>
+<tr><td>合并顺序</td><td>W1→W2→W3 → W3、W1、W2</td><td>W3 只写新文件，接口约定先定</td><td>第 26 条允许的顺序调整</td></tr>
+<tr><td>P-LINEAGE</td><td>F1 取本分支规则文件会丢 v10 侧项目规则 → 主会话原样补回</td><td>用户 10-27 定的硬约束</td><td>W1 合并前审查 finding 2</td></tr>
+<tr><td>Wan target_contract</td><td>W3 要求非空 → 生成 Wan spec 时传 <code>--target-contract none</code></td><td>Wan 客户端拒绝合同</td><td>W2 dry 校验通过</td></tr>
+<tr><td>调度</td><td>两模型分段串行 → 按 worker 空出逐个接替</td><td>显存只够一次 4 个 worker</td><td>不改 spec、不改规模</td></tr>
+</table>
+<p>实测：单步局 1232（计划写 1247，W3 核实多扫了 50 个 seed）。最终判定行：<code>PL_SWAP_FULL=PASS model=motion runs=876 invalid=0 N=74/80 Z=10/37 Rnd=11/37 A=37/37 B_donor=136/150 C_own=86/157 D_dir=147/378 D_abs=61/378</code>；<code>PL_SWAP_FULL=PASS model=wan runs=427 invalid=0 N=34/80 Z=17/17 Rnd=17/17 A=17/17 B_donor=0/57 C_own=71/71 D_dir=0/168 D_abs=0/168</code>。详见 <a href="docs/evaluation-doc/pl-swap-full-1109/result.md">result.md</a>。</p>
 </body>
 </html>

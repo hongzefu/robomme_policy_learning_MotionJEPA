@@ -4,6 +4,7 @@
 
 | 档案 | 范围 | 状态 |
 | --- | --- | --- |
+| [PatternLock 全因子单步交换 + Frozen Wan 对比](pl-swap-full-1109/result.md) | orig100 MotionMem（concat 1×1024）与 Frozen Wan pooling 59999；新 env_seed 80 局覆盖 40 种（起点格，方向），N/Z/Rnd/A/B/C/D + seed 复核，共 2433 局 | 完成；MotionMem Z 10/37、Rnd 11/37、B 跟供体方向 136/150、D donor_dir 147/378 对 donor_abs 61/378；Wan 交换与扰动 0 局跟供体（token 几乎不影响动作） |
 | [PatternLock 单步 motion token 交换](pl-single-step-swap-1108/result.md) | motion 59999；easy 单步成功 8 局 × 5 seed；只换示范段唯一 motion 窗口：原样 / 置零 / 位置方向同 / 位置同方向异 / 位置异方向同，共 130 局 | 完成；B 15/15 走到供体目标格（10 局可区分）；C 位置异方向同仍走对方向 15/25（60%），2 对确定由 token 驱动、2 对走错，0/25 走到供体绝对目标；置零 16/40 |
 | [MoveCube 强推恢复](movecube-force-recovery-seed42-1107/result.md) | 官方 ctx512 79999 与 motion 59999；拿 cube 21 局强推到 peg 上方、拿 peg 12 局强推到 cube 上方，0～80 步放手，抓起正确物体即成功，共 396 局，不录注意力 | 完成；k=16 约六到七成恢复，k≥32 几乎全部抓错误物体，两模型无差异 |
 | [PatternLock、RouteStick 按子目标的注意力](subgoal-rollout-attn-seed42-1106/result.md) | 官方 ctx512 79999 与 motion 59999；两任务官方 50 局全程模型控制，922 次推理全算，按 current_task_index 分组 | 成功 motion 34/100、基线 18/100；12 组对位读数无「明显」；motion 帧流回看示范开头与 Swap 方向相同，基线文字读示范末尾；资源已释放 |

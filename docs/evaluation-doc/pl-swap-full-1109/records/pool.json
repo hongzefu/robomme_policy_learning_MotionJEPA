@@ -1,0 +1,1352 @@
+{
+  "task": "PatternLock",
+  "difficulty": "easy",
+  "scan": {
+    "start": 900000,
+    "stop": 1299900,
+    "step": 100,
+    "skip": [
+      1150000,
+      1154900
+    ],
+    "scanned": 3950,
+    "single_step": 1232,
+    "length_hist": {
+      "2": 1232,
+      "3": 1314,
+      "4": 1404
+    }
+  },
+  "per_combo_single_step": {
+    "0:0,1": 39,
+    "0:1,0": 43,
+    "0:1,1": 42,
+    "1:0,-1": 29,
+    "1:0,1": 33,
+    "1:1,-1": 37,
+    "1:1,0": 36,
+    "1:1,1": 26,
+    "2:0,-1": 45,
+    "2:1,-1": 43,
+    "2:1,0": 38,
+    "3:-1,0": 25,
+    "3:-1,1": 23,
+    "3:0,1": 24,
+    "3:1,0": 31,
+    "3:1,1": 32,
+    "4:-1,-1": 23,
+    "4:-1,0": 21,
+    "4:-1,1": 13,
+    "4:0,-1": 10,
+    "4:0,1": 19,
+    "4:1,-1": 19,
+    "4:1,0": 15,
+    "4:1,1": 11,
+    "5:-1,-1": 32,
+    "5:-1,0": 19,
+    "5:0,-1": 37,
+    "5:1,-1": 31,
+    "5:1,0": 19,
+    "6:-1,0": 36,
+    "6:-1,1": 47,
+    "6:0,1": 43,
+    "7:-1,-1": 26,
+    "7:-1,0": 30,
+    "7:-1,1": 34,
+    "7:0,-1": 22,
+    "7:0,1": 31,
+    "8:-1,-1": 55,
+    "8:-1,0": 51,
+    "8:0,-1": 42
+  },
+  "overlap": {
+    "train": [],
+    "test": [],
+    "val": []
+  },
+  "recheck_mismatch": 0,
+  "metadata_sha256": "375bcd7dd3fa3ab8634717bb7a5096210cbf3aa41141ff43caa5d39d0642d2f0",
+  "manifest_seal": "19a3601d57bc6790bf57688adb6bda03f101893764f6e204a0dc5df9c17d734c",
+  "episodes": [
+    {
+      "episode_id": 0,
+      "role": "R",
+      "combo": 0,
+      "env_seed": 906300,
+      "path": [
+        0,
+        1
+      ],
+      "start": 0,
+      "dir": [
+        0,
+        1
+      ],
+      "target": 1
+    },
+    {
+      "episode_id": 1,
+      "role": "R",
+      "combo": 1,
+      "env_seed": 912300,
+      "path": [
+        0,
+        3
+      ],
+      "start": 0,
+      "dir": [
+        1,
+        0
+      ],
+      "target": 3
+    },
+    {
+      "episode_id": 2,
+      "role": "R",
+      "combo": 2,
+      "env_seed": 908400,
+      "path": [
+        0,
+        4
+      ],
+      "start": 0,
+      "dir": [
+        1,
+        1
+      ],
+      "target": 4
+    },
+    {
+      "episode_id": 3,
+      "role": "R",
+      "combo": 3,
+      "env_seed": 905700,
+      "path": [
+        1,
+        0
+      ],
+      "start": 1,
+      "dir": [
+        0,
+        -1
+      ],
+      "target": 0
+    },
+    {
+      "episode_id": 4,
+      "role": "R",
+      "combo": 4,
+      "env_seed": 900800,
+      "path": [
+        1,
+        2
+      ],
+      "start": 1,
+      "dir": [
+        0,
+        1
+      ],
+      "target": 2
+    },
+    {
+      "episode_id": 5,
+      "role": "R",
+      "combo": 5,
+      "env_seed": 901300,
+      "path": [
+        1,
+        3
+      ],
+      "start": 1,
+      "dir": [
+        1,
+        -1
+      ],
+      "target": 3
+    },
+    {
+      "episode_id": 6,
+      "role": "R",
+      "combo": 6,
+      "env_seed": 902500,
+      "path": [
+        1,
+        4
+      ],
+      "start": 1,
+      "dir": [
+        1,
+        0
+      ],
+      "target": 4
+    },
+    {
+      "episode_id": 7,
+      "role": "R",
+      "combo": 7,
+      "env_seed": 915600,
+      "path": [
+        1,
+        5
+      ],
+      "start": 1,
+      "dir": [
+        1,
+        1
+      ],
+      "target": 5
+    },
+    {
+      "episode_id": 8,
+      "role": "R",
+      "combo": 8,
+      "env_seed": 900900,
+      "path": [
+        2,
+        1
+      ],
+      "start": 2,
+      "dir": [
+        0,
+        -1
+      ],
+      "target": 1
+    },
+    {
+      "episode_id": 9,
+      "role": "R",
+      "combo": 9,
+      "env_seed": 912900,
+      "path": [
+        2,
+        4
+      ],
+      "start": 2,
+      "dir": [
+        1,
+        -1
+      ],
+      "target": 4
+    },
+    {
+      "episode_id": 10,
+      "role": "R",
+      "combo": 10,
+      "env_seed": 903100,
+      "path": [
+        2,
+        5
+      ],
+      "start": 2,
+      "dir": [
+        1,
+        0
+      ],
+      "target": 5
+    },
+    {
+      "episode_id": 11,
+      "role": "R",
+      "combo": 11,
+      "env_seed": 911000,
+      "path": [
+        3,
+        0
+      ],
+      "start": 3,
+      "dir": [
+        -1,
+        0
+      ],
+      "target": 0
+    },
+    {
+      "episode_id": 12,
+      "role": "R",
+      "combo": 12,
+      "env_seed": 917200,
+      "path": [
+        3,
+        1
+      ],
+      "start": 3,
+      "dir": [
+        -1,
+        1
+      ],
+      "target": 1
+    },
+    {
+      "episode_id": 13,
+      "role": "R",
+      "combo": 13,
+      "env_seed": 919500,
+      "path": [
+        3,
+        4
+      ],
+      "start": 3,
+      "dir": [
+        0,
+        1
+      ],
+      "target": 4
+    },
+    {
+      "episode_id": 14,
+      "role": "R",
+      "combo": 14,
+      "env_seed": 908500,
+      "path": [
+        3,
+        6
+      ],
+      "start": 3,
+      "dir": [
+        1,
+        0
+      ],
+      "target": 6
+    },
+    {
+      "episode_id": 15,
+      "role": "R",
+      "combo": 15,
+      "env_seed": 902300,
+      "path": [
+        3,
+        7
+      ],
+      "start": 3,
+      "dir": [
+        1,
+        1
+      ],
+      "target": 7
+    },
+    {
+      "episode_id": 16,
+      "role": "R",
+      "combo": 16,
+      "env_seed": 907900,
+      "path": [
+        4,
+        0
+      ],
+      "start": 4,
+      "dir": [
+        -1,
+        -1
+      ],
+      "target": 0
+    },
+    {
+      "episode_id": 17,
+      "role": "R",
+      "combo": 17,
+      "env_seed": 903400,
+      "path": [
+        4,
+        1
+      ],
+      "start": 4,
+      "dir": [
+        -1,
+        0
+      ],
+      "target": 1
+    },
+    {
+      "episode_id": 18,
+      "role": "R",
+      "combo": 18,
+      "env_seed": 919800,
+      "path": [
+        4,
+        2
+      ],
+      "start": 4,
+      "dir": [
+        -1,
+        1
+      ],
+      "target": 2
+    },
+    {
+      "episode_id": 19,
+      "role": "R",
+      "combo": 19,
+      "env_seed": 905500,
+      "path": [
+        4,
+        3
+      ],
+      "start": 4,
+      "dir": [
+        0,
+        -1
+      ],
+      "target": 3
+    },
+    {
+      "episode_id": 20,
+      "role": "R",
+      "combo": 20,
+      "env_seed": 909500,
+      "path": [
+        4,
+        5
+      ],
+      "start": 4,
+      "dir": [
+        0,
+        1
+      ],
+      "target": 5
+    },
+    {
+      "episode_id": 21,
+      "role": "R",
+      "combo": 21,
+      "env_seed": 922900,
+      "path": [
+        4,
+        6
+      ],
+      "start": 4,
+      "dir": [
+        1,
+        -1
+      ],
+      "target": 6
+    },
+    {
+      "episode_id": 22,
+      "role": "R",
+      "combo": 22,
+      "env_seed": 960100,
+      "path": [
+        4,
+        7
+      ],
+      "start": 4,
+      "dir": [
+        1,
+        0
+      ],
+      "target": 7
+    },
+    {
+      "episode_id": 23,
+      "role": "R",
+      "combo": 23,
+      "env_seed": 959200,
+      "path": [
+        4,
+        8
+      ],
+      "start": 4,
+      "dir": [
+        1,
+        1
+      ],
+      "target": 8
+    },
+    {
+      "episode_id": 24,
+      "role": "R",
+      "combo": 24,
+      "env_seed": 923500,
+      "path": [
+        5,
+        1
+      ],
+      "start": 5,
+      "dir": [
+        -1,
+        -1
+      ],
+      "target": 1
+    },
+    {
+      "episode_id": 25,
+      "role": "R",
+      "combo": 25,
+      "env_seed": 932900,
+      "path": [
+        5,
+        2
+      ],
+      "start": 5,
+      "dir": [
+        -1,
+        0
+      ],
+      "target": 2
+    },
+    {
+      "episode_id": 26,
+      "role": "R",
+      "combo": 26,
+      "env_seed": 920600,
+      "path": [
+        5,
+        4
+      ],
+      "start": 5,
+      "dir": [
+        0,
+        -1
+      ],
+      "target": 4
+    },
+    {
+      "episode_id": 27,
+      "role": "R",
+      "combo": 27,
+      "env_seed": 901100,
+      "path": [
+        5,
+        7
+      ],
+      "start": 5,
+      "dir": [
+        1,
+        -1
+      ],
+      "target": 7
+    },
+    {
+      "episode_id": 28,
+      "role": "R",
+      "combo": 28,
+      "env_seed": 911800,
+      "path": [
+        5,
+        8
+      ],
+      "start": 5,
+      "dir": [
+        1,
+        0
+      ],
+      "target": 8
+    },
+    {
+      "episode_id": 29,
+      "role": "R",
+      "combo": 29,
+      "env_seed": 908600,
+      "path": [
+        6,
+        3
+      ],
+      "start": 6,
+      "dir": [
+        -1,
+        0
+      ],
+      "target": 3
+    },
+    {
+      "episode_id": 30,
+      "role": "R",
+      "combo": 30,
+      "env_seed": 907200,
+      "path": [
+        6,
+        4
+      ],
+      "start": 6,
+      "dir": [
+        -1,
+        1
+      ],
+      "target": 4
+    },
+    {
+      "episode_id": 31,
+      "role": "R",
+      "combo": 31,
+      "env_seed": 919900,
+      "path": [
+        6,
+        7
+      ],
+      "start": 6,
+      "dir": [
+        0,
+        1
+      ],
+      "target": 7
+    },
+    {
+      "episode_id": 32,
+      "role": "R",
+      "combo": 32,
+      "env_seed": 916200,
+      "path": [
+        7,
+        3
+      ],
+      "start": 7,
+      "dir": [
+        -1,
+        -1
+      ],
+      "target": 3
+    },
+    {
+      "episode_id": 33,
+      "role": "R",
+      "combo": 33,
+      "env_seed": 941000,
+      "path": [
+        7,
+        4
+      ],
+      "start": 7,
+      "dir": [
+        -1,
+        0
+      ],
+      "target": 4
+    },
+    {
+      "episode_id": 34,
+      "role": "R",
+      "combo": 34,
+      "env_seed": 913400,
+      "path": [
+        7,
+        5
+      ],
+      "start": 7,
+      "dir": [
+        -1,
+        1
+      ],
+      "target": 5
+    },
+    {
+      "episode_id": 35,
+      "role": "R",
+      "combo": 35,
+      "env_seed": 911900,
+      "path": [
+        7,
+        6
+      ],
+      "start": 7,
+      "dir": [
+        0,
+        -1
+      ],
+      "target": 6
+    },
+    {
+      "episode_id": 36,
+      "role": "R",
+      "combo": 36,
+      "env_seed": 902700,
+      "path": [
+        7,
+        8
+      ],
+      "start": 7,
+      "dir": [
+        0,
+        1
+      ],
+      "target": 8
+    },
+    {
+      "episode_id": 37,
+      "role": "R",
+      "combo": 37,
+      "env_seed": 902400,
+      "path": [
+        8,
+        4
+      ],
+      "start": 8,
+      "dir": [
+        -1,
+        -1
+      ],
+      "target": 4
+    },
+    {
+      "episode_id": 38,
+      "role": "R",
+      "combo": 38,
+      "env_seed": 903900,
+      "path": [
+        8,
+        5
+      ],
+      "start": 8,
+      "dir": [
+        -1,
+        0
+      ],
+      "target": 5
+    },
+    {
+      "episode_id": 39,
+      "role": "R",
+      "combo": 39,
+      "env_seed": 900600,
+      "path": [
+        8,
+        7
+      ],
+      "start": 8,
+      "dir": [
+        0,
+        -1
+      ],
+      "target": 7
+    },
+    {
+      "episode_id": 40,
+      "role": "S",
+      "combo": 0,
+      "env_seed": 912000,
+      "path": [
+        0,
+        1
+      ],
+      "start": 0,
+      "dir": [
+        0,
+        1
+      ],
+      "target": 1
+    },
+    {
+      "episode_id": 41,
+      "role": "S",
+      "combo": 1,
+      "env_seed": 921100,
+      "path": [
+        0,
+        3
+      ],
+      "start": 0,
+      "dir": [
+        1,
+        0
+      ],
+      "target": 3
+    },
+    {
+      "episode_id": 42,
+      "role": "S",
+      "combo": 2,
+      "env_seed": 919200,
+      "path": [
+        0,
+        4
+      ],
+      "start": 0,
+      "dir": [
+        1,
+        1
+      ],
+      "target": 4
+    },
+    {
+      "episode_id": 43,
+      "role": "S",
+      "combo": 3,
+      "env_seed": 906500,
+      "path": [
+        1,
+        0
+      ],
+      "start": 1,
+      "dir": [
+        0,
+        -1
+      ],
+      "target": 0
+    },
+    {
+      "episode_id": 44,
+      "role": "S",
+      "combo": 4,
+      "env_seed": 908000,
+      "path": [
+        1,
+        2
+      ],
+      "start": 1,
+      "dir": [
+        0,
+        1
+      ],
+      "target": 2
+    },
+    {
+      "episode_id": 45,
+      "role": "S",
+      "combo": 5,
+      "env_seed": 906200,
+      "path": [
+        1,
+        3
+      ],
+      "start": 1,
+      "dir": [
+        1,
+        -1
+      ],
+      "target": 3
+    },
+    {
+      "episode_id": 46,
+      "role": "S",
+      "combo": 6,
+      "env_seed": 903800,
+      "path": [
+        1,
+        4
+      ],
+      "start": 1,
+      "dir": [
+        1,
+        0
+      ],
+      "target": 4
+    },
+    {
+      "episode_id": 47,
+      "role": "S",
+      "combo": 7,
+      "env_seed": 926200,
+      "path": [
+        1,
+        5
+      ],
+      "start": 1,
+      "dir": [
+        1,
+        1
+      ],
+      "target": 5
+    },
+    {
+      "episode_id": 48,
+      "role": "S",
+      "combo": 8,
+      "env_seed": 914100,
+      "path": [
+        2,
+        1
+      ],
+      "start": 2,
+      "dir": [
+        0,
+        -1
+      ],
+      "target": 1
+    },
+    {
+      "episode_id": 49,
+      "role": "S",
+      "combo": 9,
+      "env_seed": 920200,
+      "path": [
+        2,
+        4
+      ],
+      "start": 2,
+      "dir": [
+        1,
+        -1
+      ],
+      "target": 4
+    },
+    {
+      "episode_id": 50,
+      "role": "S",
+      "combo": 10,
+      "env_seed": 914400,
+      "path": [
+        2,
+        5
+      ],
+      "start": 2,
+      "dir": [
+        1,
+        0
+      ],
+      "target": 5
+    },
+    {
+      "episode_id": 51,
+      "role": "S",
+      "combo": 11,
+      "env_seed": 949400,
+      "path": [
+        3,
+        0
+      ],
+      "start": 3,
+      "dir": [
+        -1,
+        0
+      ],
+      "target": 0
+    },
+    {
+      "episode_id": 52,
+      "role": "S",
+      "combo": 12,
+      "env_seed": 921600,
+      "path": [
+        3,
+        1
+      ],
+      "start": 3,
+      "dir": [
+        -1,
+        1
+      ],
+      "target": 1
+    },
+    {
+      "episode_id": 53,
+      "role": "S",
+      "combo": 13,
+      "env_seed": 944300,
+      "path": [
+        3,
+        4
+      ],
+      "start": 3,
+      "dir": [
+        0,
+        1
+      ],
+      "target": 4
+    },
+    {
+      "episode_id": 54,
+      "role": "S",
+      "combo": 14,
+      "env_seed": 912100,
+      "path": [
+        3,
+        6
+      ],
+      "start": 3,
+      "dir": [
+        1,
+        0
+      ],
+      "target": 6
+    },
+    {
+      "episode_id": 55,
+      "role": "S",
+      "combo": 15,
+      "env_seed": 919000,
+      "path": [
+        3,
+        7
+      ],
+      "start": 3,
+      "dir": [
+        1,
+        1
+      ],
+      "target": 7
+    },
+    {
+      "episode_id": 56,
+      "role": "S",
+      "combo": 16,
+      "env_seed": 920500,
+      "path": [
+        4,
+        0
+      ],
+      "start": 4,
+      "dir": [
+        -1,
+        -1
+      ],
+      "target": 0
+    },
+    {
+      "episode_id": 57,
+      "role": "S",
+      "combo": 17,
+      "env_seed": 962100,
+      "path": [
+        4,
+        1
+      ],
+      "start": 4,
+      "dir": [
+        -1,
+        0
+      ],
+      "target": 1
+    },
+    {
+      "episode_id": 58,
+      "role": "S",
+      "combo": 18,
+      "env_seed": 984900,
+      "path": [
+        4,
+        2
+      ],
+      "start": 4,
+      "dir": [
+        -1,
+        1
+      ],
+      "target": 2
+    },
+    {
+      "episode_id": 59,
+      "role": "S",
+      "combo": 19,
+      "env_seed": 940000,
+      "path": [
+        4,
+        3
+      ],
+      "start": 4,
+      "dir": [
+        0,
+        -1
+      ],
+      "target": 3
+    },
+    {
+      "episode_id": 60,
+      "role": "S",
+      "combo": 20,
+      "env_seed": 917900,
+      "path": [
+        4,
+        5
+      ],
+      "start": 4,
+      "dir": [
+        0,
+        1
+      ],
+      "target": 5
+    },
+    {
+      "episode_id": 61,
+      "role": "S",
+      "combo": 21,
+      "env_seed": 957100,
+      "path": [
+        4,
+        6
+      ],
+      "start": 4,
+      "dir": [
+        1,
+        -1
+      ],
+      "target": 6
+    },
+    {
+      "episode_id": 62,
+      "role": "S",
+      "combo": 22,
+      "env_seed": 962200,
+      "path": [
+        4,
+        7
+      ],
+      "start": 4,
+      "dir": [
+        1,
+        0
+      ],
+      "target": 7
+    },
+    {
+      "episode_id": 63,
+      "role": "S",
+      "combo": 23,
+      "env_seed": 970700,
+      "path": [
+        4,
+        8
+      ],
+      "start": 4,
+      "dir": [
+        1,
+        1
+      ],
+      "target": 8
+    },
+    {
+      "episode_id": 64,
+      "role": "S",
+      "combo": 24,
+      "env_seed": 925600,
+      "path": [
+        5,
+        1
+      ],
+      "start": 5,
+      "dir": [
+        -1,
+        -1
+      ],
+      "target": 1
+    },
+    {
+      "episode_id": 65,
+      "role": "S",
+      "combo": 25,
+      "env_seed": 954400,
+      "path": [
+        5,
+        2
+      ],
+      "start": 5,
+      "dir": [
+        -1,
+        0
+      ],
+      "target": 2
+    },
+    {
+      "episode_id": 66,
+      "role": "S",
+      "combo": 26,
+      "env_seed": 921400,
+      "path": [
+        5,
+        4
+      ],
+      "start": 5,
+      "dir": [
+        0,
+        -1
+      ],
+      "target": 4
+    },
+    {
+      "episode_id": 67,
+      "role": "S",
+      "combo": 27,
+      "env_seed": 904800,
+      "path": [
+        5,
+        7
+      ],
+      "start": 5,
+      "dir": [
+        1,
+        -1
+      ],
+      "target": 7
+    },
+    {
+      "episode_id": 68,
+      "role": "S",
+      "combo": 28,
+      "env_seed": 912200,
+      "path": [
+        5,
+        8
+      ],
+      "start": 5,
+      "dir": [
+        1,
+        0
+      ],
+      "target": 8
+    },
+    {
+      "episode_id": 69,
+      "role": "S",
+      "combo": 29,
+      "env_seed": 911300,
+      "path": [
+        6,
+        3
+      ],
+      "start": 6,
+      "dir": [
+        -1,
+        0
+      ],
+      "target": 3
+    },
+    {
+      "episode_id": 70,
+      "role": "S",
+      "combo": 30,
+      "env_seed": 910200,
+      "path": [
+        6,
+        4
+      ],
+      "start": 6,
+      "dir": [
+        -1,
+        1
+      ],
+      "target": 4
+    },
+    {
+      "episode_id": 71,
+      "role": "S",
+      "combo": 31,
+      "env_seed": 951100,
+      "path": [
+        6,
+        7
+      ],
+      "start": 6,
+      "dir": [
+        0,
+        1
+      ],
+      "target": 7
+    },
+    {
+      "episode_id": 72,
+      "role": "S",
+      "combo": 32,
+      "env_seed": 917300,
+      "path": [
+        7,
+        3
+      ],
+      "start": 7,
+      "dir": [
+        -1,
+        -1
+      ],
+      "target": 3
+    },
+    {
+      "episode_id": 73,
+      "role": "S",
+      "combo": 33,
+      "env_seed": 951200,
+      "path": [
+        7,
+        4
+      ],
+      "start": 7,
+      "dir": [
+        -1,
+        0
+      ],
+      "target": 4
+    },
+    {
+      "episode_id": 74,
+      "role": "S",
+      "combo": 34,
+      "env_seed": 917500,
+      "path": [
+        7,
+        5
+      ],
+      "start": 7,
+      "dir": [
+        -1,
+        1
+      ],
+      "target": 5
+    },
+    {
+      "episode_id": 75,
+      "role": "S",
+      "combo": 35,
+      "env_seed": 923300,
+      "path": [
+        7,
+        6
+      ],
+      "start": 7,
+      "dir": [
+        0,
+        -1
+      ],
+      "target": 6
+    },
+    {
+      "episode_id": 76,
+      "role": "S",
+      "combo": 36,
+      "env_seed": 914600,
+      "path": [
+        7,
+        8
+      ],
+      "start": 7,
+      "dir": [
+        0,
+        1
+      ],
+      "target": 8
+    },
+    {
+      "episode_id": 77,
+      "role": "S",
+      "combo": 37,
+      "env_seed": 904200,
+      "path": [
+        8,
+        4
+      ],
+      "start": 8,
+      "dir": [
+        -1,
+        -1
+      ],
+      "target": 4
+    },
+    {
+      "episode_id": 78,
+      "role": "S",
+      "combo": 38,
+      "env_seed": 909000,
+      "path": [
+        8,
+        5
+      ],
+      "start": 8,
+      "dir": [
+        -1,
+        0
+      ],
+      "target": 5
+    },
+    {
+      "episode_id": 79,
+      "role": "S",
+      "combo": 39,
+      "env_seed": 901900,
+      "path": [
+        8,
+        7
+      ],
+      "start": 8,
+      "dir": [
+        0,
+        -1
+      ],
+      "target": 7
+    }
+  ]
+}

@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-09T18:10:00Z",
-    "America/New_York": "2026-11-09T13:10:00-0500"
+    "utc": "2026-11-09T20:30:00Z",
+    "America/New_York": "2026-11-09T15:30:00-0500"
   },
   "repo": {
     "branch": "v4.2-plswap-full",
@@ -1492,9 +1492,9 @@
         "file": "1109-patternlock-swap-full-factorial-wan-plan.html",
         "sha": "1ed88387e4c6cf27a8bc2eb4d0ff55d71cab8e8d"
       },
-      "state": "running",
-      "state_changed_at": "2026-11-09T16:09:04Z",
-      "state_reason": "代码三块已合入 efc3a19；两模型冒烟通过；MotionMem MODEL_REPRO/DEMO_WINDOWS/DONOR/MULTI_SWAP_EQ 全 PASS，N=74/80，交换 910 局在跑。",
+      "state": "done",
+      "state_changed_at": "2026-11-09T20:30:00Z",
+      "state_reason": "两模型全量完成：motion PL_SWAP_FULL=PASS runs=876 invalid=0；wan PL_SWAP_FULL=PASS runs=427 invalid=0（R 17/40 过 12 局门槛）；交集 17 局；全部 42 个 plf- 会话 EXIT_CODE=0 并已退出。",
       "owner": {
         "session": "bb27e5ee-343a-4725-ba31-e23ba7d6da8f",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1503,52 +1503,31 @@
       "pre_handoff": [
         {
           "what": "MotionMem 全量读数",
-          "evidence": "PL_SWAP_FULL=PASS model=motion",
-          "where": "docs/evaluation-doc/pl-swap-full-1109/",
-          "status": "pending"
+          "evidence": "PL_SWAP_FULL=PASS model=motion runs=876 invalid=0 N=74/80 Z=10/37 Rnd=11/37 A=37/37 B_donor=136/150 C_own=86/157 D_dir=147/378 D_abs=61/378",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/pl-swap-full-1109/records/motion/readout.md",
+          "status": "pass"
         },
         {
-          "what": "Wan 全量读数或样本不足",
-          "evidence": "PL_SWAP_FULL=PASS|PARTIAL model=wan",
-          "where": "docs/evaluation-doc/pl-swap-full-1109/",
-          "status": "pending"
+          "what": "Wan 全量读数",
+          "evidence": "PL_SWAP_FULL=PASS model=wan runs=427 invalid=0 N=34/80 Z=17/17 Rnd=17/17 A=17/17 B_donor=0/57 C_own=71/71 D_dir=0/168 D_abs=0/168",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/pl-swap-full-1109/records/wan/readout.md",
+          "status": "pass"
         },
         {
           "what": "留档 commit 已 push",
-          "evidence": "",
+          "evidence": "见本 handoff commit",
           "where": "origin/v4.2-plswap-full",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "全部 plf- tmux 会话退出",
-          "evidence": "",
-          "where": "tmux ls",
-          "status": "pending"
+          "evidence": "tmux ls 无 plf- 会话；42 份队列日志末行 EXIT_CODE=0",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/pl-swap-full-1109/records/logs/",
+          "status": "pass"
         }
       ],
       "long_tail": [],
-      "running_handles": [
-        {
-          "tmux": "plf-motion-swap-w00",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/pl-swap-full-1109/plf-motion-swap-w00.log",
-          "done_line": "EXIT_CODE=0"
-        },
-        {
-          "tmux": "plf-motion-swap-w01",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/pl-swap-full-1109/plf-motion-swap-w01.log",
-          "done_line": "EXIT_CODE=0"
-        },
-        {
-          "tmux": "plf-motion-swap-w10",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/pl-swap-full-1109/plf-motion-swap-w10.log",
-          "done_line": "EXIT_CODE=0"
-        },
-        {
-          "tmux": "plf-motion-swap-w11",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/pl-swap-full-1109/plf-motion-swap-w11.log",
-          "done_line": "EXIT_CODE=0"
-        }
-      ],
+      "running_handles": [],
       "authorizations": [
         {
           "kind": "go",
@@ -1560,14 +1539,9 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "MotionMem seeds 复核",
-          "command": "bash v1-store/evaluation/pl-swap-full-1109/motion/launch_stage.sh seeds",
-          "verdict_line": "PLF_QUEUE failed=0"
-        },
-        {
-          "what": "Wan repro/n/donors --wan-gate/multieq/swap/seeds",
-          "command": "bash v1-store/evaluation/pl-swap-full-1109/wan/launch_stage.sh <stage>",
-          "verdict_line": "PL_SWAP_FULL=PASS|PARTIAL model=wan"
+          "what": "下游稿件仓库写入 sources.md 与附录",
+          "command": "读 docs/evaluation-doc/pl-swap-full-1109/result.md",
+          "verdict_line": "—"
         }
       ]
     },
