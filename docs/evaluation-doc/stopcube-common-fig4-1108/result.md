@@ -133,6 +133,18 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 - **速度 M：优势在非线性探针下依然成立**。Text 组 MotionMem − FrameSamp 在第 4／8／12／17 层为 +0.230 [0.148, 0.311]、+0.173 [0.129, 0.222]、+0.210 [0.152, 0.269]、+0.183 [0.128, 0.241]。History 组为 +0.112、+0.105（第 4、8 层，区间不含 0），第 12、17 层区间含 0。Current frame 组无差别。
 - **距按下步数：kNN 下 MotionMem 不占优**。FrameSamp MAE 减 MotionMem MAE：Text 第 4 层 −27.0 [−41.3, −13.3]、第 8 层 −12.7 [−24.9, −1.1]，第 12、17 层区间含 0；Action 第 4 层 −22.6，第 12、17 层约 −5～−6（区间刚好不含 0）；Current 第 8、12 层 MotionMem 略好（+5.5、+7.1）。kNN 在这个标签上整体较弱（R² 多在 0.4 以下，MotionMem Text 接近 0）。可能的原因是欧氏距离被与该标签无关的主成分主导；所以第二节、第三节 A／B 里关于距按下步数的优势依赖线性读法，正文不宜写成与探针形式无关的结论。
 
+### F. 临近决策时刻与逐层图
+
+- **临近决策**：只取距按下 ≤ 阈值的点评估（探针仍在全部点上训练、训练折内选层）。FrameSamp MAE 减 MotionMem MAE：
+  - Text：≤48 步时 +8.1 [1.0, 16.0]，≤64 步时 +10.3 [3.5, 17.9]，≤96 步时 +4.9 [−1.6, 11.7]。
+  - Current frame：+5.7 [−0.1, 11.6]、+2.0、−0.3。
+  - Action token：−6.1 [−12.1, −0.2]、−3.5、−4.6，即 FrameSamp 更好。
+  - 同一子集上 oracle `[t,N]` 的 MAE 约 48–50 步。
+  - 结果：`records/explore/near_decision.json`。
+- **逐层图** [records/figures/layers-speed-pairs.png](records/figures/layers-speed-pairs.png)：
+  - 外观相同配对点：从第 1 层起，MotionMem 三组每一层都高于 FrameSamp 三组（Text 0.89–0.96 对 0.54–0.68）。
+  - 速度 M：MotionMem Text 第 0–17 层为 0.74–0.81，其余五条曲线都在 0.48–0.67；按每局等权，多数类基线约 0.42。
+
 ## 四、解释边界
 
 - B 节的「补上的信息」与 M 一致：`[t,N,M]` 上限 0.926；MotionMem 读速度 M 的准确率为 0.89–0.93（motion 组、history 组），FrameSamp 为 0.57–0.71。这是相关证据，没有做干预。
