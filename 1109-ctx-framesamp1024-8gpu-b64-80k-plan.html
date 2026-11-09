@@ -47,7 +47,7 @@ code{font:13px/1.6 ui-monospace,SFMono-Regular,monospace;background:var(--code);
 <tr><th>项目</th><th>原版 / 上次 fs 臂（4748064）</th><th>本方案</th></tr>
 <tr><td>global batch</td><td>64</td><td>64</td></tr>
 <tr><td>卡数 / 每卡 batch</td><td>4 / 16（mesh 1×4）</td><td><b>8 / 8（mesh 2×4）</b></td></tr>
-<tr><td>batch 组成</td><td><code>local_batch = 64 // process_count</code>，单进程，只由 seed 42 决定</td><td>相同（与卡数无关，已核对 <code>dataloader.py:134</code>）</td></tr>
+<tr><td>batch 组成</td><td><code>local_batch = 64 // process_count</code>，单进程，只由 seed 42 决定</td><td>相同（与卡数无关，已核对 <code>src/openpi/training/data_loader.py:326</code>）</td></tr>
 <tr><td>步数 / 学习率 / 优化器 / EMA / 保存</td><td>80000；warmup 10000，peak = decay = 5e-5，decay_steps 100000；AdamW clip 1.0；0.999；每 10000 步，共 8 份（末份 79999）</td><td>相同，命令行不覆盖</td></tr>
 <tr><td>budget / 每帧 token</td><td>1024 / 16</td><td>相同</td></tr>
 <tr><td>数据与 norm_stats</td><td>orig100 1600ep，md5 <code>cf425386…</code></td><td>相同</td></tr>
@@ -66,7 +66,7 @@ code{font:13px/1.6 ui-monospace,SFMono-Regular,monospace;background:var(--code);
    ▼  冒烟 20 步（fs8 smoke），EXIT_CODE=0
    ▼  正式起跑 fs8 prod；同时起 fs8-inc 增量上传
 主会话 Monitor 盯 fs8-chain 与正式日志</code></pre>
-<p>链式脚本只在自己的进程里等待，<b>不停、不杀任何别人的进程</b>。上次 timepool 评估留下的教训是：<code>tmux kill-session</code> 停不掉 sidecar，sidecar 会继续占卡。所以这里用「GPU 真的空了」作判定，不用「会话没了」。如果评估退出 60 分钟后卡仍未释放，只清理残留的 w768 评估子进程（判据见 §8 D2），然后继续等，不碰其他任何进程。</p>
+<p>链式脚本只在自己的进程里等待，<b>不停、不杀任何别人的进程</b>。上次 timepool 评估留下的教训是：<code>tmux kill-session</code> 停不掉 sidecar，sidecar 会继续占卡。所以这里用「GPU 真的空了」作判定，不用「会话没了」。如果评估退出 60 分钟后卡仍未释放，只清理残留的 w768 评估子进程（按 cmdline 特征判定，见 §8 D2），然后继续等，不碰其他任何进程。</p>
 
 <h2>5. 要改什么（很少）</h2>
 <ul>
@@ -90,7 +90,7 @@ code{font:13px/1.6 ui-monospace,SFMono-Regular,monospace;background:var(--code);
 <div class="scroll"><table>
 <tr><th>编号</th><th>情形</th><th>处理</th></tr>
 <tr><td>D1</td><td>评估以 <code>EVAL692=FAIL</code> 结束</td><td>照样往下走：驱动退出且卡空闲就起训。评估结果照实记入档案，训练不依赖它</td></tr>
-<tr><td>D2</td><td><code>EVAL692=</code> 已出、<code>w768-eval</code> 已退出，60 分钟后卡仍被占用</td><td>只对 cmdline 或 <code>/proc/&lt;pid&gt;/cwd</code> 落在 w768 评估执行副本或评估根目录下的进程，逐个发 TERM（30 s 后仍在就 KILL），PID 和 cmdline 记入日志；其他进程不碰，继续等</td></tr>
+<tr><td>D2</td><td><code>EVAL692=</code> 已出、<code>w768-eval</code> 已退出，60 分钟后卡仍被占用</td><td>w768 评估就在主检出里运行（w768 主会话 11-09 确认），所以<b>不按 cwd 判定</b>。只对 <code>/proc/&lt;pid&gt;/cmdline</code> 命中以下任一特征的进程逐个发 TERM（30 s 后仍在就 KILL），PID 和 cmdline 记入日志：① <code>serve_policy.py</code> 且带 <code>--policy.dir=…/v2-1600ep-m8x8-modul-wantp768-b128-50k/50000</code>；② <code>motion_sidecar.py</code> 且带 <code>wan_fixedpool768</code>；③ 含 <code>v1-store/evaluation/local692-wantp768-50k</code>（含 <code>-retry1</code>）或 <code>examples/robomme/eval.py</code>。其他进程不碰，继续等。w768 主会话确认 <code>EVAL692=</code> 之后不再使用 GPU</td></tr>
 <tr><td>D3</td><td>训完是否接评估</td><td>不接，训完另出评估方案</td></tr>
 <tr><td>D4</td><td>冒烟失败</td><td>本会话收集证据，派独立修复代理修复，经审查后重建只读副本再冒烟；最多 2 轮，仍失败再报告</td></tr>
 <tr><td>D5</td><td>正式训练在第一份 checkpoint（10000）之前异常退出</td><td>换 run 名 <code>…-8gpu-r2</code> 自动重起一次（bucket 同步加 <code>-r2</code>）；第 10000 步之后异常则停下报告，保留现场</td></tr>
@@ -108,7 +108,7 @@ code{font:13px/1.6 ui-monospace,SFMono-Regular,monospace;background:var(--code);
 <li>R5 不碰 <code>w768-train</code>、<code>w768-ckptup</code>、<code>w768-eval</code> 及其子进程；跨会话只发「仅答复」类通知。</li>
 <li>R6 只加本计划列出的判定，不叠加心跳或多层校验。</li>
 </ul>
-<p>已核实（11-09 美东 00:00 前后）：<code>framesamp-4x4</code> 48 GB 在库；YAML 在 v8；<code>make_mesh</code> 为 <code>(device_count//fsdp, fsdp)</code>；<code>local_batch = batch_size // process_count</code>；上传脚本参数化；<code>w768-eval.log</code> 尚不存在；<code>/scratch</code> 剩 451 GB。待验证：8 卡步速、专用 venv 导入。</p>
+<p>已核实（11-09 美东 00:00 前后）：<code>framesamp-4x4</code> 48 GB 在库；YAML 在 v8；<code>make_mesh</code> 为 <code>(device_count//fsdp, fsdp)</code>；<code>local_batch = batch_size // process_count</code>；上传脚本参数化；<code>w768-eval.log</code> 尚不存在；<code>/scratch</code> 剩 451 GB。待验证：8 卡步速。已完成：专用 venv（241 个包与主检出 <code>.venv</code> 逐项同版本，jax/jaxlib 0.5.3、flax 0.10.2、orbax 0.11.13），<code>PLAN_CONSISTENCY_REVIEW=PASS findings=0</code>。</p>
 
 <h2>一 步骤</h2>
 <div class="scroll"><table>
