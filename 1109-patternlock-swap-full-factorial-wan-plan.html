@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>PatternLock 单步 motion token 交换：全因子全量 + Frozen Wan pooling 对比计划</title>
+<style>
+body{font-family:-apple-system,"PingFang SC","Noto Sans CJK SC",sans-serif;max-width:1040px;margin:24px auto;padding:0 16px;line-height:1.65;color:#1c1c1c;background:#fff}
+h1{border-bottom:2px solid #333;padding-bottom:6px;margin-top:40px}
+h2{margin-top:30px;border-left:4px solid #3b6ea5;padding-left:10px}
+table{border-collapse:collapse;width:100%;margin:12px 0;font-size:14px}
+th,td{border:1px solid #bbb;padding:5px 8px;vertical-align:top;text-align:left}
+th{background:#eef2f7}
+td.n{text-align:right}
+code{background:#f3f3f3;padding:1px 4px;border-radius:3px;font-size:13px}
+pre{background:#f6f6f6;padding:10px;overflow-x:auto;font-size:13px;border-radius:4px}
+blockquote{border-left:4px solid #999;margin:10px 0;padding:4px 12px;background:#fafafa}
+.warn{background:#fff6e0;border:1px solid #e0b040;padding:8px 12px;border-radius:4px}
+</style>
+</head>
+<body>
+
+<p><strong>PatternLock 单步 motion token 交换：全因子全量 + Frozen Wan pooling 对比计划</strong></p>
+<blockquote>
+<p>第一版（美东 2026-11-09）。<strong>只规划、不实施</strong>；开工须用户对本文件不改而直接认可。</p>
+<p>代码锚点：分支 <code>v4.1-interpretMotion</code> @ <code>924d457</code>（先导轮执行代码 <code>d6bb48f</code>，<code>commitV4.1.48</code>）；Wan 侧 <code>origin/v10-ctx-wan-timepool-eval</code> @ <code>68bb958</code>；两者共同祖先 <code>3a4c32a</code>。工作副本：sled-aspen <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code>，2 × RTX A6000。</p>
+<p>先导轮：<a href="docs/evaluation-doc/pl-single-step-swap-1108/result.md"><code>docs/evaluation-doc/pl-single-step-swap-1108/result.md</code></a>（130 局，<code>PL_SWAP=PASS runs=130 invalid=0 N=40/40 Z=16/40 A=10/10 B_donor=15/15 C_own=15/25 C_donor=0/25</code>），计划 <code>1108-patternlock-single-step-motion-swap-plan.html</code>。</p>
+<p>commit 体例：功能合并 <code>commitV4.1.&lt;n&gt;:</code>，子代理 <code>sub/&lt;编号&gt;:</code>，文档 <code>docs:</code>。本轮在新分支 <code>v4.2-plswap-full</code> 上做（从 <code>v4.1-interpretMotion</code> 分出）。</p>
+</blockquote>
+
+<h1>第一部分（给人看）</h1>
+
+<h2>一、要做什么（总览与已定口径）</h2>
+
+<p><strong>一句话方案</strong>：把先导轮从「官方 8 局、10 对」扩成「3×3 盘上全部 40 种（起点格，方向）组合、接收 40 局 × 供体 40 局」的受控交换，两个只差编码器的 orig100 模型各跑一遍——主表的 MotionMem（学习型 encoder，concat 1×1024）与 Frozen Wan pooling（冻结 Wan VAE + 时间池化 1024）。每个模型约 1050 局闭环 rollout。</p>
+
+<p><strong>为什么要这样扩</strong>（先导轮暴露的三个问题）：</p>
+<ul>
+<li>同一对内 5 个 seed 的到达格几乎一样，有效样本是「对数」：B 只有 3 对，C 只有 5 对，A 的一对编码逐位相同、等于换成自己。</li>
+<li>官方 test 50 局里单步局只有 8 局、7 种组合，B 只能在起点格 1 上做，C 只有「左」「上」两个方向。</li>
+<li>没有「位置和方向都不同」的条件，分不开「按供体方向从自己位置走」和「走到供体的绝对目标格」；C 组 25←48、32←29 两对失败的原因也拆不开。</li>
+</ul>
+
+<p><strong>已定口径</strong>（用户原话逐字保留）：</p>
+<table>
+<tr><th>编号</th><th>口径</th><th>依据</th></tr>
+<tr><td>K1</td><td>做全量，并在跑完后加 Frozen Wan pooling 作为对比</td><td>「aspen刚跑了motion对任务的贡献 跟我制定 应该怎么跑全量的？」「跑完还要跑 Frozen Wan pooling 我们最强的对比」</td></tr>
+<tr><td>K2</td><td>motion 一侧换成主表的 orig100 模型，不沿用先导轮的 <code>vla-o16cc-59999</code></td><td>「换成主表 orig100」</td></tr>
+<tr><td>K3</td><td>计划写进策略仓库；允许 ssh 到 aspen</td><td>「对的你计划直接写到policy仓库内」「你可以ssh到aspen」</td></tr>
+<tr><td>K4</td><td>沿用先导轮口径：只做 PatternLock、easy 档、单步（m = 1）、只换示范段唯一的 motion 窗口、接收局只用该模型原样成功的局</td><td>11-08 原话「只探索成功任务」「只看一个subgoal的情况 不看更多」「单步的情况」</td></tr>
+</table>
+
+<p class="warn"><strong>下列五项是我给的推荐值，用户尚未明确表态</strong>，认可本计划即视为同意；要改请直接说：
+① 局池从官方 8 局扩到新 env_seed 的 80 局（第二节）；
+② 这一轮不做多步与 medium/hard；
+③ 先把服务端改成「一个服务端连跑多局交换」，再起全量（第五节 S3；不改则每个模型约 13 小时）；
+④ 供体局不按成功与否筛选（供体 token 只来自示范段，与它自己 rollout 成败无关），接收局仍只用原样成功的；
+⑤ 主 seed 用 42，只抽 60 对加跑 seed 1、2 复核，不再每对 5 个 seed。</p>
+
+<h2>二、局池与分组</h2>
+
+<p><strong>40 种组合怎么来</strong>：easy 档是 3×3 盘（格号 = 行 × 3 + 列），一步可走 8 邻方向。角格 4 个 × 3 个方向 + 边格 4 个 × 5 个方向 + 中心格 8 个方向 = 40 种合法的（起点格，方向）。</p>
+
+<p><strong>局从哪来</strong>（2026-11-09 在 aspen 用 <code>pl_swap_prep.replay_path</code> 只读复算）：</p>
+<table>
+<tr><th>清单</th><th>PatternLock 局数</th><th>env_seed 范围</th><th>easy 局</th><th>其中单步局</th><th>覆盖组合数</th></tr>
+<tr><td>train（orig100 训练集）</td><td class="n">100</td><td>15001–24900</td><td class="n">50</td><td class="n">11</td><td class="n">10</td></tr>
+<tr><td>test（官方评测）</td><td class="n">50</td><td>650000–654900</td><td class="n">26</td><td class="n">8</td><td class="n">7</td></tr>
+<tr><td>val</td><td class="n">50</td><td>1150000–1154900</td><td class="n">26</td><td class="n">9</td><td class="n">9</td></tr>
+<tr><td>新扫：900000 起、步长 100、跳过上面三套，共 4000 个</td><td class="n">—</td><td>900000–1299900</td><td class="n">—</td><td class="n">1247</td><td class="n">40（每种 ≥ 10 局）</td></tr>
+</table>
+<p>所以现成清单凑不齐 40 种，但新 seed 很充足。取法：每种组合按 env_seed 从小到大取前 2 局，第 1 局进接收集 R（40 局），第 2 局进供体集 S（40 局）；不按任何模型的成败挑局，两个模型共用同一套 80 局与同一张配对表。新 seed 与 train/test/val 三套清单都不重叠。</p>
+
+<p><strong>分组</strong>（每个模型各跑一遍；「位置」= 示范第一步的起点格，「方向」= 这一步的 8 邻方向）：</p>
+<table>
+<tr><th>组</th><th>接收局 ← 供体</th><th>对数</th><th>回答什么</th></tr>
+<tr><td>N 原样</td><td>R 40 局 + S 40 局，同时录 motion</td><td class="n">80</td><td>模型在这些新局上原样成功率；筛接收局</td></tr>
+<tr><td>Z 置零</td><td>R 40 局，示范窗口编码置零</td><td class="n">40</td><td>去掉这个窗口会怎样</td></tr>
+<tr><td>R 随机</td><td>R 40 局，示范窗口换成同范数随机向量</td><td class="n">40</td><td>补先导轮缺的扰动对照：掉分是因为缺信息还是因为分布外输入</td></tr>
+<tr><td>A 位置同·方向同</td><td>R ← S 同组合的另一局</td><td class="n">40</td><td>换 token 的操作本身有没有副作用（这次是真的不同局）</td></tr>
+<tr><td>B 位置同·方向异</td><td>R ← S 同起点格、其他方向</td><td class="n">160</td><td>与帧记忆冲突时跟谁走</td></tr>
+<tr><td>C 位置异·方向同</td><td>R ← S 同方向、其他起点格</td><td class="n">168</td><td>方向能不能跨位置搬运</td></tr>
+<tr><td>D 位置异·方向异</td><td>1232 对里分层抽 400：供体方向从接收局起点出发仍在盘内的抽 300，出盘的抽 100</td><td class="n">400</td><td>直接区分「供体方向」「供体绝对目标格」「自己目标」</td></tr>
+<tr><td>seed 复核</td><td>从 A/B/C/D 各抽 15 对，加跑 seed 1、2</td><td class="n">120</td><td>确认 seed 仍然几乎不影响到达格</td></tr>
+<tr><th>合计</th><td>每个模型</td><td class="n"><strong>1048</strong></td><td>接收局原样失败时，它名下的交换局不跑，实际局数只会更少</td></tr>
+</table>
+
+<h2>三、两个模型与 Wan 一侧的特殊处理</h2>
+
+<table>
+<tr><th></th><th>MotionMem（主表 orig100）</th><th>Frozen Wan pooling</th></tr>
+<tr><td>HF bucket</td><td><code>HongzeFu/robomme-vla-orig100-ctx32x4x4-motion-s2concat1x1024-60k-v1</code>（共 139.5 GB）</td><td><code>HongzeFu/robomme-vla-orig100-ctx32x4x4-wan-timepool8x8-60k-v1</code>（共 139.1 GB）</td></tr>
+<tr><td>取哪部分</td><td colspan="2">只取 step 59999 与编码器依赖，按先导轮 <code>vla-o16cc-59999</code> 的体量（11 GB + 0.3 GB）估计每个约 12 GB；落 <code>v1-store/assets/</code>（<code>/data</code> 余 2.9 TB）</td></tr>
+<tr><td>每窗口 token</td><td>学习型 encoder 输出 1 × 1024</td><td>冻结 Wan2.1 VAE 潜变量，时间上后 8 个取均值、空间 32×32→8×8，得 [1,16,8,8] = 1024 维</td></tr>
+<tr><td>官方 PatternLock 三 seed</td><td>32.67 ± 1.15（GreatLakes 10-31）</td><td>14.00 ± 4.00（<code>ctx-wan-timepool1024-3seed-1107</code>）</td></tr>
+<tr><td>代码在哪</td><td><code>v4.1-interpretMotion</code> 有交换/录制服务端 <code>scripts/interpret/</code>，但 <code>run_local.MODEL_KINDS</code> 只有 <code>history | stage2_pool4_concat</code>，且没有 orig100 两个模型的配置名（待阶段 0 核实）</td><td>配置与在线编码路径（<code>src/mme_vla_suite/shared/wan_timepool.py</code>、<code>scripts/dataset/wan_timepool/timepool_sidecar.py</code>、<code>policies/motion_client.py</code> 等）只在 v10 分支</td></tr>
+</table>
+
+<p><strong>Wan 一侧三点</strong>：</p>
+<ul>
+<li><strong>代码要合并</strong>：两条分支相对共同祖先都改过 <code>motion_client.py</code>、<code>policy.py</code>、<code>training/config.py</code>、<code>framesamp_dataset.py</code> 等同名文件，合并会有冲突。做法是在新分支上把 v10 合进来，再让 <code>serve_policy_attn.py</code> 的录制/交换钩子同时认 Wan 的编码输出（第五节 S1）。本仓库无受保护目录（<code>AGENTS.md</code> 写明 <code>&lt;PROTECTED_DIRS&gt;</code> 为无）。</li>
+<li><strong>成功局可能很少</strong>：Wan 在官方 PatternLock 上只有 14%。所以 Wan 先只跑 N 组 80 局，看 R 集里原样成功几局，再决定交换规模：成功 ≥ 12 局照常跑它名下的全部交换；不足 12 局时只跑 N、Z、R 三组并报「样本不足」，不硬凑、不为挑成功局而重试。</li>
+<li><strong>对比怎么报</strong>：每个模型各报一份自己的全量读数；另报一份「两个模型都原样成功的接收局」上的并排读数，这一份才是公平对比。</li>
+</ul>
+
+<p><strong>这段对比可能给出的三种结果</strong>（事先写明，不预设方向）：Wan 的 B 组也跟供体走——它的 token 也带方向，差距在别处；Wan 置零/随机后成功率不怎么掉——它没怎么用这个 token，靠帧记忆在走；Wan 的 C/D 组搬运率明显低于 MotionMem——时间均值丢了可搬运的方向信息。三种都如实报。</p>
+
+<h2>四、读数与验收</h2>
+
+<p><strong>每局读数</strong>：成功与否；执行段杆尖水平距离第一次 &lt; 0.025 m 的非起点按钮（沿用 <code>pl_swap_readout.first_reached</code>）；到达格归入五类之一：<code>own</code>（自己目标）、<code>donor_dir</code>（供体方向从自己起点推出的格；A、C 组里它与 own 重合，记 own）、<code>donor_abs</code>（供体的绝对目标格；与前两类重合时不单记）、<code>other</code>、<code>none</code>。先导轮只有 own / donor_abs / other / none 四类，本轮新增 <code>donor_dir</code>。</p>
+
+<table>
+<tr><th>查什么</th><th>怎么查</th><th>过了说明什么</th><th>判定行</th></tr>
+<tr><td>局池</td><td>80 局复算路径长度都为 1，40 种组合各 2 局，seed 与 train/test/val 不相交</td><td>配对表建立在正确的场景上</td><td><code>PL_POOL=PASS eps=80 combos=40 overlap=0</code></td></tr>
+<tr><td>示范只占 1 个窗口</td><td>每个模型 N 组每局终局记录 <code>budget.demo_windows == 1</code></td><td>「只换示范窗口」对 orig100 配置仍成立</td><td><code>DEMO_WINDOWS=PASS model=&lt;m&gt; eps=80 not_one=0</code></td></tr>
+<tr><td>模型装对了</td><td>每个模型在官方 PatternLock 50 局 seed 42 上重评，与原评估逐局成败一致（不一致局数 ≤ 2 视为通过并列出）</td><td>合并后的代码没有改掉模型行为</td><td><code>MODEL_REPRO=PASS model=&lt;m&gt; eps=50 mismatch=&lt;n&gt;</code></td></tr>
+<tr><td>多局服务端等价</td><td>同一模型取 12 个交换局，「一局一服务端」与「一个服务端连跑」各跑一次，到达格与成败逐局相同</td><td>S3 的提速没有改变结果</td><td><code>MULTI_SWAP_EQ=PASS runs=12 differ=0</code></td></tr>
+<tr><td>只动了示范窗口</td><td>沿用先导轮：每局 <code>motion_content.replace_log</code> 全是 <code>[0,0]</code>，<code>n_replaced</code> 等于录制 npz 第 0 帧窗口的调用次数</td><td>执行段 motion 未被替换</td><td><code>SWAP_SCOPE=PASS model=&lt;m&gt; runs=&lt;n&gt; count_mismatch=0</code></td></tr>
+<tr><td>供体互不相同</td><td>S 集 40 局示范编码两两最大绝对差 &gt; 0</td><td>不再出现先导轮「5 与 28 逐位相同」的情况</td><td><code>DONOR_DISTINCT=PASS donors=40 identical_pairs=0</code></td></tr>
+<tr><td>总读数</td><td>每个模型一行，另加交集一行</td><td>—</td><td><code>PL_SWAP_FULL=PASS model=&lt;m&gt; runs=&lt;n&gt; invalid=0 N=&lt;a&gt;/80 Z=… R=… A=… B_donor=… C_own=… D_dir=… D_abs=…</code></td></tr>
+</table>
+<p>成功率判据不设及格线：B/C/D 各类占比是读数，不是验收项；判定行 PASS 只表示数据完整、无效局为 0。</p>
+
+<h2>五、步骤</h2>
+<table>
+<tr><th>阶段</th><th>内容</th><th>判据</th></tr>
+<tr><td>S0 只读核实</td><td>读两个 bucket 的交付清单，确定 59999 的文件清单、字节数、配置名、<code>model_kind</code>；确认 <code>eval.py</code> 怎样接非官方 env_seed</td><td>写出取数清单与配置名；任一项与本计划假设不符即停下问用户</td></tr>
+<tr><td>S1 合并与适配</td><td>新分支合入 v10，解冲突；<code>run_local</code>、<code>serve_policy_attn</code> 认两个 orig100 模型；自定义 80 局清单的评测口径</td><td>核心短测全过；合并前后两次审查 PASS</td></tr>
+<tr><td>S2 取权重</td><td>两个模型各取 59999 与依赖（tmux，约 24 GB）</td><td>逐文件 sha256 与清单一致</td></tr>
+<tr><td>S3 多局交换服务端</td><td>交换供体从「服务端启动参数」改为「按局随请求指定」，<code>run_local</code> 取消「swap_map 每块恰 1 局」</td><td><code>MULTI_SWAP_EQ=PASS</code></td></tr>
+<tr><td>S4 冒烟</td><td>每个模型：官方 50 局重评；新局 N 2 局 + 交换 2 局 + 置零 1 局</td><td><code>MODEL_REPRO</code>、<code>DEMO_WINDOWS</code>、<code>SWAP_SCOPE</code> 各 PASS；量单局耗时与显存</td></tr>
+<tr><td>S5 MotionMem 全量</td><td>N 80 局 → 生成供体/置零/随机文件 → 其余约 970 局</td><td><code>PL_SWAP_FULL=PASS model=motion</code></td></tr>
+<tr><td>S6 Wan 全量</td><td>N 80 局 → 按第三节的 12 局门槛决定交换规模 → 其余</td><td><code>PL_SWAP_FULL=PASS model=wan</code> 或写明「样本不足」</td></tr>
+<tr><td>S7 读数与留档</td><td>两份全量读数 + 交集并排表；<code>docs/evaluation-doc/pl-swap-full-1109/</code> 三件套</td><td>留档 commit 并 push</td></tr>
+</table>
+<p><strong>耗时估计</strong>（先导轮实测：起一次服务端 2–3 分钟，单局 rollout 20–35 秒；4 个 worker）：S3 做完后每块约 20 局、每局摊约 40 秒，每个模型约 1050 局 ≈ 11.5 worker·小时 ≈ 3 小时；不做 S3 则每局约 3 分钟，每个模型约 13 小时。写代码、合并与审查约半天。S4 冒烟后按实测重估，两个模型的运行部分合计超过 12 小时就停下问用户，不自行减组。</p>
+
+<h2>六、交接顺序与状态机登记</h2>
+<ul>
+<li>任务 id：<code>pl-swap-full-1109</code>。</li>
+<li>交接前必须完成：<code>PL_SWAP_FULL</code> 两行（或 Wan 的「样本不足」说明）、留档 commit 已 push、本轮全部 <code>plf-</code> tmux 会话已退出。</li>
+<li>长尾：无（不上传任何产物）。</li>
+<li>上游依赖：无在跑任务；只读依赖先导轮产物与两个 HF bucket。</li>
+<li>下游：稿件仓库把读数写进 <code>sources.md</code> 与附录，须等本任务 <code>done</code>。</li>
+<li>是否登记进 <code>docs/handoff/current.json</code>：<strong>待用户回答</strong>。</li>
+</ul>
+
+<h2>七、子代理分工与合并（简述）</h2>
+<p>代码拆成三块，各由一个写入型子代理在独立 worktree 里做，按 W1 → W2 → W3 的顺序合回 <code>v4.2-plswap-full</code>：W1 合并 v10 并解冲突（只动冲突文件）；W2 在 W1 之上改 <code>scripts/interpret/</code> 的服务端与运行器（多局交换、认两个模型、随机向量扰动）；W3 在 W2 之上写新的准备脚本与读数脚本（80 局清单、配对表、五类归类）。每次合并前派一个只读审查子代理审范围与接口，合并后主会话跑核心短测再 push。取权重与全部运行由主会话在分离工作树里起 tmux，每份日志挂一个 Monitor。细节见第二部分。</p>
+
+<h1>第二部分（技术细节，供 agent 追踪）</h1>
+
+<h2>〇、前置声明与红线</h2>
+<ul>
+<li>R1 <strong>现有能力</strong>（<code>v4.1-interpretMotion@924d457</code> 已有）：<code>serve_policy_attn.py</code> 的 <code>--record-motion</code>、<code>motion_swap_exact:&lt;DIR&gt;</code>、<code>load_donor</code>；<code>run_local.py</code> 的 <code>swap_map</code>、<code>parse_swap_map</code>、<code>select_chunks</code>；<code>pl_swap_prep.py</code> 的 <code>replay_path</code>、<code>write_specs</code>、<code>make_donors</code>；<code>analysis/pl_swap_readout.py</code> 的 <code>button_xy</code>、<code>first_reached</code>、<code>classify</code>、<code>summarize</code>。<strong>拟新增</strong>：见第一节。<strong>未验证</strong>：两个 orig100 模型能否在合并后的分支上加载；orig100 配置下单步示范是否只占 1 个窗口；Wan 在线编码在 A6000 上每 worker 的显存。</li>
+<li>R2 不改 <code>third_party/</code>；不改训练超参；不动先导轮产物目录 <code>v1-store/evaluation/pl-single-step-swap-1108/</code>（只读）。</li>
+<li>R3 只在 aspen 本机跑，不提交集群作业。GPU 上若有他人进程，先报用户，不清理他人进程。</li>
+<li>R4 正常任务失败不重试；基础设施故障每局最多重试 1 次并记录原因；无效局计入 <code>invalid</code>。</li>
+<li>R5 中途停止 <code>run_local</code> 时连同服务端与 sidecar 进程树按精确 PID 清理（先导轮 OOM 教训）；tmux 只按精确会话名逐个停。</li>
+<li>R6 下载只取第一部分第三节写明的两份 step 59999 与依赖；实际体量超过 40 GB 即停下问用户。</li>
+</ul>
+
+<h2>一、逐文件改动清单</h2>
+<table>
+<tr><th>文件</th><th>锚点</th><th>改什么</th></tr>
+<tr><td>（合并）<code>src/mme_vla_suite/policies/motion_client.py</code>、<code>policy.py</code>、<code>policy_config.py</code>、<code>training/config.py</code>、<code>training/framesamp_dataset.py</code>、<code>datastore/motion_adapter.py</code>、<code>datastore/motion_store.py</code>、<code>shared/wan_timepool.py</code>、<code>models/config/robomme/*.yaml</code></td><td>两分支冲突处</td><td><code>git merge origin/v10-ctx-wan-timepool-eval</code>；冲突按「两边功能都保留」解，不删任何一侧的配置名与编码路径</td></tr>
+<tr><td><code>scripts/interpret/run_local.py</code></td><td><code>MODEL_KINDS</code>、<code>select_chunks</code>、<code>parse_swap_map</code>、带 <code>--swap-donor</code> 的启动段</td><td>加入两个 orig100 模型的 <code>model_kind</code>（名称以 S0 读到的为准）；<code>swap_map</code> 允许一块多局；Wan 模型起 <code>timepool_sidecar</code> 而非 <code>stage2_sidecar</code></td></tr>
+<tr><td><code>scripts/interpret/serve_policy_attn.py</code></td><td><code>load_donor</code>、<code>motion_swap_exact</code> 分支、<code>--record-motion</code></td><td>供体改为按局从请求元数据取（保留 <code>--swap-donor</code> 旧路径不变）；随机扰动不加新模式：随机向量做成与供体同格式的 npz，仍走 <code>motion_swap_exact</code>；录制/替换钩子挂到 Wan 编码输出</td></tr>
+<tr><td><code>examples/robomme/eval.py</code></td><td><code>evaluate</code> 中 <code>profile == "testx"</code> 分支、<code>resolve_episode</code> 核对处</td><td>新增 <code>profile="plfull"</code>：局清单自带 env_seed 与 difficulty，按清单建环境（具体接法 S0 定：优先用 builder 已有的自定义 metadata 路径，不行再加分支）；official 与 testx 两个口径逐行不变</td></tr>
+<tr><td><code>scripts/interpret/pl_full_prep.py</code>（新）</td><td><code>scan_pool</code>、<code>build_pairs</code>、<code>write_specs</code>、<code>make_donors</code>、<code>make_random</code></td><td>扫 seed 选 80 局并写清单；生成 A/B/C/D 配对表（D 的分层抽样用固定随机种子 0）；每模型的 spec 与 4 个队列；裁供体、写置零与同范数随机文件。复用 <code>pl_swap_prep</code> 的 <code>replay_path</code>、<code>cell_rc</code>、<code>direction</code>、<code>button_xy</code></td></tr>
+<tr><td><code>scripts/interpret/analysis/pl_full_readout.py</code>（新）</td><td><code>classify5</code>、<code>summarize</code>、<code>intersect</code></td><td>五类归类；按组、按（接收起点，供体起点）位置差、按方向分层出表；两模型交集并排表；判定行</td></tr>
+<tr><td><code>scripts/interpret/test_pl_full.py</code>（新）</td><td>—</td><td>配对表计数（A 40 / B 160 / C 168 / D 1232）、五类归类、多局 swap_map 解析的单测</td></tr>
+</table>
+
+<h2>二、子代理分配表</h2>
+<table>
+<tr><th>编号</th><th>目标</th><th>可写文件集合</th><th>禁触</th><th>依赖</th><th>合并顺序</th><th>验收（worktree 内，CPU）</th></tr>
+<tr><td>W1</td><td>合并 v10 并解冲突</td><td>第一节「（合并）」一行列出的文件及 v10 带来的新文件</td><td><code>third_party/</code>、<code>scripts/interpret/</code>、<code>docs/</code></td><td>S0 结论</td><td>1</td><td><code>uv run python -m pytest scripts/interpret -q</code> 与仓库核心短测；<code>MERGE_TESTS=PASS</code></td></tr>
+<tr><td>W2</td><td>多局交换服务端、认两个模型、plfull 口径</td><td><code>scripts/interpret/run_local.py</code>、<code>serve_policy_attn.py</code>、对应测试、<code>examples/robomme/eval.py</code></td><td><code>src/</code>、<code>third_party/</code></td><td>W1 已合入</td><td>2</td><td>同上；新增测试覆盖一块多局与旧路径不变</td></tr>
+<tr><td>W3</td><td>准备脚本与读数脚本</td><td><code>scripts/interpret/pl_full_prep.py</code>、<code>analysis/pl_full_readout.py</code>、<code>test_pl_full.py</code></td><td>其余全部</td><td>W2 的 spec 字段</td><td>3</td><td><code>uv run python -m pytest scripts/interpret/test_pl_full.py -q</code>；<code>PL_PAIRS=PASS A=40 B=160 C=168 D=1232</code></td></tr>
+<tr><td>—</td><td>S0 核实、取权重、全部运行、读数、留档</td><td colspan="5">主会话自做（运行需要主检出的环境与产物；监听、清理归主会话）</td></tr>
+</table>
+<p>模型：写入型 <code>opus</code> + 独立 worktree；审查 <code>sonnet</code> 只读；探索 <code>haiku</code>。GPU 验收（<code>MODEL_REPRO</code>、<code>MULTI_SWAP_EQ</code>）只在合并后由主会话串行跑。</p>
+
+<h2>三、闸门总表</h2>
+<p><code>PLAN_CONSISTENCY_REVIEW</code>（开工时）→ <code>PRE_MERGE_REVIEW</code>/<code>POST_MERGE_REVIEW</code> × 3 → <code>PL_POOL</code> → <code>MODEL_REPRO</code> × 2 → <code>DEMO_WINDOWS</code> × 2 → <code>MULTI_SWAP_EQ</code> → <code>SWAP_SCOPE</code> × 2 → <code>DONOR_DISTINCT</code> × 2 → <code>PL_SWAP_FULL</code> × 2。任一 FAIL 记证据交用户，不改判据。</p>
+
+<h2>四、runbook</h2>
+<pre>W=/data/hongzefu/robomme_policy_learning_MotionJEPA
+T=$W/v1-store/worktrees/pl-full-run            # 分离工作树，钉在合并后的 commit
+O=$W/v1-store/evaluation/pl-swap-full-1109     # 产物根；其下 motion/ 与 wan/ 各一套
+# 取权重（tmux plf-fetch-motion / plf-fetch-wan，日志 v1-store/logs/pl-swap-full-1109/）
+#   沿用 v1-store/fetch-vla-step-1027.py 的做法（curl -4，本机 IPv6 不可达），BUCKET 换成第三节两项
+# 每个模型 M ∈ {motion, wan}：
+python -m scripts.interpret.pl_full_prep pool  --out $O                 # 80 局清单 + 配对表（两模型共用）
+python -m scripts.interpret.pl_full_prep specs --out $O/$M --model $M --commit &lt;sha&gt;
+bash $O/$M/launch_stage.sh repro    # 官方 50 局 seed 42
+bash $O/$M/launch_stage.sh smoke
+bash $O/$M/launch_stage.sh n        # N 80 局，录 motion
+python -m scripts.interpret.pl_full_prep donors --out $O/$M
+bash $O/$M/launch_stage.sh swap     # Z、R、A、B、C、D
+bash $O/$M/launch_stage.sh seeds    # seed 1、2 复核
+python -m scripts.interpret.analysis.pl_full_readout --root $O/$M
+python -m scripts.interpret.analysis.pl_full_readout --root $O --intersect motion,wan</pre>
+<p>tmux 会话名 <code>plf-&lt;模型&gt;-&lt;阶段&gt;-&lt;worker&gt;</code>，模板同先导轮 <code>launch_stage.sh</code>（<code>set -o pipefail</code>、<code>tee</code>、<code>EXIT_CODE=</code> 尾行）。每卡 2 个 worker，<code>XLA_PYTHON_CLIENT_MEM_FRACTION=0.30</code> 为起始值，Wan 侧按冒烟实测显存调整。Monitor 过滤词：<code>ENV_CHECK=FAIL|rc=[1-9]|PLF_QUEUE|EXIT_CODE=|Traceback|out of memory|Killed|ContractError</code>。环境变量照抄先导轮 <code>launch.md</code>。</p>
+
+<h2>五、风险</h2>
+<table>
+<tr><th>风险</th><th>处置</th></tr>
+<tr><td>合并冲突大，或合并后某个模型行为变了</td><td><code>MODEL_REPRO</code> 兜底；FAIL 即停，不带病跑全量</td></tr>
+<tr><td>orig100 配置下单步示范占 2 个窗口</td><td><code>DEMO_WINDOWS</code> FAIL 即停，问用户是换掉全部示范窗口还是只换第一个</td></tr>
+<tr><td>Wan 在线编码显存高，每卡放不下 2 个 worker</td><td>降为每卡 1 个 worker，耗时翻倍，报告用户</td></tr>
+<tr><td>MotionMem 在新局上原样成功率低，接收局不足</td><td>如实报；R 集成功不足 20 局时停下问用户是否补扫第 3、4 局</td></tr>
+<tr><td>自定义 env_seed 接不进评测契约</td><td>S0 就查清；需要动 <code>third_party/</code> 才能做时停下问用户</td></tr>
+</table>
+
+<h2>六、盲区</h2>
+<ul>
+<li>结论仍只覆盖 easy 档、单步、PatternLock；不推到多步与其他任务。</li>
+<li>新 env_seed 不是官方评测局，原样成功率不能与主表 PatternLock 列直接比。</li>
+<li>两个模型的 token 来自不同编码器，「同范数随机」各按自己的范数取，R 组只能各自与自己的 Z、N 比。</li>
+<li>MotionMem 的官方 PatternLock 数字来自 GreatLakes，本机逐局对照用的是哪次评估的逐局记录，S0 才能确定；没有逐局记录时 <code>MODEL_REPRO</code> 改为比成功局数（差 ≤ 3）。</li>
+<li>bucket 里 59999 的确切体量、配置名、<code>model_kind</code> 本计划未读，均为 S0 核实项。</li>
+</ul>
+
+<h2>七、留档与 commit 纪律</h2>
+<p>起跑前建 <code>docs/evaluation-doc/pl-swap-full-1109/</code>，<code>launch.md</code> 记版本、命令、tmux 会话清单；跑完写 <code>result.md</code> 与 <code>records/</code>（readout、清单、配对表、清洗后日志）。只 <code>git add</code> 逐个明确路径；每次 commit 后立即 push。仓库根目录现有未跟踪文件 <code>TODO_RoboMME_Qwen3VL_FrameSamp_Context.en (1).html</code> 不属本轮，不碰。</p>
+
+</body>
+</html>
