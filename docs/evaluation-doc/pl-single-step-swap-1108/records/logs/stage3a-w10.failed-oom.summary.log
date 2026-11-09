@@ -1,0 +1,8 @@
+ENV_CHECK=PASS head=d6bb48f6e8e1ebd9fd501686291e2668f6686481 gpu=1 frac=0.30
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=3f7e14ee422bf44614524371840b698cca7bc74f2b3479ae041b7454390a01e7 manifest_seal=fd05d342f5235d629db0ec2a5cced850eb0c6549f04d8761c26e596e96dfe389 chunks=1 cuda=1 ablate=none
+CHUNK_ERROR index=0 error=RuntimeError: 策略服务启动期间退出 code=1
+jaxlib.xla_extension.XlaRuntimeError: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 71663616 bytes.
+EPISODE_RESULT task=PatternLock ep=28 success=0 npz=0
+RUN_LOCAL=FAIL model=stage2_pool4_concat episodes=1 success=0 npz=0
+PLS_EPISODE stage=stage3a group=N seed=1 ep=28 rc=1
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=3f7e14ee422bf44614524371840b698cca7bc74f2b3479ae041b7454390a01e7 manifest_seal=fd05d342f5235d629db0ec2a5cced850eb0c6549f04d8761c26e596e96dfe389 chunks=1 cuda=1 ablate=none

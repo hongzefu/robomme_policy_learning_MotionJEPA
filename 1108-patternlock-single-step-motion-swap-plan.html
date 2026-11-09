@@ -209,6 +209,13 @@ uv run python -m scripts.interpret.analysis.pl_swap_readout --root $O</pre>
 
 <h2>七 留档与 commit 纪律</h2>
 <p>脚本经 W1 的 <code>sub/S1:</code> 提交，主会话 <code>--no-ff</code> 合并为 <code>commitV4.1.&lt;n&gt;:</code>；冒烟后写 <code>launch.md</code>（含 tmux 会话清单），跑完写 <code>result.md</code>、<code>records/</code>（清洗后日志、<code>readout.json</code>、判定行），<code>docs:</code> 提交。每次 commit 后立即 push。本任务约 3 小时、无上下游依赖，建议不登记进 <code>docs/handoff/current.json</code>，由用户决定。</p>
+<h2>八 实施中调整与实测结果（美东 2026-11-08 追加，不改写上文）</h2>
+<div class="tbl"><table>
+<tr><th>编号</th><th>旧</th><th>新</th><th>理由</th><th>子代理结论</th></tr>
+<tr><td>J1</td><td>seed 1–4 与 seed 42 同为 official 口径；R1 认为 <code>model_seed</code> 传到服务端即可</td><td>seed ≠ 42 的 spec 加 <code>profile=testx</code>、<code>max_steps=1300</code>（<code>commitV4.1.48</code>，d6bb48f）</td><td><code>examples/robomme/eval.py::evaluate</code> 在 official 口径要求 <code>model_seed == 42</code>，seed 1 首批 4 局在客户端启动即 <code>ContractError</code>；testx 对这 8 局 easy 局与 official 等价</td><td><code>ADJUST_REVIEW=PASS scale=same findings=2</code>；采纳「不加等价性重跑闸门」</td></tr>
+<tr><td>J2</td><td>中途停止只 <code>tmux kill-session</code></td><td>另按精确 PID 结束本任务残留的服务端与 sidecar（8 个 + 4 个），失败目录改名留证</td><td><code>run_local</code> 的服务端未随 tmux 退出，成为孤儿占满显存，第二次阶段 3a 全部 OOM</td><td>非计划调整，属计划外事件；未影响其他用户进程</td></tr>
+</table></div>
+<p><b>实测判定行：</b><code>RECORD_REPRO=PASS eps=8 success=8</code>；<code>SEED_EFFECT=PASS seeds=5 eps_differ=8</code>；<code>DONOR_TRIM=PASS donors=7 zeros=8 rows=1 maxabs=0</code>；<code>SWAP_SCOPE=PASS runs=90 log_all_00=1 count_mismatch=0</code>；<code>PL_SWAP=PASS runs=130 invalid=0 N=40/40 Z=16/40 A=10/10 B_donor=15/15 C_own=15/25 C_donor=0/25</code>。另测得局 5 与局 28 的示范编码逐位相同，A 组实为自换。解读见 <code>docs/evaluation-doc/pl-single-step-swap-1108/result.md</code>。</p>
 </main>
 </body>
 </html>

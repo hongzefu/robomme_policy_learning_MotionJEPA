@@ -1,0 +1,10 @@
+ENV_CHECK=PASS head=d6bb48f6e8e1ebd9fd501686291e2668f6686481 gpu=0 frac=0.30
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=5fea6044b1ae207fe85f7d8c0ca4ad23a50cda28e4f41997d2eb50b1e66eccd6 manifest_seal=c617be41feef5bcd89b6f122c3f9cc62f59205e62ef4a5a4129ce288f4e4add1 chunks=1 cuda=0 ablate=none
+CHUNK_ERROR index=0 error=RuntimeError: 策略服务启动期间退出 code=1
+    raise RuntimeError(f"阶段二 sidecar 启动失败: {self.provenance['error']}")
+RuntimeError: 阶段二 sidecar 启动失败: Traceback (most recent call last):
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 16.00 MiB. GPU 0 has a total capacity of 44.43 GiB of which 449.06 MiB is free. Process 2523577 has 332.00 MiB memory in use. Process 3410286 has 13.59 GiB memory in use. Process 3410783 has 13.59 GiB memory in use. Process 3411360 has 2.21 GiB memory in use. Process 3411943 has 2.21 GiB memory in use. Process 3422844 has 11.06 GiB memory in use. Process 3422845 has 408.00 MiB memory in use. Including non-PyTorch memory, this process has 370.00 MiB memory in use. Of the allocated memory 84.17 MiB is allocated by PyTorch, and 25.83 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+EPISODE_RESULT task=PatternLock ep=5 success=0 npz=0
+RUN_LOCAL=FAIL model=stage2_pool4_concat episodes=1 success=0 npz=0
+PLS_EPISODE stage=stage3a group=N seed=1 ep=5 rc=1
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=a806b94290124a87966a89652ad89707ba86ddafe8e2c264dd6e5258eb280428 manifest_seal=6e8e3fb6013cade78dce6e4d9d41ac89ff990ea0d60776c7239cf82ece1ddf7a chunks=1 cuda=0 ablate=none

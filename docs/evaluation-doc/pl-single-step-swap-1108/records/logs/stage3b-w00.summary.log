@@ -1,0 +1,115 @@
+ENV_CHECK=PASS head=d6bb48f6e8e1ebd9fd501686291e2668f6686481 gpu=0 frac=0.30
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=caa99873df5bfc02b9008715bf752fd64c7c57805b64daeb96d6c7daaeafd2d7 manifest_seal=c617be41feef5bcd89b6f122c3f9cc62f59205e62ef4a5a4129ce288f4e4add1 chunks=1 cuda=0 ablate=motion_swap_exact:/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/zero
+EPISODE_RESULT task=PatternLock ep=5 success=1 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=1 npz=0
+PLS_EPISODE stage=stage3b group=Z seed=42 ep=5 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=6dc541e942813054723749f18fdb8db035429151882b018e20ebbd8ddfb5aebf manifest_seal=fd05d342f5235d629db0ec2a5cced850eb0c6549f04d8761c26e596e96dfe389 chunks=1 cuda=0 ablate=motion_swap_exact:/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/zero
+EPISODE_RESULT task=PatternLock ep=44 success=0 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=0 npz=0
+PLS_EPISODE stage=stage3b group=Z seed=42 ep=44 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=9857f4841419551c14a0d3b035a5c20988e21e39b6007a01de6ddf31b7c9366f manifest_seal=fd05d342f5235d629db0ec2a5cced850eb0c6549f04d8761c26e596e96dfe389 chunks=1 cuda=0 ablate=motion_swap_exact:/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/donor_trim
+EPISODE_RESULT task=PatternLock ep=28 success=1 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=1 npz=0
+PLS_EPISODE stage=stage3b group=A seed=42 ep=28 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=f689dcac730722c0212d6ccb76c7baf73f1a800ab465bc7dd66f8e0202c6888a manifest_seal=6e8e3fb6013cade78dce6e4d9d41ac89ff990ea0d60776c7239cf82ece1ddf7a chunks=1 cuda=0 ablate=motion_swap_exact:/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/donor_trim
+EPISODE_RESULT task=PatternLock ep=25 success=0 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=0 npz=0
+PLS_EPISODE stage=stage3b group=C seed=42 ep=25 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=597dfaa3de034dd74fb8ba05667c8d8ab43898a117b0f90ca05d44dff0a08630 manifest_seal=c617be41feef5bcd89b6f122c3f9cc62f59205e62ef4a5a4129ce288f4e4add1 chunks=1 cuda=0 ablate=motion_swap_exact:/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/zero
+EPISODE_RESULT task=PatternLock ep=5 success=1 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=1 npz=0
+PLS_EPISODE stage=stage3b group=Z seed=1 ep=5 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=0477e1d064b0bfce5b583feefb95f87977f0c8bc68f3abf73e63286f23041b74 manifest_seal=6e8e3fb6013cade78dce6e4d9d41ac89ff990ea0d60776c7239cf82ece1ddf7a chunks=1 cuda=0 ablate=motion_swap_exact:/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/zero
+EPISODE_RESULT task=PatternLock ep=25 success=0 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=0 npz=0
+PLS_EPISODE stage=stage3b group=Z seed=1 ep=25 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=04ea2c1d82ac10fe179bdf4eeee5c5fa24bca05afc12b76920d03e472d54b747 manifest_seal=c617be41feef5bcd89b6f122c3f9cc62f59205e62ef4a5a4129ce288f4e4add1 chunks=1 cuda=0 ablate=motion_swap_exact:/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/donor_trim
+EPISODE_RESULT task=PatternLock ep=5 success=1 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=1 npz=0
+PLS_EPISODE stage=stage3b group=A seed=1 ep=5 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=0305e26a27b0d19612286d3b2546e38806eab022a5dd26d98f9e0cc842187a05 manifest_seal=fd05d342f5235d629db0ec2a5cced850eb0c6549f04d8761c26e596e96dfe389 chunks=1 cuda=0 ablate=motion_swap_exact:/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/donor_trim
+EPISODE_RESULT task=PatternLock ep=28 success=0 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=0 npz=0
+PLS_EPISODE stage=stage3b group=B seed=1 ep=28 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=7d8e0d0de3a9ff6b89087e121cab630ee5974f882c309ed0a4e97ac4be52c5b9 manifest_seal=fd05d342f5235d629db0ec2a5cced850eb0c6549f04d8761c26e596e96dfe389 chunks=1 cuda=0 ablate=motion_swap_exact:/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/donor_trim
+EPISODE_RESULT task=PatternLock ep=29 success=1 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=1 npz=0
+PLS_EPISODE stage=stage3b group=C seed=1 ep=29 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=ebb042be5e50d5597c385a087e92b00bcd0caef1e4fd88253a30f75873467b4d manifest_seal=c617be41feef5bcd89b6f122c3f9cc62f59205e62ef4a5a4129ce288f4e4add1 chunks=1 cuda=0 ablate=none
+EPISODE_RESULT task=PatternLock ep=20 success=1 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=1 npz=0
+PLS_EPISODE stage=stage3b group=N seed=2 ep=20 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=495669baff5858be5946baac7b11b27320ad2787ad1a0e8f458fdff2e905d78e manifest_seal=fd05d342f5235d629db0ec2a5cced850eb0c6549f04d8761c26e596e96dfe389 chunks=1 cuda=0 ablate=none
+EPISODE_RESULT task=PatternLock ep=29 success=1 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=1 npz=0
+PLS_EPISODE stage=stage3b group=N seed=2 ep=29 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=55521ff0848c6b100b021a57113c1c437d8ccda39b7b151be4fa9d2c2ca7a315 manifest_seal=c617be41feef5bcd89b6f122c3f9cc62f59205e62ef4a5a4129ce288f4e4add1 chunks=1 cuda=0 ablate=motion_swap_exact:/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/zero
+EPISODE_RESULT task=PatternLock ep=20 success=0 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=0 npz=0
+PLS_EPISODE stage=stage3b group=Z seed=2 ep=20 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=d79131a385e4d5ab568d481921a7c26f2018906e10b2362462ff878c041699df manifest_seal=fd05d342f5235d629db0ec2a5cced850eb0c6549f04d8761c26e596e96dfe389 chunks=1 cuda=0 ablate=motion_swap_exact:/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/zero
+EPISODE_RESULT task=PatternLock ep=29 success=1 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=1 npz=0
+PLS_EPISODE stage=stage3b group=Z seed=2 ep=29 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=cbe29599cd280cef01335b9e133dc58f04d8e4faafdaec202e7ea774b19235bc manifest_seal=c617be41feef5bcd89b6f122c3f9cc62f59205e62ef4a5a4129ce288f4e4add1 chunks=1 cuda=0 ablate=motion_swap_exact:/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/donor_trim
+EPISODE_RESULT task=PatternLock ep=20 success=0 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=0 npz=0
+PLS_EPISODE stage=stage3b group=B seed=2 ep=20 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=0ec20de564db1bed280527d919dca2bd2f77c1c56a5f99f9bcdaf552f2250aea manifest_seal=6e8e3fb6013cade78dce6e4d9d41ac89ff990ea0d60776c7239cf82ece1ddf7a chunks=1 cuda=0 ablate=motion_swap_exact:/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/donor_trim
+EPISODE_RESULT task=PatternLock ep=25 success=0 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=0 npz=0
+PLS_EPISODE stage=stage3b group=C seed=2 ep=25 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=a747caf1873977230572b959fac2651c739b9a6242a89ae6d6c9996ffa83fcdc manifest_seal=c617be41feef5bcd89b6f122c3f9cc62f59205e62ef4a5a4129ce288f4e4add1 chunks=1 cuda=0 ablate=none
+EPISODE_RESULT task=PatternLock ep=5 success=1 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=1 npz=0
+PLS_EPISODE stage=stage3b group=N seed=3 ep=5 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=46720fa4af6b3e65c681f6016b7c3c9a5edb657a8692f2139f1edec02ea97d90 manifest_seal=6e8e3fb6013cade78dce6e4d9d41ac89ff990ea0d60776c7239cf82ece1ddf7a chunks=1 cuda=0 ablate=none
+EPISODE_RESULT task=PatternLock ep=25 success=1 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=1 npz=0
+PLS_EPISODE stage=stage3b group=N seed=3 ep=25 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=d2f6baf279f21cb554b65d360b41c844d3ebff1feefd34c10ae3ea147423ee42 manifest_seal=c617be41feef5bcd89b6f122c3f9cc62f59205e62ef4a5a4129ce288f4e4add1 chunks=1 cuda=0 ablate=motion_swap_exact:/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/zero
+EPISODE_RESULT task=PatternLock ep=5 success=1 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=1 npz=0
+PLS_EPISODE stage=stage3b group=Z seed=3 ep=5 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=acba9e7f10cdfe40cd4af14a23c6808e358c6d7d153cebe2acae9704cca4f868 manifest_seal=6e8e3fb6013cade78dce6e4d9d41ac89ff990ea0d60776c7239cf82ece1ddf7a chunks=1 cuda=0 ablate=motion_swap_exact:/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/zero
+EPISODE_RESULT task=PatternLock ep=25 success=0 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=0 npz=0
+PLS_EPISODE stage=stage3b group=Z seed=3 ep=25 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=2b47489dc8e5eb38a8186105b7060a77938e6667becb1b89ab7dcfd65c97811e manifest_seal=c617be41feef5bcd89b6f122c3f9cc62f59205e62ef4a5a4129ce288f4e4add1 chunks=1 cuda=0 ablate=motion_swap_exact:/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/donor_trim
+EPISODE_RESULT task=PatternLock ep=5 success=1 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=1 npz=0
+PLS_EPISODE stage=stage3b group=A seed=3 ep=5 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=741cfad0710385d51cb23a39f23dc538c02eca933b5edceebacca78e6ac2d47d manifest_seal=fd05d342f5235d629db0ec2a5cced850eb0c6549f04d8761c26e596e96dfe389 chunks=1 cuda=0 ablate=motion_swap_exact:/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/donor_trim
+EPISODE_RESULT task=PatternLock ep=28 success=0 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=0 npz=0
+PLS_EPISODE stage=stage3b group=B seed=3 ep=28 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=f860d7b8b78841160b80f79d0db321c09fea08441482c425ad58f74f163d8521 manifest_seal=fd05d342f5235d629db0ec2a5cced850eb0c6549f04d8761c26e596e96dfe389 chunks=1 cuda=0 ablate=motion_swap_exact:/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/donor_trim
+EPISODE_RESULT task=PatternLock ep=29 success=1 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=1 npz=0
+PLS_EPISODE stage=stage3b group=C seed=3 ep=29 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=d929b2549be863970378589c4aaca1971d6e34856cbbd4ea7485cb81399eb461 manifest_seal=c617be41feef5bcd89b6f122c3f9cc62f59205e62ef4a5a4129ce288f4e4add1 chunks=1 cuda=0 ablate=none
+EPISODE_RESULT task=PatternLock ep=20 success=1 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=1 npz=0
+PLS_EPISODE stage=stage3b group=N seed=4 ep=20 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=622f034cfe007b44fe74177803f4d91049599608328e308d20e6bb01823cf322 manifest_seal=fd05d342f5235d629db0ec2a5cced850eb0c6549f04d8761c26e596e96dfe389 chunks=1 cuda=0 ablate=none
+EPISODE_RESULT task=PatternLock ep=29 success=1 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=1 npz=0
+PLS_EPISODE stage=stage3b group=N seed=4 ep=29 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=7253e17d6f4da1f0e9a1490cbfde1dbbbe48c4fd652218dc6cd64a85a4b46450 manifest_seal=c617be41feef5bcd89b6f122c3f9cc62f59205e62ef4a5a4129ce288f4e4add1 chunks=1 cuda=0 ablate=motion_swap_exact:/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/zero
+EPISODE_RESULT task=PatternLock ep=20 success=0 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=0 npz=0
+PLS_EPISODE stage=stage3b group=Z seed=4 ep=20 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=bba9d7df06a52e6c8a4a098469a45e203d85a394e49fc49bd4a6eafaf0590c72 manifest_seal=fd05d342f5235d629db0ec2a5cced850eb0c6549f04d8761c26e596e96dfe389 chunks=1 cuda=0 ablate=motion_swap_exact:/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/zero
+EPISODE_RESULT task=PatternLock ep=29 success=0 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=0 npz=0
+PLS_EPISODE stage=stage3b group=Z seed=4 ep=29 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=6b93f4928228bedf36d6d04fdc00a7825d96c77b7657a0193927ac862adf4a10 manifest_seal=c617be41feef5bcd89b6f122c3f9cc62f59205e62ef4a5a4129ce288f4e4add1 chunks=1 cuda=0 ablate=motion_swap_exact:/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/donor_trim
+EPISODE_RESULT task=PatternLock ep=20 success=0 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=0 npz=0
+PLS_EPISODE stage=stage3b group=B seed=4 ep=20 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=20dcf095f24b6e2747027ebc7e79b19f199afd2fc464351e5d14e8441111701a manifest_seal=6e8e3fb6013cade78dce6e4d9d41ac89ff990ea0d60776c7239cf82ece1ddf7a chunks=1 cuda=0 ablate=motion_swap_exact:/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/donor_trim
+EPISODE_RESULT task=PatternLock ep=25 success=0 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=0 npz=0
+PLS_EPISODE stage=stage3b group=C seed=4 ep=25 rc=0
+PLS_QUEUE stage=stage3b worker=w00 runs=28 failed=0
+EXIT_CODE=0

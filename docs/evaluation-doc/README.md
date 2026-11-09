@@ -4,6 +4,7 @@
 
 | 档案 | 范围 | 状态 |
 | --- | --- | --- |
+| [PatternLock 单步 motion token 交换](pl-single-step-swap-1108/result.md) | motion 59999；easy 单步成功 8 局 × 5 seed；只换示范段唯一 motion 窗口：原样 / 置零 / 位置方向同 / 位置同方向异 / 位置异方向同，共 130 局 | 完成；B 15/15 走到供体目标格（10 局可区分）；C 0/25 走到供体绝对目标、可区分的 2 对按相对方向走对；置零 16/40 |
 | [MoveCube 强推恢复](movecube-force-recovery-seed42-1107/result.md) | 官方 ctx512 79999 与 motion 59999；拿 cube 21 局强推到 peg 上方、拿 peg 12 局强推到 cube 上方，0～80 步放手，抓起正确物体即成功，共 396 局，不录注意力 | 完成；k=16 约六到七成恢复，k≥32 几乎全部抓错误物体，两模型无差异 |
 | [PatternLock、RouteStick 按子目标的注意力](subgoal-rollout-attn-seed42-1106/result.md) | 官方 ctx512 79999 与 motion 59999；两任务官方 50 局全程模型控制，922 次推理全算，按 current_task_index 分组 | 成功 motion 34/100、基线 18/100；12 组对位读数无「明显」；motion 帧流回看示范开头与 Swap 方向相同，基线文字读示范末尾；资源已释放 |
 | [两个 Swap 任务第一次取 bin](swap-first-bin-attn-seed42-1105/result.md) | ButtonUnmaskSwap、VideoUnmaskSwap 各 50 局；官方 ctx512 79999 与 motion 59999；靠近到闭合的注意力，motion 模型 4 个替换条件 | 成功 motion 29/100、基线 20/100；motion 回看开局是两任务共同 pattern，与选对选错无可见关系；Button 换 motion 后相对 E0 下降（17→7），Video 无显著变化；E4 未跑 |

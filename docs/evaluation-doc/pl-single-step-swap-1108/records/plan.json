@@ -1,0 +1,2495 @@
+{
+  "commit": "d6bb48f6e8e1ebd9fd501686291e2668f6686481",
+  "run_tree": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/worktrees/pl-swap-run",
+  "out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108",
+  "record_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/record",
+  "seeds": [
+    42,
+    1,
+    2,
+    3,
+    4
+  ],
+  "runs": [
+    {
+      "stage": "smoke1",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "N",
+      "seed": 42,
+      "ep": 5,
+      "donor": null,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed42-w00-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w00/run"
+    },
+    {
+      "stage": "smoke1",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "N",
+      "seed": 42,
+      "ep": 20,
+      "donor": null,
+      "path": [
+        1,
+        0
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed42-w10-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w10/run"
+    },
+    {
+      "stage": "smoke2",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "Z",
+      "seed": 42,
+      "ep": 20,
+      "donor": 20,
+      "path": [
+        1,
+        0
+      ],
+      "donor_path": [
+        1,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed42-w00-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w00/run"
+    },
+    {
+      "stage": "smoke2",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "B",
+      "seed": 42,
+      "ep": 20,
+      "donor": 5,
+      "path": [
+        1,
+        0
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/B-seed42-w10-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed42/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed42/w10/run"
+    },
+    {
+      "stage": "stage2",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "N",
+      "seed": 42,
+      "ep": 28,
+      "donor": null,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed42-w00-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w00/run"
+    },
+    {
+      "stage": "stage2",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "N",
+      "seed": 42,
+      "ep": 48,
+      "donor": null,
+      "path": [
+        2,
+        1
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed42-w10-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w10/run"
+    },
+    {
+      "stage": "stage2",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "N",
+      "seed": 42,
+      "ep": 25,
+      "donor": null,
+      "path": [
+        4,
+        3
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed42-w01-m2.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w01/run"
+    },
+    {
+      "stage": "stage2",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "N",
+      "seed": 42,
+      "ep": 44,
+      "donor": null,
+      "path": [
+        0,
+        1
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed42-w11-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w11/run"
+    },
+    {
+      "stage": "stage2",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "N",
+      "seed": 42,
+      "ep": 29,
+      "donor": null,
+      "path": [
+        7,
+        4
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed42-w00-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w00/run"
+    },
+    {
+      "stage": "stage2",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "N",
+      "seed": 42,
+      "ep": 32,
+      "donor": null,
+      "path": [
+        3,
+        0
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed42-w10-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w10/run"
+    },
+    {
+      "stage": "stage3a",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "N",
+      "seed": 1,
+      "ep": 5,
+      "donor": null,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed1-w00-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w00/run"
+    },
+    {
+      "stage": "stage3a",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "N",
+      "seed": 1,
+      "ep": 28,
+      "donor": null,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed1-w10-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w10/run"
+    },
+    {
+      "stage": "stage3a",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "N",
+      "seed": 1,
+      "ep": 20,
+      "donor": null,
+      "path": [
+        1,
+        0
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed1-w01-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w01/run"
+    },
+    {
+      "stage": "stage3a",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "N",
+      "seed": 1,
+      "ep": 48,
+      "donor": null,
+      "path": [
+        2,
+        1
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed1-w11-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w11/run"
+    },
+    {
+      "stage": "stage3a",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "N",
+      "seed": 1,
+      "ep": 25,
+      "donor": null,
+      "path": [
+        4,
+        3
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed1-w00-m2.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w00/run"
+    },
+    {
+      "stage": "stage3a",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "N",
+      "seed": 1,
+      "ep": 44,
+      "donor": null,
+      "path": [
+        0,
+        1
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed1-w10-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w10/run"
+    },
+    {
+      "stage": "stage3a",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "N",
+      "seed": 1,
+      "ep": 29,
+      "donor": null,
+      "path": [
+        7,
+        4
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed1-w01-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w01/run"
+    },
+    {
+      "stage": "stage3a",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "N",
+      "seed": 1,
+      "ep": 32,
+      "donor": null,
+      "path": [
+        3,
+        0
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed1-w11-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "Z",
+      "seed": 42,
+      "ep": 5,
+      "donor": 5,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed42-w00-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "Z",
+      "seed": 42,
+      "ep": 28,
+      "donor": 28,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed42-w10-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "Z",
+      "seed": 42,
+      "ep": 48,
+      "donor": 48,
+      "path": [
+        2,
+        1
+      ],
+      "donor_path": [
+        2,
+        1
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed42-w01-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "Z",
+      "seed": 42,
+      "ep": 25,
+      "donor": 25,
+      "path": [
+        4,
+        3
+      ],
+      "donor_path": [
+        4,
+        3
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed42-w11-m2.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "Z",
+      "seed": 42,
+      "ep": 44,
+      "donor": 44,
+      "path": [
+        0,
+        1
+      ],
+      "donor_path": [
+        0,
+        1
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed42-w00-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "Z",
+      "seed": 42,
+      "ep": 29,
+      "donor": 29,
+      "path": [
+        7,
+        4
+      ],
+      "donor_path": [
+        7,
+        4
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed42-w10-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "Z",
+      "seed": 42,
+      "ep": 32,
+      "donor": 32,
+      "path": [
+        3,
+        0
+      ],
+      "donor_path": [
+        3,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed42-w01-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "A",
+      "seed": 42,
+      "ep": 5,
+      "donor": 28,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/A-seed42-w11-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed42/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed42/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "A",
+      "seed": 42,
+      "ep": 28,
+      "donor": 5,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/A-seed42-w00-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed42/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed42/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "B",
+      "seed": 42,
+      "ep": 5,
+      "donor": 20,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/B-seed42-w10-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed42/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed42/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "B",
+      "seed": 42,
+      "ep": 28,
+      "donor": 20,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/B-seed42-w01-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed42/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed42/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "C",
+      "seed": 42,
+      "ep": 20,
+      "donor": 25,
+      "path": [
+        1,
+        0
+      ],
+      "donor_path": [
+        4,
+        3
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed42-w11-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed42/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed42/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "C",
+      "seed": 42,
+      "ep": 25,
+      "donor": 48,
+      "path": [
+        4,
+        3
+      ],
+      "donor_path": [
+        2,
+        1
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed42-w00-m2.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed42/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed42/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "C",
+      "seed": 42,
+      "ep": 48,
+      "donor": 20,
+      "path": [
+        2,
+        1
+      ],
+      "donor_path": [
+        1,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed42-w10-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed42/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed42/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "C",
+      "seed": 42,
+      "ep": 29,
+      "donor": 32,
+      "path": [
+        7,
+        4
+      ],
+      "donor_path": [
+        3,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed42-w01-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed42/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed42/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "C",
+      "seed": 42,
+      "ep": 32,
+      "donor": 29,
+      "path": [
+        3,
+        0
+      ],
+      "donor_path": [
+        7,
+        4
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed42-w11-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed42/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed42/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "Z",
+      "seed": 1,
+      "ep": 5,
+      "donor": 5,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed1-w00-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "Z",
+      "seed": 1,
+      "ep": 28,
+      "donor": 28,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed1-w10-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "Z",
+      "seed": 1,
+      "ep": 20,
+      "donor": 20,
+      "path": [
+        1,
+        0
+      ],
+      "donor_path": [
+        1,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed1-w01-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "Z",
+      "seed": 1,
+      "ep": 48,
+      "donor": 48,
+      "path": [
+        2,
+        1
+      ],
+      "donor_path": [
+        2,
+        1
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed1-w11-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "Z",
+      "seed": 1,
+      "ep": 25,
+      "donor": 25,
+      "path": [
+        4,
+        3
+      ],
+      "donor_path": [
+        4,
+        3
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed1-w00-m2.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "Z",
+      "seed": 1,
+      "ep": 44,
+      "donor": 44,
+      "path": [
+        0,
+        1
+      ],
+      "donor_path": [
+        0,
+        1
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed1-w10-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "Z",
+      "seed": 1,
+      "ep": 29,
+      "donor": 29,
+      "path": [
+        7,
+        4
+      ],
+      "donor_path": [
+        7,
+        4
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed1-w01-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "Z",
+      "seed": 1,
+      "ep": 32,
+      "donor": 32,
+      "path": [
+        3,
+        0
+      ],
+      "donor_path": [
+        3,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed1-w11-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "A",
+      "seed": 1,
+      "ep": 5,
+      "donor": 28,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/A-seed1-w00-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed1/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed1/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "A",
+      "seed": 1,
+      "ep": 28,
+      "donor": 5,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/A-seed1-w10-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed1/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed1/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "B",
+      "seed": 1,
+      "ep": 20,
+      "donor": 5,
+      "path": [
+        1,
+        0
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/B-seed1-w01-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed1/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed1/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "B",
+      "seed": 1,
+      "ep": 5,
+      "donor": 20,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/B-seed1-w11-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed1/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed1/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "B",
+      "seed": 1,
+      "ep": 28,
+      "donor": 20,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/B-seed1-w00-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed1/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed1/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "C",
+      "seed": 1,
+      "ep": 20,
+      "donor": 25,
+      "path": [
+        1,
+        0
+      ],
+      "donor_path": [
+        4,
+        3
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed1-w10-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed1/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed1/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "C",
+      "seed": 1,
+      "ep": 25,
+      "donor": 48,
+      "path": [
+        4,
+        3
+      ],
+      "donor_path": [
+        2,
+        1
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed1-w01-m2.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed1/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed1/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "C",
+      "seed": 1,
+      "ep": 48,
+      "donor": 20,
+      "path": [
+        2,
+        1
+      ],
+      "donor_path": [
+        1,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed1-w11-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed1/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed1/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "C",
+      "seed": 1,
+      "ep": 29,
+      "donor": 32,
+      "path": [
+        7,
+        4
+      ],
+      "donor_path": [
+        3,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed1-w00-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed1/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed1/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "C",
+      "seed": 1,
+      "ep": 32,
+      "donor": 29,
+      "path": [
+        3,
+        0
+      ],
+      "donor_path": [
+        7,
+        4
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed1-w10-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed1/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed1/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "N",
+      "seed": 2,
+      "ep": 5,
+      "donor": null,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed2-w01-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "N",
+      "seed": 2,
+      "ep": 28,
+      "donor": null,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed2-w11-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "N",
+      "seed": 2,
+      "ep": 20,
+      "donor": null,
+      "path": [
+        1,
+        0
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed2-w00-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "N",
+      "seed": 2,
+      "ep": 48,
+      "donor": null,
+      "path": [
+        2,
+        1
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed2-w10-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "N",
+      "seed": 2,
+      "ep": 25,
+      "donor": null,
+      "path": [
+        4,
+        3
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed2-w01-m2.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "N",
+      "seed": 2,
+      "ep": 44,
+      "donor": null,
+      "path": [
+        0,
+        1
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed2-w11-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "N",
+      "seed": 2,
+      "ep": 29,
+      "donor": null,
+      "path": [
+        7,
+        4
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed2-w00-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "N",
+      "seed": 2,
+      "ep": 32,
+      "donor": null,
+      "path": [
+        3,
+        0
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed2-w10-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "Z",
+      "seed": 2,
+      "ep": 5,
+      "donor": 5,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed2-w01-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "Z",
+      "seed": 2,
+      "ep": 28,
+      "donor": 28,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed2-w11-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "Z",
+      "seed": 2,
+      "ep": 20,
+      "donor": 20,
+      "path": [
+        1,
+        0
+      ],
+      "donor_path": [
+        1,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed2-w00-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "Z",
+      "seed": 2,
+      "ep": 48,
+      "donor": 48,
+      "path": [
+        2,
+        1
+      ],
+      "donor_path": [
+        2,
+        1
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed2-w10-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "Z",
+      "seed": 2,
+      "ep": 25,
+      "donor": 25,
+      "path": [
+        4,
+        3
+      ],
+      "donor_path": [
+        4,
+        3
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed2-w01-m2.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "Z",
+      "seed": 2,
+      "ep": 44,
+      "donor": 44,
+      "path": [
+        0,
+        1
+      ],
+      "donor_path": [
+        0,
+        1
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed2-w11-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "Z",
+      "seed": 2,
+      "ep": 29,
+      "donor": 29,
+      "path": [
+        7,
+        4
+      ],
+      "donor_path": [
+        7,
+        4
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed2-w00-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "Z",
+      "seed": 2,
+      "ep": 32,
+      "donor": 32,
+      "path": [
+        3,
+        0
+      ],
+      "donor_path": [
+        3,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed2-w10-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "A",
+      "seed": 2,
+      "ep": 5,
+      "donor": 28,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/A-seed2-w01-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed2/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed2/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "A",
+      "seed": 2,
+      "ep": 28,
+      "donor": 5,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/A-seed2-w11-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed2/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed2/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "B",
+      "seed": 2,
+      "ep": 20,
+      "donor": 5,
+      "path": [
+        1,
+        0
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/B-seed2-w00-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed2/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed2/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "B",
+      "seed": 2,
+      "ep": 5,
+      "donor": 20,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/B-seed2-w10-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed2/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed2/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "B",
+      "seed": 2,
+      "ep": 28,
+      "donor": 20,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/B-seed2-w01-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed2/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed2/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "C",
+      "seed": 2,
+      "ep": 20,
+      "donor": 25,
+      "path": [
+        1,
+        0
+      ],
+      "donor_path": [
+        4,
+        3
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed2-w11-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed2/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed2/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "C",
+      "seed": 2,
+      "ep": 25,
+      "donor": 48,
+      "path": [
+        4,
+        3
+      ],
+      "donor_path": [
+        2,
+        1
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed2-w00-m2.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed2/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed2/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "C",
+      "seed": 2,
+      "ep": 48,
+      "donor": 20,
+      "path": [
+        2,
+        1
+      ],
+      "donor_path": [
+        1,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed2-w10-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed2/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed2/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "C",
+      "seed": 2,
+      "ep": 29,
+      "donor": 32,
+      "path": [
+        7,
+        4
+      ],
+      "donor_path": [
+        3,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed2-w01-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed2/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed2/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "C",
+      "seed": 2,
+      "ep": 32,
+      "donor": 29,
+      "path": [
+        3,
+        0
+      ],
+      "donor_path": [
+        7,
+        4
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed2-w11-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed2/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed2/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "N",
+      "seed": 3,
+      "ep": 5,
+      "donor": null,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed3-w00-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "N",
+      "seed": 3,
+      "ep": 28,
+      "donor": null,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed3-w10-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "N",
+      "seed": 3,
+      "ep": 20,
+      "donor": null,
+      "path": [
+        1,
+        0
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed3-w01-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "N",
+      "seed": 3,
+      "ep": 48,
+      "donor": null,
+      "path": [
+        2,
+        1
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed3-w11-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "N",
+      "seed": 3,
+      "ep": 25,
+      "donor": null,
+      "path": [
+        4,
+        3
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed3-w00-m2.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "N",
+      "seed": 3,
+      "ep": 44,
+      "donor": null,
+      "path": [
+        0,
+        1
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed3-w10-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "N",
+      "seed": 3,
+      "ep": 29,
+      "donor": null,
+      "path": [
+        7,
+        4
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed3-w01-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "N",
+      "seed": 3,
+      "ep": 32,
+      "donor": null,
+      "path": [
+        3,
+        0
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed3-w11-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "Z",
+      "seed": 3,
+      "ep": 5,
+      "donor": 5,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed3-w00-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "Z",
+      "seed": 3,
+      "ep": 28,
+      "donor": 28,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed3-w10-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "Z",
+      "seed": 3,
+      "ep": 20,
+      "donor": 20,
+      "path": [
+        1,
+        0
+      ],
+      "donor_path": [
+        1,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed3-w01-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "Z",
+      "seed": 3,
+      "ep": 48,
+      "donor": 48,
+      "path": [
+        2,
+        1
+      ],
+      "donor_path": [
+        2,
+        1
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed3-w11-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "Z",
+      "seed": 3,
+      "ep": 25,
+      "donor": 25,
+      "path": [
+        4,
+        3
+      ],
+      "donor_path": [
+        4,
+        3
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed3-w00-m2.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "Z",
+      "seed": 3,
+      "ep": 44,
+      "donor": 44,
+      "path": [
+        0,
+        1
+      ],
+      "donor_path": [
+        0,
+        1
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed3-w10-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "Z",
+      "seed": 3,
+      "ep": 29,
+      "donor": 29,
+      "path": [
+        7,
+        4
+      ],
+      "donor_path": [
+        7,
+        4
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed3-w01-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "Z",
+      "seed": 3,
+      "ep": 32,
+      "donor": 32,
+      "path": [
+        3,
+        0
+      ],
+      "donor_path": [
+        3,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed3-w11-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "A",
+      "seed": 3,
+      "ep": 5,
+      "donor": 28,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/A-seed3-w00-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed3/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed3/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "A",
+      "seed": 3,
+      "ep": 28,
+      "donor": 5,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/A-seed3-w10-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed3/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed3/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "B",
+      "seed": 3,
+      "ep": 20,
+      "donor": 5,
+      "path": [
+        1,
+        0
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/B-seed3-w01-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed3/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed3/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "B",
+      "seed": 3,
+      "ep": 5,
+      "donor": 20,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/B-seed3-w11-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed3/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed3/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "B",
+      "seed": 3,
+      "ep": 28,
+      "donor": 20,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/B-seed3-w00-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed3/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed3/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "C",
+      "seed": 3,
+      "ep": 20,
+      "donor": 25,
+      "path": [
+        1,
+        0
+      ],
+      "donor_path": [
+        4,
+        3
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed3-w10-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed3/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed3/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "C",
+      "seed": 3,
+      "ep": 25,
+      "donor": 48,
+      "path": [
+        4,
+        3
+      ],
+      "donor_path": [
+        2,
+        1
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed3-w01-m2.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed3/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed3/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "C",
+      "seed": 3,
+      "ep": 48,
+      "donor": 20,
+      "path": [
+        2,
+        1
+      ],
+      "donor_path": [
+        1,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed3-w11-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed3/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed3/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "C",
+      "seed": 3,
+      "ep": 29,
+      "donor": 32,
+      "path": [
+        7,
+        4
+      ],
+      "donor_path": [
+        3,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed3-w00-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed3/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed3/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "C",
+      "seed": 3,
+      "ep": 32,
+      "donor": 29,
+      "path": [
+        3,
+        0
+      ],
+      "donor_path": [
+        7,
+        4
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed3-w10-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed3/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed3/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "N",
+      "seed": 4,
+      "ep": 5,
+      "donor": null,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed4-w01-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "N",
+      "seed": 4,
+      "ep": 28,
+      "donor": null,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed4-w11-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "N",
+      "seed": 4,
+      "ep": 20,
+      "donor": null,
+      "path": [
+        1,
+        0
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed4-w00-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "N",
+      "seed": 4,
+      "ep": 48,
+      "donor": null,
+      "path": [
+        2,
+        1
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed4-w10-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "N",
+      "seed": 4,
+      "ep": 25,
+      "donor": null,
+      "path": [
+        4,
+        3
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed4-w01-m2.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "N",
+      "seed": 4,
+      "ep": 44,
+      "donor": null,
+      "path": [
+        0,
+        1
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed4-w11-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "N",
+      "seed": 4,
+      "ep": 29,
+      "donor": null,
+      "path": [
+        7,
+        4
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed4-w00-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "N",
+      "seed": 4,
+      "ep": 32,
+      "donor": null,
+      "path": [
+        3,
+        0
+      ],
+      "donor_path": null,
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/N-seed4-w10-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "Z",
+      "seed": 4,
+      "ep": 5,
+      "donor": 5,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed4-w01-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "Z",
+      "seed": 4,
+      "ep": 28,
+      "donor": 28,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed4-w11-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "Z",
+      "seed": 4,
+      "ep": 20,
+      "donor": 20,
+      "path": [
+        1,
+        0
+      ],
+      "donor_path": [
+        1,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed4-w00-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "Z",
+      "seed": 4,
+      "ep": 48,
+      "donor": 48,
+      "path": [
+        2,
+        1
+      ],
+      "donor_path": [
+        2,
+        1
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed4-w10-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "Z",
+      "seed": 4,
+      "ep": 25,
+      "donor": 25,
+      "path": [
+        4,
+        3
+      ],
+      "donor_path": [
+        4,
+        3
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed4-w01-m2.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "Z",
+      "seed": 4,
+      "ep": 44,
+      "donor": 44,
+      "path": [
+        0,
+        1
+      ],
+      "donor_path": [
+        0,
+        1
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed4-w11-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "Z",
+      "seed": 4,
+      "ep": 29,
+      "donor": 29,
+      "path": [
+        7,
+        4
+      ],
+      "donor_path": [
+        7,
+        4
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed4-w00-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "Z",
+      "seed": 4,
+      "ep": 32,
+      "donor": 32,
+      "path": [
+        3,
+        0
+      ],
+      "donor_path": [
+        3,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/Z-seed4-w10-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "A",
+      "seed": 4,
+      "ep": 5,
+      "donor": 28,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/A-seed4-w01-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed4/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed4/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "A",
+      "seed": 4,
+      "ep": 28,
+      "donor": 5,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/A-seed4-w11-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed4/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed4/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "B",
+      "seed": 4,
+      "ep": 20,
+      "donor": 5,
+      "path": [
+        1,
+        0
+      ],
+      "donor_path": [
+        1,
+        5
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/B-seed4-w00-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed4/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed4/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "B",
+      "seed": 4,
+      "ep": 5,
+      "donor": 20,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/B-seed4-w10-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed4/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed4/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "B",
+      "seed": 4,
+      "ep": 28,
+      "donor": 20,
+      "path": [
+        1,
+        5
+      ],
+      "donor_path": [
+        1,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/B-seed4-w01-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed4/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed4/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "C",
+      "seed": 4,
+      "ep": 20,
+      "donor": 25,
+      "path": [
+        1,
+        0
+      ],
+      "donor_path": [
+        4,
+        3
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed4-w11-m1.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed4/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed4/w11/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "cuda": "0",
+      "group": "C",
+      "seed": 4,
+      "ep": 25,
+      "donor": 48,
+      "path": [
+        4,
+        3
+      ],
+      "donor_path": [
+        2,
+        1
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed4-w00-m2.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed4/w00/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed4/w00/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "cuda": "1",
+      "group": "C",
+      "seed": 4,
+      "ep": 48,
+      "donor": 20,
+      "path": [
+        2,
+        1
+      ],
+      "donor_path": [
+        1,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed4-w10-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed4/w10/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed4/w10/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "cuda": "0",
+      "group": "C",
+      "seed": 4,
+      "ep": 29,
+      "donor": 32,
+      "path": [
+        7,
+        4
+      ],
+      "donor_path": [
+        3,
+        0
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed4-w01-m3.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed4/w01/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed4/w01/run"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "cuda": "1",
+      "group": "C",
+      "seed": 4,
+      "ep": 32,
+      "donor": 29,
+      "path": [
+        3,
+        0
+      ],
+      "donor_path": [
+        7,
+        4
+      ],
+      "spec": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/specs/C-seed4-w11-m0.json",
+      "attn_out": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed4/w11/attn",
+      "run_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed4/w11/run"
+    }
+  ]
+}

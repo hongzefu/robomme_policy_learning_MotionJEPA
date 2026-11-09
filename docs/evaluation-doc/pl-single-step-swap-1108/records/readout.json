@@ -1,0 +1,5455 @@
+{
+  "lines": [
+    "RECORD_REPRO=PASS eps=8 success=8",
+    "SEED_EFFECT=PASS seeds=5 eps_differ=8",
+    "SWAP_SCOPE=PASS runs=90 log_all_00=1 count_mismatch=0",
+    "PL_SWAP=PASS runs=130 invalid=0 N=40/40 Z=16/40 A=10/10 B_donor=15/15 C_own=15/25 C_donor=0/25"
+  ],
+  "seeds": [
+    42,
+    1,
+    2,
+    3,
+    4
+  ],
+  "record_repro": {
+    "eps": 8,
+    "success": 8
+  },
+  "seed_effect": {
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      42
+    ],
+    "eps_compared": [
+      5,
+      20,
+      25,
+      28,
+      29,
+      32,
+      44,
+      48
+    ],
+    "eps_differ": [
+      5,
+      20,
+      25,
+      28,
+      29,
+      32,
+      44,
+      48
+    ],
+    "seeds_wanted": [
+      42,
+      1,
+      2,
+      3,
+      4
+    ]
+  },
+  "swap_scope": {
+    "runs": 90,
+    "count_mismatch": 0,
+    "donor_mismatch": 0,
+    "details": [
+      {
+        "group": "Z",
+        "seed": 42,
+        "ep": 20,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:20",
+        "donor_ok": true
+      },
+      {
+        "group": "B",
+        "seed": 42,
+        "ep": 20,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:5",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 42,
+        "ep": 5,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:5",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 42,
+        "ep": 28,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:28",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 42,
+        "ep": 48,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:48",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 42,
+        "ep": 25,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:25",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 42,
+        "ep": 44,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:44",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 42,
+        "ep": 29,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:29",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 42,
+        "ep": 32,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:32",
+        "donor_ok": true
+      },
+      {
+        "group": "A",
+        "seed": 42,
+        "ep": 5,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:28",
+        "donor_ok": true
+      },
+      {
+        "group": "A",
+        "seed": 42,
+        "ep": 28,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:5",
+        "donor_ok": true
+      },
+      {
+        "group": "B",
+        "seed": 42,
+        "ep": 5,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:20",
+        "donor_ok": true
+      },
+      {
+        "group": "B",
+        "seed": 42,
+        "ep": 28,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:20",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 42,
+        "ep": 20,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:25",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 42,
+        "ep": 25,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:48",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 42,
+        "ep": 48,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:20",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 42,
+        "ep": 29,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:32",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 42,
+        "ep": 32,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:29",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 1,
+        "ep": 5,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:5",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 1,
+        "ep": 28,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:28",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 1,
+        "ep": 20,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:20",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 1,
+        "ep": 48,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:48",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 1,
+        "ep": 25,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:25",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 1,
+        "ep": 44,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:44",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 1,
+        "ep": 29,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:29",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 1,
+        "ep": 32,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:32",
+        "donor_ok": true
+      },
+      {
+        "group": "A",
+        "seed": 1,
+        "ep": 5,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:28",
+        "donor_ok": true
+      },
+      {
+        "group": "A",
+        "seed": 1,
+        "ep": 28,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:5",
+        "donor_ok": true
+      },
+      {
+        "group": "B",
+        "seed": 1,
+        "ep": 20,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:5",
+        "donor_ok": true
+      },
+      {
+        "group": "B",
+        "seed": 1,
+        "ep": 5,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:20",
+        "donor_ok": true
+      },
+      {
+        "group": "B",
+        "seed": 1,
+        "ep": 28,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:20",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 1,
+        "ep": 20,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:25",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 1,
+        "ep": 25,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:48",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 1,
+        "ep": 48,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:20",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 1,
+        "ep": 29,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:32",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 1,
+        "ep": 32,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:29",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 2,
+        "ep": 5,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:5",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 2,
+        "ep": 28,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:28",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 2,
+        "ep": 20,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:20",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 2,
+        "ep": 48,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:48",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 2,
+        "ep": 25,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:25",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 2,
+        "ep": 44,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:44",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 2,
+        "ep": 29,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:29",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 2,
+        "ep": 32,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:32",
+        "donor_ok": true
+      },
+      {
+        "group": "A",
+        "seed": 2,
+        "ep": 5,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:28",
+        "donor_ok": true
+      },
+      {
+        "group": "A",
+        "seed": 2,
+        "ep": 28,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:5",
+        "donor_ok": true
+      },
+      {
+        "group": "B",
+        "seed": 2,
+        "ep": 20,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:5",
+        "donor_ok": true
+      },
+      {
+        "group": "B",
+        "seed": 2,
+        "ep": 5,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:20",
+        "donor_ok": true
+      },
+      {
+        "group": "B",
+        "seed": 2,
+        "ep": 28,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:20",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 2,
+        "ep": 20,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:25",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 2,
+        "ep": 25,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:48",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 2,
+        "ep": 48,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:20",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 2,
+        "ep": 29,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:32",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 2,
+        "ep": 32,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:29",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 3,
+        "ep": 5,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:5",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 3,
+        "ep": 28,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:28",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 3,
+        "ep": 20,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:20",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 3,
+        "ep": 48,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:48",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 3,
+        "ep": 25,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:25",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 3,
+        "ep": 44,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:44",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 3,
+        "ep": 29,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:29",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 3,
+        "ep": 32,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:32",
+        "donor_ok": true
+      },
+      {
+        "group": "A",
+        "seed": 3,
+        "ep": 5,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:28",
+        "donor_ok": true
+      },
+      {
+        "group": "A",
+        "seed": 3,
+        "ep": 28,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:5",
+        "donor_ok": true
+      },
+      {
+        "group": "B",
+        "seed": 3,
+        "ep": 20,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:5",
+        "donor_ok": true
+      },
+      {
+        "group": "B",
+        "seed": 3,
+        "ep": 5,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:20",
+        "donor_ok": true
+      },
+      {
+        "group": "B",
+        "seed": 3,
+        "ep": 28,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:20",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 3,
+        "ep": 20,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:25",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 3,
+        "ep": 25,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:48",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 3,
+        "ep": 48,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:20",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 3,
+        "ep": 29,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:32",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 3,
+        "ep": 32,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:29",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 4,
+        "ep": 5,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:5",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 4,
+        "ep": 28,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:28",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 4,
+        "ep": 20,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:20",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 4,
+        "ep": 48,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:48",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 4,
+        "ep": 25,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:25",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 4,
+        "ep": 44,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:44",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 4,
+        "ep": 29,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:29",
+        "donor_ok": true
+      },
+      {
+        "group": "Z",
+        "seed": 4,
+        "ep": 32,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:32",
+        "donor_ok": true
+      },
+      {
+        "group": "A",
+        "seed": 4,
+        "ep": 5,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:28",
+        "donor_ok": true
+      },
+      {
+        "group": "A",
+        "seed": 4,
+        "ep": 28,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:5",
+        "donor_ok": true
+      },
+      {
+        "group": "B",
+        "seed": 4,
+        "ep": 20,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:5",
+        "donor_ok": true
+      },
+      {
+        "group": "B",
+        "seed": 4,
+        "ep": 5,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:20",
+        "donor_ok": true
+      },
+      {
+        "group": "B",
+        "seed": 4,
+        "ep": 28,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:20",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 4,
+        "ep": 20,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:25",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 4,
+        "ep": 25,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:48",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 4,
+        "ep": 48,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:20",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 4,
+        "ep": 29,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:32",
+        "donor_ok": true
+      },
+      {
+        "group": "C",
+        "seed": 4,
+        "ep": 32,
+        "log_all_00": true,
+        "n_replaced": 1,
+        "expected_count": 1,
+        "donor": "PatternLock:29",
+        "donor_ok": true
+      }
+    ]
+  },
+  "summary": {
+    "groups": {
+      "N": {
+        "n": 40,
+        "success": 40,
+        "categories": {
+          "own": 40,
+          "donor_abs": 0,
+          "other": 0,
+          "none": 0
+        },
+        "success_ci95": [
+          1.0,
+          1.0
+        ],
+        "category_ci95": {
+          "own": [
+            1.0,
+            1.0
+          ],
+          "donor_abs": [
+            0.0,
+            0.0
+          ],
+          "other": [
+            0.0,
+            0.0
+          ],
+          "none": [
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "Z": {
+        "n": 40,
+        "success": 16,
+        "categories": {
+          "own": 16,
+          "donor_abs": 0,
+          "other": 24,
+          "none": 0
+        },
+        "success_ci95": [
+          0.25,
+          0.55
+        ],
+        "category_ci95": {
+          "own": [
+            0.25,
+            0.55
+          ],
+          "donor_abs": [
+            0.0,
+            0.0
+          ],
+          "other": [
+            0.45,
+            0.75
+          ],
+          "none": [
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "A": {
+        "n": 10,
+        "success": 10,
+        "categories": {
+          "own": 10,
+          "donor_abs": 0,
+          "other": 0,
+          "none": 0
+        },
+        "success_ci95": [
+          1.0,
+          1.0
+        ],
+        "category_ci95": {
+          "own": [
+            1.0,
+            1.0
+          ],
+          "donor_abs": [
+            0.0,
+            0.0
+          ],
+          "other": [
+            0.0,
+            0.0
+          ],
+          "none": [
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "B": {
+        "n": 15,
+        "success": 0,
+        "categories": {
+          "own": 0,
+          "donor_abs": 15,
+          "other": 0,
+          "none": 0
+        },
+        "success_ci95": [
+          0.0,
+          0.0
+        ],
+        "category_ci95": {
+          "own": [
+            0.0,
+            0.0
+          ],
+          "donor_abs": [
+            1.0,
+            1.0
+          ],
+          "other": [
+            0.0,
+            0.0
+          ],
+          "none": [
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "C": {
+        "n": 25,
+        "success": 15,
+        "categories": {
+          "own": 15,
+          "donor_abs": 0,
+          "other": 10,
+          "none": 0
+        },
+        "success_ci95": [
+          0.4,
+          0.8
+        ],
+        "category_ci95": {
+          "own": [
+            0.4,
+            0.8
+          ],
+          "donor_abs": [
+            0.0,
+            0.0
+          ],
+          "other": [
+            0.2,
+            0.6
+          ],
+          "none": [
+            0.0,
+            0.0
+          ]
+        }
+      }
+    },
+    "pairs": {
+      "Z:20<-20": {
+        "group": "Z",
+        "ep": 20,
+        "donor": 20,
+        "seeds": {
+          "42": {
+            "category": "other",
+            "reached": 5,
+            "success": 0
+          },
+          "1": {
+            "category": "other",
+            "reached": 5,
+            "success": 0
+          },
+          "2": {
+            "category": "other",
+            "reached": 5,
+            "success": 0
+          },
+          "3": {
+            "category": "other",
+            "reached": 5,
+            "success": 0
+          },
+          "4": {
+            "category": "other",
+            "reached": 4,
+            "success": 0
+          }
+        },
+        "categories": {
+          "own": 0,
+          "donor_abs": 0,
+          "other": 5,
+          "none": 0
+        },
+        "success": 0
+      },
+      "B:20<-5": {
+        "group": "B",
+        "ep": 20,
+        "donor": 5,
+        "seeds": {
+          "42": {
+            "category": "donor_abs",
+            "reached": 5,
+            "success": 0
+          },
+          "1": {
+            "category": "donor_abs",
+            "reached": 5,
+            "success": 0
+          },
+          "2": {
+            "category": "donor_abs",
+            "reached": 5,
+            "success": 0
+          },
+          "3": {
+            "category": "donor_abs",
+            "reached": 5,
+            "success": 0
+          },
+          "4": {
+            "category": "donor_abs",
+            "reached": 5,
+            "success": 0
+          }
+        },
+        "categories": {
+          "own": 0,
+          "donor_abs": 5,
+          "other": 0,
+          "none": 0
+        },
+        "success": 0
+      },
+      "Z:5<-5": {
+        "group": "Z",
+        "ep": 5,
+        "donor": 5,
+        "seeds": {
+          "42": {
+            "category": "own",
+            "reached": 5,
+            "success": 1
+          },
+          "1": {
+            "category": "own",
+            "reached": 5,
+            "success": 1
+          },
+          "2": {
+            "category": "own",
+            "reached": 5,
+            "success": 1
+          },
+          "3": {
+            "category": "own",
+            "reached": 5,
+            "success": 1
+          },
+          "4": {
+            "category": "own",
+            "reached": 5,
+            "success": 1
+          }
+        },
+        "categories": {
+          "own": 5,
+          "donor_abs": 0,
+          "other": 0,
+          "none": 0
+        },
+        "success": 5
+      },
+      "Z:28<-28": {
+        "group": "Z",
+        "ep": 28,
+        "donor": 28,
+        "seeds": {
+          "42": {
+            "category": "own",
+            "reached": 5,
+            "success": 1
+          },
+          "1": {
+            "category": "own",
+            "reached": 5,
+            "success": 1
+          },
+          "2": {
+            "category": "own",
+            "reached": 5,
+            "success": 1
+          },
+          "3": {
+            "category": "own",
+            "reached": 5,
+            "success": 1
+          },
+          "4": {
+            "category": "own",
+            "reached": 5,
+            "success": 1
+          }
+        },
+        "categories": {
+          "own": 5,
+          "donor_abs": 0,
+          "other": 0,
+          "none": 0
+        },
+        "success": 5
+      },
+      "Z:48<-48": {
+        "group": "Z",
+        "ep": 48,
+        "donor": 48,
+        "seeds": {
+          "42": {
+            "category": "other",
+            "reached": 5,
+            "success": 0
+          },
+          "1": {
+            "category": "own",
+            "reached": 1,
+            "success": 1
+          },
+          "2": {
+            "category": "other",
+            "reached": 5,
+            "success": 0
+          },
+          "3": {
+            "category": "other",
+            "reached": 5,
+            "success": 0
+          },
+          "4": {
+            "category": "other",
+            "reached": 5,
+            "success": 0
+          }
+        },
+        "categories": {
+          "own": 1,
+          "donor_abs": 0,
+          "other": 4,
+          "none": 0
+        },
+        "success": 1
+      },
+      "Z:25<-25": {
+        "group": "Z",
+        "ep": 25,
+        "donor": 25,
+        "seeds": {
+          "42": {
+            "category": "other",
+            "reached": 8,
+            "success": 0
+          },
+          "1": {
+            "category": "other",
+            "reached": 5,
+            "success": 0
+          },
+          "2": {
+            "category": "other",
+            "reached": 5,
+            "success": 0
+          },
+          "3": {
+            "category": "other",
+            "reached": 8,
+            "success": 0
+          },
+          "4": {
+            "category": "other",
+            "reached": 7,
+            "success": 0
+          }
+        },
+        "categories": {
+          "own": 0,
+          "donor_abs": 0,
+          "other": 5,
+          "none": 0
+        },
+        "success": 0
+      },
+      "Z:44<-44": {
+        "group": "Z",
+        "ep": 44,
+        "donor": 44,
+        "seeds": {
+          "42": {
+            "category": "other",
+            "reached": 3,
+            "success": 0
+          },
+          "1": {
+            "category": "own",
+            "reached": 1,
+            "success": 1
+          },
+          "2": {
+            "category": "other",
+            "reached": 3,
+            "success": 0
+          },
+          "3": {
+            "category": "other",
+            "reached": 3,
+            "success": 0
+          },
+          "4": {
+            "category": "other",
+            "reached": 3,
+            "success": 0
+          }
+        },
+        "categories": {
+          "own": 1,
+          "donor_abs": 0,
+          "other": 4,
+          "none": 0
+        },
+        "success": 1
+      },
+      "Z:29<-29": {
+        "group": "Z",
+        "ep": 29,
+        "donor": 29,
+        "seeds": {
+          "42": {
+            "category": "own",
+            "reached": 4,
+            "success": 1
+          },
+          "1": {
+            "category": "own",
+            "reached": 4,
+            "success": 1
+          },
+          "2": {
+            "category": "own",
+            "reached": 4,
+            "success": 1
+          },
+          "3": {
+            "category": "own",
+            "reached": 4,
+            "success": 1
+          },
+          "4": {
+            "category": "other",
+            "reached": 6,
+            "success": 0
+          }
+        },
+        "categories": {
+          "own": 4,
+          "donor_abs": 0,
+          "other": 1,
+          "none": 0
+        },
+        "success": 4
+      },
+      "Z:32<-32": {
+        "group": "Z",
+        "ep": 32,
+        "donor": 32,
+        "seeds": {
+          "42": {
+            "category": "other",
+            "reached": 7,
+            "success": 0
+          },
+          "1": {
+            "category": "other",
+            "reached": 1,
+            "success": 0
+          },
+          "2": {
+            "category": "other",
+            "reached": 1,
+            "success": 0
+          },
+          "3": {
+            "category": "other",
+            "reached": 6,
+            "success": 0
+          },
+          "4": {
+            "category": "other",
+            "reached": 6,
+            "success": 0
+          }
+        },
+        "categories": {
+          "own": 0,
+          "donor_abs": 0,
+          "other": 5,
+          "none": 0
+        },
+        "success": 0
+      },
+      "A:5<-28": {
+        "group": "A",
+        "ep": 5,
+        "donor": 28,
+        "seeds": {
+          "42": {
+            "category": "own",
+            "reached": 5,
+            "success": 1
+          },
+          "1": {
+            "category": "own",
+            "reached": 5,
+            "success": 1
+          },
+          "2": {
+            "category": "own",
+            "reached": 5,
+            "success": 1
+          },
+          "3": {
+            "category": "own",
+            "reached": 5,
+            "success": 1
+          },
+          "4": {
+            "category": "own",
+            "reached": 5,
+            "success": 1
+          }
+        },
+        "categories": {
+          "own": 5,
+          "donor_abs": 0,
+          "other": 0,
+          "none": 0
+        },
+        "success": 5
+      },
+      "A:28<-5": {
+        "group": "A",
+        "ep": 28,
+        "donor": 5,
+        "seeds": {
+          "42": {
+            "category": "own",
+            "reached": 5,
+            "success": 1
+          },
+          "1": {
+            "category": "own",
+            "reached": 5,
+            "success": 1
+          },
+          "2": {
+            "category": "own",
+            "reached": 5,
+            "success": 1
+          },
+          "3": {
+            "category": "own",
+            "reached": 5,
+            "success": 1
+          },
+          "4": {
+            "category": "own",
+            "reached": 5,
+            "success": 1
+          }
+        },
+        "categories": {
+          "own": 5,
+          "donor_abs": 0,
+          "other": 0,
+          "none": 0
+        },
+        "success": 5
+      },
+      "B:5<-20": {
+        "group": "B",
+        "ep": 5,
+        "donor": 20,
+        "seeds": {
+          "42": {
+            "category": "donor_abs",
+            "reached": 0,
+            "success": 0
+          },
+          "1": {
+            "category": "donor_abs",
+            "reached": 0,
+            "success": 0
+          },
+          "2": {
+            "category": "donor_abs",
+            "reached": 0,
+            "success": 0
+          },
+          "3": {
+            "category": "donor_abs",
+            "reached": 0,
+            "success": 0
+          },
+          "4": {
+            "category": "donor_abs",
+            "reached": 0,
+            "success": 0
+          }
+        },
+        "categories": {
+          "own": 0,
+          "donor_abs": 5,
+          "other": 0,
+          "none": 0
+        },
+        "success": 0
+      },
+      "B:28<-20": {
+        "group": "B",
+        "ep": 28,
+        "donor": 20,
+        "seeds": {
+          "42": {
+            "category": "donor_abs",
+            "reached": 0,
+            "success": 0
+          },
+          "1": {
+            "category": "donor_abs",
+            "reached": 0,
+            "success": 0
+          },
+          "2": {
+            "category": "donor_abs",
+            "reached": 0,
+            "success": 0
+          },
+          "3": {
+            "category": "donor_abs",
+            "reached": 0,
+            "success": 0
+          },
+          "4": {
+            "category": "donor_abs",
+            "reached": 0,
+            "success": 0
+          }
+        },
+        "categories": {
+          "own": 0,
+          "donor_abs": 5,
+          "other": 0,
+          "none": 0
+        },
+        "success": 0
+      },
+      "C:20<-25": {
+        "group": "C",
+        "ep": 20,
+        "donor": 25,
+        "seeds": {
+          "42": {
+            "category": "own",
+            "reached": 0,
+            "success": 1
+          },
+          "1": {
+            "category": "own",
+            "reached": 0,
+            "success": 1
+          },
+          "2": {
+            "category": "own",
+            "reached": 0,
+            "success": 1
+          },
+          "3": {
+            "category": "own",
+            "reached": 0,
+            "success": 1
+          },
+          "4": {
+            "category": "own",
+            "reached": 0,
+            "success": 1
+          }
+        },
+        "categories": {
+          "own": 5,
+          "donor_abs": 0,
+          "other": 0,
+          "none": 0
+        },
+        "success": 5
+      },
+      "C:25<-48": {
+        "group": "C",
+        "ep": 25,
+        "donor": 48,
+        "seeds": {
+          "42": {
+            "category": "other",
+            "reached": 2,
+            "success": 0
+          },
+          "1": {
+            "category": "other",
+            "reached": 2,
+            "success": 0
+          },
+          "2": {
+            "category": "other",
+            "reached": 2,
+            "success": 0
+          },
+          "3": {
+            "category": "other",
+            "reached": 2,
+            "success": 0
+          },
+          "4": {
+            "category": "other",
+            "reached": 0,
+            "success": 0
+          }
+        },
+        "categories": {
+          "own": 0,
+          "donor_abs": 0,
+          "other": 5,
+          "none": 0
+        },
+        "success": 0
+      },
+      "C:48<-20": {
+        "group": "C",
+        "ep": 48,
+        "donor": 20,
+        "seeds": {
+          "42": {
+            "category": "own",
+            "reached": 1,
+            "success": 1
+          },
+          "1": {
+            "category": "own",
+            "reached": 1,
+            "success": 1
+          },
+          "2": {
+            "category": "own",
+            "reached": 1,
+            "success": 1
+          },
+          "3": {
+            "category": "own",
+            "reached": 1,
+            "success": 1
+          },
+          "4": {
+            "category": "own",
+            "reached": 1,
+            "success": 1
+          }
+        },
+        "categories": {
+          "own": 5,
+          "donor_abs": 0,
+          "other": 0,
+          "none": 0
+        },
+        "success": 5
+      },
+      "C:29<-32": {
+        "group": "C",
+        "ep": 29,
+        "donor": 32,
+        "seeds": {
+          "42": {
+            "category": "own",
+            "reached": 4,
+            "success": 1
+          },
+          "1": {
+            "category": "own",
+            "reached": 4,
+            "success": 1
+          },
+          "2": {
+            "category": "own",
+            "reached": 4,
+            "success": 1
+          },
+          "3": {
+            "category": "own",
+            "reached": 4,
+            "success": 1
+          },
+          "4": {
+            "category": "other",
+            "reached": 3,
+            "success": 0
+          }
+        },
+        "categories": {
+          "own": 4,
+          "donor_abs": 0,
+          "other": 1,
+          "none": 0
+        },
+        "success": 4
+      },
+      "C:32<-29": {
+        "group": "C",
+        "ep": 32,
+        "donor": 29,
+        "seeds": {
+          "42": {
+            "category": "other",
+            "reached": 1,
+            "success": 0
+          },
+          "1": {
+            "category": "other",
+            "reached": 1,
+            "success": 0
+          },
+          "2": {
+            "category": "other",
+            "reached": 1,
+            "success": 0
+          },
+          "3": {
+            "category": "other",
+            "reached": 1,
+            "success": 0
+          },
+          "4": {
+            "category": "own",
+            "reached": 0,
+            "success": 1
+          }
+        },
+        "categories": {
+          "own": 1,
+          "donor_abs": 0,
+          "other": 4,
+          "none": 0
+        },
+        "success": 1
+      }
+    },
+    "valid": 130,
+    "invalid_reads": 0,
+    "retried": 0,
+    "planned": 130
+  },
+  "cosine_distance": {
+    "B:20<-5": 0.8036660348270591,
+    "A:5<-28": -2.220446049250313e-16,
+    "A:28<-5": -2.220446049250313e-16,
+    "B:5<-20": 0.8036660348270591,
+    "B:28<-20": 0.8036660348270591,
+    "C:20<-25": 0.38129117542686375,
+    "C:25<-48": 0.5364034131918127,
+    "C:48<-20": 0.16394683641152785,
+    "C:29<-32": 0.5236208055315438,
+    "C:32<-29": 0.5236208055315438
+  },
+  "runs": [
+    {
+      "stage": "smoke1",
+      "worker": "w00",
+      "group": "N",
+      "seed": 42,
+      "ep": 5,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "8f6d26246efd474988668e0b0fbda98e",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "none",
+        "donor": null,
+        "n_windows": 2,
+        "n_replaced": 0,
+        "replace_log": [],
+        "record_file": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/record/8f6d26246efd474988668e0b0fbda98e.npz"
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w00/run/attempts/000-b89dee851578-94a5612d/client/traces/8f6d26246efd474988668e0b0fbda98e/step_trace.jsonl",
+      "steps": 35,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "smoke1",
+      "worker": "w10",
+      "group": "N",
+      "seed": 42,
+      "ep": 20,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "b1076230a8f845fb92eefcf47e061f3a",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "none",
+        "donor": null,
+        "n_windows": 1,
+        "n_replaced": 0,
+        "replace_log": [],
+        "record_file": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/record/b1076230a8f845fb92eefcf47e061f3a.npz"
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w10/run/attempts/000-5faa3e990010-1c549b67/client/traces/b1076230a8f845fb92eefcf47e061f3a/step_trace.jsonl",
+      "steps": 22,
+      "reached": 0,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "smoke2",
+      "worker": "w00",
+      "group": "Z",
+      "seed": 42,
+      "ep": 20,
+      "donor": 20,
+      "attempts": 1,
+      "nonce": "04151f2f73c94b46bf3ab084850a673b",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:20",
+        "n_windows": 2,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w00/run/attempts/000-5faa3e990010-2db44766/client/traces/04151f2f73c94b46bf3ab084850a673b/step_trace.jsonl",
+      "steps": 35,
+      "reached": 5,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "smoke2",
+      "worker": "w10",
+      "group": "B",
+      "seed": 42,
+      "ep": 20,
+      "donor": 5,
+      "attempts": 1,
+      "nonce": "9ec38e7d96464dfb9a1b0a8ed5be359c",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:5",
+        "n_windows": 2,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed42/w10/run/attempts/000-5faa3e990010-cd755a31/client/traces/9ec38e7d96464dfb9a1b0a8ed5be359c/step_trace.jsonl",
+      "steps": 36,
+      "reached": 5,
+      "category": "donor_abs",
+      "status": "ok"
+    },
+    {
+      "stage": "stage2",
+      "worker": "w00",
+      "group": "N",
+      "seed": 42,
+      "ep": 28,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "ceeafdbdff164c74815a775405487ab5",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "none",
+        "donor": null,
+        "n_windows": 2,
+        "n_replaced": 0,
+        "replace_log": [],
+        "record_file": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/record/ceeafdbdff164c74815a775405487ab5.npz"
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w00/run/attempts/000-92bfe96563c1-6c62ddf8/client/traces/ceeafdbdff164c74815a775405487ab5/step_trace.jsonl",
+      "steps": 35,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage2",
+      "worker": "w10",
+      "group": "N",
+      "seed": 42,
+      "ep": 48,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "7c94aa977ed640aead7742cc65e9eadc",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "none",
+        "donor": null,
+        "n_windows": 1,
+        "n_replaced": 0,
+        "replace_log": [],
+        "record_file": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/record/7c94aa977ed640aead7742cc65e9eadc.npz"
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w10/run/attempts/000-827fa7f982aa-ff353b68/client/traces/7c94aa977ed640aead7742cc65e9eadc/step_trace.jsonl",
+      "steps": 21,
+      "reached": 1,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage2",
+      "worker": "w01",
+      "group": "N",
+      "seed": 42,
+      "ep": 25,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "8db7aea2b0904b9a8e353fb93c1d470b",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "none",
+        "donor": null,
+        "n_windows": 1,
+        "n_replaced": 0,
+        "replace_log": [],
+        "record_file": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/record/8db7aea2b0904b9a8e353fb93c1d470b.npz"
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w01/run/attempts/000-3bb285671b84-ecf346c6/client/traces/8db7aea2b0904b9a8e353fb93c1d470b/step_trace.jsonl",
+      "steps": 20,
+      "reached": 3,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage2",
+      "worker": "w11",
+      "group": "N",
+      "seed": 42,
+      "ep": 44,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "36e5f47361bc4f6a9306b227cda5f52a",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "none",
+        "donor": null,
+        "n_windows": 1,
+        "n_replaced": 0,
+        "replace_log": [],
+        "record_file": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/record/36e5f47361bc4f6a9306b227cda5f52a.npz"
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w11/run/attempts/000-a679118f752b-b1c29d49/client/traces/36e5f47361bc4f6a9306b227cda5f52a/step_trace.jsonl",
+      "steps": 21,
+      "reached": 1,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage2",
+      "worker": "w00",
+      "group": "N",
+      "seed": 42,
+      "ep": 29,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "aa50985401d64364bca612ac87ba23ff",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "none",
+        "donor": null,
+        "n_windows": 1,
+        "n_replaced": 0,
+        "replace_log": [],
+        "record_file": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/record/aa50985401d64364bca612ac87ba23ff.npz"
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w00/run/attempts/000-a21a98971e99-5b1521b1/client/traces/aa50985401d64364bca612ac87ba23ff/step_trace.jsonl",
+      "steps": 26,
+      "reached": 4,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage2",
+      "worker": "w10",
+      "group": "N",
+      "seed": 42,
+      "ep": 32,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "9ecdc57d18ab43109ce4d88e9a1a8203",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "none",
+        "donor": null,
+        "n_windows": 1,
+        "n_replaced": 0,
+        "replace_log": [],
+        "record_file": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/record/9ecdc57d18ab43109ce4d88e9a1a8203.npz"
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed42/w10/run/attempts/000-ffcf26b831e2-b5071c13/client/traces/9ecdc57d18ab43109ce4d88e9a1a8203/step_trace.jsonl",
+      "steps": 25,
+      "reached": 0,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3a",
+      "worker": "w00",
+      "group": "N",
+      "seed": 1,
+      "ep": 5,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "ca9f1ee1ddf449f5aab77472d657f94c",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w00/run/attempts/000-b89dee851578-7cc79326/client/traces/ca9f1ee1ddf449f5aab77472d657f94c/step_trace.jsonl",
+      "steps": 31,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3a",
+      "worker": "w10",
+      "group": "N",
+      "seed": 1,
+      "ep": 28,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "ae09de563f6f44d79d3b485787680e7e",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w10/run/attempts/000-92bfe96563c1-809e818e/client/traces/ae09de563f6f44d79d3b485787680e7e/step_trace.jsonl",
+      "steps": 31,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3a",
+      "worker": "w01",
+      "group": "N",
+      "seed": 1,
+      "ep": 20,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "97d9f6ab56894a47be48605b29cab978",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w01/run/attempts/000-5faa3e990010-7fe737de/client/traces/97d9f6ab56894a47be48605b29cab978/step_trace.jsonl",
+      "steps": 23,
+      "reached": 0,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3a",
+      "worker": "w11",
+      "group": "N",
+      "seed": 1,
+      "ep": 48,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "0f115e44cec94d649d9bcc3e2934bf25",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w11/run/attempts/000-827fa7f982aa-7d27f5b7/client/traces/0f115e44cec94d649d9bcc3e2934bf25/step_trace.jsonl",
+      "steps": 22,
+      "reached": 1,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3a",
+      "worker": "w00",
+      "group": "N",
+      "seed": 1,
+      "ep": 25,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "026ef8e9474d4bec9d80ad62961151f4",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w00/run/attempts/000-3bb285671b84-15358a3e/client/traces/026ef8e9474d4bec9d80ad62961151f4/step_trace.jsonl",
+      "steps": 20,
+      "reached": 3,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3a",
+      "worker": "w10",
+      "group": "N",
+      "seed": 1,
+      "ep": 44,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "a00e64295f6445e68b3cfe47c660553f",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w10/run/attempts/000-a679118f752b-a4ca9510/client/traces/a00e64295f6445e68b3cfe47c660553f/step_trace.jsonl",
+      "steps": 22,
+      "reached": 1,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3a",
+      "worker": "w01",
+      "group": "N",
+      "seed": 1,
+      "ep": 29,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "b92e2a11863d4675909221b8e71dde47",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w01/run/attempts/000-a21a98971e99-02b74979/client/traces/b92e2a11863d4675909221b8e71dde47/step_trace.jsonl",
+      "steps": 26,
+      "reached": 4,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3a",
+      "worker": "w11",
+      "group": "N",
+      "seed": 1,
+      "ep": 32,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "a5caf92b638e47689f1ee2c240ccfd81",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed1/w11/run/attempts/000-ffcf26b831e2-9691b849/client/traces/a5caf92b638e47689f1ee2c240ccfd81/step_trace.jsonl",
+      "steps": 24,
+      "reached": 0,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "Z",
+      "seed": 42,
+      "ep": 5,
+      "donor": 5,
+      "attempts": 1,
+      "nonce": "625929ce8ffc426f99332f25410794d9",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:5",
+        "n_windows": 2,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w00/run/attempts/000-b89dee851578-053bf4a0/client/traces/625929ce8ffc426f99332f25410794d9/step_trace.jsonl",
+      "steps": 34,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "Z",
+      "seed": 42,
+      "ep": 28,
+      "donor": 28,
+      "attempts": 1,
+      "nonce": "b68faa4b75844fb4b3020010a0504cab",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:28",
+        "n_windows": 2,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w10/run/attempts/000-92bfe96563c1-5e59881c/client/traces/b68faa4b75844fb4b3020010a0504cab/step_trace.jsonl",
+      "steps": 34,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "Z",
+      "seed": 42,
+      "ep": 48,
+      "donor": 48,
+      "attempts": 1,
+      "nonce": "e14f90dd4dc5466fab88356847c85b68",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:48",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w01/run/attempts/000-827fa7f982aa-08701875/client/traces/e14f90dd4dc5466fab88356847c85b68/step_trace.jsonl",
+      "steps": 28,
+      "reached": 5,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "Z",
+      "seed": 42,
+      "ep": 25,
+      "donor": 25,
+      "attempts": 1,
+      "nonce": "244d53abb4734b0c942640438194a39a",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:25",
+        "n_windows": 2,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w11/run/attempts/000-3bb285671b84-4f1ded76/client/traces/244d53abb4734b0c942640438194a39a/step_trace.jsonl",
+      "steps": 37,
+      "reached": 8,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "Z",
+      "seed": 42,
+      "ep": 44,
+      "donor": 44,
+      "attempts": 1,
+      "nonce": "6d265bca6d84488f84d33ef5b72f3c92",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:44",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w00/run/attempts/000-a679118f752b-201af24a/client/traces/6d265bca6d84488f84d33ef5b72f3c92/step_trace.jsonl",
+      "steps": 27,
+      "reached": 3,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "Z",
+      "seed": 42,
+      "ep": 29,
+      "donor": 29,
+      "attempts": 1,
+      "nonce": "fc78a9658ede4f06a914a69f2d7e3fe1",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:29",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w10/run/attempts/000-a21a98971e99-ca5e9cee/client/traces/fc78a9658ede4f06a914a69f2d7e3fe1/step_trace.jsonl",
+      "steps": 30,
+      "reached": 4,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "Z",
+      "seed": 42,
+      "ep": 32,
+      "donor": 32,
+      "attempts": 1,
+      "nonce": "e1d7cec7221c43a9a67298dcf566ec1c",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:32",
+        "n_windows": 2,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed42/w01/run/attempts/000-ffcf26b831e2-cb9d0679/client/traces/e1d7cec7221c43a9a67298dcf566ec1c/step_trace.jsonl",
+      "steps": 43,
+      "reached": 7,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "A",
+      "seed": 42,
+      "ep": 5,
+      "donor": 28,
+      "attempts": 1,
+      "nonce": "704983b46bff4b239569ac4e948f297e",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:28",
+        "n_windows": 2,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed42/w11/run/attempts/000-b89dee851578-2709c6bf/client/traces/704983b46bff4b239569ac4e948f297e/step_trace.jsonl",
+      "steps": 35,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "A",
+      "seed": 42,
+      "ep": 28,
+      "donor": 5,
+      "attempts": 1,
+      "nonce": "986d185c355140b5a5f74d20912b6e33",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:5",
+        "n_windows": 2,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed42/w00/run/attempts/000-92bfe96563c1-95fa15ae/client/traces/986d185c355140b5a5f74d20912b6e33/step_trace.jsonl",
+      "steps": 35,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "B",
+      "seed": 42,
+      "ep": 5,
+      "donor": 20,
+      "attempts": 1,
+      "nonce": "5e9035be0fc84e58b4ce4c76ef13c4a9",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:20",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed42/w10/run/attempts/000-b89dee851578-de08a93c/client/traces/5e9035be0fc84e58b4ce4c76ef13c4a9/step_trace.jsonl",
+      "steps": 23,
+      "reached": 0,
+      "category": "donor_abs",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "B",
+      "seed": 42,
+      "ep": 28,
+      "donor": 20,
+      "attempts": 1,
+      "nonce": "54995c546c2f4e4982f10b33ad8afc77",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:20",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed42/w01/run/attempts/000-92bfe96563c1-6b25adb5/client/traces/54995c546c2f4e4982f10b33ad8afc77/step_trace.jsonl",
+      "steps": 23,
+      "reached": 0,
+      "category": "donor_abs",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "C",
+      "seed": 42,
+      "ep": 20,
+      "donor": 25,
+      "attempts": 1,
+      "nonce": "f4bf760fbfeb46af836d1060c30d9718",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:25",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed42/w11/run/attempts/000-5faa3e990010-f01fe7f7/client/traces/f4bf760fbfeb46af836d1060c30d9718/step_trace.jsonl",
+      "steps": 21,
+      "reached": 0,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "C",
+      "seed": 42,
+      "ep": 25,
+      "donor": 48,
+      "attempts": 1,
+      "nonce": "586ec12f164c4cb3b5a43acd204e1e98",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:48",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed42/w00/run/attempts/000-3bb285671b84-fb4ec3cd/client/traces/586ec12f164c4cb3b5a43acd204e1e98/step_trace.jsonl",
+      "steps": 25,
+      "reached": 2,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "C",
+      "seed": 42,
+      "ep": 48,
+      "donor": 20,
+      "attempts": 1,
+      "nonce": "825b4b7a81d7412aae54c02bcccb4af6",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:20",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed42/w10/run/attempts/000-827fa7f982aa-e7a236eb/client/traces/825b4b7a81d7412aae54c02bcccb4af6/step_trace.jsonl",
+      "steps": 21,
+      "reached": 1,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "C",
+      "seed": 42,
+      "ep": 29,
+      "donor": 32,
+      "attempts": 1,
+      "nonce": "578e3476f92b4789b28b85740df872c4",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:32",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed42/w01/run/attempts/000-a21a98971e99-4ef4dcea/client/traces/578e3476f92b4789b28b85740df872c4/step_trace.jsonl",
+      "steps": 26,
+      "reached": 4,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "C",
+      "seed": 42,
+      "ep": 32,
+      "donor": 29,
+      "attempts": 1,
+      "nonce": "a80ad09883024f608bb971443a008b21",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:29",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed42/w11/run/attempts/000-ffcf26b831e2-8f0f9e82/client/traces/a80ad09883024f608bb971443a008b21/step_trace.jsonl",
+      "steps": 29,
+      "reached": 1,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "Z",
+      "seed": 1,
+      "ep": 5,
+      "donor": 5,
+      "attempts": 1,
+      "nonce": "64e5ee8793d54c3d842b1d820b12c793",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:5",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w00/run/attempts/000-b89dee851578-a4a6662b/client/traces/64e5ee8793d54c3d842b1d820b12c793/step_trace.jsonl",
+      "steps": 30,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "Z",
+      "seed": 1,
+      "ep": 28,
+      "donor": 28,
+      "attempts": 1,
+      "nonce": "d0c53fa805d64c0abfe6cee564070c15",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:28",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w10/run/attempts/000-92bfe96563c1-c150ddbf/client/traces/d0c53fa805d64c0abfe6cee564070c15/step_trace.jsonl",
+      "steps": 30,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "Z",
+      "seed": 1,
+      "ep": 20,
+      "donor": 20,
+      "attempts": 1,
+      "nonce": "8312c460d6a54273af9b26e71de4a5da",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:20",
+        "n_windows": 2,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w01/run/attempts/000-5faa3e990010-59e73a60/client/traces/8312c460d6a54273af9b26e71de4a5da/step_trace.jsonl",
+      "steps": 38,
+      "reached": 5,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "Z",
+      "seed": 1,
+      "ep": 48,
+      "donor": 48,
+      "attempts": 1,
+      "nonce": "a8f916a6c1e549c6ad350c68030e0f11",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:48",
+        "n_windows": 2,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w11/run/attempts/000-827fa7f982aa-a802ff65/client/traces/a8f916a6c1e549c6ad350c68030e0f11/step_trace.jsonl",
+      "steps": 39,
+      "reached": 1,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "Z",
+      "seed": 1,
+      "ep": 25,
+      "donor": 25,
+      "attempts": 1,
+      "nonce": "b8d67c7f0e0e489f9986da2fc833c0d5",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:25",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w00/run/attempts/000-3bb285671b84-7d478e63/client/traces/b8d67c7f0e0e489f9986da2fc833c0d5/step_trace.jsonl",
+      "steps": 24,
+      "reached": 5,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "Z",
+      "seed": 1,
+      "ep": 44,
+      "donor": 44,
+      "attempts": 1,
+      "nonce": "47e29bbe88d74db68ddfa1295054131f",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:44",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w10/run/attempts/000-a679118f752b-1d24302f/client/traces/47e29bbe88d74db68ddfa1295054131f/step_trace.jsonl",
+      "steps": 27,
+      "reached": 1,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "Z",
+      "seed": 1,
+      "ep": 29,
+      "donor": 29,
+      "attempts": 1,
+      "nonce": "bac2e2a164f84db2b8f333468c8156aa",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:29",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w01/run/attempts/000-a21a98971e99-c8593e45/client/traces/bac2e2a164f84db2b8f333468c8156aa/step_trace.jsonl",
+      "steps": 26,
+      "reached": 4,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "Z",
+      "seed": 1,
+      "ep": 32,
+      "donor": 32,
+      "attempts": 1,
+      "nonce": "57afe6a732d54545821056a004079aca",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:32",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed1/w11/run/attempts/000-ffcf26b831e2-c79c6ada/client/traces/57afe6a732d54545821056a004079aca/step_trace.jsonl",
+      "steps": 29,
+      "reached": 1,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "A",
+      "seed": 1,
+      "ep": 5,
+      "donor": 28,
+      "attempts": 1,
+      "nonce": "75765771fff94863b77980bcb9e29da1",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:28",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed1/w00/run/attempts/000-b89dee851578-16eff2a6/client/traces/75765771fff94863b77980bcb9e29da1/step_trace.jsonl",
+      "steps": 31,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "A",
+      "seed": 1,
+      "ep": 28,
+      "donor": 5,
+      "attempts": 1,
+      "nonce": "669a40f2abd546349e257066699600a9",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:5",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed1/w10/run/attempts/000-92bfe96563c1-881b2449/client/traces/669a40f2abd546349e257066699600a9/step_trace.jsonl",
+      "steps": 31,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "B",
+      "seed": 1,
+      "ep": 20,
+      "donor": 5,
+      "attempts": 1,
+      "nonce": "f58949b997e444cfb484c0e8bbaf690b",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:5",
+        "n_windows": 2,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed1/w01/run/attempts/000-5faa3e990010-af129bef/client/traces/f58949b997e444cfb484c0e8bbaf690b/step_trace.jsonl",
+      "steps": 35,
+      "reached": 5,
+      "category": "donor_abs",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "B",
+      "seed": 1,
+      "ep": 5,
+      "donor": 20,
+      "attempts": 1,
+      "nonce": "e51a38aa3b3343a688664f0d9efb53c4",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:20",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed1/w11/run/attempts/000-b89dee851578-e2314ebb/client/traces/e51a38aa3b3343a688664f0d9efb53c4/step_trace.jsonl",
+      "steps": 24,
+      "reached": 0,
+      "category": "donor_abs",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "B",
+      "seed": 1,
+      "ep": 28,
+      "donor": 20,
+      "attempts": 1,
+      "nonce": "6d7bdacc8da8468dbaee5077341845c2",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:20",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed1/w00/run/attempts/000-92bfe96563c1-ada25a8c/client/traces/6d7bdacc8da8468dbaee5077341845c2/step_trace.jsonl",
+      "steps": 24,
+      "reached": 0,
+      "category": "donor_abs",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "C",
+      "seed": 1,
+      "ep": 20,
+      "donor": 25,
+      "attempts": 1,
+      "nonce": "b39a2298eb594bfe921c4ae63d4e6ef5",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:25",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed1/w10/run/attempts/000-5faa3e990010-918e2228/client/traces/b39a2298eb594bfe921c4ae63d4e6ef5/step_trace.jsonl",
+      "steps": 23,
+      "reached": 0,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "C",
+      "seed": 1,
+      "ep": 25,
+      "donor": 48,
+      "attempts": 1,
+      "nonce": "bb700fcabaea415393b811c49cf16c03",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:48",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed1/w01/run/attempts/000-3bb285671b84-3f66b375/client/traces/bb700fcabaea415393b811c49cf16c03/step_trace.jsonl",
+      "steps": 26,
+      "reached": 2,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "C",
+      "seed": 1,
+      "ep": 48,
+      "donor": 20,
+      "attempts": 1,
+      "nonce": "599fac7426ce4b3291d13a8ba5bfd14a",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:20",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed1/w11/run/attempts/000-827fa7f982aa-69279240/client/traces/599fac7426ce4b3291d13a8ba5bfd14a/step_trace.jsonl",
+      "steps": 22,
+      "reached": 1,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "C",
+      "seed": 1,
+      "ep": 29,
+      "donor": 32,
+      "attempts": 1,
+      "nonce": "30d00fe87e3b48b9af20aff1d658d4ad",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:32",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed1/w00/run/attempts/000-a21a98971e99-89119536/client/traces/30d00fe87e3b48b9af20aff1d658d4ad/step_trace.jsonl",
+      "steps": 26,
+      "reached": 4,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "C",
+      "seed": 1,
+      "ep": 32,
+      "donor": 29,
+      "attempts": 1,
+      "nonce": "76a5e080220c40f89e4e033494ed593c",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:29",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed1/w10/run/attempts/000-ffcf26b831e2-eb85ffd1/client/traces/76a5e080220c40f89e4e033494ed593c/step_trace.jsonl",
+      "steps": 30,
+      "reached": 1,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "N",
+      "seed": 2,
+      "ep": 5,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "9614c46d6a714cafa2873b5b360884a4",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w01/run/attempts/000-b89dee851578-9116a08e/client/traces/9614c46d6a714cafa2873b5b360884a4/step_trace.jsonl",
+      "steps": 31,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "N",
+      "seed": 2,
+      "ep": 28,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "4029e85a07314f22bace4ec8e80ab2c2",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w11/run/attempts/000-92bfe96563c1-434ac2a7/client/traces/4029e85a07314f22bace4ec8e80ab2c2/step_trace.jsonl",
+      "steps": 31,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "N",
+      "seed": 2,
+      "ep": 20,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "e9720a42115144ebad73733a3e7059ac",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w00/run/attempts/000-5faa3e990010-f71fad7e/client/traces/e9720a42115144ebad73733a3e7059ac/step_trace.jsonl",
+      "steps": 21,
+      "reached": 0,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "N",
+      "seed": 2,
+      "ep": 48,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "b56598daef174fd4b96c4da560820a72",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w10/run/attempts/000-827fa7f982aa-979ec7f4/client/traces/b56598daef174fd4b96c4da560820a72/step_trace.jsonl",
+      "steps": 21,
+      "reached": 1,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "N",
+      "seed": 2,
+      "ep": 25,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "31d18da1fe8c4a6d97bc191990cbfb77",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w01/run/attempts/000-3bb285671b84-8774efc5/client/traces/31d18da1fe8c4a6d97bc191990cbfb77/step_trace.jsonl",
+      "steps": 19,
+      "reached": 3,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "N",
+      "seed": 2,
+      "ep": 44,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "80b3901856e8478f83f3b1edfaf2f112",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w11/run/attempts/000-a679118f752b-7d259c0c/client/traces/80b3901856e8478f83f3b1edfaf2f112/step_trace.jsonl",
+      "steps": 23,
+      "reached": 1,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "N",
+      "seed": 2,
+      "ep": 29,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "1e994e657a5e42aba79f63a06217c3a1",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w00/run/attempts/000-a21a98971e99-946d4ab5/client/traces/1e994e657a5e42aba79f63a06217c3a1/step_trace.jsonl",
+      "steps": 27,
+      "reached": 4,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "N",
+      "seed": 2,
+      "ep": 32,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "e0aad78857dd4c159ac4895819d4e630",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed2/w10/run/attempts/000-ffcf26b831e2-8adf3af0/client/traces/e0aad78857dd4c159ac4895819d4e630/step_trace.jsonl",
+      "steps": 25,
+      "reached": 0,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "Z",
+      "seed": 2,
+      "ep": 5,
+      "donor": 5,
+      "attempts": 1,
+      "nonce": "fc5e36cfc9474073ab28cab0074c4548",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:5",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w01/run/attempts/000-b89dee851578-70eb30ba/client/traces/fc5e36cfc9474073ab28cab0074c4548/step_trace.jsonl",
+      "steps": 30,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "Z",
+      "seed": 2,
+      "ep": 28,
+      "donor": 28,
+      "attempts": 1,
+      "nonce": "67388d35b5654d6887fe0c9d4dcc8618",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:28",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w11/run/attempts/000-92bfe96563c1-50114b84/client/traces/67388d35b5654d6887fe0c9d4dcc8618/step_trace.jsonl",
+      "steps": 30,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "Z",
+      "seed": 2,
+      "ep": 20,
+      "donor": 20,
+      "attempts": 1,
+      "nonce": "3b8c47b84e3d4fdda95776a5ed93c836",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:20",
+        "n_windows": 2,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w00/run/attempts/000-5faa3e990010-afbf0b94/client/traces/3b8c47b84e3d4fdda95776a5ed93c836/step_trace.jsonl",
+      "steps": 34,
+      "reached": 5,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "Z",
+      "seed": 2,
+      "ep": 48,
+      "donor": 48,
+      "attempts": 1,
+      "nonce": "cc9a03e6760b4363ac2e50f3dd26b103",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:48",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w10/run/attempts/000-827fa7f982aa-d06f4869/client/traces/cc9a03e6760b4363ac2e50f3dd26b103/step_trace.jsonl",
+      "steps": 30,
+      "reached": 5,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "Z",
+      "seed": 2,
+      "ep": 25,
+      "donor": 25,
+      "attempts": 1,
+      "nonce": "5b0dca6c11434cd18e65da29c07d5593",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:25",
+        "n_windows": 2,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w01/run/attempts/000-3bb285671b84-61a9a218/client/traces/5b0dca6c11434cd18e65da29c07d5593/step_trace.jsonl",
+      "steps": 34,
+      "reached": 5,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "Z",
+      "seed": 2,
+      "ep": 44,
+      "donor": 44,
+      "attempts": 1,
+      "nonce": "8d6e7d37363b43288cace4a9947062d9",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:44",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w11/run/attempts/000-a679118f752b-b3e4aa9c/client/traces/8d6e7d37363b43288cace4a9947062d9/step_trace.jsonl",
+      "steps": 28,
+      "reached": 3,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "Z",
+      "seed": 2,
+      "ep": 29,
+      "donor": 29,
+      "attempts": 1,
+      "nonce": "c9b814eb05d349f08b34500f33392041",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:29",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w00/run/attempts/000-a21a98971e99-a80ad0d5/client/traces/c9b814eb05d349f08b34500f33392041/step_trace.jsonl",
+      "steps": 27,
+      "reached": 4,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "Z",
+      "seed": 2,
+      "ep": 32,
+      "donor": 32,
+      "attempts": 1,
+      "nonce": "b27ecdfbf6534501b4408adb71f7cf00",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:32",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed2/w10/run/attempts/000-ffcf26b831e2-bd8230d0/client/traces/b27ecdfbf6534501b4408adb71f7cf00/step_trace.jsonl",
+      "steps": 31,
+      "reached": 1,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "A",
+      "seed": 2,
+      "ep": 5,
+      "donor": 28,
+      "attempts": 1,
+      "nonce": "5406b8fa38f5437cbda559f42cd121cb",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:28",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed2/w01/run/attempts/000-b89dee851578-2e985185/client/traces/5406b8fa38f5437cbda559f42cd121cb/step_trace.jsonl",
+      "steps": 31,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "A",
+      "seed": 2,
+      "ep": 28,
+      "donor": 5,
+      "attempts": 1,
+      "nonce": "c86cdb26b245452caf6f4fd64d94862e",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:5",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed2/w11/run/attempts/000-92bfe96563c1-866c5a4d/client/traces/c86cdb26b245452caf6f4fd64d94862e/step_trace.jsonl",
+      "steps": 31,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "B",
+      "seed": 2,
+      "ep": 20,
+      "donor": 5,
+      "attempts": 1,
+      "nonce": "4149ee46bede4b629b61a838f22ee873",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:5",
+        "n_windows": 2,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed2/w00/run/attempts/000-5faa3e990010-421afbf6/client/traces/4149ee46bede4b629b61a838f22ee873/step_trace.jsonl",
+      "steps": 33,
+      "reached": 5,
+      "category": "donor_abs",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "B",
+      "seed": 2,
+      "ep": 5,
+      "donor": 20,
+      "attempts": 1,
+      "nonce": "5937d0df38494694b1bb54efffdd5b65",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:20",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed2/w10/run/attempts/000-b89dee851578-df1ffdb3/client/traces/5937d0df38494694b1bb54efffdd5b65/step_trace.jsonl",
+      "steps": 22,
+      "reached": 0,
+      "category": "donor_abs",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "B",
+      "seed": 2,
+      "ep": 28,
+      "donor": 20,
+      "attempts": 1,
+      "nonce": "8e161d27ec1c42ab9d76448d49459576",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:20",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed2/w01/run/attempts/000-92bfe96563c1-a4d6ba03/client/traces/8e161d27ec1c42ab9d76448d49459576/step_trace.jsonl",
+      "steps": 22,
+      "reached": 0,
+      "category": "donor_abs",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "C",
+      "seed": 2,
+      "ep": 20,
+      "donor": 25,
+      "attempts": 1,
+      "nonce": "14fff52214cd4682a351f7eea90c3be1",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:25",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed2/w11/run/attempts/000-5faa3e990010-62c6a6e7/client/traces/14fff52214cd4682a351f7eea90c3be1/step_trace.jsonl",
+      "steps": 21,
+      "reached": 0,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "C",
+      "seed": 2,
+      "ep": 25,
+      "donor": 48,
+      "attempts": 1,
+      "nonce": "c30b4f9716654888b10f8ef60c6626bd",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:48",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed2/w00/run/attempts/000-3bb285671b84-03daa355/client/traces/c30b4f9716654888b10f8ef60c6626bd/step_trace.jsonl",
+      "steps": 29,
+      "reached": 2,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "C",
+      "seed": 2,
+      "ep": 48,
+      "donor": 20,
+      "attempts": 1,
+      "nonce": "8453a04d2d3142849d823a5ad2175826",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:20",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed2/w10/run/attempts/000-827fa7f982aa-cdbf29db/client/traces/8453a04d2d3142849d823a5ad2175826/step_trace.jsonl",
+      "steps": 21,
+      "reached": 1,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "C",
+      "seed": 2,
+      "ep": 29,
+      "donor": 32,
+      "attempts": 1,
+      "nonce": "01edaf061cf3461f83766bd4f6bfe16a",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:32",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed2/w01/run/attempts/000-a21a98971e99-57e76a6f/client/traces/01edaf061cf3461f83766bd4f6bfe16a/step_trace.jsonl",
+      "steps": 27,
+      "reached": 4,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "C",
+      "seed": 2,
+      "ep": 32,
+      "donor": 29,
+      "attempts": 1,
+      "nonce": "ee5211e5c47043749a6f426280bcbd5d",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:29",
+        "n_windows": 2,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed2/w11/run/attempts/000-ffcf26b831e2-e98d49b1/client/traces/ee5211e5c47043749a6f426280bcbd5d/step_trace.jsonl",
+      "steps": 33,
+      "reached": 1,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "N",
+      "seed": 3,
+      "ep": 5,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "b14e5661091b44aa9bf56e5a7a1c9a9b",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w00/run/attempts/000-b89dee851578-8a020f8a/client/traces/b14e5661091b44aa9bf56e5a7a1c9a9b/step_trace.jsonl",
+      "steps": 30,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "N",
+      "seed": 3,
+      "ep": 28,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "3bfd7a29fe7d48eabd78ddee5490cbe7",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w10/run/attempts/000-92bfe96563c1-b64a63c1/client/traces/3bfd7a29fe7d48eabd78ddee5490cbe7/step_trace.jsonl",
+      "steps": 30,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "N",
+      "seed": 3,
+      "ep": 20,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "4c4ebf2f162545faa8ba776eacb56d6b",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w01/run/attempts/000-5faa3e990010-63740766/client/traces/4c4ebf2f162545faa8ba776eacb56d6b/step_trace.jsonl",
+      "steps": 21,
+      "reached": 0,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "N",
+      "seed": 3,
+      "ep": 48,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "5b1a4f94a4ce4606a25962365d818a2d",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w11/run/attempts/000-827fa7f982aa-fea4d31a/client/traces/5b1a4f94a4ce4606a25962365d818a2d/step_trace.jsonl",
+      "steps": 20,
+      "reached": 1,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "N",
+      "seed": 3,
+      "ep": 25,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "b5da7a36f6fd4f95961dcf7a74df6175",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w00/run/attempts/000-3bb285671b84-0f3a2fbb/client/traces/b5da7a36f6fd4f95961dcf7a74df6175/step_trace.jsonl",
+      "steps": 18,
+      "reached": 3,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "N",
+      "seed": 3,
+      "ep": 44,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "c65ebbfc22d44a27af23d3f73ef9329e",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w10/run/attempts/000-a679118f752b-b70c44ed/client/traces/c65ebbfc22d44a27af23d3f73ef9329e/step_trace.jsonl",
+      "steps": 22,
+      "reached": 1,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "N",
+      "seed": 3,
+      "ep": 29,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "e5c47358c3c9450da142e39a7ddb23b4",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w01/run/attempts/000-a21a98971e99-9286f389/client/traces/e5c47358c3c9450da142e39a7ddb23b4/step_trace.jsonl",
+      "steps": 27,
+      "reached": 4,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "N",
+      "seed": 3,
+      "ep": 32,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "7e05e61b47464752bc267d259facd9fb",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed3/w11/run/attempts/000-ffcf26b831e2-b322afdd/client/traces/7e05e61b47464752bc267d259facd9fb/step_trace.jsonl",
+      "steps": 25,
+      "reached": 0,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "Z",
+      "seed": 3,
+      "ep": 5,
+      "donor": 5,
+      "attempts": 1,
+      "nonce": "73bc8a9a23074de2847407c5d331b984",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:5",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w00/run/attempts/000-b89dee851578-b3cbf0db/client/traces/73bc8a9a23074de2847407c5d331b984/step_trace.jsonl",
+      "steps": 29,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "Z",
+      "seed": 3,
+      "ep": 28,
+      "donor": 28,
+      "attempts": 1,
+      "nonce": "6c80ef892d5e4c0ca3bcc38ff82983b1",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:28",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w10/run/attempts/000-92bfe96563c1-641f6d92/client/traces/6c80ef892d5e4c0ca3bcc38ff82983b1/step_trace.jsonl",
+      "steps": 29,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "Z",
+      "seed": 3,
+      "ep": 20,
+      "donor": 20,
+      "attempts": 1,
+      "nonce": "5efe28d826004e37bbe14b49cd0c57ee",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:20",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w01/run/attempts/000-5faa3e990010-76912094/client/traces/5efe28d826004e37bbe14b49cd0c57ee/step_trace.jsonl",
+      "steps": 31,
+      "reached": 5,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "Z",
+      "seed": 3,
+      "ep": 48,
+      "donor": 48,
+      "attempts": 1,
+      "nonce": "bc5db4c01c5146b4bae3ef93cea93605",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:48",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w11/run/attempts/000-827fa7f982aa-bd27daa8/client/traces/bc5db4c01c5146b4bae3ef93cea93605/step_trace.jsonl",
+      "steps": 28,
+      "reached": 5,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "Z",
+      "seed": 3,
+      "ep": 25,
+      "donor": 25,
+      "attempts": 1,
+      "nonce": "85a665e60e4d4a1fb48dcb4e31ebab7d",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:25",
+        "n_windows": 2,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w00/run/attempts/000-3bb285671b84-644c2299/client/traces/85a665e60e4d4a1fb48dcb4e31ebab7d/step_trace.jsonl",
+      "steps": 34,
+      "reached": 8,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "Z",
+      "seed": 3,
+      "ep": 44,
+      "donor": 44,
+      "attempts": 1,
+      "nonce": "82780041138440489e017fa1e685ec64",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:44",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w10/run/attempts/000-a679118f752b-2a14e1a2/client/traces/82780041138440489e017fa1e685ec64/step_trace.jsonl",
+      "steps": 27,
+      "reached": 3,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "Z",
+      "seed": 3,
+      "ep": 29,
+      "donor": 29,
+      "attempts": 1,
+      "nonce": "d8b15fa1cdd945d3a8fd4093c7e112ac",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:29",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w01/run/attempts/000-a21a98971e99-0ae07ecc/client/traces/d8b15fa1cdd945d3a8fd4093c7e112ac/step_trace.jsonl",
+      "steps": 28,
+      "reached": 4,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "Z",
+      "seed": 3,
+      "ep": 32,
+      "donor": 32,
+      "attempts": 1,
+      "nonce": "3de65ec2b7494f9d8548a40d445c5060",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:32",
+        "n_windows": 2,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed3/w11/run/attempts/000-ffcf26b831e2-43b652e3/client/traces/3de65ec2b7494f9d8548a40d445c5060/step_trace.jsonl",
+      "steps": 36,
+      "reached": 6,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "A",
+      "seed": 3,
+      "ep": 5,
+      "donor": 28,
+      "attempts": 1,
+      "nonce": "676417b02f71419dbc55353affba2239",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:28",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed3/w00/run/attempts/000-b89dee851578-40a79ee5/client/traces/676417b02f71419dbc55353affba2239/step_trace.jsonl",
+      "steps": 30,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "A",
+      "seed": 3,
+      "ep": 28,
+      "donor": 5,
+      "attempts": 1,
+      "nonce": "7a1ee095cbea45aead5815745ae8b116",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:5",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed3/w10/run/attempts/000-92bfe96563c1-7d4baed4/client/traces/7a1ee095cbea45aead5815745ae8b116/step_trace.jsonl",
+      "steps": 30,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "B",
+      "seed": 3,
+      "ep": 20,
+      "donor": 5,
+      "attempts": 1,
+      "nonce": "892e6d344db047aa8e712cdb94b1c156",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:5",
+        "n_windows": 2,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed3/w01/run/attempts/000-5faa3e990010-09800b69/client/traces/892e6d344db047aa8e712cdb94b1c156/step_trace.jsonl",
+      "steps": 36,
+      "reached": 5,
+      "category": "donor_abs",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "B",
+      "seed": 3,
+      "ep": 5,
+      "donor": 20,
+      "attempts": 1,
+      "nonce": "82f9e33b31d94fcf86f7a92aaa52e1fc",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:20",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed3/w11/run/attempts/000-b89dee851578-29f160aa/client/traces/82f9e33b31d94fcf86f7a92aaa52e1fc/step_trace.jsonl",
+      "steps": 21,
+      "reached": 0,
+      "category": "donor_abs",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "B",
+      "seed": 3,
+      "ep": 28,
+      "donor": 20,
+      "attempts": 1,
+      "nonce": "5fc8f8d6a3a6456aa72e0b7752f7af4a",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:20",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed3/w00/run/attempts/000-92bfe96563c1-7aec05ed/client/traces/5fc8f8d6a3a6456aa72e0b7752f7af4a/step_trace.jsonl",
+      "steps": 21,
+      "reached": 0,
+      "category": "donor_abs",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "C",
+      "seed": 3,
+      "ep": 20,
+      "donor": 25,
+      "attempts": 1,
+      "nonce": "577c47f3b48b4e59b19686267e5ad3b0",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:25",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed3/w10/run/attempts/000-5faa3e990010-cab8968d/client/traces/577c47f3b48b4e59b19686267e5ad3b0/step_trace.jsonl",
+      "steps": 20,
+      "reached": 0,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "C",
+      "seed": 3,
+      "ep": 25,
+      "donor": 48,
+      "attempts": 1,
+      "nonce": "7783a1215e6e4aa89b0ad6db6610f755",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:48",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed3/w01/run/attempts/000-3bb285671b84-7b2b5e9a/client/traces/7783a1215e6e4aa89b0ad6db6610f755/step_trace.jsonl",
+      "steps": 27,
+      "reached": 2,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "C",
+      "seed": 3,
+      "ep": 48,
+      "donor": 20,
+      "attempts": 1,
+      "nonce": "a2229384152144ea929b8c16620f85df",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:20",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed3/w11/run/attempts/000-827fa7f982aa-cef692d2/client/traces/a2229384152144ea929b8c16620f85df/step_trace.jsonl",
+      "steps": 20,
+      "reached": 1,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "C",
+      "seed": 3,
+      "ep": 29,
+      "donor": 32,
+      "attempts": 1,
+      "nonce": "e6d29ab9aa824d83b30cf5a1b0b60fb4",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:32",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed3/w00/run/attempts/000-a21a98971e99-c823eb10/client/traces/e6d29ab9aa824d83b30cf5a1b0b60fb4/step_trace.jsonl",
+      "steps": 27,
+      "reached": 4,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "C",
+      "seed": 3,
+      "ep": 32,
+      "donor": 29,
+      "attempts": 1,
+      "nonce": "a682cc7d00d9429fa61d7d4f8ce3711b",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:29",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed3/w10/run/attempts/000-ffcf26b831e2-ebac9e89/client/traces/a682cc7d00d9429fa61d7d4f8ce3711b/step_trace.jsonl",
+      "steps": 31,
+      "reached": 1,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "N",
+      "seed": 4,
+      "ep": 5,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "9288f15fa5bf492ab868eeae2b7fb8c4",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w01/run/attempts/000-b89dee851578-1aec9b17/client/traces/9288f15fa5bf492ab868eeae2b7fb8c4/step_trace.jsonl",
+      "steps": 29,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "N",
+      "seed": 4,
+      "ep": 28,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "4387242665fd4802865b6bd9c016981c",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w11/run/attempts/000-92bfe96563c1-8e5ddd7f/client/traces/4387242665fd4802865b6bd9c016981c/step_trace.jsonl",
+      "steps": 29,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "N",
+      "seed": 4,
+      "ep": 20,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "fab2c9a9e0f84da5b1ac18c172d96280",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w00/run/attempts/000-5faa3e990010-e4b3dc53/client/traces/fab2c9a9e0f84da5b1ac18c172d96280/step_trace.jsonl",
+      "steps": 19,
+      "reached": 0,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "N",
+      "seed": 4,
+      "ep": 48,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "2f6916b082dd4a6ea39b1f8af9894f02",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w10/run/attempts/000-827fa7f982aa-bc2d116f/client/traces/2f6916b082dd4a6ea39b1f8af9894f02/step_trace.jsonl",
+      "steps": 19,
+      "reached": 1,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "N",
+      "seed": 4,
+      "ep": 25,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "5603c84acc46420d891a9b51da119a7d",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w01/run/attempts/000-3bb285671b84-3fc6efca/client/traces/5603c84acc46420d891a9b51da119a7d/step_trace.jsonl",
+      "steps": 16,
+      "reached": 3,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "N",
+      "seed": 4,
+      "ep": 44,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "4c96ef7305694a6cb89d54fc92223b37",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w11/run/attempts/000-a679118f752b-72ce23ff/client/traces/4c96ef7305694a6cb89d54fc92223b37/step_trace.jsonl",
+      "steps": 24,
+      "reached": 1,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "N",
+      "seed": 4,
+      "ep": 29,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "281fd2d76d474ecea4ee17f7a10c2a5f",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w00/run/attempts/000-a21a98971e99-dbc4cf00/client/traces/281fd2d76d474ecea4ee17f7a10c2a5f/step_trace.jsonl",
+      "steps": 28,
+      "reached": 4,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "N",
+      "seed": 4,
+      "ep": 32,
+      "donor": null,
+      "attempts": 1,
+      "nonce": "cbe8ffe1f9ce47f894ee4f9f9b1f8a77",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": null,
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/N/seed4/w10/run/attempts/000-ffcf26b831e2-224ec644/client/traces/cbe8ffe1f9ce47f894ee4f9f9b1f8a77/step_trace.jsonl",
+      "steps": 26,
+      "reached": 0,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "Z",
+      "seed": 4,
+      "ep": 5,
+      "donor": 5,
+      "attempts": 1,
+      "nonce": "82b9149e58bf4ef3a0a32693e0239553",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:5",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w01/run/attempts/000-b89dee851578-a83c9db6/client/traces/82b9149e58bf4ef3a0a32693e0239553/step_trace.jsonl",
+      "steps": 30,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "Z",
+      "seed": 4,
+      "ep": 28,
+      "donor": 28,
+      "attempts": 1,
+      "nonce": "f2cc80ce4dba43549720967499ac7453",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:28",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w11/run/attempts/000-92bfe96563c1-55d45475/client/traces/f2cc80ce4dba43549720967499ac7453/step_trace.jsonl",
+      "steps": 30,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "Z",
+      "seed": 4,
+      "ep": 20,
+      "donor": 20,
+      "attempts": 1,
+      "nonce": "a8a3a839b20f48378e8063945d74fee6",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:20",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w00/run/attempts/000-5faa3e990010-99686088/client/traces/a8a3a839b20f48378e8063945d74fee6/step_trace.jsonl",
+      "steps": 26,
+      "reached": 4,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "Z",
+      "seed": 4,
+      "ep": 48,
+      "donor": 48,
+      "attempts": 1,
+      "nonce": "bd74f8a6dd0a4c93939b6529f44adcd8",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:48",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w10/run/attempts/000-827fa7f982aa-970ee208/client/traces/bd74f8a6dd0a4c93939b6529f44adcd8/step_trace.jsonl",
+      "steps": 26,
+      "reached": 5,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "Z",
+      "seed": 4,
+      "ep": 25,
+      "donor": 25,
+      "attempts": 1,
+      "nonce": "ded5488226e7468cac2718eed52fdb8d",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:25",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w01/run/attempts/000-3bb285671b84-55b65cc8/client/traces/ded5488226e7468cac2718eed52fdb8d/step_trace.jsonl",
+      "steps": 28,
+      "reached": 7,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "Z",
+      "seed": 4,
+      "ep": 44,
+      "donor": 44,
+      "attempts": 1,
+      "nonce": "104887b66f7b4685b77ff4e7a284d586",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:44",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w11/run/attempts/000-a679118f752b-d2a4115f/client/traces/104887b66f7b4685b77ff4e7a284d586/step_trace.jsonl",
+      "steps": 26,
+      "reached": 3,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "Z",
+      "seed": 4,
+      "ep": 29,
+      "donor": 29,
+      "attempts": 1,
+      "nonce": "a20186032b414da2b86cb2034a124a92",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:29",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w00/run/attempts/000-a21a98971e99-db2069ad/client/traces/a20186032b414da2b86cb2034a124a92/step_trace.jsonl",
+      "steps": 20,
+      "reached": 6,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "Z",
+      "seed": 4,
+      "ep": 32,
+      "donor": 32,
+      "attempts": 1,
+      "nonce": "644e12d02cae49bd9e1740679a932fb4",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:32",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/Z/seed4/w10/run/attempts/000-ffcf26b831e2-5b23b5f6/client/traces/644e12d02cae49bd9e1740679a932fb4/step_trace.jsonl",
+      "steps": 28,
+      "reached": 6,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "A",
+      "seed": 4,
+      "ep": 5,
+      "donor": 28,
+      "attempts": 1,
+      "nonce": "5e1bf7d1940b4bc4a042a15fd33d1665",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:28",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed4/w01/run/attempts/000-b89dee851578-f4d524a1/client/traces/5e1bf7d1940b4bc4a042a15fd33d1665/step_trace.jsonl",
+      "steps": 29,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "A",
+      "seed": 4,
+      "ep": 28,
+      "donor": 5,
+      "attempts": 1,
+      "nonce": "a836342556774e2ab708f3bf12c5e83b",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:5",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/A/seed4/w11/run/attempts/000-92bfe96563c1-d1196934/client/traces/a836342556774e2ab708f3bf12c5e83b/step_trace.jsonl",
+      "steps": 29,
+      "reached": 5,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "B",
+      "seed": 4,
+      "ep": 20,
+      "donor": 5,
+      "attempts": 1,
+      "nonce": "838dcff930824a799c4f9c6b38783dab",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:5",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed4/w00/run/attempts/000-5faa3e990010-8223b96d/client/traces/838dcff930824a799c4f9c6b38783dab/step_trace.jsonl",
+      "steps": 30,
+      "reached": 5,
+      "category": "donor_abs",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "B",
+      "seed": 4,
+      "ep": 5,
+      "donor": 20,
+      "attempts": 1,
+      "nonce": "70af290eee9d44f0affa41fd9dced2e3",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:20",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed4/w10/run/attempts/000-b89dee851578-50fc41df/client/traces/70af290eee9d44f0affa41fd9dced2e3/step_trace.jsonl",
+      "steps": 19,
+      "reached": 0,
+      "category": "donor_abs",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "B",
+      "seed": 4,
+      "ep": 28,
+      "donor": 20,
+      "attempts": 1,
+      "nonce": "eb27f352352d4e6da8e2f2ef8c068cb5",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:20",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/B/seed4/w01/run/attempts/000-92bfe96563c1-e6e57daf/client/traces/eb27f352352d4e6da8e2f2ef8c068cb5/step_trace.jsonl",
+      "steps": 19,
+      "reached": 0,
+      "category": "donor_abs",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "C",
+      "seed": 4,
+      "ep": 20,
+      "donor": 25,
+      "attempts": 1,
+      "nonce": "b9b7103d73824f55a51d771a16d7ea36",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:25",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed4/w11/run/attempts/000-5faa3e990010-31b5940a/client/traces/b9b7103d73824f55a51d771a16d7ea36/step_trace.jsonl",
+      "steps": 20,
+      "reached": 0,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w00",
+      "group": "C",
+      "seed": 4,
+      "ep": 25,
+      "donor": 48,
+      "attempts": 1,
+      "nonce": "40c4503aa3414cb99a14aa0616805f5c",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:48",
+        "n_windows": 2,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed4/w00/run/attempts/000-3bb285671b84-2aa122c6/client/traces/40c4503aa3414cb99a14aa0616805f5c/step_trace.jsonl",
+      "steps": 39,
+      "reached": 0,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w10",
+      "group": "C",
+      "seed": 4,
+      "ep": 48,
+      "donor": 20,
+      "attempts": 1,
+      "nonce": "b64a6e6c3f0c42b0838e467e5698484f",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:20",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed4/w10/run/attempts/000-827fa7f982aa-a948f1c5/client/traces/b64a6e6c3f0c42b0838e467e5698484f/step_trace.jsonl",
+      "steps": 19,
+      "reached": 1,
+      "category": "own",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w01",
+      "group": "C",
+      "seed": 4,
+      "ep": 29,
+      "donor": 32,
+      "attempts": 1,
+      "nonce": "b5497d1116f4412f931c14c90af5d2e5",
+      "outcome": "fail",
+      "success": 0,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:32",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed4/w01/run/attempts/000-a21a98971e99-4c74b815/client/traces/b5497d1116f4412f931c14c90af5d2e5/step_trace.jsonl",
+      "steps": 31,
+      "reached": 3,
+      "category": "other",
+      "status": "ok"
+    },
+    {
+      "stage": "stage3b",
+      "worker": "w11",
+      "group": "C",
+      "seed": 4,
+      "ep": 32,
+      "donor": 29,
+      "attempts": 1,
+      "nonce": "7b243c7060d44465baa97b56e2184f70",
+      "outcome": "success",
+      "success": 1,
+      "terminals": 1,
+      "motion_content": {
+        "mode": "swap_exact",
+        "donor": "PatternLock:29",
+        "n_windows": 1,
+        "n_replaced": 1,
+        "replace_log": [
+          [
+            0,
+            0
+          ]
+        ],
+        "record_file": null
+      },
+      "trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/pl-single-step-swap-1108/C/seed4/w11/run/attempts/000-ffcf26b831e2-5244dd53/client/traces/7b243c7060d44465baa97b56e2184f70/step_trace.jsonl",
+      "steps": 27,
+      "reached": 0,
+      "category": "own",
+      "status": "ok"
+    }
+  ],
+  "missing": []
+}

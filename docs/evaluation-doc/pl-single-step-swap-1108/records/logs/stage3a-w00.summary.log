@@ -1,0 +1,11 @@
+ENV_CHECK=PASS head=d6bb48f6e8e1ebd9fd501686291e2668f6686481 gpu=0 frac=0.30
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=5fea6044b1ae207fe85f7d8c0ca4ad23a50cda28e4f41997d2eb50b1e66eccd6 manifest_seal=c617be41feef5bcd89b6f122c3f9cc62f59205e62ef4a5a4129ce288f4e4add1 chunks=1 cuda=0 ablate=none
+EPISODE_RESULT task=PatternLock ep=5 success=1 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=1 npz=0
+PLS_EPISODE stage=stage3a group=N seed=1 ep=5 rc=0
+RUN_LOCAL_BEGIN model=stage2_pool4_concat run_identity=a806b94290124a87966a89652ad89707ba86ddafe8e2c264dd6e5258eb280428 manifest_seal=6e8e3fb6013cade78dce6e4d9d41ac89ff990ea0d60776c7239cf82ece1ddf7a chunks=1 cuda=0 ablate=none
+EPISODE_RESULT task=PatternLock ep=25 success=1 npz=0
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=1 success=1 npz=0
+PLS_EPISODE stage=stage3a group=N seed=1 ep=25 rc=0
+PLS_QUEUE stage=stage3a worker=w00 runs=2 failed=0
+EXIT_CODE=0
