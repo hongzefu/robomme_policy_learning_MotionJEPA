@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Framesample 1024 八卡训练</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1b2733;--muted:#566575;--line:#d8dfe6;--accent:#1f5fbf;--warn:#a2650a;--warnbg:#fff7e8;--notebg:#eef4fd;--code:#edf1f5}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12171d;--card:#1a212a;--ink:#e4e9ee;--muted:#9fadba;--line:#303b47;--accent:#7fb0f2;--warn:#e0a84e;--warnbg:#2c2416;--notebg:#18263a;--code:#26303b}}
+:root[data-theme="dark"]{--bg:#12171d;--card:#1a212a;--ink:#e4e9ee;--muted:#9fadba;--line:#303b47;--accent:#7fb0f2;--warn:#e0a84e;--warnbg:#2c2416;--notebg:#18263a;--code:#26303b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 system-ui,-apple-system,"Noto Sans CJK SC",sans-serif}
+main{max-width:1040px;margin:auto;padding:32px 16px 72px}h1{font-size:25px;margin:40px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--line)}h2{font-size:19px;margin:28px 0 8px}
+.title{font-size:29px;font-weight:700;line-height:1.35;margin:0 0 8px}.meta{color:var(--muted);font-size:14px}
+table{width:100%;border-collapse:collapse;font-size:14px;margin:12px 0;background:var(--card)}th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{font-weight:650}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}.scroll{overflow-x:auto}
+code{font:13px/1.6 ui-monospace,SFMono-Regular,monospace;background:var(--code);padding:1px 4px;border-radius:4px;overflow-wrap:anywhere}pre{background:var(--code);padding:14px;border-radius:8px;overflow-x:auto;font-size:13px;line-height:1.6}pre code{background:none;padding:0}
+.note,.warn{padding:10px 14px;margin:14px 0;border-left:4px solid var(--accent);background:var(--notebg)}.warn{border-color:var(--warn);background:var(--warnbg)}
+</style></head><body><main>
+<p class="title">Context framesample 1024 八卡训练：w768 评估结束后立刻起跑</p>
+<p class="meta">创建：2026-11-09 美东 · 分支 <code>v12-ctx-fs1024-8gpu-b64-80k</code>（基于 <code>v8-ctx-td-fs-1024-b64-80k@8c4c41a</code>）· 状态：方案待确认，开工令未给</p>
+<p class="meta">用户原话：「给出方案 跑完eval完立刻开始 context1024的训练 之前没跑的那个 写html方案」；选择题答复：「8卡跑framesample1024」；追问：「这个要跑多久？」</p>
+
+<h1>第一部分（给人看）</h1>
+
+<h2>1. 结论</h2>
+<p>这次只跑一条 run：<code>orig100-ctx-framesamp1024-b64-80k-8gpu</code>，8 卡独占。它就是 11-06 叫停的 framesample 臂（当时在 GPU 4–7 上跑到 14.9k/80k），这次<b>从头训满 80k</b>。代码沿用 v8 已经验证过的读取与 YAML，官方条目 <code>mme_vla_suite</code> 一个字都不改。跟上次相比，唯一的变化是卡数从 4 变成 8。</p>
+<p>起跑由一个 tmux 链式脚本自动完成：它盯住 w768 评估日志，看到 <code>EVAL692=PASS</code>、评估会话已退出、8 张卡全部空闲之后，先跑 20 步冒烟，紧接着正式起跑，同时启动 checkpoint 增量上传。整个过程不需要有人在场。</p>
+<div class="scroll"><table>
+<tr><th>项目</th><th>取值</th></tr>
+<tr><td>run</td><td><code>orig100-ctx-framesamp1024-b64-80k-8gpu</code>（旧 run 名的目录已存在，<code>train.py</code> 禁用 <code>--overwrite</code>，所以另起名）</td></tr>
+<tr><td>GPU</td><td>0–7，<code>fsdp_devices=4</code> 不变，mesh 为 DP2×FSDP4</td></tr>
+<tr><td>记忆</td><td>framesample：均匀取 64 帧 × 每帧 4×4（16 token）= 1024 个 <code>[1024, 2048]</code> token，右补零加 mask</td></tr>
+<tr><td>数据</td><td><code>v1-store/datasets/16task-orig100-1600ep-9e109419/framesamp-4x4</code>（48 GB，现成，已核实存在）</td></tr>
+<tr><td>history YAML</td><td><code>perceptual-framesamp-context-1024.yaml</code>（v8 已有）</td></tr>
+<tr><td>bucket</td><td><code>HongzeFu/robomme-vla-orig100-ctx-framesamp1024-b64-80k-8gpu-v1</code>（公开）</td></tr>
+</table></div>
+
+<h2>2. 要跑多久</h2>
+<div class="scroll"><table>
+<tr><th>阶段</th><th>估计（美东）</th><th>依据</th></tr>
+<tr><td>w768 训练剩余</td><td>约 3.4 h，11-09 03:00 前后结束</td><td>11-08 23:34 时 37.2k/50k，1.0 it/s</td></tr>
+<tr><td>w768 本机 692 局评估</td><td>约 5–8 h，11-09 08:00–11:00 结束</td><td>本机没有完整实测；10 片、每片约 69 局粗估</td></tr>
+<tr><td>冒烟 20 步</td><td>约 10–15 min</td><td>主要是 JIT 编译；编译缓存与正式 run 共用</td></tr>
+<tr><td><b>正式 80k</b></td><td><b>约 32–42 h</b></td><td>上次 4 卡（每卡 16）实测 2.706 s/步；历史 8 卡相对 4 卡的加速比是 1.88（context 512，<code>ctx-stock-scaling-20260928</code>），推出约 1.44 s/步。每卡 batch 降到 8 后效率会打折，所以取 1.45–1.9 s/步</td></tr>
+<tr><td>完成</td><td>约 11-10 下午到 11-11 凌晨</td><td>起跑后用第 200–500 步的实测步速替换这个区间</td></tr>
+</table></div>
+
+<h2>3. 与上次 framesample 臂、与原版的对照</h2>
+<div class="scroll"><table>
+<tr><th>项目</th><th>原版 / 上次 fs 臂（4748064）</th><th>本方案</th></tr>
+<tr><td>global batch</td><td>64</td><td>64</td></tr>
+<tr><td>卡数 / 每卡 batch</td><td>4 / 16（mesh 1×4）</td><td><b>8 / 8（mesh 2×4）</b></td></tr>
+<tr><td>batch 组成</td><td><code>local_batch = 64 // process_count</code>，单进程，只由 seed 42 决定</td><td>相同（与卡数无关，已核对 <code>dataloader.py:134</code>）</td></tr>
+<tr><td>步数 / 学习率 / 优化器 / EMA / 保存</td><td>80000；warmup 10000，peak = decay = 5e-5，decay_steps 100000；AdamW clip 1.0；0.999；每 10000 步，共 8 份（末份 79999）</td><td>相同，命令行不覆盖</td></tr>
+<tr><td>budget / 每帧 token</td><td>1024 / 16</td><td>相同</td></tr>
+<tr><td>数据与 norm_stats</td><td>orig100 1600ep，md5 <code>cf425386…</code></td><td>相同</td></tr>
+<tr><td>初始化</td><td><code>pi05_base</code></td><td>相同，从头训；不接第 10000 步（该仓 checkpoint 不存 train_state，接不上优化器状态）</td></tr>
+<tr><td>解释器</td><td>主检出 <code>.venv</code></td><td>专用 venv <code>v1-store/envs/fs8-train</code>：主检出现在在 v11 分支上，<code>.venv</code> 跟的是 v11 的锁（与 v8 只差 <code>pyarrow==20.0.0</code> 一项），不去动 w768 正在用的环境</td></tr>
+</table></div>
+<p>数值上唯一的差别是 FSDP 下的规约顺序（2 份数据并行），预期只带来浮点量级的偏差，不影响实验口径。</p>
+
+<h2>4. 自动衔接怎么做</h2>
+<pre><code>w768-eval 日志出现 EVAL692=        ──► 要求是 PASS（Q1）
+   │
+   ▼  tmux has-session '=w768-eval' 为假（评估驱动已退出）
+   ▼  8 张卡 memory.used &lt; 2000 MiB 且没有计算进程，连续 3 次（间隔 20 s）
+   ▼  /scratch 剩余 ≥ 150 GB
+   ▼  冒烟 20 步（fs8 smoke），EXIT_CODE=0
+   ▼  正式起跑 fs8 prod；同时起 fs8-inc 增量上传
+主会话 Monitor 盯 fs8-chain 与正式日志</code></pre>
+<p>链式脚本只在自己的进程里等待，<b>不停、不杀任何别人的进程</b>。上次 timepool 评估留下的教训是：<code>tmux kill-session</code> 停不掉 sidecar，sidecar 会继续占卡。所以这里用「GPU 真的空了」作判定，不用「会话没了」。如果评估退出 60 分钟后卡仍未释放，链式脚本就停下并写出原因，交给用户处理（Q2）。</p>
+
+<h2>5. 要改什么（很少）</h2>
+<ul>
+<li><code>scripts/training/run_ctx1024_b64_80k.sh</code>：新增 <code>fs8</code> 档（GPU 0–7、run 名带 <code>-8gpu</code>，其余与 <code>fs</code> 相同），另外允许用 <code>PY</code> 环境变量覆盖解释器（默认值不变）。<code>td</code>、<code>fs</code> 两档行为不变。</li>
+<li>新增 <code>scripts/training/fs8_after_w768_eval.sh</code>：第 4 节的链式脚本。</li>
+<li>上传直接复用 <code>scripts/dataset/hf_export/ctx1024_ckpt_inc.py --run … --bucket …</code>，不改。</li>
+</ul>
+
+<h2>6. 不做什么</h2>
+<p>不跑 tokendrop；不接旧的第 10000 步；不改 <code>mme_vla_suite</code>；不加学习率缩放；不碰 w768 的任何会话、日志和 checkpoint；不删旧 run 目录和旧 bucket。本计划不包括训完之后的评估（Q3）。</p>
+
+<h2>7. 磁盘与风险</h2>
+<ul>
+<li><b>磁盘</b>：<code>/scratch</code> 剩 451 GB（占用 94%）。8 份 checkpoint 按历史约 11.6 GB/份，共约 93 GB；评估产物会再占一些。链式脚本起跑前要求剩余 ≥150 GB，不够就停下。</li>
+<li><b>每卡 8 的步速</b>：没有实测过，可能比外推慢。冒烟日志会给出第一个步速读数。</li>
+<li><b>评估比预估长</b>：训练起跑时刻跟着顺延，不影响正确性。</li>
+<li><b>单 seed</b>：与原版一致；差距小于约 2pp 时不足以判断优劣。</li>
+</ul>
+
+<h2>8. 待你确认</h2>
+<div class="scroll"><table>
+<tr><th>编号</th><th>问题</th><th>推荐</th></tr>
+<tr><td>Q1</td><td>w768 评估以 <code>EVAL692=FAIL</code> 结束时，还要不要起训？</td><td><b>不起</b>，链式脚本停下等你决定。FAIL 时 w768 可能要用卡排查或重跑</td></tr>
+<tr><td>Q2</td><td>评估退出 60 分钟后卡仍被占用（比如残留的 sidecar）</td><td><b>停下报告</b>，不替 w768 杀进程</td></tr>
+<tr><td>Q3</td><td>训完是否自动接评估（官方 800 局 3 seed）</td><td><b>不接</b>，训完另出评估方案</td></tr>
+</table></div>
+<p>这三项都按推荐执行的话，回复「同意 开工」即可。</p>
+
+<h1>第二部分（技术细节，供 agent 追踪）</h1>
+
+<h2>〇 红线与前置</h2>
+<ul>
+<li>R1 开工令覆盖下表 P0–P5（CPU 准备在 w768 运行期间即可完成；GPU 只在链式脚本判定空闲后才使用）。</li>
+<li>R2 <code>mme_vla_suite</code> 条目一字不动；prod 不传 <code>--num-train-steps</code>、<code>--batch-size</code>。</li>
+<li>R3 <code>td</code>、<code>fs</code> 档的 dry 输出（参数数组）与改前逐字相同。</li>
+<li>R4 训练从 Beta commit 的只读副本 <code>/scratch/hongze/worktrees/fs8-&lt;Beta 短 sha&gt;</code> 运行；主检出保持在 v11 分支，不切换。</li>
+<li>R5 不碰 <code>w768-train</code>、<code>w768-ckptup</code>、<code>w768-eval</code> 及其子进程；跨会话只发「仅答复」类通知。</li>
+<li>R6 只加本计划列出的判定，不叠加心跳或多层校验。</li>
+</ul>
+<p>已核实（11-09 美东 00:00 前后）：<code>framesamp-4x4</code> 48 GB 在库；YAML 在 v8；<code>make_mesh</code> 为 <code>(device_count//fsdp, fsdp)</code>；<code>local_batch = batch_size // process_count</code>；上传脚本参数化；<code>w768-eval.log</code> 尚不存在；<code>/scratch</code> 剩 451 GB。待验证：8 卡步速、专用 venv 导入。</p>
+
+<h2>一 步骤</h2>
+<div class="scroll"><table>
+<tr><th>步骤</th><th>内容</th><th>判定行</th></tr>
+<tr><td>P0</td><td>sonnet 做计划一致性审查；在本分支 <code>docs/handoff/current.json</code> 登记任务 <code>ctx-fs1024-8gpu-b64-80k</code>（<code>depends_on</code> 写明跨分支依赖 <code>v11-4task-modul-wantp768-50k:4task-wantp768-eval</code>）；给 w768 主会话发一条仅答复通知</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS</code></td></tr>
+<tr><td>P1</td><td>S1 改启动脚本、写链式脚本（opus，独立 worktree），合并前后由 sonnet 审查，合入后打 Beta 锚点</td><td><code>PRE_MERGE_REVIEW=PASS</code>、<code>POST_MERGE_REVIEW=PASS</code>、<code>FS8_DRY=PASS td=same fs=same</code></td></tr>
+<tr><td>P2</td><td>建只读副本；在副本根目录执行 <code>UV_PROJECT_ENVIRONMENT=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/envs/fs8-train uv sync --frozen</code>（CPU）；导入核对</td><td><code>FS8_VENV=PASS import=&lt;副本&gt;/src lock_sha=&lt;x&gt;</code></td></tr>
+<tr><td>P3</td><td>起 tmux <code>fs8-chain</code>（日志 <code>v1-store/logs/fs8-chain.log</code>），主会话挂 Monitor</td><td><code>FS8_WAIT_START</code></td></tr>
+<tr><td>P4</td><td>链式脚本自动：触发判定 → 冒烟 20 步 → 正式起跑 → 起 <code>fs8-inc</code></td><td><code>FS8_TRIGGER=PASS eval=PASS gpus_idle=8 free_gb=&lt;x&gt;</code>；<code>FS8_SMOKE=PASS steps=20 mesh=2x4 s_per_step=&lt;x&gt;</code>；<code>FS8_PROD_LAUNCHED</code></td></tr>
+<tr><td>P5</td><td>正式结束：<code>EXIT_CODE=0</code>、8 份 checkpoint、79999 EMA CPU 恢复、上传全量回读；写训练档案并把状态改为 done</td><td><code>CTX1024_TRAIN=PASS run=orig100-ctx-framesamp1024-b64-80k-8gpu step=79999</code>、<code>HF_VERIFY=PASS bucket=… steps=8 mismatches=0</code></td></tr>
+</table></div>
+<p>链式脚本的停止行（出现任意一条就不再往下走，也不重试）：<code>FS8_STOP reason=eval_fail|gpu_busy_60min|disk_low|smoke_fail|prod_exit</code>。</p>
+
+<h2>二 命令</h2>
+<pre><code># fs8 档（S1 新增）
+fs8) BASE=orig100-ctx-framesamp1024-b64-80k-8gpu; GPUS=0,1,2,3,4,5,6,7; FRAME=framesamp-4x4; HISTORY=perceptual-framesamp-context-1024.yaml ;;
+PY=${PY:-$PROJECT/.venv/bin/python}
+
+# 链式脚本里的两次调用
+CODE_ROOT=&lt;只读副本&gt; PY=$STORE/envs/fs8-train/bin/python bash &lt;只读副本&gt;/scripts/training/run_ctx1024_b64_80k.sh fs8 smoke
+CODE_ROOT=&lt;只读副本&gt; PY=$STORE/envs/fs8-train/bin/python bash &lt;只读副本&gt;/scripts/training/run_ctx1024_b64_80k.sh fs8 prod   # 在 tmux fs8-train 内
+# 上传
+tmux new-session -d -s fs8-inc "... ctx1024_ckpt_inc.py --run orig100-ctx-framesamp1024-b64-80k-8gpu --bucket HongzeFu/robomme-vla-orig100-ctx-framesamp1024-b64-80k-8gpu-v1 2&gt;&amp;1 | tee v1-store/logs/orig100-ctx-framesamp1024-b64-80k-8gpu-inc.log; echo EXIT_CODE=\$? &gt;&gt; …"</code></pre>
+<p>GPU 空闲判定：<code>nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits</code> 8 行都小于 2000，且 <code>nvidia-smi --query-compute-apps=pid --format=csv,noheader</code> 为空，连续 3 次。等待评估日志用 <code>tail -n +1 -F</code> 加 <code>grep --line-buffered -m1 '^EVAL692='</code>（文件尚不存在时 <code>-F</code> 会一直等下去）。</p>
+<p>Monitor 过滤词：<code>FS8_|EXIT_CODE=|Traceback|nan|out of memory|RESOURCE_EXHAUSTED|Killed</code>；上传日志另盯 <code>INC_UPLOADED|UPLOAD_FAIL|HF_VERIFY</code>。</p>
+
+<h2>三 tmux 与产物</h2>
+<ul>
+<li>会话：<code>fs8-chain</code>（冒烟在它内部前台运行）、<code>fs8-train</code>、<code>fs8-inc</code>。</li>
+<li>日志：<code>v1-store/logs/fs8-chain.log</code>、<code>…-8gpu-smoke.log</code>、<code>…-8gpu.log</code>、<code>…-8gpu-inc.log</code>。</li>
+<li>checkpoint：<code>v1-store/train-runs/mme_vla_suite/orig100-ctx-framesamp1024-b64-80k-8gpu/</code>；冒烟目录 <code>…-8gpu-smoke</code> 在正式过了首个日志步之后由主会话删除（本任务自己的产物）。</li>
+<li>编译缓存：<code>MMEVLA_JAX_CACHE_DIR=/scratch/hongze/.cache/jax/orig100-ctx-framesamp1024-b64-80k-8gpu</code>，冒烟与正式共用。</li>
+</ul>
+
+<h2>四 子代理分配表</h2>
+<div class="scroll"><table>
+<tr><th>子任务</th><th>目标</th><th>可写文件</th><th>禁触</th><th>模型</th><th>验收</th></tr>
+<tr><td>R0</td><td>计划一致性审查</td><td>只读</td><td>全部</td><td>sonnet</td><td><code>PLAN_CONSISTENCY_REVIEW</code></td></tr>
+<tr><td>S1</td><td>fs8 档与链式脚本</td><td><code>scripts/training/run_ctx1024_b64_80k.sh</code>、<code>scripts/training/fs8_after_w768_eval.sh</code></td><td>其余全部</td><td>opus，worktree</td><td><code>bash -n</code>、<code>FS8_DRY</code>；链式脚本用假日志、假 <code>nvidia-smi</code> 跑通 PASS / FAIL / 卡忙三种路径</td></tr>
+<tr><td>R1</td><td>S1 合并前后审查</td><td>只读</td><td>全部</td><td>sonnet</td><td><code>PRE/POST_MERGE_REVIEW</code></td></tr>
+<tr><td>RUN</td><td>P2 建副本和 venv、P3 起 <code>fs8-chain</code></td><td>无代码改动</td><td>代码、配置、参数</td><td>opus，无 worktree</td><td>交回句柄</td></tr>
+</table></div>
+<p>合并：<code>git merge --no-ff</code>，commit subject 前缀 <code>sub/S1: </code>；只有主会话 push。</p>
+</main></body></html>
