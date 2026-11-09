@@ -119,6 +119,13 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 
 **旧闭环数据同样的拆法**（`stopcube-rollout-1105` 的第 17 层折外预测，q4 点集，各自轨迹）：FrameSamp Text MAE 在 N=2..5 依次为 42.8、67.0、71.2、106.1；MotionMem 为 52.8、45.7、46.7、64.1。走势与共同轨迹一致。
 
+### D. 跨 N 外推（中性／负面结果）
+
+探针只在 N≤3 的局上训练、在 N≥4 的局上测（以及反方向），特征与选 λ 同上，脚本 `records/diagnostics/cross_N_generalize.py`，结果 `records/explore/cross_N.json`，`leak=0`。
+
+- **距按下步数**：两个模型都外推不了，所有组、所有层的 R² 都为负（N≤3→N≥4：FrameSamp Text −0.24 ～ −0.93，MotionMem Text −0.24 ～ −0.73；连续 `[t,N]` 参考为 0.22）。原因是标签范围随 N 整体平移，线性探针没见过这个范围。没有哪个模型占优。
+- **速度 M**（N≤3→N≥4，准确率）：MotionMem History 组 0.62–0.75，Text 0.55–0.60；FrameSamp 各组 0.36–0.53；连续 `[t,N]` 参考 0.487。MotionMem 的记忆组对速度的编码在不同 N 之间迁移得更好，但幅度有限。
+
 ## 四、解释边界
 
 - B 节的「补上的信息」与 M 一致：`[t,N,M]` 上限 0.926；MotionMem 读速度 M 的准确率为 0.89–0.93（motion 组、history 组），FrameSamp 为 0.57–0.71。这是相关证据，没有做干预。
