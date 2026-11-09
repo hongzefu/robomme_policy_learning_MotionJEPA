@@ -178,6 +178,29 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 
 行为上的优势集中在高记忆需求（N≥4）和最慢的速度（M=120）这两类局，方向与 C 节探针按 N 的结果一致（FrameSamp 的误差随 N 变差，N=5 时成功 0/11）。这些分组是事后拆分，只作相关描述。M=60、80 两档两个模型都很少成功，不足以区分。
 
+### I. 正式 3 seed 评测：StopCube 成功率按 N、M 拆分（两个 motion 变体）
+
+数据：GreatLakes 正式评测 `official-stage2-1026/` 的逐局记录（只读）。M、N 按 `episode_key` 取自 `stopcube-oracle-1104` 的 oracle 表，并核对 `env_seed` 一致。脚本 `records/diagnostics/official_success_by_N.py`。
+
+- **对比对象**：`o16cc`（concat 1×1024，即论文的 MotionMem）对 `o16ctx`（context split 4×256，motion 预算 384，也是带 motion 的模型）。
+  - 起初误把 `o16ctx` 当成同数据训练的 FrameSamp；按 `o16ctx-60k-800/launch.md` 第 5 行核对后纠正：它是 split 读出的 motion 变体。
+  - 官方 FrameSamp Context 只有论文 Table 3 的汇总（StopCube 13.67 ± 8.82），本机没有逐局记录，无法按 N 拆。
+
+| 子集 | 局数（3 seed） | concat（MotionMem） | split | 不一致局 concat 胜／split 胜 | p |
+| --- | ---: | --- | --- | --- | ---: |
+| 全部 | 150 | 65（0.43） | 99（0.66） | 8／42 | 1e-6 |
+| N=2 | 45 | 0.16 | 0.38 | 3／13 | 0.021 |
+| N=3 | 45 | 0.49 | 0.67 | 2／10 | 0.039 |
+| N=4 | 27 | 0.44 | 0.85 | 1／12 | 0.003 |
+| N=5 | 33 | 0.73 | 0.88 | 2／7 | 0.18 |
+| M=60 | 36 | 0.19 | 0.67 | 2／19 | 0.0002 |
+| M=80 | 66 | 0.30 | 0.50 | 5／18 | 0.011 |
+| M=120 | 48 | 0.79 | 0.88 | 1／5 | 0.22 |
+
+- 在 StopCube 上，split 变体全面好于 concat。这与 `o16-3seed-1031/result.md` 末尾提到的「concat 在 RouteStick／StopCube 上的显著退化」一致，属于 MotionMem 内部两种读法的差别，不涉及与 FrameSamp 的比较。
+- 两个 motion 变体都是 N 越大成功率越高（concat 0.16 → 0.73，split 0.38 → 0.88），最慢的 M=120 最容易成功。H 节闭环 50 局里 FrameSamp 在 N=5 时 0/11，走势相反；但官方 FrameSamp 没有逐局数据，这个对比只能停在这里。
+- 若稿件用的是 concat，StopCube 的绝对成功率（43%）低于 split（66%）；正文如果引用 StopCube 成功率，需注明是哪个变体。
+
 ## 四、解释边界
 
 - B 节的「补上的信息」与 M 一致：`[t,N,M]` 上限 0.926；MotionMem 读速度 M 的准确率为 0.89–0.93（motion 组、history 组），FrameSamp 为 0.57–0.71。这是相关证据，没有做干预。
