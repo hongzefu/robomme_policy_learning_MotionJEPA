@@ -4,7 +4,7 @@
 
 探索性分析里的 MotionMem 优势，主要来自 motion 输入带来的速度信息（未做 motion 通道消融，不写成「记忆更强」）：
 1. **速度 M**：MotionMem 的 Text、History、Motion 组读速度明显更好（Text +0.207 [0.156, 0.261]）。Text 组换成 kNN 读法依然成立（History 组只在第 4、8 层）；在各自闭环轨迹上，FrameSamp 读不出速度（不高于多数类）。
-2. **`[t,N]` 之外的信息**：在 `[t,N]` 上加入表征后，MotionMem 的 Text、History、Motion 组在第 0–17 层都能补上 22–30 步误差，FrameSamp 各组只补 0–10 步（修正口径；同点配对差，第 17 层 Text +16.0 [12.1, 19.7] 步）。MotionMem 的 Current／Action 组在中间层最多也补 17 步；虽然 Action 组直接读速度不比 FrameSamp 好、Current 组只好 0.086，但在 `[t,N,M]` 之上几乎补不上（N 节），所以补上的也主要是速度信息。
+2. **`[t,N]` 之外的信息**：在 `[t,N]` 上加入表征后，MotionMem 的 Text、History、Motion 组在第 0–17 层都能补上 22–30 步误差，FrameSamp 各组只补 0–10 步（修正口径；同点配对差，第 17 层 Text +16.0 [12.1, 19.7] 步）。这个优势在低、高记忆需求的局里都显著（N≤3 +7～+16 步，N≥4 +22～+36 步），闭环轨迹上同样如此（B 节）。MotionMem 的 Current／Action 组在中间层最多也补 17 步；虽然 Action 组直接读速度不比 FrameSamp 好、Current 组只好 0.086，但在 `[t,N,M]` 之上几乎补不上（N 节），所以补上的也主要是速度信息。
 3. **外观相同的配对点**：画面几乎相同、但已过次数不同的配对点，MotionMem 读对的比例高 0.2–0.3。
 4. **按目标次数 N**：N≥4 时 MotionMem Text 读距按下更好（N=5 少 25.4 步）；但 N=2 时 FrameSamp 明显更好（MotionMem 多 23.8 步，比 oracle 还差），一部分来自回归到均值。
 
