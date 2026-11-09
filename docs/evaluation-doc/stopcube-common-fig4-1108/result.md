@@ -78,6 +78,15 @@
 
 MotionMem 的 Text 在第 0–17 层每一层都在 0.78–0.83 之间，FrameSamp 的 Text 在 0.46–0.52 之间。
 
+**闭环复核**：用 `stopcube-rollout-1105` 各模型自己的 50 局闭环轨迹，取 Q4（距正确窗口中心）。样本与标签同 `rollout_probe`，折用其 `hash_fold`，拟合同上；每个模型只在自己的轨迹上计算，跨模型只比增量。脚本 `records/diagnostics/closedloop_beyond_oracle.py`，结果 `records/explore/closedloop_beyond_oracle.json`，`leak=0`。
+
+| 模型 | 只用 `[t,N]`（R²／MAE） | `[t,N,M]` | + Text（9） | + History（8） | + Action（7） |
+| --- | --- | --- | --- | --- | --- |
+| FrameSamp（561 点、50 局） | 0.604／59.2 | 0.935 | 0.587，−2.8 [−10.3, 5.5] | 0.352，−14.8 [−28.6, −1.6] | 0.467，−10.9 [−21.2, 0.1] |
+| MotionMem（640 点、49 局） | 0.570／51.8 | 0.923 | 0.785，+16.4 [9.7, 22.9] | 0.824，+19.5 [10.1, 29.2] | 0.738，+11.8 [5.2, 18.5] |
+
+FrameSamp 加入任何一组表征都不提升（多数为负，相当于只增加了噪声维度）；MotionMem 的 Text、History、Action 都提升，与共同轨迹的结论一致。
+
 ### C. 按目标次数 N 拆开（Text 组，训练折内选层）
 
 | N | 距按下 MAE：MotionMem／FrameSamp／oracle `[t,N]` | 差（步） | 速度 M：MotionMem／FrameSamp | 已过次数：MotionMem／FrameSamp |
