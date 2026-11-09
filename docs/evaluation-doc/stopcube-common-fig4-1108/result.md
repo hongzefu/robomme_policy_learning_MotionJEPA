@@ -264,6 +264,12 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 
 第 0、8 层三者顺序在所有种子下都与成功率同序，取值范围互不重叠；第 17 层 concat 最低，顺序不成立。split 在三层都最高。
 
+**split 对 FrameSamp 的 kNN 检查**（`knn_probe.py` 不改，指向 `cmp-split-vs-fs`；结果 `records/explore/split/split-vs-fs-knn.json`）：
+
+- **速度 M**：Text +0.121 ～ +0.310，History +0.197 ～ +0.286，第 4／8／12／17 层区间都不含 0。
+- **距按下步数**：Text 第 8／12／17 层 split 更好（+11.2 [3.1, 19.0]、+22.6 [16.0, 29.2]、+8.8 [1.4, 16.3] 步），第 4 层区间含 0；Action 第 8–17 层小幅更好（+4.7 ～ +6.8）。concat 在 kNN 下这一项不占优（E 节），split 是占优的。
+- **不利项**：Current frame 组 FrameSamp 更好（距按下 −6.9 ～ −31.5 步，速度第 4、8 层 −0.14～−0.15）；Action 第 4 层距按下也是 FrameSamp 好（−21.5）。
+
 **解释边界**：只有三个模型，是相关证据，不是因果。FrameSamp 的成功率来自论文、不是本轮评测，评测平台与 seed 也不同。split 和 concat 的差别同时涉及 motion 预算（384 对 96）与读出方式，分不开。
 
 ### K. PCA 维度稳健性
@@ -359,7 +365,7 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 
 ## 六、本轮 tmux 会话
 
-`cc-cf-explore1`、`cc-cf-smoke-ctx`、`cc-cf-smoke-mot`、`cc-cf-repro-1105`、`cc-cf-ctx`、`cc-cf-mot`、`cc-cf-beyond`、`cc-cf-fig4`、`cc-cf-explore-new`、`cc-cf-beyond-new`、`cc-cf-closedloop`、`cc-cf-beyond-new2`、`cc-cf-scale100`、`cc-cf-crossN`、`cc-cf-knn`、`cc-cf-clspeed`、`cc-cf-smoke-split`、`cc-cf-split-g0`、`cc-cf-split-g1`、`cc-cf-split-g1b`、`cc-cf-split-ana`、`cc-cf-pcadim`、`cc-cf-foldseed`、`cc-cf-shuffle`、`cc-cf-tnm`、`cc-cf-verify46`、`cc-cf-3fold`、`cc-cf-curve`，全部自然退出。
+`cc-cf-explore1`、`cc-cf-smoke-ctx`、`cc-cf-smoke-mot`、`cc-cf-repro-1105`、`cc-cf-ctx`、`cc-cf-mot`、`cc-cf-beyond`、`cc-cf-fig4`、`cc-cf-explore-new`、`cc-cf-beyond-new`、`cc-cf-closedloop`、`cc-cf-beyond-new2`、`cc-cf-scale100`、`cc-cf-crossN`、`cc-cf-knn`、`cc-cf-clspeed`、`cc-cf-smoke-split`、`cc-cf-split-g0`、`cc-cf-split-g1`、`cc-cf-split-g1b`、`cc-cf-split-ana`、`cc-cf-pcadim`、`cc-cf-foldseed`、`cc-cf-shuffle`、`cc-cf-tnm`、`cc-cf-verify46`、`cc-cf-3fold`、`cc-cf-curve`、`cc-cf-knn-split`，全部自然退出。
 
 ## 七、归档
 
