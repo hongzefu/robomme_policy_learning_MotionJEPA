@@ -283,7 +283,7 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 | N≥4，第 0–17 层平均（范围） | 0.35（0.30–0.39） | 0.52（0.37–0.66） | 0.64（0.50–0.80） |
 | N≤3，第 0–17 层平均（范围） | 0.27（0.12–0.38） | −0.59（−1.24 ～ −0.01） | 0.17（−0.71 ～ 0.33） |
 
-高记忆需求的局里，三者与成功率同序；低记忆需求的局里，FrameSamp 最好，不同序。
+高记忆需求的局里，三者与成功率同序；低记忆需求的局里，FrameSamp 最好，不同序。图：[records/figures/three-models-by-N.png](records/figures/three-models-by-N.png)（`records/diagnostics/plot_three_models_by_N.py`）。
 
 **解释边界**：只有三个模型，是相关证据，不是因果。FrameSamp 的成功率来自论文、不是本轮评测，评测平台与 seed 也不同。split 和 concat 的差别同时涉及 motion 预算（384 对 96）与读出方式，分不开。
 
@@ -392,7 +392,7 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
   - split 加跑：split/
   - 候选图数据：beyond_oracle_by_layer.csv、beyond_oracle_by_layer_scale100.csv、by_N.csv、oracle_variants.csv、paired_diff.csv、three_model_dose.csv
 - `records/prefix-match-full.txt`：全量前缀与 1105 库逐局比对的判定行原文
-- `records/figures/`：上文引用的五张图
+- `records/figures/`：上文引用的六张图
 - `records/diagnostics/`：探索脚本
 - 清洗后的日志在 `records/logs/`，被 `*.log` 规则忽略，只留在本机
 
