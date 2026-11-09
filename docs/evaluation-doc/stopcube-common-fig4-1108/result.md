@@ -254,7 +254,7 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
     - Action 方向偏向 concat，但 18 层里 10 层区间含 0。
   - 也就是说，「补上 `[t,N]` 之外的速度信息」是有 motion 与没有 motion 的差别；在两个 motion 变体之间，它不随成功率变化；Current 组上甚至是成功率较低的 concat 更强，方向与成功率相反。
 
-**固定层、换分折种子**：Text 读距按下 R² 在固定层、5 个分折种子下的范围（`records/diagnostics/three_model_fold_seed.py`、`records/explore/three_model_fold_seed.json、learning_curve.json`）：
+**固定层、换分折种子**：Text 读距按下 R² 在固定层、5 个分折种子下的范围（`records/diagnostics/three_model_fold_seed.py`、`records/explore/three_model_fold_seed.json`）：
 
 | 层 | FrameSamp | concat | split |
 | --- | --- | --- | --- |
@@ -267,12 +267,12 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 **split 对 FrameSamp 的 kNN 检查**（`knn_probe.py` 不改，指向 `cmp-split-vs-fs`；结果 `records/explore/split/split-vs-fs-knn.json`）：
 
 - **速度 M**：Text +0.121 ～ +0.310，History +0.197 ～ +0.286，第 4／8／12／17 层区间都不含 0。
-- **距按下步数**：Text 第 8／12／17 层 split 更好（+11.2 [3.1, 19.0]、+22.6 [16.0, 29.2]、+8.8 [1.4, 16.3] 步），第 4 层区间含 0；Action 第 8–17 层小幅更好（+4.7 ～ +6.8）。concat 在 kNN 下这一项不占优（E 节），split 是占优的。
+- **距按下步数**：Text 第 8／12／17 层 split 更好（+11.2 [3.1, 19.0]、+22.6 [16.0, 29.2]、+8.8 [1.4, 16.3] 步），第 4 层区间含 0；Action 第 8、12 层小幅更好（+6.8、+5.6），第 17 层 +4.7 的区间下界贴近 0。History 四层区间都含 0。所以 split 在 kNN 下只在 Text 第 8／12／17 层显著占优；concat 在 kNN 下这一项不占优（E 节）。
 - **不利项**：Current frame 组 FrameSamp 更好（距按下 −6.9 ～ −31.5 步，速度第 4、8 层 −0.14～−0.15）；Action 第 4 层距按下也是 FrameSamp 好（−21.5）。
 
 **split 按 N 拆分**（`explore_breakdown.py` 不改，结果 `records/explore/split/split-vs-fs-breakdown.json`）：
 
-- Text 读距按下的 MAE 在 N=2..5 依次为 31.8、33.3、31.3、39.6 步，基本持平，而且每一档都低于 concat（41.2、40.9、43.2、47.0）。
+- Text 读距按下的 MAE 在 N=2..5 依次为 31.8、33.3、31.3、39.6 步，N=2–4 持平、N=5 略升，而且每一档都低于 concat（41.2、40.9、43.2、47.0）。
 - 与 FrameSamp 相比：N=2 时仍是 FrameSamp 更好（split 多 14.4 [3.9, 25.8] 步，比 concat 的 23.8 小）；N=3 +12.9 [−0.2, 25.4]；N=4 +27.1 [18.0, 36.1]；N=5 +32.8 [24.3, 40.9]。
 - Text 读速度 M：N=2 时 +0.070（区间含 0），N=3–5 时 +0.244 ～ +0.332（区间不含 0）。
 
@@ -283,7 +283,7 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 | N≥4，第 0–17 层平均（范围） | 0.35（0.30–0.39） | 0.52（0.37–0.66） | 0.64（0.50–0.80） |
 | N≤3，第 0–17 层平均（范围） | 0.27（0.12–0.38） | −0.59（−1.24 ～ −0.01） | 0.17（−0.71 ～ 0.33） |
 
-高记忆需求的局里，三者与成功率同序；低记忆需求的局里，FrameSamp 最好，不同序。图：[records/figures/three-models-by-N.png](records/figures/three-models-by-N.png)（`records/diagnostics/plot_three_models_by_N.py`）。
+高记忆需求的局里，三者与成功率同序，而且 18 层逐层都是 FrameSamp < concat < split。低记忆需求的局里，平均上 FrameSamp 最好、split 与它相当（18 层里 FrameSamp 有 13 层最高，split 有 5 层高于 FrameSamp），concat 每一层都最低。图：[records/figures/three-models-by-N.png](records/figures/three-models-by-N.png)（`records/diagnostics/plot_three_models_by_N.py`）。
 
 **解释边界**：只有三个模型，是相关证据，不是因果。FrameSamp 的成功率来自论文、不是本轮评测，评测平台与 seed 也不同。split 和 concat 的差别同时涉及 motion 预算（384 对 96）与读出方式，分不开。
 
@@ -359,7 +359,7 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
   - 25% 训练局（约 20 局）时，Text 组已有 +0.139～+0.188，History 第 0、8 层 +0.214～+0.320，区间都不含 0；只有 History 第 17 层在 25% 时区间含 0（+0.038）。
   - 50% 和 100% 时，各格区间都不含 0。
 - **`[t,N]` 之上的增量**：
-  - MotionMem 随训练局增多快速上升：25% 时 +6.6～+10.2 步，50% 时 +18.8～+24.5 步，100% 时 +22.1～+29.2 步。
+  - MotionMem 随训练局增多快速上升：25% 时 +6.6～+10.2 步（History 第 17 层仅 +0.9），50% 时 +18.8～+24.5 步，100% 时 +22.1～+29.2 步。
   - FrameSamp 一直只有 −1.7～+7.8 步。
   - 跨模型差在 25% 时 +7.1～+9.1（History 第 17 层 +2.6，区间含 0），100% 时 +16.0～+26.7。
 - MotionMem 的速度信息用很少的训练局就能线性读出；而要把它和 `[t,N]` 组合起来读距按下，需要更多的局。
@@ -386,7 +386,7 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 
 - `records/fig4-tables/`：r2_by_layer.csv、fit_lines.csv、reference_lines.csv、summary.json
 - `records/explore/`：
-  - 共同轨迹：angles.json、breakdown.json、layers_by_N.json、near_decision.json、knn.json、cross_N.json、pca_dim.json、fold_seed.json、shuffle_control.json、beyond_tNM.json、speed_by_time.json、speed_within_episode.txt、closedloop_speed_vs_success.txt、three_model_fold_seed.json
+  - 共同轨迹：angles.json、breakdown.json、layers_by_N.json、near_decision.json、knn.json、cross_N.json、pca_dim.json、fold_seed.json、shuffle_control.json、beyond_tNM.json、speed_by_time.json、speed_within_episode.txt、closedloop_speed_vs_success.txt、three_model_fold_seed.json、learning_curve.json
   - oracle 增量：beyond_oracle.json（旧口径）、beyond_oracle_scale100.json（修正口径）
   - 闭环：closedloop_beyond_oracle.json、closedloop_beyond_oracle_scale100.json、closedloop_speed.json
   - split 加跑：split/
