@@ -339,6 +339,7 @@ N≤3 的同样检验（`three_model_N3_paired.py`，结果 `records/explore/thr
 - **`[t,N]` + 表征读距按下**（FrameSamp MAE − MotionMem MAE）：24 格全部为正，+11.0 ～ +26.8 步，区间都不含 0。
 - **读速度 M**（MotionMem − FrameSamp）：24 格里 23 格区间不含 0。唯一的例外是 Text 第 17 层 16 维，+0.046 [−0.001, 0.092]。
 - 维度越高，优势一般越大（例如 Text 第 8 层读速度：16 维 +0.065，128 维 +0.257），所以 64 维不是对 MotionMem 最有利的选择。
+- split 变体对 FrameSamp 同样检查（`records/explore/split/split-vs-fs-pca_dim.json`）：两项结论 24/24 格区间都不含 0（`[t,N]` 增量 +7.7 ～ +27.3 步，读速度 +0.065 ～ +0.431）。
 
 ### L. 分折种子稳健性
 
