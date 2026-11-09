@@ -1,0 +1,1933 @@
+{
+  "schema_version": 1,
+  "label": "to_press",
+  "n_points": 2344,
+  "n_episodes": 98,
+  "method": {
+    "folds": {
+      "outer": 5,
+      "inner": 4,
+      "seed": 42,
+      "rule": "sha256(seed:盐:局编号) 取模"
+    },
+    "pca_dim": 64,
+    "lambdas": [
+      0.001,
+      0.01,
+      0.1,
+      1.0,
+      10.0,
+      100.0,
+      1000.0,
+      10000.0,
+      100000.0
+    ],
+    "targets": "to_press",
+    "fit_line": {
+      "layer": 17,
+      "weights": "episode_weights",
+      "bootstrap_repeats": 2000,
+      "bootstrap_seed": 42,
+      "unit": "episode",
+      "quantiles": [
+        0.025,
+        0.975
+      ]
+    },
+    "workers": 6
+  },
+  "model_name": {
+    "ctx": "baseline",
+    "mot": "motion"
+  },
+  "group_leak": 0,
+  "models": {
+    "ctx": {
+      "name": "baseline",
+      "groups": {
+        "Text": {
+          "layers": [
+            {
+              "mae": 60.28615390437773,
+              "r2": 0.2736032013217006,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "input",
+              "layer_index": -1,
+              "minus_time": 0.2148236856882887
+            },
+            {
+              "mae": 54.80981392235935,
+              "r2": 0.4551342574368462,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "0",
+              "layer_index": 0,
+              "minus_time": 0.39635474180343433
+            },
+            {
+              "mae": 53.9257920902153,
+              "r2": 0.4584130284895792,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "1",
+              "layer_index": 1,
+              "minus_time": 0.39963351285616733
+            },
+            {
+              "mae": 54.035199583800875,
+              "r2": 0.46013891404258533,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "2",
+              "layer_index": 2,
+              "minus_time": 0.40135939840917345
+            },
+            {
+              "mae": 53.58588246207134,
+              "r2": 0.4641093402972424,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "3",
+              "layer_index": 3,
+              "minus_time": 0.4053298246638305
+            },
+            {
+              "mae": 53.11115052374694,
+              "r2": 0.47213137547624107,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "4",
+              "layer_index": 4,
+              "minus_time": 0.4133518598428292
+            },
+            {
+              "mae": 53.64175587673281,
+              "r2": 0.4612589474647373,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "5",
+              "layer_index": 5,
+              "minus_time": 0.4024794318313254
+            },
+            {
+              "mae": 52.0419373493022,
+              "r2": 0.4850256243469119,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "6",
+              "layer_index": 6,
+              "minus_time": 0.4262461087135
+            },
+            {
+              "mae": 49.441522850997146,
+              "r2": 0.5215210137531368,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "7",
+              "layer_index": 7,
+              "minus_time": 0.46274149811972487
+            },
+            {
+              "mae": 49.92736715862348,
+              "r2": 0.5094532170833701,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "8",
+              "layer_index": 8,
+              "minus_time": 0.4506737014499582
+            },
+            {
+              "mae": 50.47534777253948,
+              "r2": 0.4957567233058867,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "9",
+              "layer_index": 9,
+              "minus_time": 0.43697720767247483
+            },
+            {
+              "mae": 50.69946376614207,
+              "r2": 0.4921423541080828,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "10",
+              "layer_index": 10,
+              "minus_time": 0.43336283847467094
+            },
+            {
+              "mae": 50.76282545027063,
+              "r2": 0.5016304539601069,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "11",
+              "layer_index": 11,
+              "minus_time": 0.442850938326695
+            },
+            {
+              "mae": 49.55532839369525,
+              "r2": 0.5227071786095734,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "12",
+              "layer_index": 12,
+              "minus_time": 0.4639276629761615
+            },
+            {
+              "mae": 49.695242377598596,
+              "r2": 0.5168145567741554,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "13",
+              "layer_index": 13,
+              "minus_time": 0.45803504114074356
+            },
+            {
+              "mae": 49.39676948640356,
+              "r2": 0.5213536080110655,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "14",
+              "layer_index": 14,
+              "minus_time": 0.46257409237765357
+            },
+            {
+              "mae": 49.59184371350484,
+              "r2": 0.5195894853078171,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "15",
+              "layer_index": 15,
+              "minus_time": 0.46080996967440524
+            },
+            {
+              "mae": 49.33805198528723,
+              "r2": 0.5203259269660243,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "16",
+              "layer_index": 16,
+              "minus_time": 0.4615464113326124
+            },
+            {
+              "mae": 51.24173737540732,
+              "r2": 0.48903853112841256,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "17",
+              "layer_index": 17,
+              "minus_time": 0.4302590154950007
+            }
+          ],
+          "best_layer": 12,
+          "fit_line": {
+            "slope": 0.4744035225192759,
+            "intercept": 70.03430730527403,
+            "slope_ci": [
+              0.4214068450841816,
+              0.5355161180442481
+            ],
+            "n_points": 2344,
+            "n_episodes": 98,
+            "r2": 0.48903853112841256,
+            "layer": 17
+          }
+        },
+        "Current frame": {
+          "layers": [
+            {
+              "mae": 73.42844939253312,
+              "r2": 0.06116696010208844,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "input",
+              "layer_index": -1,
+              "minus_time": 0.0023874444686765584
+            },
+            {
+              "mae": 75.29312851116688,
+              "r2": 0.024000396748991792,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "0",
+              "layer_index": 0,
+              "minus_time": -0.03477911888442009
+            },
+            {
+              "mae": 53.811755461332815,
+              "r2": 0.4640598605147789,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "1",
+              "layer_index": 1,
+              "minus_time": 0.405280344881367
+            },
+            {
+              "mae": 51.75050474017929,
+              "r2": 0.4897368848241198,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "2",
+              "layer_index": 2,
+              "minus_time": 0.43095736919070793
+            },
+            {
+              "mae": 51.2651759400268,
+              "r2": 0.4968498116048097,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "3",
+              "layer_index": 3,
+              "minus_time": 0.4380702959713978
+            },
+            {
+              "mae": 52.159559684050016,
+              "r2": 0.482813630568808,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "4",
+              "layer_index": 4,
+              "minus_time": 0.4240341149353961
+            },
+            {
+              "mae": 51.06376057172258,
+              "r2": 0.49999817697538773,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "5",
+              "layer_index": 5,
+              "minus_time": 0.44121866134197585
+            },
+            {
+              "mae": 48.899153999143564,
+              "r2": 0.5331173741215316,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "6",
+              "layer_index": 6,
+              "minus_time": 0.4743378584881197
+            },
+            {
+              "mae": 47.69692023660522,
+              "r2": 0.5494582042208551,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "7",
+              "layer_index": 7,
+              "minus_time": 0.49067868858744323
+            },
+            {
+              "mae": 47.81827640906221,
+              "r2": 0.5460163891509087,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "8",
+              "layer_index": 8,
+              "minus_time": 0.4872368735174968
+            },
+            {
+              "mae": 48.02695710469182,
+              "r2": 0.5471433745939964,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "9",
+              "layer_index": 9,
+              "minus_time": 0.48836385896058454
+            },
+            {
+              "mae": 47.78276993063741,
+              "r2": 0.557777180033598,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "10",
+              "layer_index": 10,
+              "minus_time": 0.4989976644001861
+            },
+            {
+              "mae": 48.05459620083717,
+              "r2": 0.5541517549624029,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "11",
+              "layer_index": 11,
+              "minus_time": 0.495372239328991
+            },
+            {
+              "mae": 49.67683669705778,
+              "r2": 0.522003855101209,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "12",
+              "layer_index": 12,
+              "minus_time": 0.46322433946779706
+            },
+            {
+              "mae": 49.49491974380783,
+              "r2": 0.5214455489924668,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "13",
+              "layer_index": 13,
+              "minus_time": 0.4626660333590549
+            },
+            {
+              "mae": 49.52566767373003,
+              "r2": 0.5217960034498819,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "14",
+              "layer_index": 14,
+              "minus_time": 0.46301648781647
+            },
+            {
+              "mae": 49.67997843349976,
+              "r2": 0.5205242643198078,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "15",
+              "layer_index": 15,
+              "minus_time": 0.4617447486863959
+            },
+            {
+              "mae": 49.92416567877526,
+              "r2": 0.5152538555306716,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "16",
+              "layer_index": 16,
+              "minus_time": 0.4564743398972597
+            },
+            {
+              "mae": 51.4748778873614,
+              "r2": 0.4900183655430176,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "17",
+              "layer_index": 17,
+              "minus_time": 0.4312388499096057
+            }
+          ],
+          "best_layer": 10,
+          "fit_line": {
+            "slope": 0.4984396327681545,
+            "intercept": 68.2506624267018,
+            "slope_ci": [
+              0.4388725848384665,
+              0.569779850466619
+            ],
+            "n_points": 2344,
+            "n_episodes": 98,
+            "r2": 0.4900183655430176,
+            "layer": 17
+          }
+        },
+        "Action token": {
+          "layers": [
+            {
+              "mae": 76.03647754037672,
+              "r2": -0.024928579595502987,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "0",
+              "layer_index": 0,
+              "minus_time": -0.08370809522891487
+            },
+            {
+              "mae": 75.14799748814983,
+              "r2": 0.005245656321136161,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "1",
+              "layer_index": 1,
+              "minus_time": -0.05353385931227572
+            },
+            {
+              "mae": 58.67358814990042,
+              "r2": 0.38531998966154557,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "2",
+              "layer_index": 2,
+              "minus_time": 0.3265404740281337
+            },
+            {
+              "mae": 55.97733110147893,
+              "r2": 0.40145602766335464,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "3",
+              "layer_index": 3,
+              "minus_time": 0.34267651202994276
+            },
+            {
+              "mae": 55.621871604271085,
+              "r2": 0.40859469515922764,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "4",
+              "layer_index": 4,
+              "minus_time": 0.34981517952581576
+            },
+            {
+              "mae": 55.22407144446297,
+              "r2": 0.4171474375610643,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "5",
+              "layer_index": 5,
+              "minus_time": 0.35836792192765243
+            },
+            {
+              "mae": 50.19476461839167,
+              "r2": 0.49311361012965904,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "6",
+              "layer_index": 6,
+              "minus_time": 0.43433409449624716
+            },
+            {
+              "mae": 49.78344535002992,
+              "r2": 0.4955267760347708,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "7",
+              "layer_index": 7,
+              "minus_time": 0.4367472604013589
+            },
+            {
+              "mae": 49.93806323074213,
+              "r2": 0.49499390624600326,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "8",
+              "layer_index": 8,
+              "minus_time": 0.4362143906125914
+            },
+            {
+              "mae": 50.616005151312066,
+              "r2": 0.4880449811249129,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "9",
+              "layer_index": 9,
+              "minus_time": 0.429265465491501
+            },
+            {
+              "mae": 51.21279751213315,
+              "r2": 0.484943899085023,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "10",
+              "layer_index": 10,
+              "minus_time": 0.4261643834516111
+            },
+            {
+              "mae": 51.54226951841495,
+              "r2": 0.4806102566045154,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "11",
+              "layer_index": 11,
+              "minus_time": 0.4218307409711035
+            },
+            {
+              "mae": 51.58628493716071,
+              "r2": 0.48054745694938306,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "12",
+              "layer_index": 12,
+              "minus_time": 0.4217679413159712
+            },
+            {
+              "mae": 51.35662731862565,
+              "r2": 0.4834723255486636,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "13",
+              "layer_index": 13,
+              "minus_time": 0.4246928099152517
+            },
+            {
+              "mae": 51.783339573569805,
+              "r2": 0.48166460770270736,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "14",
+              "layer_index": 14,
+              "minus_time": 0.4228850920692955
+            },
+            {
+              "mae": 51.023292288927955,
+              "r2": 0.4891988789727819,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "15",
+              "layer_index": 15,
+              "minus_time": 0.43041936333937003
+            },
+            {
+              "mae": 51.05701491476418,
+              "r2": 0.4884919552073719,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "16",
+              "layer_index": 16,
+              "minus_time": 0.42971243957396
+            },
+            {
+              "mae": 51.65955100114861,
+              "r2": 0.4825674411377888,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "17",
+              "layer_index": 17,
+              "minus_time": 0.42378792550437694
+            }
+          ],
+          "best_layer": 7,
+          "fit_line": {
+            "slope": 0.48066728607856485,
+            "intercept": 70.9907233539357,
+            "slope_ci": [
+              0.42062521485353643,
+              0.5538226453117302
+            ],
+            "n_points": 2344,
+            "n_episodes": 98,
+            "r2": 0.4825674411377888,
+            "layer": 17
+          }
+        },
+        "History frames": {
+          "layers": [
+            {
+              "mae": 72.5897229069161,
+              "r2": 0.05488032132641896,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "input",
+              "layer_index": -1,
+              "minus_time": -0.003899194306992926
+            },
+            {
+              "mae": 72.3480434073632,
+              "r2": 0.061999873587707977,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "0",
+              "layer_index": 0,
+              "minus_time": 0.0032203579542960936
+            },
+            {
+              "mae": 72.32689223503317,
+              "r2": 0.06301468171282743,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "1",
+              "layer_index": 1,
+              "minus_time": 0.004235166079415542
+            },
+            {
+              "mae": 72.35362181843696,
+              "r2": 0.06261821123531297,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "2",
+              "layer_index": 2,
+              "minus_time": 0.0038386956019010876
+            },
+            {
+              "mae": 72.34032140796052,
+              "r2": 0.06282416054712936,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "3",
+              "layer_index": 3,
+              "minus_time": 0.004044644913717477
+            },
+            {
+              "mae": 72.36527820885775,
+              "r2": 0.06230227650371534,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "4",
+              "layer_index": 4,
+              "minus_time": 0.003522760870303454
+            },
+            {
+              "mae": 72.34839931137653,
+              "r2": 0.0626090304069179,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "5",
+              "layer_index": 5,
+              "minus_time": 0.0038295147735060153
+            },
+            {
+              "mae": 72.30158011017504,
+              "r2": 0.06354802408075255,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "6",
+              "layer_index": 6,
+              "minus_time": 0.004768508447340669
+            },
+            {
+              "mae": 72.26581067050228,
+              "r2": 0.06392439009767115,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "7",
+              "layer_index": 7,
+              "minus_time": 0.005144874464259264
+            },
+            {
+              "mae": 72.2936917557691,
+              "r2": 0.06349611813204026,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "8",
+              "layer_index": 8,
+              "minus_time": 0.004716602498628375
+            },
+            {
+              "mae": 72.32027781050289,
+              "r2": 0.06286431768380407,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "9",
+              "layer_index": 9,
+              "minus_time": 0.004084802050392189
+            },
+            {
+              "mae": 72.2927389267836,
+              "r2": 0.06362386280779952,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "10",
+              "layer_index": 10,
+              "minus_time": 0.004844347174387642
+            },
+            {
+              "mae": 72.29997296379338,
+              "r2": 0.06309214353165782,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "11",
+              "layer_index": 11,
+              "minus_time": 0.004312627898245935
+            },
+            {
+              "mae": 72.28626378411639,
+              "r2": 0.06308842754698862,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "12",
+              "layer_index": 12,
+              "minus_time": 0.004308911913576741
+            },
+            {
+              "mae": 72.32675156858609,
+              "r2": 0.06192711542873275,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "13",
+              "layer_index": 13,
+              "minus_time": 0.0031475997953208656
+            },
+            {
+              "mae": 72.3036276322614,
+              "r2": 0.06264144417413642,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "14",
+              "layer_index": 14,
+              "minus_time": 0.003861928540724535
+            },
+            {
+              "mae": 72.30661531099996,
+              "r2": 0.06287777814611972,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "15",
+              "layer_index": 15,
+              "minus_time": 0.00409826251270784
+            },
+            {
+              "mae": 72.31090689004698,
+              "r2": 0.06271921155174176,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "16",
+              "layer_index": 16,
+              "minus_time": 0.003939695918329877
+            },
+            {
+              "mae": 72.94243822294504,
+              "r2": 0.0562875874404174,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "17",
+              "layer_index": 17,
+              "minus_time": -0.002491928192994486
+            }
+          ],
+          "best_layer": 7
+        }
+      },
+      "references": {
+        "time_only": {
+          "mae": 71.76738373083413,
+          "r2": 0.05877951563341188,
+          "n_samples": 2344,
+          "n_episodes": 98,
+          "n_no_prediction": 0
+        },
+        "time_and_target_count": {
+          "mae": 55.347822595292705,
+          "r2": 0.44707264429362636,
+          "n_samples": 2344,
+          "n_episodes": 98,
+          "n_no_prediction": 0
+        }
+      }
+    },
+    "mot": {
+      "name": "motion",
+      "groups": {
+        "Text": {
+          "layers": [
+            {
+              "mae": 60.317339345963475,
+              "r2": 0.272535090894367,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "input",
+              "layer_index": -1,
+              "minus_time": 0.21375557526095512
+            },
+            {
+              "mae": 43.38954383969794,
+              "r2": 0.6519983220233541,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "0",
+              "layer_index": 0,
+              "minus_time": 0.5932188063899422
+            },
+            {
+              "mae": 56.54816916051053,
+              "r2": 0.39308591606788257,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "1",
+              "layer_index": 1,
+              "minus_time": 0.3343064004344707
+            },
+            {
+              "mae": 55.5190185066572,
+              "r2": 0.39913209048473575,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "2",
+              "layer_index": 2,
+              "minus_time": 0.34035257485132386
+            },
+            {
+              "mae": 56.52169516929316,
+              "r2": 0.3692016829098491,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "3",
+              "layer_index": 3,
+              "minus_time": 0.31042216727643723
+            },
+            {
+              "mae": 56.93995313528232,
+              "r2": 0.35906356208680845,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "4",
+              "layer_index": 4,
+              "minus_time": 0.30028404645339657
+            },
+            {
+              "mae": 51.433029470022475,
+              "r2": 0.471568700643189,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "5",
+              "layer_index": 5,
+              "minus_time": 0.4127891850097771
+            },
+            {
+              "mae": 52.20246595021139,
+              "r2": 0.45450282551906895,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "6",
+              "layer_index": 6,
+              "minus_time": 0.39572330988565707
+            },
+            {
+              "mae": 48.58789892333629,
+              "r2": 0.5183538820816539,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "7",
+              "layer_index": 7,
+              "minus_time": 0.459574366448242
+            },
+            {
+              "mae": 47.63570752374123,
+              "r2": 0.5344532950391009,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "8",
+              "layer_index": 8,
+              "minus_time": 0.475673779405689
+            },
+            {
+              "mae": 47.389069432347796,
+              "r2": 0.5427453362143349,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "9",
+              "layer_index": 9,
+              "minus_time": 0.48396582058092297
+            },
+            {
+              "mae": 47.12733426791337,
+              "r2": 0.5429044955224295,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "10",
+              "layer_index": 10,
+              "minus_time": 0.4841249798890176
+            },
+            {
+              "mae": 47.11459465041842,
+              "r2": 0.5511918697161835,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "11",
+              "layer_index": 11,
+              "minus_time": 0.4924123540827716
+            },
+            {
+              "mae": 47.908999952956485,
+              "r2": 0.5391523653858474,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "12",
+              "layer_index": 12,
+              "minus_time": 0.48037284975243555
+            },
+            {
+              "mae": 48.66845687677728,
+              "r2": 0.5272721001232239,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "13",
+              "layer_index": 13,
+              "minus_time": 0.468492584489812
+            },
+            {
+              "mae": 48.497430863036435,
+              "r2": 0.5267263586283653,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "14",
+              "layer_index": 14,
+              "minus_time": 0.46794684299495337
+            },
+            {
+              "mae": 48.27576485835236,
+              "r2": 0.5333929473245382,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "15",
+              "layer_index": 15,
+              "minus_time": 0.47461343169112635
+            },
+            {
+              "mae": 48.54131024708019,
+              "r2": 0.5296739773057908,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "16",
+              "layer_index": 16,
+              "minus_time": 0.4708944616723789
+            },
+            {
+              "mae": 56.369798876738706,
+              "r2": 0.3815365012321492,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "17",
+              "layer_index": 17,
+              "minus_time": 0.32275698559873733
+            }
+          ],
+          "best_layer": 0,
+          "fit_line": {
+            "slope": 0.4312348575427307,
+            "intercept": 78.65493205808515,
+            "slope_ci": [
+              0.37028568926059335,
+              0.5025852454039192
+            ],
+            "n_points": 2344,
+            "n_episodes": 98,
+            "r2": 0.3815365012321492,
+            "layer": 17
+          }
+        },
+        "Current frame": {
+          "layers": [
+            {
+              "mae": 73.42844940647005,
+              "r2": 0.061166959678749966,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "input",
+              "layer_index": -1,
+              "minus_time": 0.002387444045338083
+            },
+            {
+              "mae": 73.7815371458514,
+              "r2": 0.04875025573332814,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "0",
+              "layer_index": 0,
+              "minus_time": -0.010029259900083742
+            },
+            {
+              "mae": 71.27908760834987,
+              "r2": 0.10421621771953993,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "1",
+              "layer_index": 1,
+              "minus_time": 0.045436702086128045
+            },
+            {
+              "mae": 70.18129224288755,
+              "r2": 0.1325649759142442,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "2",
+              "layer_index": 2,
+              "minus_time": 0.07378546028083233
+            },
+            {
+              "mae": 58.50593791099481,
+              "r2": 0.3812679643462321,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "3",
+              "layer_index": 3,
+              "minus_time": 0.32248844871282023
+            },
+            {
+              "mae": 58.616499707858495,
+              "r2": 0.3714153456176874,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "4",
+              "layer_index": 4,
+              "minus_time": 0.3126358299842755
+            },
+            {
+              "mae": 59.43883866181443,
+              "r2": 0.35469542884793104,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "5",
+              "layer_index": 5,
+              "minus_time": 0.29591591321451916
+            },
+            {
+              "mae": 47.790065994171286,
+              "r2": 0.5584143315411979,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "6",
+              "layer_index": 6,
+              "minus_time": 0.499634815907786
+            },
+            {
+              "mae": 45.94961785302061,
+              "r2": 0.5797176348513484,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "7",
+              "layer_index": 7,
+              "minus_time": 0.5209381192179365
+            },
+            {
+              "mae": 46.03851722243534,
+              "r2": 0.5650459095901427,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "8",
+              "layer_index": 8,
+              "minus_time": 0.5062663939567308
+            },
+            {
+              "mae": 46.820426062531354,
+              "r2": 0.5529619862721147,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "9",
+              "layer_index": 9,
+              "minus_time": 0.4941824706387028
+            },
+            {
+              "mae": 47.611554795941565,
+              "r2": 0.53982824520812,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "10",
+              "layer_index": 10,
+              "minus_time": 0.4810487295747081
+            },
+            {
+              "mae": 47.9709010328222,
+              "r2": 0.5314284977221738,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "11",
+              "layer_index": 11,
+              "minus_time": 0.47264898208876194
+            },
+            {
+              "mae": 50.24102654380464,
+              "r2": 0.4837531374514965,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "12",
+              "layer_index": 12,
+              "minus_time": 0.4249736218180846
+            },
+            {
+              "mae": 50.19558857761477,
+              "r2": 0.4801286643798235,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "13",
+              "layer_index": 13,
+              "minus_time": 0.4213491487464116
+            },
+            {
+              "mae": 50.5745631147752,
+              "r2": 0.4767203917655546,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "14",
+              "layer_index": 14,
+              "minus_time": 0.4179408761321427
+            },
+            {
+              "mae": 50.93873329184968,
+              "r2": 0.4678245513520488,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "15",
+              "layer_index": 15,
+              "minus_time": 0.40904503571863693
+            },
+            {
+              "mae": 50.56930099322656,
+              "r2": 0.5069022765583968,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "16",
+              "layer_index": 16,
+              "minus_time": 0.44812276092498493
+            },
+            {
+              "mae": 51.80843357227646,
+              "r2": 0.4783647532970311,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "17",
+              "layer_index": 17,
+              "minus_time": 0.4195852376636192
+            }
+          ],
+          "best_layer": 7,
+          "fit_line": {
+            "slope": 0.48493177825374284,
+            "intercept": 71.45330796701569,
+            "slope_ci": [
+              0.42288742383746164,
+              0.5631972513899016
+            ],
+            "n_points": 2344,
+            "n_episodes": 98,
+            "r2": 0.4783647532970311,
+            "layer": 17
+          }
+        },
+        "Action token": {
+          "layers": [
+            {
+              "mae": 75.16524854388102,
+              "r2": -0.016171565095376428,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "0",
+              "layer_index": 0,
+              "minus_time": -0.07495108072878831
+            },
+            {
+              "mae": 74.89315289165496,
+              "r2": -0.0014856493211692356,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "1",
+              "layer_index": 1,
+              "minus_time": -0.06026516495458112
+            },
+            {
+              "mae": 74.36790654287599,
+              "r2": 0.03292887566862601,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "2",
+              "layer_index": 2,
+              "minus_time": -0.02585063996478587
+            },
+            {
+              "mae": 71.3982384876648,
+              "r2": 0.09633701948409679,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "3",
+              "layer_index": 3,
+              "minus_time": 0.037557503850684903
+            },
+            {
+              "mae": 69.4977081212577,
+              "r2": 0.1514338110842337,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "4",
+              "layer_index": 4,
+              "minus_time": 0.09265429545082182
+            },
+            {
+              "mae": 67.76911437359422,
+              "r2": 0.19090812472418406,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "5",
+              "layer_index": 5,
+              "minus_time": 0.13212860909077218
+            },
+            {
+              "mae": 63.01437498524592,
+              "r2": 0.2747914581660068,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "6",
+              "layer_index": 6,
+              "minus_time": 0.21601194253259492
+            },
+            {
+              "mae": 51.548384235517695,
+              "r2": 0.48227074302177086,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "7",
+              "layer_index": 7,
+              "minus_time": 0.423491227388359
+            },
+            {
+              "mae": 52.824259681122385,
+              "r2": 0.4572296776335011,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "8",
+              "layer_index": 8,
+              "minus_time": 0.3984501620000892
+            },
+            {
+              "mae": 51.77868978698553,
+              "r2": 0.4789134384034891,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "9",
+              "layer_index": 9,
+              "minus_time": 0.4201339227700772
+            },
+            {
+              "mae": 53.48811179295935,
+              "r2": 0.4471193595272046,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "10",
+              "layer_index": 10,
+              "minus_time": 0.3883398438937927
+            },
+            {
+              "mae": 53.564581096932315,
+              "r2": 0.4331341639514157,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "11",
+              "layer_index": 11,
+              "minus_time": 0.3743546483180038
+            },
+            {
+              "mae": 54.21937940526271,
+              "r2": 0.41337245810273493,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "12",
+              "layer_index": 12,
+              "minus_time": 0.35459294246932305
+            },
+            {
+              "mae": 53.52908281200115,
+              "r2": 0.4138995900884538,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "13",
+              "layer_index": 13,
+              "minus_time": 0.3551200744550419
+            },
+            {
+              "mae": 54.35308110337261,
+              "r2": 0.3996299999549755,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "14",
+              "layer_index": 14,
+              "minus_time": 0.3408504843215636
+            },
+            {
+              "mae": 54.71957802621352,
+              "r2": 0.397130287920919,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "15",
+              "layer_index": 15,
+              "minus_time": 0.3383507722875071
+            },
+            {
+              "mae": 54.628980713842104,
+              "r2": 0.3994740303269253,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "16",
+              "layer_index": 16,
+              "minus_time": 0.3406945146935134
+            },
+            {
+              "mae": 55.129364811457684,
+              "r2": 0.3900362788520475,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "17",
+              "layer_index": 17,
+              "minus_time": 0.3312567632186356
+            }
+          ],
+          "best_layer": 7,
+          "fit_line": {
+            "slope": 0.3924817685907008,
+            "intercept": 82.25198248845193,
+            "slope_ci": [
+              0.3398764946228696,
+              0.4586599198412708
+            ],
+            "n_points": 2344,
+            "n_episodes": 98,
+            "r2": 0.3900362788520475,
+            "layer": 17
+          }
+        },
+        "History frames": {
+          "layers": [
+            {
+              "mae": 72.69128452863809,
+              "r2": 0.05092908544747621,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "input",
+              "layer_index": -1,
+              "minus_time": -0.007850430185935675
+            },
+            {
+              "mae": 70.56077172869311,
+              "r2": 0.07865966415680703,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "0",
+              "layer_index": 0,
+              "minus_time": 0.019880148523395147
+            },
+            {
+              "mae": 70.81760901887202,
+              "r2": 0.09256172761814696,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "1",
+              "layer_index": 1,
+              "minus_time": 0.03378221198473508
+            },
+            {
+              "mae": 69.42620998609411,
+              "r2": 0.12368162163913421,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "2",
+              "layer_index": 2,
+              "minus_time": 0.06490210600572233
+            },
+            {
+              "mae": 69.46171955406845,
+              "r2": 0.12305648363277821,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "3",
+              "layer_index": 3,
+              "minus_time": 0.06427696799936633
+            },
+            {
+              "mae": 69.4354379536797,
+              "r2": 0.1247590492778694,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "4",
+              "layer_index": 4,
+              "minus_time": 0.06597953364445752
+            },
+            {
+              "mae": 69.29097818091444,
+              "r2": 0.1285178166817149,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "5",
+              "layer_index": 5,
+              "minus_time": 0.06973830104830303
+            },
+            {
+              "mae": 68.69275057555028,
+              "r2": 0.14530944464463869,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "6",
+              "layer_index": 6,
+              "minus_time": 0.0865299290112268
+            },
+            {
+              "mae": 69.96958326488883,
+              "r2": 0.1187868614600972,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "7",
+              "layer_index": 7,
+              "minus_time": 0.06000734582668532
+            },
+            {
+              "mae": 68.8417818684613,
+              "r2": 0.14109796133108743,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "8",
+              "layer_index": 8,
+              "minus_time": 0.08231844569767555
+            },
+            {
+              "mae": 69.82011603391015,
+              "r2": 0.11815780375412888,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "9",
+              "layer_index": 9,
+              "minus_time": 0.05937828812071699
+            },
+            {
+              "mae": 69.63897649956272,
+              "r2": 0.1231105934766149,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "10",
+              "layer_index": 10,
+              "minus_time": 0.06433107784320302
+            },
+            {
+              "mae": 69.36904827236118,
+              "r2": 0.12829984775719383,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "11",
+              "layer_index": 11,
+              "minus_time": 0.06952033212378195
+            },
+            {
+              "mae": 69.00107038254605,
+              "r2": 0.13933931191986548,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "12",
+              "layer_index": 12,
+              "minus_time": 0.0805597962864536
+            },
+            {
+              "mae": 68.86565647779243,
+              "r2": 0.1437440973253027,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "13",
+              "layer_index": 13,
+              "minus_time": 0.0849645816918908
+            },
+            {
+              "mae": 69.28950587462843,
+              "r2": 0.13649673574681065,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "14",
+              "layer_index": 14,
+              "minus_time": 0.07771722011339877
+            },
+            {
+              "mae": 69.24176036503502,
+              "r2": 0.1390419670108729,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "15",
+              "layer_index": 15,
+              "minus_time": 0.08026245137746102
+            },
+            {
+              "mae": 68.89892995834633,
+              "r2": 0.14783610135430159,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "16",
+              "layer_index": 16,
+              "minus_time": 0.0890565857208897
+            },
+            {
+              "mae": 69.6451140593021,
+              "r2": 0.10715375284872597,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "17",
+              "layer_index": 17,
+              "minus_time": 0.048374237215314086
+            }
+          ],
+          "best_layer": 16
+        },
+        "Motion": {
+          "layers": [
+            {
+              "mae": 67.00600046648883,
+              "r2": 0.18504992558570021,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "input",
+              "layer_index": -1,
+              "minus_time": 0.12627040995228833
+            },
+            {
+              "mae": 71.12087983882111,
+              "r2": 0.11912676922638377,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "0",
+              "layer_index": 0,
+              "minus_time": 0.06034725359297188
+            },
+            {
+              "mae": 70.37575085670521,
+              "r2": 0.12602447702293562,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "1",
+              "layer_index": 1,
+              "minus_time": 0.06724496138952374
+            },
+            {
+              "mae": 70.23717187649629,
+              "r2": 0.12955102011341868,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "2",
+              "layer_index": 2,
+              "minus_time": 0.0707715044800068
+            },
+            {
+              "mae": 70.66980623221936,
+              "r2": 0.12542643693600697,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "3",
+              "layer_index": 3,
+              "minus_time": 0.06664692130259509
+            },
+            {
+              "mae": 70.5995450888359,
+              "r2": 0.12661712503005906,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "4",
+              "layer_index": 4,
+              "minus_time": 0.06783760939664718
+            },
+            {
+              "mae": 70.61374702854714,
+              "r2": 0.12671133848440364,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "5",
+              "layer_index": 5,
+              "minus_time": 0.06793182285099175
+            },
+            {
+              "mae": 70.67846352889835,
+              "r2": 0.12507100538568006,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "6",
+              "layer_index": 6,
+              "minus_time": 0.06629148975226817
+            },
+            {
+              "mae": 70.67752034639086,
+              "r2": 0.12475387361526213,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "7",
+              "layer_index": 7,
+              "minus_time": 0.06597435798185025
+            },
+            {
+              "mae": 70.28517932565924,
+              "r2": 0.12823929710355164,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "8",
+              "layer_index": 8,
+              "minus_time": 0.06945978147013976
+            },
+            {
+              "mae": 70.2490315693865,
+              "r2": 0.128088676506113,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "9",
+              "layer_index": 9,
+              "minus_time": 0.06930916087270111
+            },
+            {
+              "mae": 70.29677293370725,
+              "r2": 0.12829260875723536,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "10",
+              "layer_index": 10,
+              "minus_time": 0.06951309312382348
+            },
+            {
+              "mae": 70.2543746622006,
+              "r2": 0.12924631324770708,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "11",
+              "layer_index": 11,
+              "minus_time": 0.0704667976142952
+            },
+            {
+              "mae": 70.12750710004636,
+              "r2": 0.12973348465699142,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "12",
+              "layer_index": 12,
+              "minus_time": 0.07095396902357953
+            },
+            {
+              "mae": 70.09631836561614,
+              "r2": 0.13135581164698873,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "13",
+              "layer_index": 13,
+              "minus_time": 0.07257629601357685
+            },
+            {
+              "mae": 70.17455636142188,
+              "r2": 0.13008670540648248,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "14",
+              "layer_index": 14,
+              "minus_time": 0.0713071897730706
+            },
+            {
+              "mae": 70.12680115641929,
+              "r2": 0.1303724343319207,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "15",
+              "layer_index": 15,
+              "minus_time": 0.07159291869850881
+            },
+            {
+              "mae": 70.31399370375537,
+              "r2": 0.12754016839788496,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "16",
+              "layer_index": 16,
+              "minus_time": 0.06876065276447307
+            },
+            {
+              "mae": 70.14915971157939,
+              "r2": 0.12050486244048686,
+              "n_samples": 2344,
+              "n_episodes": 98,
+              "n_no_prediction": 0,
+              "layer": "17",
+              "layer_index": 17,
+              "minus_time": 0.06172534680707498
+            }
+          ],
+          "best_layer": -1
+        }
+      },
+      "references": {
+        "time_only": {
+          "mae": 71.76738373083413,
+          "r2": 0.05877951563341188,
+          "n_samples": 2344,
+          "n_episodes": 98,
+          "n_no_prediction": 0
+        },
+        "time_and_target_count": {
+          "mae": 55.347822595292705,
+          "r2": 0.44707264429362636,
+          "n_samples": 2344,
+          "n_episodes": 98,
+          "n_no_prediction": 0
+        }
+      }
+    }
+  },
+  "task_seconds": {
+    "tasks": 173,
+    "mean": 8.597255271746416
+  },
+  "note": "流程判定不代表解码成功；只到「可解码」。共同轨迹：两个模型在同一批示教观测上开环前向。",
+  "same_points": {
+    "points": 2344,
+    "diff": 0
+  },
+  "verdicts": [
+    "SAME_POINTS=PASS points=2344 diff=0",
+    "GROUP_LEAK=PASS leak=0",
+    "ORACLE_EQUAL=PASS r2_a=0.44707264429362636 r2_b=0.44707264429362636",
+    "PROBE=PASS model=baseline group=Text layer=17 r2=0.4890 minus_time=0.4303 pick=last",
+    "PROBE=PASS model=baseline group=Text layer=12 r2=0.5227 minus_time=0.4639 pick=best",
+    "PROBE=PASS model=baseline group=Current_frame layer=17 r2=0.4900 minus_time=0.4312 pick=last",
+    "PROBE=PASS model=baseline group=Current_frame layer=10 r2=0.5578 minus_time=0.4990 pick=best",
+    "PROBE=PASS model=baseline group=Action_token layer=17 r2=0.4826 minus_time=0.4238 pick=last",
+    "PROBE=PASS model=baseline group=Action_token layer=7 r2=0.4955 minus_time=0.4367 pick=best",
+    "PROBE=PASS model=baseline group=History_frames layer=17 r2=0.0563 minus_time=-0.0025 pick=last",
+    "PROBE=PASS model=baseline group=History_frames layer=7 r2=0.0639 minus_time=0.0051 pick=best",
+    "PROBE=PASS model=motion group=Text layer=17 r2=0.3815 minus_time=0.3228 pick=last",
+    "PROBE=PASS model=motion group=Text layer=0 r2=0.6520 minus_time=0.5932 pick=best",
+    "PROBE=PASS model=motion group=Current_frame layer=17 r2=0.4784 minus_time=0.4196 pick=last",
+    "PROBE=PASS model=motion group=Current_frame layer=7 r2=0.5797 minus_time=0.5209 pick=best",
+    "PROBE=PASS model=motion group=Action_token layer=17 r2=0.3900 minus_time=0.3313 pick=last",
+    "PROBE=PASS model=motion group=Action_token layer=7 r2=0.4823 minus_time=0.4235 pick=best",
+    "PROBE=PASS model=motion group=History_frames layer=17 r2=0.1072 minus_time=0.0484 pick=last",
+    "PROBE=PASS model=motion group=History_frames layer=16 r2=0.1478 minus_time=0.0891 pick=best",
+    "PROBE=PASS model=motion group=Motion layer=17 r2=0.1205 minus_time=0.0617 pick=last",
+    "PROBE=PASS model=motion group=Motion layer=input r2=0.1850 minus_time=0.1263 pick=best"
+  ],
+  "seconds": 272.06355942972004,
+  "inputs": {
+    "points": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-hover-probe-1105/hover_points.json",
+    "replay_root": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-common-fig4-1108/replay",
+    "repro_summary": null
+  }
+}
