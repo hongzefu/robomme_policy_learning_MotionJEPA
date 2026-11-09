@@ -120,6 +120,21 @@ blockquote{border-left:4px solid #999;margin:10px 0;padding:4px 12px;background:
 
 <h1>第二部分（技术细节，供 agent 追踪）</h1>
 
+<h2>〇′ 开工后修订（修订一，美东 2026-11-09）</h2>
+<p>开工令「同意开工并登记」「同意开始 尽可能自己做 不要阻塞」（针对 <code>9e1038d</code>）。用户随后追加「不用这个！」（指官方 50 局重评）。开工审查 <code>PLAN_CONSISTENCY_REVIEW=FAIL base=9e1038d0922228401fd85b580b3df62befb6388e findings=7 blocking=1</code>，按用户「尽可能自己做 不要阻塞」由主代理裁决：</p>
+<table>
+<tr><th>编号</th><th>问题</th><th>裁决</th></tr>
+<tr><td>U1（用户）</td><td>官方 50 局重评</td><td>取消：<code>MODEL_REPRO</code> 与 repro 阶段删除。依据：模型、权重、运行器代码与上一轮相同，上一轮在 <code>efc3a19</code> 上两模型已 <code>MODEL_REPRO=PASS</code>；本轮只新增脚本</td></tr>
+<tr><td>F1（blocking）</td><td>停 / 跑名单不全</td><td>停止名单：<code>RS_REPLAY</code>、<code>RS_POOL</code>、<code>RS_PAIRS</code>、<code>RS_DEMO_LAYOUT</code>、<code>SWAP_SCOPE</code>、<code>MULTI_SWAP_EQ</code>（这些 FAIL 会使后续读数失效）；<code>DONOR_DISTINCT</code> FAIL 时剔除逐位相同的供体对后照跑并记录；其余照跑如实报告</td></tr>
+<tr><td>F2</td><td>局数写了 790 / 820 / 824</td><td>以 824 为准（实际只会更少）；去掉重评后合计运行约 4.5～7 小时</td></tr>
+<tr><td>F3</td><td>Wan 门槛措辞</td><td>门槛决定「是否跑交换」：R 原样成功 ≥ 8 全跑，&lt; 8 只跑 N、Z、Rnd</td></tr>
+<tr><td>F4</td><td>判定行分散</td><td>第三节判定行另含 <code>RS_PAIRS</code>、<code>RS_SWAP_INTERSECT</code>；PARTIAL 格式 <code>RS_SWAP_FULL=PARTIAL model=wan reason=few_success r_success=&lt;k&gt; groups=N,Z,Rnd</code></td></tr>
+<tr><td>F4b</td><td>冒烟供体来源</td><td>同上一轮：冒烟队列内先跑 N 2 局，再 <code>donors --smoke</code> 从冒烟录制裁供体，再跑交换与置零</td></tr>
+<tr><td>F5</td><td>replay-check 在 worktree 能否跑</td><td>能跑则在 W1 内跑；不能跑（缺子模块或需 GPU）则合并后由主会话跑，判据不变</td></tr>
+<tr><td>F6</td><td>两行供体若要改服务端无 owner</td><td>若冒烟发现需改 <code>serve_policy_attn.py</code>，另派 W2 并把该文件列入其可写集合</td></tr>
+<tr><td>F7</td><td>到达只用水平距离</td><td>保持水平距离 0.03 m（与上一轮读数同口径），并另报环境官方第一子目标成败作对照</td></tr>
+</table>
+
 <h2>〇、前置声明与红线</h2>
 <ul>
 <li>R1 现有能力（<code>2393df7</code>）：<code>eval.py</code> profile <code>plfull</code>（局号 &lt; 80、seed ∈ {42,1,2}、<code>--plfull-metadata-dir</code>）；<code>run_local</code> 多局 <code>--swap-map</code>；<code>serve_policy_attn</code> 逐局供体、<code>motion_swap_exact</code> 只替换起点帧在供体中精确存在的窗口（供体文件只放起点 0、32 两行即「只换第一步」）；<code>subgoal_trace_runner</code> 允许 PatternLock、RouteStick，回执含逐帧 <code>demo_task_index</code>，步轨迹含 <code>tcp_before</code>/<code>tcp_after</code>。未验证：plfull 下 RouteStick 能否直接跑。</li>
