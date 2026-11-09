@@ -293,6 +293,11 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 
 - MotionMem 的 Text 读速度随时间上升（0.55 → 0.95），FrameSamp 基本持平；MotionMem 的 History 从最早一档起就在 0.82 以上。看上去像是速度信息先出现在记忆组，再随着看到更多 motion 窗口逐步进入 Text。
 - **混杂**：t 越大的档只来自 N 大或速度慢的局（局数从 98 降到 58），各档的局组成不同，不能直接读成同一局内随时间积累。
+- **同局对照**（`records/diagnostics/speed_within_episode.py`）：只保留早档 t∈[56, 120) 与晚档 t≥200 都有点的 58 局。
+  - MotionMem Text 从 0.69 升到 0.95，晚减早 +0.262 [0.186, 0.337]。
+  - FrameSamp Text 从 0.45 升到 0.60，+0.149 [0.032, 0.279]。
+  - History 组两边基本不变（MotionMem +0.040，FrameSamp −0.038）。
+  - 同一局内，Text 读速度随时间上升在两个模型里都存在，MotionMem 升得更多，晚期也高得多（0.95 对 0.60）。
 
 ## 四、解释边界
 
