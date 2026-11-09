@@ -45,6 +45,7 @@
 - FrameSamp 的 14% 来自论文 Table 3，另两个来自 official-stage2-1026 的三 seed 逐局结果，平台不同。
 - split 和 concat 的差别同时涉及 motion 预算（384 对 96）和读出方式，所以句子只按 token 数描述，不归因。
 - 不是所有读数都同序（反例见 result.md 第三节 J），所以用「several … rise」，不写「order as」。
+- 0.51／0.65／0.77 是训练折内选层的值。固定层时，第 0、8 层在 5 个分折种子下都同序，但第 17 层不成立（concat 0.38–0.43，低于 FrameSamp 0.46–0.49）。正文若用这句，需写明是「best layer」，或改用第 8 层的数字（0.47–0.51／0.52–0.55／0.66–0.69）。
 - 候选图 `paper/figures/candidates/belief_dose_common.pdf`（F3 已合入）。
 
 ## 两版都必须保留的限定
