@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-09T08:10:00Z",
-    "america_new_york": "2026-11-09T03:10:00-05:00"
+    "utc": "2026-11-09T11:20:00Z",
+    "america_new_york": "2026-11-09T06:20:00-05:00"
   },
   "repo": {
     "branch": "v11-4task-modul-wantp768-50k",
-    "base_head": "f7dfe16"
+    "base_head": "dfc73df"
   },
   "freeze": {
     "active": false,
@@ -19,9 +19,9 @@
         "file": "1108-4task-modul-wantp768-50k-plan.html",
         "sha": "4b14722"
       },
-      "state": "done",
-      "state_changed_at": "2026-11-09T08:00:21Z",
-      "state_reason": "50001 步完成，10 份 ckpt 齐全，50000 真实加载通过；ckpt 上传为长尾（bucket 已按用户裁决改公开）",
+      "state": "closed",
+      "state_changed_at": "2026-11-09T08:30:00Z",
+      "state_reason": "长尾 ckpt 上传完成 HF_VERIFY=PASS ckpts=10（bucket 公开）",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiTAgjMcs9tdyGT8J4e",
         "host": "ip-10-242-11-177"
@@ -95,7 +95,8 @@
           "tmux": "w768-ckptup",
           "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/w768-ckptup.log",
           "done_line": "HF_VERIFY=PASS ckpts=10",
-          "status": "pending"
+          "status": "pass",
+          "evidence": "HF_VERIFY=PASS ckpts=10"
         }
       ],
       "running_handles": [],
@@ -108,22 +109,16 @@
         }
       ],
       "pending_decisions": [],
-      "next_steps": [
-        {
-          "what": "等上传长尾完成后标 closed",
-          "command": "Monitor v1-store/logs/w768-ckptup.log",
-          "verdict_line": "HF_VERIFY=PASS ckpts=10"
-        }
-      ]
+      "next_steps": []
     },
     "4task-wantp768-eval": {
       "plan": {
         "file": "1108-4task-modul-wantp768-50k-plan.html",
         "sha": "4b14722"
       },
-      "state": "running",
-      "state_changed_at": "2026-11-09T08:01:24Z",
-      "state_reason": "上游训练 done（TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10），按 kind: go 自动开工",
+      "state": "closed",
+      "state_changed_at": "2026-11-09T11:08:57Z",
+      "state_reason": "692 局评估完成 298/692=43.06%，档案 docs/training-doc/local692-wantp768-50k/；无长尾",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiTAgjMcs9tdyGT8J4e",
         "host": "ip-10-242-11-177"
@@ -134,9 +129,9 @@
       "pre_handoff": [
         {
           "what": "E1 本机评估完成",
-          "evidence": "EVAL692=PASS episodes=<n> success=<k> rate=<x> preseeded_errors=9 new_errors=<n> retried=<n> expect_motion_stats=1",
+          "evidence": "EVAL692=PASS episodes=692 success=298 rate=0.4306 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1",
           "where": "v1-store/logs/w768-eval.log",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "预标 9 局按身份定位",
@@ -146,13 +141,7 @@
         }
       ],
       "long_tail": [],
-      "running_handles": [
-        {
-          "tmux": "w768-eval",
-          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/w768-eval.log",
-          "done_line": "EVAL692=PASS"
-        }
-      ],
+      "running_handles": [],
       "authorizations": [
         {
           "kind": "go",
@@ -162,13 +151,7 @@
         }
       ],
       "pending_decisions": [],
-      "next_steps": [
-        {
-          "what": "评估完成后写评估档案并标 done",
-          "command": "Monitor v1-store/logs/w768-eval.log",
-          "verdict_line": "EVAL692=PASS"
-        }
-      ]
+      "next_steps": []
     }
   }
 }
