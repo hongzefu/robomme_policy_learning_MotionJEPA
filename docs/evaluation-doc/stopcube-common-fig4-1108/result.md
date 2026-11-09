@@ -145,6 +145,20 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
   - 外观相同配对点：从第 1 层起，MotionMem 三组每一层都高于 FrameSamp 三组（Text 0.89–0.96 对 0.54–0.68）。
   - 速度 M：MotionMem Text 第 0–17 层为 0.74–0.81，其余五条曲线都在 0.48–0.67；按每局等权，多数类基线约 0.42。
 
+### G. 闭环轨迹上读速度 M
+
+用各模型自己的闭环轨迹（Q4 样本集，样本与折同 B 节闭环复核），逐层读速度 M：一对多岭回归，训练折内 PCA64，每局等权。脚本 `records/diagnostics/closedloop_speed.py`，结果 `records/explore/closedloop_speed.json`，`leak=0`。
+
+- 按每局等权的多数类基线：FrameSamp 0.44，MotionMem 0.45。
+- FrameSamp：Text、Current frame、History、Action 各层都在 0.30–0.43，不高于多数类，即在它自己的轨迹上读不出速度。
+- MotionMem：
+  - Text 0.64–0.77（第 0 层 0.77）。
+  - History 0.72–0.80。
+  - Motion 输入层 0.98，各层 0.80–0.83。
+  - Current frame 0.39–0.54，Action 0.46–0.57。
+
+速度信息在 motion token 的输入层就几乎完整（0.98），到第 0 层已经出现在 Text 和 History 里。这和 F5「优势来自 motion 输入」一致，也和 5.3 注意力分析里 language 在第 0–1 层读 motion 的通路一致。
+
 ## 四、解释边界
 
 - B 节的「补上的信息」与 M 一致：`[t,N,M]` 上限 0.926；MotionMem 读速度 M 的准确率为 0.89–0.93（motion 组、history 组），FrameSamp 为 0.57–0.71。这是相关证据，没有做干预。
