@@ -38,7 +38,7 @@ def task(args):
     model, group, layer = args
     s, prefix, action = _S[model]
     X = (action[:, layer] if group == "action" else prefix[:, layer + 1, COL[group]]).astype(np.float64)
-    T = np.hstack([hp._one_hot(s["t"]), hp._one_hot(s["N"])])
+    T = np.hstack([hp._one_hot(s["t"]), hp._one_hot(s["N"])]) * float(os.environ.get("ONEHOT_SCALE", "1"))  # 审查 F1：放大独热列，使 [t,N] 几乎不受岭惩罚
     def feats(fold):
         train = s["outer"] != fold
         pca = hp.fit_pca(X[train], rp.episode_weights(s["groups"][train]))

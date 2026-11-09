@@ -21,7 +21,7 @@ def task(args):
         X = _S["actions"][model][:, layer].astype(np.float64)
     else:
         X = _S["banks"][model][:, layer + 1, COL[group]].astype(np.float64)
-    T = hp.time_features(s, "t_N")
+    T = hp.time_features(s, "t_N") * float(os.environ.get("ONEHOT_SCALE", "1"))  # 审查 F1：放大独热列，使 [t,N] 几乎不受岭惩罚
     def feats(fold):
         train = s["outer"] != fold
         pca = hp.fit_pca(X[train], episode_weights(s["groups"][train]))

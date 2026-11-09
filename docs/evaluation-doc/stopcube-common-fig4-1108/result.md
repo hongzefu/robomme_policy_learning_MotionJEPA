@@ -62,39 +62,41 @@
 
 ### B. oracle 之外的信息：`[t,N]` 独热 + 组特征（训练折内 PCA 64）
 
-只用 `[t,N]` 时 R² 0.447、MAE 55.3 步；`[t,N,M]` 加性独热为 0.926、20.2 步（缺的变量就是速度 M）。下表是在 `[t,N]` 上加入组特征后的 R²，以及 MAE 相对只用 `[t,N]` 减少的步数（局级 95% 区间）：
+只用 `[t,N]` 时 R² 0.447、MAE 55.3 步；`[t,N,M]` 加性独热为 0.926、20.2 步（缺的变量就是速度 M）。
+
+**口径修正（探索审查 F1）**：最初的版本里，独热列和 PCA 得分共用一个岭惩罚 λ。表征没有可补信息的一方会被迫选大 λ，把 `[t,N]` 也一起压掉，于是它的增量被压成负值，跨模型差被放大。修正版把独热列放大 100 倍（环境变量 `ONEHOT_SCALE=100`），使 `[t,N]` 几乎不受惩罚。下面三张表都以修正版为准（`records/explore/beyond_oracle_scale100.json`、`closedloop_beyond_oracle_scale100.json`）；修正前的版本保留在 `beyond_oracle.json`、`closedloop_beyond_oracle.json`，只作对照。
+
+共同轨迹上，加入组特征后的 R²，以及 MAE 相对只用 `[t,N]` 减少的步数（局级 95% 区间）：
 
 | 模型 | 组（层） | R² | MAE 减少（步） |
 | --- | --- | ---: | --- |
-| FrameSamp | Text（8） | 0.510 | 5.4 [2.4, 8.5] |
-| FrameSamp | History frames（8） | 0.493 | 0.7 [−5.6, 7.0] |
-| FrameSamp | Current frame（10） | 0.558 | 7.6 [4.4, 11.0] |
-| FrameSamp | Action token，各层 | 0.39–0.57 | ≤ 7 |
-| MotionMem | Text（0／8／17） | 0.832／0.828／0.778 | 26.1 [21.7, 30.7]／26.1 [21.2, 30.8]／21.7 [17.4, 25.7] |
-| MotionMem | History frames（8） | 0.855 | 28.1 [21.8, 34.2] |
-| MotionMem | Motion（输入层／8） | 0.808／0.793 | 24.9 [17.7, 31.4]／22.4 [16.1, 28.5] |
-| MotionMem | Current frame（7） | 0.725 | 16.8 [11.7, 21.8] |
-| MotionMem | Action token，第 4–17 层 | 0.63–0.73 | 10–17 |
+| FrameSamp | Text（8／17） | 0.558／0.547 | 7.8 [5.2, 10.4]／6.1 [3.2, 8.8] |
+| FrameSamp | History frames（8） | 0.481 | 2.6 [−0.5, 5.1] |
+| FrameSamp | Current frame（10） | 0.598 | 9.3 [6.4, 12.5] |
+| FrameSamp | Action token，各层 | 0.45–0.58 | 0–8 |
+| MotionMem | Text（0／8／17） | 0.837／0.826／0.781 | 26.7 [22.3, 31.2]／26.2 [21.4, 30.7]／22.1 [18.1, 25.9] |
+| MotionMem | History frames（8） | 0.864 | 29.2 [23.3, 34.9] |
+| MotionMem | Motion（输入层） | 0.862 | 28.2 [22.3, 33.7] |
+| MotionMem | Current frame（7） | 0.725 | 16.7 [12.3, 21.2] |
+| MotionMem | Action token（7） | 0.728 | 17.5 [13.3, 21.7] |
 
-MotionMem 的 Text 在第 0–17 层每一层都在 0.78–0.83 之间，FrameSamp 的 Text 在 0.46–0.52 之间。
+**同点配对的跨模型差**：同一批点、同一分折，FrameSamp 的局级 MAE 减 MotionMem 的局级 MAE（正 = MotionMem 误差小）：
 
-**同点配对的跨模型差**：同一批点、同一分折，`[t,N]` + 组特征时，FrameSamp 的局级 MAE 减 MotionMem 的局级 MAE（正 = MotionMem 误差小，按局重采样 95% 区间，见 `beyond_oracle.json` 的 `cross_model_mae_ctx_minus_mot`）：
-
-| 组 | 第 17 层 | 第 0–16 层范围 |
+| 组 | 第 17 层 | 其他层 |
 | --- | --- | --- |
-| Text | +18 [13, 22] | +18 ～ +26，各层区间都不含 0 |
-| History frames | +18 [11, 26] | +14 ～ +28 |
-| Action token | +5 [1, 9] | +1 ～ +16 |
-| Current frame | +3 [−2, 8] | −11 ～ +11（第 1 层为 −11 [−17, −6]） |
+| Text | +16.0 [12.1, 19.7] | 第 8 层 +18.4 [13.5, 22.9]；第 0–17 层 +16 ～ +24，各层区间都不含 0 |
+| History frames | +17.9 [10.8, 24.3] | +18 ～ +27 |
+| Current frame | +4.6 [1.3, 7.8] | 0 ～ +13 |
+| Action token | +3.1 [0.1, 5.9] | +1 ～ +14 |
 
-**闭环复核**：用 `stopcube-rollout-1105` 各模型自己的 50 局闭环轨迹，取 Q4（距正确窗口中心）。样本与标签同 `rollout_probe`，折用其 `hash_fold`，拟合同上；每个模型只在自己的轨迹上计算，跨模型只比增量。脚本 `records/diagnostics/closedloop_beyond_oracle.py`，结果 `records/explore/closedloop_beyond_oracle.json`，`leak=0`。
+**闭环复核**：用 `stopcube-rollout-1105` 各模型自己的 50 局闭环轨迹，取 Q4（距正确窗口中心）。样本与标签同 `rollout_probe`，折用其 `hash_fold`，拟合同上（修正版），`leak=0`。两个模型的点集不同，跨模型只能比方向，不能当作配对显著差（审查 F7）。
 
 | 模型 | 只用 `[t,N]`（R²／MAE） | `[t,N,M]` | + Text（9） | + History（8） | + Action（7） |
 | --- | --- | --- | --- | --- | --- |
-| FrameSamp（561 点、50 局） | 0.604／59.2 | 0.935 | 0.587，−2.8 [−10.3, 5.5] | 0.352，−14.8 [−28.6, −1.6] | 0.467，−10.9 [−21.2, 0.1] |
-| MotionMem（640 点、49 局） | 0.570／51.8 | 0.923 | 0.785，+16.4 [9.7, 22.9] | 0.824，+19.5 [10.1, 29.2] | 0.738，+11.8 [5.2, 18.5] |
+| FrameSamp（561 点、50 局） | 0.604／59.2 | 0.935 | 0.599，−1.7 [−5.9, 2.4] | 0.575，−3.5 [−8.3, 0.9] | 0.590，−1.7 [−4.5, 1.0] |
+| MotionMem（640 点、49 局） | 0.570／51.8 | 0.923 | 0.786，+16.5 [10.3, 22.8] | 0.841，+20.3 [12.6, 28.2] | 0.723，+10.7 [4.8, 16.5] |
 
-FrameSamp 加入任何一组表征都不提升（多数为负，相当于只增加了噪声维度）；MotionMem 的 Text、History、Action 都提升，与共同轨迹的结论一致。
+修正后，FrameSamp 的增量在共同轨迹上是小的正值，在闭环上区间都含 0；MotionMem 修正前后基本不变。
 
 ### C. 按目标次数 N 拆开（Text 组，训练折内选层）
 
@@ -107,6 +109,12 @@ FrameSamp 加入任何一组表征都不提升（多数为负，相当于只增�
 
 N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误差几乎不随 N 增长。
 
+**N=2 与 N≥4 应并列写（审查 F6）**。按 N 看预测的平均偏差与斜率（预测对真值，同一 N 内）：
+
+- MotionMem 的偏差依次为 +30、+19、−28、−22 步，有部分回归到均值；N=2 时更差，主要来自 +30 的高估。
+- N=4、5 时，两个模型的偏差相近（MotionMem −28、−22；FrameSamp −26、−31）。差别在同一 N 内的斜率：MotionMem 0.68、0.63，FrameSamp 0.39、0.36，即 MotionMem 更能跟上同一 N 下由速度 M 造成的差异。
+- 全体斜率：MotionMem 0.63，FrameSamp 0.42，oracle `[t,N]` 0.38。
+
 逐层看，只在评估时按 N≥4 分档（探针仍在全部点上训练）：MotionMem Text 第 0–16 层 R² 0.44–0.66，FrameSamp 0.30–0.39；N≤3 时 MotionMem 多数层为负。图：[records/figures/text-by-N.png](records/figures/text-by-N.png)、[records/figures/layers-by-N.png](records/figures/layers-by-N.png)。
 
 **旧闭环数据同样的拆法**（`stopcube-rollout-1105` 的第 17 层折外预测，q4 点集，各自轨迹）：FrameSamp Text MAE 在 N=2..5 依次为 42.8、67.0、71.2、106.1；MotionMem 为 52.8、45.7、46.7、64.1。走势与共同轨迹一致。
@@ -116,6 +124,8 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 - B 节的「补上的信息」与 M 一致：`[t,N,M]` 上限 0.926；MotionMem 读速度 M 的准确率为 0.89–0.93（motion 组、history 组），FrameSamp 为 0.57–0.71。这是相关证据，没有做干预。
 - C 节按 N 拆分是事后拆分。N 与局长、取点数相关（N=2 的局短、点少），每局等权后短局权重相对更大。
 - 选层后的读数，以及 B、C 两节，都没有预先登记；正文引用时须标明是探索性结果。
+- **优势来自 motion 输入，未必是「长期记忆」（审查 F5）**：MotionMem 额外看到近期 motion 窗口（相邻帧运动），可以直接得到方块速度；FrameSamp 只有稀疏采样的历史帧。所以「能读出 M」更可能是 motion 通道的作用，没有做 motion 通道消融。正文宜写成「motion 表征提供了任务规格 [t,N] 之外的动态信息」，不宜写成「记忆更强」。
+- 探索审查判定行：`EXPLORE_AUDIT=PASS base=5c0f588 findings=7 blocking=0`。F2、F3（内层 PCA 用到内层验证行、λ 与层的二重选择）属轻微乐观，两模型对称；F4 确认跨模型配对差同点、同折，按局重采样实现正确。
 
 ## 五、实施中调整
 
@@ -125,7 +135,7 @@ N=2 时 FrameSamp 明显更好。N 越大，MotionMem 的优势越大，且误�
 
 ## 六、本轮 tmux 会话
 
-`cc-cf-explore1`、`cc-cf-smoke-ctx`、`cc-cf-smoke-mot`、`cc-cf-repro-1105`、`cc-cf-ctx`、`cc-cf-mot`、`cc-cf-beyond`、`cc-cf-fig4`、`cc-cf-explore-new`、`cc-cf-beyond-new`，全部自然退出。
+`cc-cf-explore1`、`cc-cf-smoke-ctx`、`cc-cf-smoke-mot`、`cc-cf-repro-1105`、`cc-cf-ctx`、`cc-cf-mot`、`cc-cf-beyond`、`cc-cf-fig4`、`cc-cf-explore-new`、`cc-cf-beyond-new`、`cc-cf-closedloop`、`cc-cf-beyond-new2`、`cc-cf-scale100`，全部自然退出。
 
 ## 七、归档
 
