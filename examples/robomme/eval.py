@@ -18,6 +18,9 @@ except ImportError:
     from env_runner import EnvRunner
 
 OFFICIAL_SEEDS = (0, 7, 42)
+# plfull：PatternLock 全因子交换自建 80 局清单（局号 0–79），主 seed 42，seed 复核 1、2。
+PLFULL_SEEDS = (42, 1, 2)
+PLFULL_EPISODES = 80
 
 
 @dataclasses.dataclass
@@ -39,6 +42,8 @@ class Args:
     use_history: bool = True
     # official：官方 test 16×50、seed 42、1300 步；testx：hold-out xhard 清单，放宽只在此口径生效。
     profile: str = "official"
+    # plfull 口径的自建 metadata 目录（含 record_dataset_<task>_metadata.json）；其他口径必须为空。
+    plfull_metadata_dir: str = ""
 
 
 class UncertainRPC(RuntimeError):
@@ -206,6 +211,9 @@ class EpisodeEvaluator:
         self.batch_seq = self.replan_seq = self.next_global_frame = 0
         rpc = {"episode_nonce": episode_nonce, "expected_run_identity_sha256": self.args.run_identity_sha256,
                "expected_server_nonce": self.args.expected_server_nonce}
+        if self.args.profile == "plfull":
+            # 多局交换：服务端在 reset 时按局身份查供体；该键随 ACK 原样回显，旧口径不带。
+            rpc["episode_key"] = self.episode_key
         require_ack(client.request({"reset": True, "eval_rpc": rpc}), "reset_finished", rpc)
         state = EpisodeState()
         prompt, self.recorder = self.init_episode(env_runner, state, video_save_dir)
@@ -258,7 +266,7 @@ def write_record(path, record):
 
 
 def load_chunk(args):
-    episode_limit = 110 if args.profile == "testx" else 50
+    episode_limit = {"testx": 110, "plfull": PLFULL_EPISODES}.get(args.profile, 50)
     with Path(args.episode_manifest).open() as stream:
         manifest = json.load(stream)
     if "chunks" in manifest:
@@ -294,9 +302,17 @@ def evaluate(args: Args, *, runner_factory=EnvRunner, client_factory=EvaluationC
         if (args.dataset != "test" or args.obs_horizon != 16 or not args.use_history or args.rpc_timeout_seconds <= 0
                 or args.max_steps <= 0 or args.model_seed <= 0):
             raise ContractError("testx 评估固定 test、16 步和历史模式，max_steps、model_seed 与 RPC 超时须为正")
+    elif args.profile == "plfull":
+        if (args.dataset != "test" or args.max_steps != 1300 or args.obs_horizon != 16 or not args.use_history
+                or args.rpc_timeout_seconds <= 0 or args.model_seed not in PLFULL_SEEDS):
+            raise ContractError("plfull 评估固定 test、1300、16 步和历史模式，seed 须为 42／1／2，RPC 超时须为正")
+        if not args.plfull_metadata_dir or not Path(args.plfull_metadata_dir).is_dir():
+            raise ContractError(f"plfull 需要 --plfull-metadata-dir 指向自建 metadata 目录，得到 {args.plfull_metadata_dir!r}")
     elif (args.dataset != "test" or args.max_steps != 1300 or args.obs_horizon != 16 or not args.use_history
             or args.rpc_timeout_seconds <= 0 or args.model_seed not in OFFICIAL_SEEDS):
         raise ContractError("官方评估固定 test、1300、16 步和历史模式，seed 须为官方 0／7／42，RPC 超时须为正")
+    if args.profile != "plfull" and args.plfull_metadata_dir:
+        raise ContractError("--plfull-metadata-dir 只用于 plfull 口径")
     require_sha256(args.run_identity_sha256)
     if not all((args.episode_manifest, args.chunk, args.attempt_output, args.run_identity_sha256,
                 args.expected_server_nonce, args.model_kind)):
@@ -325,6 +341,7 @@ def evaluate(args: Args, *, runner_factory=EnvRunner, client_factory=EvaluationC
                             run_identity_sha256=args.run_identity_sha256, chunk_id=args.chunk)
             runner = None
             evaluator = EpisodeEvaluator(args, output)
+            evaluator.episode_key = key
             began = time.monotonic()
             terminal_saved = False
             try:
@@ -332,6 +349,10 @@ def evaluate(args: Args, *, runner_factory=EnvRunner, client_factory=EvaluationC
                 if args.profile == "testx":
                     runner = runner_factory(episode["task_name"], video_dir, max_steps=args.max_steps, dataset="test",
                                             difficulty=episode["difficulty"])
+                elif args.profile == "plfull":
+                    # 自建 metadata 覆盖官方表；局数不固定，seed／难度仍由下方 resolve_episode 逐局核对。
+                    runner = runner_factory(episode["task_name"], video_dir, max_steps=1300, dataset="test",
+                                            difficulty=episode["difficulty"], metadata_dir=args.plfull_metadata_dir)
                 else:
                     runner = runner_factory(episode["task_name"], video_dir, max_steps=1300, dataset="test")
                     if runner.num_episodes != 50:

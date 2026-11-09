@@ -26,7 +26,7 @@ class EnvRunner:
     """
 
     def __init__(self, env_id: str, video_save_dir: str, max_steps: int = 1300, dataset: str = "test",
-                 difficulty: str | None = None) -> None:
+                 difficulty: str | None = None, metadata_dir: str | None = None) -> None:
         # 延迟加载仿真依赖，使纯 CPU 契约测试无需创建图形环境。
         import robomme.robomme_env  # noqa: F401
         from robomme.env_record_wrapper import BenchmarkEnvBuilder
@@ -41,7 +41,23 @@ class EnvRunner:
         # testx 口径传入清单难度；official 不传，走原路径。
         self.expected_difficulty = difficulty
 
-        if difficulty is not None and difficulty.startswith("xhard"):
+        if metadata_dir is not None:
+            # plfull 口径：照 XHARD_METADATA_DIR 的做法改读自建 metadata 目录，任务类与难度仍按清单原样。
+            if difficulty is None or difficulty.startswith("xhard"):
+                raise ValueError(f"metadata_dir 只用于非 xhard 的清单难度，得到 {difficulty!r}")
+            if not Path(metadata_dir).is_dir():
+                raise ValueError(f"metadata_dir 不是目录：{metadata_dir!r}")
+            self.route = "plfull"
+            self.build_id = env_id
+            self.env_builder = BenchmarkEnvBuilder(
+                env_id=env_id,
+                dataset=dataset,
+                action_space="joint_angle",
+                gui_render=False,
+                override_metadata_path=Path(metadata_dir),
+                max_steps=max_steps,
+            )
+        elif difficulty is not None and difficulty.startswith("xhard"):
             # 注册 <Task>XHard 子类；必须在 import robomme.robomme_env 之后。
             import robomme_xhard  # noqa: F401
             xhard_dir = os.environ.get("XHARD_METADATA_DIR", "")
