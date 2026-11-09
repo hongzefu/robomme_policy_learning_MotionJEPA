@@ -26,6 +26,17 @@
 - 时间上的限定：O 节显示早期（t<80）MotionMem Text 读速度只有 0.55，与 FrameSamp 无显著差，之后上升到 0.95；同局对照里 FrameSamp Text 也会上升（+0.149），只是幅度较小。正文篇幅不够时不写，附录写。
 - 「16 steps lower error」来自同点配对差 +16.0 [12.1, 19.7]。
 
+
+**方案 A 精简版**（按篇幅压缩；图注 54 词，正文段 142 词）：
+
+图注：
+
+> **What hidden states add beyond the task specification on StopCube.** Both policies replay 98 official demonstrations. Out-of-fold $R^2$ for the steps left to the correct window from the true time step and target count $[t,N]$ plus one token group per layer. Dashed: $[t,N]$; dotted: $[t,N]$ and the true cube speed.
+
+正文段：
+
+> StopCube tests task progress most directly: the robot must press a button when a cube reaches the target on its $N$-th visit, the only time-sensitive RoboMME task (human success 78\%)~\cite{dai2026robomme}. We replay the same 98 official demonstrations through both policies and probe the steps left to the correct window (\cref{fig:belief}). The true time step and target count give $R^2=0.45$; adding the true cube speed gives 0.93. Adding MotionMem's text tokens raises $R^2$ to 0.78--0.84 at every layer, FrameSamp's to 0.48--0.56 (layer 17: 16 steps lower MAE, paired 95\% CI [12, 20]). The gain appears to be mostly the cube's speed, which MotionMem's text tokens decode better (0.81 vs.\ 0.60), mainly from layer 0, where text reads motion tokens (\cref{sec:attn}). Decoding does not show use, and we did not ablate the motion channel.
+
 ## 方案 B：只把原 Fig. 4 换成共同轨迹版
 
 图：`paper/figures/belief_probe_common.pdf`。
