@@ -124,3 +124,7 @@
 | Imitation | RouteStick | 4 | 8.0 |
 
 套件均值（逐任务等权）：Counting 47.0、Permanence 23.0、Reference 19.5、Imitation 24.5；All 28.50。
+
+## 协议变更（2026-11-10 美东）：停在最后 checkpoint × 3 seed
+
+用户决定不再补 3 checkpoint × 3 seed（原话：「给出方案把我们也全部改成三个run 就不用跑九次了。」「先按照现在的这个五个模型跑三次的这个现状，呃，你你直接归档就就可以了。这个其他情况下都不需要这个，呃，就就不跑三个 checkpoint 了。」）。队列于 FS1024 70000 seed 7 运行中停止（`eval_queue.py --stop`：`STOP_DONE sent=97 remaining=[]`），70000 seed 7 未完成、不计入。五个模型最后 checkpoint × 3 seed 的逐局结果集中在 `final-ckpt-3seed/`，汇总见其 `README.md`。
