@@ -4,6 +4,7 @@
 
 | 档案 | 范围 | 状态 |
 | --- | --- | --- |
+| [逐子目标位置交换（全部长度）+ 交换任务按第 k 次交换](sp-swap-1110/result.md) | orig100 MotionMem 与 Frozen Wan 59999；PatternLock m=1–7、RouteStick m=2–7 每个 (m,j) 换第 j 段示范 motion token（Bsame/Bcross/Z），三交换任务按第 k 次交换（Bsame_k/Z_k）读第一次拿起；GreatLakes 8×A40 + aspen，约 5000 局 | 完成；MotionMem 第 j 步跟随供体减基线 RS Bsame +0.08 [+0.02,+0.13]、Bcross +0.11 [+0.02,+0.20]、PL Bcross +0.10，集中在 j=1；Wan ≈0；无对角结构（MotionMem 前序步约一半改变，与 seed 一致率 20/40 相当）；交换任务换交换段 token 后两模型都很少改拿「没交换」答案 |
 | [RouteStick 第一子目标交换 + Frozen Wan 对比](rs-swap-full-1109/result.md) | orig100 MotionMem 与 Frozen Wan 59999；easy 两步局只换只读第一个子目标（1 路径 × 1 绕向，16 类型），N/Z/Rnd/A/Bsw/Bside/C/D1/D2/W0 + seed 复核，约 870 局 | 完成；MotionMem 绕向跟供体 15/18、左右跟供体 16/20、D2 donor_dir 39/124 对 donor_abs 0/124；Wan 交换 237/237 走自己（不读内容），但置零后第一步 1/13 |
 | [PatternLock 全因子单步交换 + Frozen Wan 对比](pl-swap-full-1109/result.md) | orig100 MotionMem（concat 1×1024）与 Frozen Wan pooling 59999；新 env_seed 80 局覆盖 40 种（起点格，方向），N/Z/Rnd/A/B/C/D + seed 复核，共 2433 局 | 完成；MotionMem Z 10/37、Rnd 11/37、B 跟供体方向 136/150、D donor_dir 147/378 对 donor_abs 61/378；Wan 交换与扰动 0 局跟供体（token 几乎不影响动作） |
 | [PatternLock 单步 motion token 交换](pl-single-step-swap-1108/result.md) | motion 59999；easy 单步成功 8 局 × 5 seed；只换示范段唯一 motion 窗口：原样 / 置零 / 位置方向同 / 位置同方向异 / 位置异方向同，共 130 局 | 完成；B 15/15 走到供体目标格（10 局可区分）；C 位置异方向同仍走对方向 15/25（60%），2 对确定由 token 驱动、2 对走错，0/25 走到供体绝对目标；置零 16/40 |

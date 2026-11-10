@@ -1,0 +1,7455 @@
+{
+  "tasks": {
+    "VideoUnmaskSwap": {
+      "scanned": 450,
+      "usable": 450,
+      "cells_taken": {
+        "easy|n1|stay": 8,
+        "easy|n1|moved": 8,
+        "medium|n1|stay": 7,
+        "medium|n1|moved": 7,
+        "easy|n2|stay": 8,
+        "easy|n2|moved": 8,
+        "medium|n2|stay": 7,
+        "medium|n2|moved": 7,
+        "hard|n3|stay": 15,
+        "hard|n3|moved": 15
+      },
+      "cells_available": {
+        "easy|n1|stay": 29,
+        "easy|n1|moved": 58,
+        "medium|n1|stay": 36,
+        "medium|n1|moved": 32,
+        "easy|n2|stay": 30,
+        "easy|n2|moved": 33,
+        "medium|n2|stay": 23,
+        "medium|n2|moved": 59,
+        "hard|n3|stay": 34,
+        "hard|n3|moved": 38
+      },
+      "overlap": [],
+      "scan_files": [
+        "scan_VideoUnmaskSwap.json",
+        "scan_VideoUnmaskSwap_hard.json"
+      ],
+      "bins": {
+        "1": 30,
+        "2": 30,
+        "3": 30
+      }
+    },
+    "ButtonUnmaskSwap": {
+      "scanned": 450,
+      "usable": 450,
+      "cells_taken": {
+        "easy|n1|stay": 8,
+        "easy|n1|moved": 8,
+        "medium|n1|stay": 7,
+        "medium|n1|moved": 7,
+        "easy|n2|stay": 8,
+        "easy|n2|moved": 8,
+        "medium|n2|stay": 7,
+        "medium|n2|moved": 7,
+        "hard|n3|stay": 15,
+        "hard|n3|moved": 15
+      },
+      "cells_available": {
+        "easy|n1|stay": 25,
+        "easy|n1|moved": 52,
+        "medium|n1|stay": 39,
+        "medium|n1|moved": 45,
+        "easy|n2|stay": 34,
+        "easy|n2|moved": 39,
+        "medium|n2|stay": 23,
+        "medium|n2|moved": 43,
+        "hard|n3|stay": 42,
+        "hard|n3|moved": 36
+      },
+      "overlap": [],
+      "scan_files": [
+        "scan_ButtonUnmaskSwap.json",
+        "scan_ButtonUnmaskSwap_hard.json"
+      ],
+      "bins": {
+        "1": 30,
+        "2": 30,
+        "3": 30
+      }
+    },
+    "VideoRepick": {
+      "scanned": 300,
+      "usable": 283,
+      "cells_taken": {
+        "easy|n1|moved": 30,
+        "easy|n2|stay": 8,
+        "easy|n2|moved": 8,
+        "medium|n2|stay": 7,
+        "medium|n2|moved": 7,
+        "medium|n3|stay": 14,
+        "medium|n3|moved": 16
+      },
+      "cells_available": {
+        "easy|n1|moved": 78,
+        "easy|n2|stay": 31,
+        "easy|n2|moved": 31,
+        "medium|n2|stay": 29,
+        "medium|n2|moved": 42,
+        "medium|n3|stay": 14,
+        "medium|n3|moved": 58
+      },
+      "overlap": [],
+      "scan_files": [
+        "scan_VideoRepick.json"
+      ],
+      "bins": {
+        "1": 30,
+        "2": 30,
+        "3": 30
+      }
+    }
+  },
+  "per_task": 90,
+  "metadata_sha256": {
+    "record_dataset_VideoUnmaskSwap_metadata.json": "85627708780957de05e948b757bc96826d82d581bc73e5706a55f2eff70d3e40",
+    "record_dataset_ButtonUnmaskSwap_metadata.json": "3bbd6fae65de2029c6b33dedf49e95ab1e389d7387c2905659dae10699094fb9",
+    "record_dataset_VideoRepick_metadata.json": "9f5beae63c407969961295280ad8dade64ed36e923241455a7f4515035e44d6f"
+  },
+  "manifest_seal": "e4f09a790d86cc5133bc1f91a212e06deb3381ca62b62d76d150b39f1f89c556",
+  "numbering": "每任务局号按 env_seed 升序 0..per_task−1",
+  "episodes": [
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 0,
+      "env_seed": 2000000,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 114,
+      "scan_index": 0
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 1,
+      "env_seed": 2000100,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 168,
+      "scan_index": 1
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 2,
+      "env_seed": 2000200,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          0,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 168,
+      "scan_index": 2
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 3,
+      "env_seed": 2000300,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          0,
+          64,
+          114
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 114,
+      "scan_index": 3
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 4,
+      "env_seed": 2000400,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          0,
+          1,
+          114,
+          164
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 168,
+      "scan_index": 4
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 5,
+      "env_seed": 2000500,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 114,
+      "scan_index": 5
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 6,
+      "env_seed": 2000600,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 114,
+      "scan_index": 6
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 7,
+      "env_seed": 2000700,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          3,
+          64,
+          114
+        ],
+        [
+          0,
+          2,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 3,
+      "n_objects": 4,
+      "es": 168,
+      "scan_index": 7
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 8,
+      "env_seed": 2000800,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 114,
+      "scan_index": 8
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 9,
+      "env_seed": 2000900,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 4,
+      "es": 114,
+      "scan_index": 9
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 10,
+      "env_seed": 2001000,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 114,
+      "scan_index": 10
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 11,
+      "env_seed": 2001100,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 4,
+      "es": 114,
+      "scan_index": 11
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 12,
+      "env_seed": 2001200,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 114,
+      "scan_index": 12
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 13,
+      "env_seed": 2001300,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          0,
+          3,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 168,
+      "scan_index": 13
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 14,
+      "env_seed": 2001400,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          64,
+          114
+        ],
+        [
+          1,
+          0,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 168,
+      "scan_index": 14
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 15,
+      "env_seed": 2001500,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 114,
+      "scan_index": 15
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 16,
+      "env_seed": 2001600,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          64,
+          114
+        ],
+        [
+          1,
+          0,
+          114,
+          164
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 168,
+      "scan_index": 16
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 17,
+      "env_seed": 2001700,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          0,
+          3,
+          114,
+          164
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 3,
+      "n_objects": 4,
+      "es": 168,
+      "scan_index": 17
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 18,
+      "env_seed": 2001800,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 114,
+      "scan_index": 18
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 19,
+      "env_seed": 2001900,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 114,
+      "scan_index": 19
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 20,
+      "env_seed": 2002000,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          0,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 168,
+      "scan_index": 20
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 21,
+      "env_seed": 2002100,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          0,
+          3,
+          114,
+          164
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 168,
+      "scan_index": 21
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 22,
+      "env_seed": 2002200,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 114,
+      "scan_index": 22
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 23,
+      "env_seed": 2002300,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 168,
+      "scan_index": 23
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 24,
+      "env_seed": 2002400,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          0,
+          114,
+          164
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 168,
+      "scan_index": 24
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 25,
+      "env_seed": 2002500,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 4,
+      "es": 114,
+      "scan_index": 25
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 26,
+      "env_seed": 2002600,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          64,
+          114
+        ],
+        [
+          0,
+          2,
+          114,
+          164
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 168,
+      "scan_index": 26
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 27,
+      "env_seed": 2002700,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 168,
+      "scan_index": 27
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 28,
+      "env_seed": 2002800,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          0,
+          64,
+          114
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 114,
+      "scan_index": 28
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 29,
+      "env_seed": 2002900,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 114,
+      "scan_index": 29
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 30,
+      "env_seed": 2003000,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          64,
+          114
+        ],
+        [
+          1,
+          0,
+          114,
+          164
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 168,
+      "scan_index": 30
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 31,
+      "env_seed": 2003100,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 4,
+      "es": 114,
+      "scan_index": 31
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 32,
+      "env_seed": 2003200,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 114,
+      "scan_index": 32
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 33,
+      "env_seed": 2003300,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 3,
+      "n_objects": 4,
+      "es": 168,
+      "scan_index": 33
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 34,
+      "env_seed": 2003400,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 114,
+      "scan_index": 34
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 35,
+      "env_seed": 2003500,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 4,
+      "es": 114,
+      "scan_index": 35
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 36,
+      "env_seed": 2003600,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          64,
+          114
+        ],
+        [
+          1,
+          0,
+          114,
+          164
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 168,
+      "scan_index": 36
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 37,
+      "env_seed": 2003700,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 114,
+      "scan_index": 37
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 38,
+      "env_seed": 2003800,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 114,
+      "scan_index": 38
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 39,
+      "env_seed": 2003900,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 168,
+      "scan_index": 39
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 40,
+      "env_seed": 2004000,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          64,
+          114
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 114,
+      "scan_index": 40
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 41,
+      "env_seed": 2004100,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 4,
+      "es": 168,
+      "scan_index": 41
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 42,
+      "env_seed": 2004200,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 114,
+      "scan_index": 42
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 43,
+      "env_seed": 2004300,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          3,
+          64,
+          114
+        ],
+        [
+          0,
+          2,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 3,
+      "n_objects": 4,
+      "es": 168,
+      "scan_index": 43
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 44,
+      "env_seed": 2004400,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 114,
+      "scan_index": 44
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 45,
+      "env_seed": 2004500,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 114,
+      "scan_index": 45
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 46,
+      "env_seed": 2004600,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          64,
+          114
+        ],
+        [
+          1,
+          0,
+          114,
+          164
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 168,
+      "scan_index": 46
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 47,
+      "env_seed": 2004700,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 114,
+      "scan_index": 47
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 48,
+      "env_seed": 2004800,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 114,
+      "scan_index": 48
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 49,
+      "env_seed": 2004900,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          0,
+          3,
+          114,
+          164
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 3,
+      "n_objects": 4,
+      "es": 168,
+      "scan_index": 49
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 50,
+      "env_seed": 2005000,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 168,
+      "scan_index": 50
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 51,
+      "env_seed": 2005200,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          64,
+          114
+        ],
+        [
+          0,
+          2,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 168,
+      "scan_index": 52
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 52,
+      "env_seed": 2005300,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 168,
+      "scan_index": 53
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 53,
+      "env_seed": 2005400,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          0,
+          1,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 168,
+      "scan_index": 54
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 54,
+      "env_seed": 2005600,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          0,
+          114,
+          164
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 168,
+      "scan_index": 56
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 55,
+      "env_seed": 2005700,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 3,
+      "n_objects": 4,
+      "es": 114,
+      "scan_index": 57
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 56,
+      "env_seed": 2005900,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 4,
+      "es": 168,
+      "scan_index": 59
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 57,
+      "env_seed": 2006000,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          64,
+          114
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 114,
+      "scan_index": 60
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 58,
+      "env_seed": 2006200,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          0,
+          1,
+          114,
+          164
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 168,
+      "scan_index": 62
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 59,
+      "env_seed": 2007000,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          0,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 168,
+      "scan_index": 70
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 60,
+      "env_seed": 2050400,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          1,
+          64,
+          114
+        ],
+        [
+          1,
+          0,
+          114,
+          164
+        ],
+        [
+          3,
+          2,
+          164,
+          214
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 4
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 61,
+      "env_seed": 2050600,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          0,
+          3,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 6
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 62,
+      "env_seed": 2050700,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          1,
+          64,
+          114
+        ],
+        [
+          1,
+          0,
+          114,
+          164
+        ],
+        [
+          2,
+          1,
+          164,
+          214
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 7
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 63,
+      "env_seed": 2050900,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          3,
+          64,
+          114
+        ],
+        [
+          0,
+          2,
+          114,
+          164
+        ],
+        [
+          1,
+          3,
+          164,
+          214
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 9
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 64,
+      "env_seed": 2051000,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          0,
+          3,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 10
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 65,
+      "env_seed": 2051100,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 11
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 66,
+      "env_seed": 2051300,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          0,
+          3,
+          114,
+          164
+        ],
+        [
+          2,
+          1,
+          164,
+          214
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 13
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 67,
+      "env_seed": 2051700,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ],
+        [
+          1,
+          3,
+          114,
+          164
+        ],
+        [
+          2,
+          3,
+          164,
+          214
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 17
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 68,
+      "env_seed": 2052000,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          0,
+          64,
+          114
+        ],
+        [
+          2,
+          0,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 20
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 69,
+      "env_seed": 2052400,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ],
+        [
+          0,
+          3,
+          164,
+          214
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 24
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 70,
+      "env_seed": 2052500,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ],
+        [
+          2,
+          1,
+          164,
+          214
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 3,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 25
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 71,
+      "env_seed": 2052600,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ],
+        [
+          0,
+          3,
+          164,
+          214
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 3,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 26
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 72,
+      "env_seed": 2052800,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 28
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 73,
+      "env_seed": 2053200,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 32
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 74,
+      "env_seed": 2053400,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 34
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 75,
+      "env_seed": 2053600,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          0,
+          3,
+          114,
+          164
+        ],
+        [
+          1,
+          2,
+          164,
+          214
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 36
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 76,
+      "env_seed": 2053700,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          0,
+          64,
+          114
+        ],
+        [
+          0,
+          1,
+          114,
+          164
+        ],
+        [
+          2,
+          3,
+          164,
+          214
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 37
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 77,
+      "env_seed": 2053800,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ],
+        [
+          0,
+          1,
+          164,
+          214
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 38
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 78,
+      "env_seed": 2053900,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          0,
+          64,
+          114
+        ],
+        [
+          2,
+          0,
+          114,
+          164
+        ],
+        [
+          0,
+          2,
+          164,
+          214
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 0,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 39
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 79,
+      "env_seed": 2054000,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          0,
+          3,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 40
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 80,
+      "env_seed": 2054700,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ],
+        [
+          0,
+          3,
+          164,
+          214
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 47
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 81,
+      "env_seed": 2054800,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ],
+        [
+          2,
+          1,
+          164,
+          214
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 48
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 82,
+      "env_seed": 2055000,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 3,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 50
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 83,
+      "env_seed": 2055400,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          0,
+          64,
+          114
+        ],
+        [
+          0,
+          1,
+          114,
+          164
+        ],
+        [
+          2,
+          1,
+          164,
+          214
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 54
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 84,
+      "env_seed": 2055600,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ],
+        [
+          0,
+          3,
+          164,
+          214
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 3,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 56
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 85,
+      "env_seed": 2055700,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 57
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 86,
+      "env_seed": 2056000,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          1,
+          64,
+          114
+        ],
+        [
+          2,
+          0,
+          114,
+          164
+        ],
+        [
+          1,
+          2,
+          164,
+          214
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 0,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 60
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 87,
+      "env_seed": 2056800,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ],
+        [
+          1,
+          2,
+          164,
+          214
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 3,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 68
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 88,
+      "env_seed": 2057600,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          0,
+          3,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 76
+    },
+    {
+      "task_name": "VideoUnmaskSwap",
+      "episode_id": 89,
+      "env_seed": 2057800,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 216,
+      "scan_index": 78
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 0,
+      "env_seed": 2100000,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 0
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 1,
+      "env_seed": 2100100,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 3,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 1
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 2,
+      "env_seed": 2100200,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          64,
+          114
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 2
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 3,
+      "env_seed": 2100300,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          0,
+          3,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 3
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 4,
+      "env_seed": 2100400,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 4
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 5,
+      "env_seed": 2100500,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 5
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 6,
+      "env_seed": 2100600,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 6
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 7,
+      "env_seed": 2100700,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 7
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 8,
+      "env_seed": 2100800,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          0,
+          114,
+          164
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 8
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 9,
+      "env_seed": 2100900,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 9
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 10,
+      "env_seed": 2101000,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          64,
+          114
+        ],
+        [
+          1,
+          0,
+          114,
+          164
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 10
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 11,
+      "env_seed": 2101100,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 11
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 12,
+      "env_seed": 2101200,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 12
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 13,
+      "env_seed": 2101300,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 13
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 14,
+      "env_seed": 2101400,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 14
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 15,
+      "env_seed": 2101500,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 15
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 16,
+      "env_seed": 2101600,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          64,
+          114
+        ],
+        [
+          0,
+          2,
+          114,
+          164
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 16
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 17,
+      "env_seed": 2101700,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 17
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 18,
+      "env_seed": 2101800,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          64,
+          114
+        ],
+        [
+          1,
+          0,
+          114,
+          164
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 18
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 19,
+      "env_seed": 2101900,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          0,
+          2,
+          114,
+          164
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 19
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 20,
+      "env_seed": 2102000,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          64,
+          114
+        ],
+        [
+          0,
+          2,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 20
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 21,
+      "env_seed": 2102100,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 21
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 22,
+      "env_seed": 2102200,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          0,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 22
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 23,
+      "env_seed": 2102300,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          0,
+          3,
+          114,
+          164
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 3,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 23
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 24,
+      "env_seed": 2102400,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 24
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 25,
+      "env_seed": 2102500,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 3,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 25
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 26,
+      "env_seed": 2102600,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 26
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 27,
+      "env_seed": 2102800,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 28
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 28,
+      "env_seed": 2102900,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 29
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 29,
+      "env_seed": 2103000,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 30
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 30,
+      "env_seed": 2103200,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 32
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 31,
+      "env_seed": 2103300,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 33
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 32,
+      "env_seed": 2103400,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 34
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 33,
+      "env_seed": 2103500,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          0,
+          64,
+          114
+        ],
+        [
+          0,
+          1,
+          114,
+          164
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 35
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 34,
+      "env_seed": 2103600,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 36
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 35,
+      "env_seed": 2103700,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 37
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 36,
+      "env_seed": 2103800,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          0,
+          1,
+          114,
+          164
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 38
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 37,
+      "env_seed": 2103900,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 3,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 39
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 38,
+      "env_seed": 2104000,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          64,
+          114
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 40
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 39,
+      "env_seed": 2104100,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 3,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 41
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 40,
+      "env_seed": 2104200,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 42
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 41,
+      "env_seed": 2104300,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 43
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 42,
+      "env_seed": 2104400,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          0,
+          1,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 44
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 43,
+      "env_seed": 2104500,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 45
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 44,
+      "env_seed": 2104600,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          0,
+          1,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 46
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 45,
+      "env_seed": 2104800,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          64,
+          114
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 48
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 46,
+      "env_seed": 2105000,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          64,
+          114
+        ],
+        [
+          1,
+          0,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 50
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 47,
+      "env_seed": 2105300,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          0,
+          64,
+          114
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 53
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 48,
+      "env_seed": 2105400,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          64,
+          114
+        ],
+        [
+          1,
+          0,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 54
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 49,
+      "env_seed": 2105500,
+      "difficulty": "medium",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 55
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 50,
+      "env_seed": 2105800,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          64,
+          114
+        ],
+        [
+          1,
+          0,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 58
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 51,
+      "env_seed": 2105900,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 59
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 52,
+      "env_seed": 2106700,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          64,
+          114
+        ],
+        [
+          0,
+          2,
+          114,
+          164
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 67
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 53,
+      "env_seed": 2107200,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 72
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 54,
+      "env_seed": 2107700,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 77
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 55,
+      "env_seed": 2108600,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 86
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 56,
+      "env_seed": 2109800,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          64,
+          114
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 98
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 57,
+      "env_seed": 2109900,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          0,
+          64,
+          114
+        ],
+        [
+          0,
+          1,
+          114,
+          164
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 99
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 58,
+      "env_seed": 2110600,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          64,
+          114
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 0,
+      "scan_index": 106
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 59,
+      "env_seed": 2111500,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 115
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 60,
+      "env_seed": 2150000,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          0,
+          3,
+          114,
+          164
+        ],
+        [
+          2,
+          1,
+          164,
+          214
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 3,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 0
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 61,
+      "env_seed": 2150100,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 1
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 62,
+      "env_seed": 2150200,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 2
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 63,
+      "env_seed": 2150300,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ],
+        [
+          0,
+          3,
+          164,
+          214
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 3
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 64,
+      "env_seed": 2150400,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ],
+        [
+          0,
+          3,
+          164,
+          214
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 3,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 4
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 65,
+      "env_seed": 2150900,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ],
+        [
+          2,
+          1,
+          164,
+          214
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 9
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 66,
+      "env_seed": 2151000,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ],
+        [
+          0,
+          3,
+          164,
+          214
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 10
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 67,
+      "env_seed": 2151200,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          0,
+          3,
+          114,
+          164
+        ],
+        [
+          1,
+          2,
+          164,
+          214
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 12
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 68,
+      "env_seed": 2151700,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          1,
+          64,
+          114
+        ],
+        [
+          2,
+          0,
+          114,
+          164
+        ],
+        [
+          1,
+          2,
+          164,
+          214
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 17
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 69,
+      "env_seed": 2152000,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          0,
+          3,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 20
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 70,
+      "env_seed": 2152100,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 21
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 71,
+      "env_seed": 2152200,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          0,
+          3,
+          114,
+          164
+        ],
+        [
+          2,
+          1,
+          164,
+          214
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 22
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 72,
+      "env_seed": 2152400,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 24
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 73,
+      "env_seed": 2152800,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 28
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 74,
+      "env_seed": 2153200,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          0,
+          3,
+          114,
+          164
+        ],
+        [
+          1,
+          2,
+          164,
+          214
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 32
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 75,
+      "env_seed": 2153300,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          0,
+          3,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 33
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 76,
+      "env_seed": 2153400,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          0,
+          3,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 34
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 77,
+      "env_seed": 2153500,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          0,
+          3,
+          114,
+          164
+        ],
+        [
+          2,
+          1,
+          164,
+          214
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 35
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 78,
+      "env_seed": 2153600,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ],
+        [
+          1,
+          2,
+          164,
+          214
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 36
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 79,
+      "env_seed": 2154400,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          0,
+          3,
+          114,
+          164
+        ],
+        [
+          2,
+          1,
+          164,
+          214
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 3,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 44
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 80,
+      "env_seed": 2154800,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 48
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 81,
+      "env_seed": 2154900,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ],
+        [
+          0,
+          1,
+          164,
+          214
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 49
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 82,
+      "env_seed": 2155000,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 3,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 50
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 83,
+      "env_seed": 2155200,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          0,
+          3,
+          114,
+          164
+        ],
+        [
+          2,
+          1,
+          164,
+          214
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 52
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 84,
+      "env_seed": 2155500,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          64,
+          114
+        ],
+        [
+          1,
+          2,
+          114,
+          164
+        ],
+        [
+          0,
+          3,
+          164,
+          214
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 55
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 85,
+      "env_seed": 2155600,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ],
+        [
+          0,
+          3,
+          164,
+          214
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 3,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 56
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 86,
+      "env_seed": 2156000,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ],
+        [
+          0,
+          3,
+          164,
+          214
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 3,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 60
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 87,
+      "env_seed": 2156800,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 68
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 88,
+      "env_seed": 2157000,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 70
+    },
+    {
+      "task_name": "ButtonUnmaskSwap",
+      "episode_id": 89,
+      "env_seed": 2157700,
+      "difficulty": "hard",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          3,
+          64,
+          114
+        ],
+        [
+          2,
+          1,
+          114,
+          164
+        ],
+        [
+          3,
+          0,
+          164,
+          214
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 4,
+      "es": 0,
+      "scan_index": 77
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 0,
+      "env_seed": 2200000,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          197,
+          247
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 263,
+      "scan_index": 0
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 1,
+      "env_seed": 2200100,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          205,
+          255
+        ],
+        [
+          0,
+          1,
+          255,
+          305
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 327,
+      "scan_index": 1
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 2,
+      "env_seed": 2200200,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          223,
+          273
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 290,
+      "scan_index": 2
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 3,
+      "env_seed": 2200300,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          212,
+          262
+        ],
+        [
+          0,
+          1,
+          262,
+          312
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 336,
+      "scan_index": 3
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 4,
+      "env_seed": 2200400,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          209,
+          259
+        ],
+        [
+          0,
+          1,
+          259,
+          309
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 330,
+      "scan_index": 4
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 5,
+      "env_seed": 2200500,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          189,
+          239
+        ],
+        [
+          0,
+          1,
+          239,
+          289
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 309,
+      "scan_index": 5
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 6,
+      "env_seed": 2200600,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          203,
+          253
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 270,
+      "scan_index": 6
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 7,
+      "env_seed": 2200700,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          191,
+          241
+        ],
+        [
+          1,
+          2,
+          241,
+          291
+        ],
+        [
+          0,
+          2,
+          291,
+          341
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 369,
+      "scan_index": 7
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 8,
+      "env_seed": 2200800,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          216,
+          266
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 283,
+      "scan_index": 8
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 9,
+      "env_seed": 2200900,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          210,
+          260
+        ],
+        [
+          1,
+          0,
+          260,
+          310
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 333,
+      "scan_index": 9
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 10,
+      "env_seed": 2201000,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          191,
+          241
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 258,
+      "scan_index": 10
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 11,
+      "env_seed": 2201100,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          202,
+          252
+        ],
+        [
+          1,
+          2,
+          252,
+          302
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 325,
+      "scan_index": 11
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 12,
+      "env_seed": 2201200,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          218,
+          268
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 290,
+      "scan_index": 12
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 13,
+      "env_seed": 2201300,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          194,
+          244
+        ],
+        [
+          1,
+          0,
+          244,
+          294
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 315,
+      "scan_index": 13
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 14,
+      "env_seed": 2201400,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          217,
+          267
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 284,
+      "scan_index": 14
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 15,
+      "env_seed": 2201500,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          216,
+          266
+        ],
+        [
+          2,
+          0,
+          266,
+          316
+        ],
+        [
+          1,
+          2,
+          316,
+          366
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 395,
+      "scan_index": 15
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 16,
+      "env_seed": 2201600,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          185,
+          235
+        ],
+        [
+          1,
+          0,
+          235,
+          285
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 306,
+      "scan_index": 16
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 17,
+      "env_seed": 2201700,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          206,
+          256
+        ],
+        [
+          1,
+          2,
+          256,
+          306
+        ],
+        [
+          2,
+          1,
+          306,
+          356
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 381,
+      "scan_index": 17
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 18,
+      "env_seed": 2201800,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          187,
+          237
+        ],
+        [
+          1,
+          2,
+          237,
+          287
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 307,
+      "scan_index": 18
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 19,
+      "env_seed": 2201900,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          197,
+          247
+        ],
+        [
+          0,
+          1,
+          247,
+          297
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 319,
+      "scan_index": 19
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 20,
+      "env_seed": 2202000,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          207,
+          257
+        ],
+        [
+          0,
+          1,
+          257,
+          307
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 330,
+      "scan_index": 20
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 21,
+      "env_seed": 2202100,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          195,
+          245
+        ],
+        [
+          0,
+          1,
+          245,
+          295
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 316,
+      "scan_index": 21
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 22,
+      "env_seed": 2202200,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          205,
+          255
+        ],
+        [
+          2,
+          1,
+          255,
+          305
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 326,
+      "scan_index": 22
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 23,
+      "env_seed": 2202400,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          229,
+          279
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 296,
+      "scan_index": 24
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 24,
+      "env_seed": 2202500,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          198,
+          248
+        ],
+        [
+          2,
+          0,
+          248,
+          298
+        ],
+        [
+          1,
+          2,
+          298,
+          348
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 372,
+      "scan_index": 25
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 25,
+      "env_seed": 2202600,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          202,
+          252
+        ],
+        [
+          0,
+          2,
+          252,
+          302
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 323,
+      "scan_index": 26
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 26,
+      "env_seed": 2202700,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          209,
+          259
+        ],
+        [
+          2,
+          1,
+          259,
+          309
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 333,
+      "scan_index": 27
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 27,
+      "env_seed": 2202800,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          206,
+          256
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 276,
+      "scan_index": 28
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 28,
+      "env_seed": 2203000,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          220,
+          270
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 287,
+      "scan_index": 30
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 29,
+      "env_seed": 2203100,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          204,
+          254
+        ],
+        [
+          0,
+          1,
+          254,
+          304
+        ],
+        [
+          2,
+          0,
+          304,
+          354
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 379,
+      "scan_index": 31
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 30,
+      "env_seed": 2203200,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          0,
+          203,
+          253
+        ],
+        [
+          2,
+          1,
+          253,
+          303
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 324,
+      "scan_index": 32
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 31,
+      "env_seed": 2203300,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          194,
+          244
+        ],
+        [
+          2,
+          1,
+          244,
+          294
+        ],
+        [
+          0,
+          2,
+          294,
+          344
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 369,
+      "scan_index": 33
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 32,
+      "env_seed": 2203400,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          0,
+          205,
+          255
+        ],
+        [
+          0,
+          1,
+          255,
+          305
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 326,
+      "scan_index": 34
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 33,
+      "env_seed": 2203500,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          195,
+          245
+        ],
+        [
+          2,
+          0,
+          245,
+          295
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 316,
+      "scan_index": 35
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 34,
+      "env_seed": 2203600,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          1,
+          213,
+          263
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 280,
+      "scan_index": 36
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 35,
+      "env_seed": 2203700,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          190,
+          240
+        ],
+        [
+          1,
+          0,
+          240,
+          290
+        ],
+        [
+          0,
+          1,
+          290,
+          340
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 365,
+      "scan_index": 37
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 36,
+      "env_seed": 2203800,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          206,
+          256
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 274,
+      "scan_index": 38
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 37,
+      "env_seed": 2204000,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          200,
+          250
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 267,
+      "scan_index": 40
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 38,
+      "env_seed": 2204100,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          204,
+          254
+        ],
+        [
+          0,
+          1,
+          254,
+          304
+        ],
+        [
+          2,
+          0,
+          304,
+          354
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 379,
+      "scan_index": 41
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 39,
+      "env_seed": 2204200,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          204,
+          254
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 271,
+      "scan_index": 42
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 40,
+      "env_seed": 2204400,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          201,
+          251
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 270,
+      "scan_index": 44
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 41,
+      "env_seed": 2204500,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          206,
+          256
+        ],
+        [
+          1,
+          0,
+          256,
+          306
+        ],
+        [
+          2,
+          1,
+          306,
+          356
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 385,
+      "scan_index": 45
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 42,
+      "env_seed": 2204600,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          195,
+          245
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 263,
+      "scan_index": 46
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 43,
+      "env_seed": 2204800,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          187,
+          237
+        ],
+        [
+          1,
+          2,
+          237,
+          287
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 308,
+      "scan_index": 48
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 44,
+      "env_seed": 2204900,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          197,
+          247
+        ],
+        [
+          0,
+          1,
+          247,
+          297
+        ],
+        [
+          2,
+          0,
+          297,
+          347
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 373,
+      "scan_index": 49
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 45,
+      "env_seed": 2205000,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          0,
+          200,
+          250
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 271,
+      "scan_index": 50
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 46,
+      "env_seed": 2205100,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          217,
+          267
+        ],
+        [
+          1,
+          0,
+          267,
+          317
+        ],
+        [
+          2,
+          1,
+          317,
+          367
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 392,
+      "scan_index": 51
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 47,
+      "env_seed": 2205200,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          189,
+          239
+        ],
+        [
+          2,
+          0,
+          239,
+          289
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 309,
+      "scan_index": 52
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 48,
+      "env_seed": 2205300,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          199,
+          249
+        ],
+        [
+          0,
+          1,
+          249,
+          299
+        ],
+        [
+          2,
+          0,
+          299,
+          349
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 374,
+      "scan_index": 53
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 49,
+      "env_seed": 2205400,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          187,
+          237
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 254,
+      "scan_index": 54
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 50,
+      "env_seed": 2205500,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          1,
+          204,
+          254
+        ],
+        [
+          2,
+          0,
+          254,
+          304
+        ],
+        [
+          1,
+          2,
+          304,
+          354
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 379,
+      "scan_index": 55
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 51,
+      "env_seed": 2205600,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          188,
+          238
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 255,
+      "scan_index": 56
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 52,
+      "env_seed": 2205800,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          215,
+          265
+        ],
+        [
+          2,
+          0,
+          265,
+          315
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 337,
+      "scan_index": 58
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 53,
+      "env_seed": 2205900,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          1,
+          205,
+          255
+        ],
+        [
+          2,
+          0,
+          255,
+          305
+        ],
+        [
+          1,
+          2,
+          305,
+          355
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 381,
+      "scan_index": 59
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 54,
+      "env_seed": 2206000,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          188,
+          238
+        ],
+        [
+          2,
+          1,
+          238,
+          288
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 309,
+      "scan_index": 60
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 55,
+      "env_seed": 2206100,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          207,
+          257
+        ],
+        [
+          2,
+          1,
+          257,
+          307
+        ],
+        [
+          0,
+          2,
+          307,
+          357
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 385,
+      "scan_index": 61
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 56,
+      "env_seed": 2206200,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          203,
+          253
+        ],
+        [
+          2,
+          0,
+          253,
+          303
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 324,
+      "scan_index": 62
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 57,
+      "env_seed": 2206300,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          199,
+          249
+        ],
+        [
+          1,
+          2,
+          249,
+          299
+        ],
+        [
+          0,
+          2,
+          299,
+          349
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 376,
+      "scan_index": 63
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 58,
+      "env_seed": 2206400,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          209,
+          259
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 275,
+      "scan_index": 64
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 59,
+      "env_seed": 2206500,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          205,
+          255
+        ],
+        [
+          2,
+          0,
+          255,
+          305
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 326,
+      "scan_index": 65
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 60,
+      "env_seed": 2206800,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          198,
+          248
+        ],
+        [
+          0,
+          1,
+          248,
+          298
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 319,
+      "scan_index": 68
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 61,
+      "env_seed": 2206900,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          198,
+          248
+        ],
+        [
+          0,
+          2,
+          248,
+          298
+        ],
+        [
+          1,
+          2,
+          298,
+          348
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 378,
+      "scan_index": 69
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 62,
+      "env_seed": 2207000,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          202,
+          252
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 269,
+      "scan_index": 70
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 63,
+      "env_seed": 2207400,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          205,
+          255
+        ],
+        [
+          1,
+          0,
+          255,
+          305
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 326,
+      "scan_index": 74
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 64,
+      "env_seed": 2207600,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          1,
+          189,
+          239
+        ],
+        [
+          2,
+          0,
+          239,
+          289
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 310,
+      "scan_index": 76
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 65,
+      "env_seed": 2207700,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          187,
+          237
+        ],
+        [
+          0,
+          2,
+          237,
+          287
+        ],
+        [
+          1,
+          2,
+          287,
+          337
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 361,
+      "scan_index": 77
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 66,
+      "env_seed": 2207900,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          188,
+          238
+        ],
+        [
+          2,
+          1,
+          238,
+          288
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 308,
+      "scan_index": 79
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 67,
+      "env_seed": 2208000,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          196,
+          246
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 267,
+      "scan_index": 80
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 68,
+      "env_seed": 2208100,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          204,
+          254
+        ],
+        [
+          1,
+          2,
+          254,
+          304
+        ],
+        [
+          0,
+          2,
+          304,
+          354
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 382,
+      "scan_index": 81
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 69,
+      "env_seed": 2208300,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          194,
+          244
+        ],
+        [
+          1,
+          0,
+          244,
+          294
+        ],
+        [
+          0,
+          1,
+          294,
+          344
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 372,
+      "scan_index": 83
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 70,
+      "env_seed": 2208600,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          198,
+          248
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 267,
+      "scan_index": 86
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 71,
+      "env_seed": 2208800,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          210,
+          260
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 276,
+      "scan_index": 88
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 72,
+      "env_seed": 2209000,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          195,
+          245
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 261,
+      "scan_index": 90
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 73,
+      "env_seed": 2209100,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          194,
+          244
+        ],
+        [
+          2,
+          0,
+          244,
+          294
+        ],
+        [
+          1,
+          2,
+          294,
+          344
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 372,
+      "scan_index": 91
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 74,
+      "env_seed": 2209200,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          216,
+          266
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 283,
+      "scan_index": 92
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 75,
+      "env_seed": 2209500,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          199,
+          249
+        ],
+        [
+          0,
+          2,
+          249,
+          299
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 323,
+      "scan_index": 95
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 76,
+      "env_seed": 2209700,
+      "difficulty": "medium",
+      "swap_times": 2,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          193,
+          243
+        ],
+        [
+          2,
+          0,
+          243,
+          293
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 314,
+      "scan_index": 97
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 77,
+      "env_seed": 2209800,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          219,
+          269
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 286,
+      "scan_index": 98
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 78,
+      "env_seed": 2210200,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          204,
+          254
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 271,
+      "scan_index": 102
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 79,
+      "env_seed": 2210600,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          216,
+          266
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 287,
+      "scan_index": 106
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 80,
+      "env_seed": 2210800,
+      "difficulty": "easy",
+      "swap_times": 1,
+      "moved": true,
+      "swap_schedule": [
+        [
+          0,
+          1,
+          205,
+          255
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 272,
+      "scan_index": 108
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 81,
+      "env_seed": 2214700,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          192,
+          242
+        ],
+        [
+          2,
+          0,
+          242,
+          292
+        ],
+        [
+          1,
+          2,
+          292,
+          342
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 371,
+      "scan_index": 147
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 82,
+      "env_seed": 2215700,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          1,
+          204,
+          254
+        ],
+        [
+          1,
+          2,
+          254,
+          304
+        ],
+        [
+          0,
+          1,
+          304,
+          354
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 379,
+      "scan_index": 157
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 83,
+      "env_seed": 2219700,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          197,
+          247
+        ],
+        [
+          2,
+          0,
+          247,
+          297
+        ],
+        [
+          1,
+          2,
+          297,
+          347
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 375,
+      "scan_index": 197
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 84,
+      "env_seed": 2221500,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          195,
+          245
+        ],
+        [
+          2,
+          1,
+          245,
+          295
+        ],
+        [
+          0,
+          2,
+          295,
+          345
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 369,
+      "scan_index": 215
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 85,
+      "env_seed": 2223300,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          204,
+          254
+        ],
+        [
+          2,
+          1,
+          254,
+          304
+        ],
+        [
+          0,
+          2,
+          304,
+          354
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 378,
+      "scan_index": 233
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 86,
+      "env_seed": 2224500,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          201,
+          251
+        ],
+        [
+          2,
+          1,
+          251,
+          301
+        ],
+        [
+          0,
+          2,
+          301,
+          351
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 379,
+      "scan_index": 245
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 87,
+      "env_seed": 2225300,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          0,
+          2,
+          186,
+          236
+        ],
+        [
+          2,
+          0,
+          236,
+          286
+        ],
+        [
+          1,
+          2,
+          286,
+          336
+        ]
+      ],
+      "target_index": 0,
+      "swap_blind_index": 0,
+      "n_objects": 3,
+      "es": 364,
+      "scan_index": 253
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 88,
+      "env_seed": 2228700,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          1,
+          2,
+          198,
+          248
+        ],
+        [
+          2,
+          1,
+          248,
+          298
+        ],
+        [
+          0,
+          2,
+          298,
+          348
+        ]
+      ],
+      "target_index": 1,
+      "swap_blind_index": 1,
+      "n_objects": 3,
+      "es": 373,
+      "scan_index": 287
+    },
+    {
+      "task_name": "VideoRepick",
+      "episode_id": 89,
+      "env_seed": 2229700,
+      "difficulty": "medium",
+      "swap_times": 3,
+      "moved": false,
+      "swap_schedule": [
+        [
+          2,
+          0,
+          192,
+          242
+        ],
+        [
+          0,
+          2,
+          242,
+          292
+        ],
+        [
+          1,
+          0,
+          292,
+          342
+        ]
+      ],
+      "target_index": 2,
+      "swap_blind_index": 2,
+      "n_objects": 3,
+      "es": 367,
+      "scan_index": 297
+    }
+  ],
+  "mode": "by_swap_times",
+  "per_n": 30,
+  "sources": {
+    "VideoRepick": {
+      "1": [
+        "easy",
+        "medium"
+      ],
+      "2": [
+        "easy",
+        "medium"
+      ],
+      "3": [
+        "easy",
+        "medium"
+      ]
+    },
+    "VideoUnmaskSwap": {
+      "1": [
+        "easy",
+        "medium"
+      ],
+      "2": [
+        "easy",
+        "medium"
+      ],
+      "3": [
+        "hard"
+      ]
+    },
+    "ButtonUnmaskSwap": {
+      "1": [
+        "easy",
+        "medium"
+      ],
+      "2": [
+        "easy",
+        "medium"
+      ],
+      "3": [
+        "hard"
+      ]
+    }
+  }
+}
