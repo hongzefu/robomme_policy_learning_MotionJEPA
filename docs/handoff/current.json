@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-10T07:00:00Z",
-    "America/New_York": "2026-11-10T02:00:00-0500"
+    "utc": "2026-11-10T11:10:00Z",
+    "America/New_York": "2026-11-10T06:10:00-0500"
   },
   "repo": {
     "branch": "v4.2-plswap-full",
-    "base_head": "e25fa45",
+    "base_head": "238f40c",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -2331,9 +2331,9 @@
         "file": "1109-subgoal-position-swap-all-lengths-plan.html",
         "sha": "ac6ff45"
       },
-      "state": "running",
-      "state_changed_at": "2026-11-10T05:20:00Z",
-      "state_reason": "N 全部完成（多步两模型 240/240）；两模型多步干预与交换任务 N 运行中（GL 第 4 轮 + aspen）；代码至 commitV4.4.5 e25fa45",
+      "state": "done",
+      "state_changed_at": "2026-11-10T11:10:00Z",
+      "state_reason": "多步两模型干预与交换任务按 k 干预全部完成，留档 238f40c；GL 占位 8 个已 scancel",
       "owner": {
         "session": "bb27e5ee-343a-4725-ba31-e23ba7d6da8f",
         "host": "sled-aspen.eecs.umich.edu"
@@ -2341,42 +2341,32 @@
       "depends_on": [],
       "pre_handoff": [
         {
-          "what": "SP_MATRIX 与 FP_SWAP_K 各行",
-          "evidence": "",
-          "where": "docs/evaluation-doc/sp-swap-1110/records/",
-          "status": "pending"
+          "what": "多步矩阵",
+          "evidence": "SP_MATRIX=PASS ×4（motion/wan × PatternLock/RouteStick，invalid=0）；SWAP_SCOPE=PASS motion runs=1042、wan runs=935",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/sp-swap-1110/result.md",
+          "status": "pass"
+        },
+        {
+          "what": "交换任务按 k",
+          "evidence": "FIRST_PICK_LABEL=PASS ×2；SWAP_SCOPE=PASS motion runs=468、wan runs=412",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/sp-swap-1110/result.md",
+          "status": "pass"
         },
         {
           "what": "留档 push",
-          "evidence": "",
+          "evidence": "238f40c",
           "where": "origin/v4.2-plswap-full",
-          "status": "pending"
+          "status": "pass"
         },
         {
-          "what": "GL 占位全部 scancel",
-          "evidence": "",
-          "where": "squeue -u hongzefu",
-          "status": "pending"
+          "what": "GL 占位释放",
+          "evidence": "scancel 65812859–65812866，squeue -u hongzefu 为空",
+          "where": "greatlakes",
+          "status": "pass"
         }
       ],
       "long_tail": [],
-      "running_handles": [
-        {
-          "tmux": "GL 登录节点 sps-hold{0..7}-r4（每占位一个作业步、两条通道）",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/sp-swap-1110/sps-hold<h>-r4.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "aspen sps-iv-aspen-w{00,01,10,11}、sps-ivwan-aspen-w{00,01,10,11}",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/sp-swap-1110/<会话>.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "",
-          "log": "GL JobID 65812859–65812866（sps-hold-1..8，全部 RUNNING）",
-          "done_line": "scancel"
-        }
-      ],
+      "running_handles": [],
       "authorizations": [
         {
           "kind": "go",
@@ -2391,12 +2381,15 @@
           "scope": "夜间自主推进，问题留待裁决"
         }
       ],
-      "pending_decisions": [],
+      "pending_decisions": [
+        "是否补跑反向对照（frame_swap_exact 已实现，run_local 接入与帧供体生成未做）",
+        "是否修交换任务帧号对应（FP_FRAMEMAP 偏 1–2 帧）后重跑边界窗"
+      ],
       "next_steps": [
         {
-          "what": "干预完成后读数；交换任务 N 完成后 donors --by-k → kswap/kseeds",
-          "command": "sp_swap_readout --root <O>/<M>；fp_swap_prep donors --out <FPO-GL>/<M> --by-k",
-          "verdict_line": "SP_MATRIX / FP_SWAP_K"
+          "what": "用户读 result.md 并裁决",
+          "command": "读 docs/evaluation-doc/sp-swap-1110/result.md",
+          "verdict_line": "—"
         }
       ]
     }
