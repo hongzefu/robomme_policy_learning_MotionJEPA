@@ -1,0 +1,63 @@
+{
+ "schema": "eval3x3-queue-v1",
+ "note": "官方 FrameSamp+Context 512（HF Yinpei/mme_vla_suite 79999）bs64 续训 5000 步后，对最后一步 4999 做官方 test 800 局 × 推理 seed 42/7/0；其余参数沿用 eval3x3_1110_queue.json。",
+ "out_root": "v1-store/evaluation/fs512cont5k-1110",
+ "manifest_sha256": "991c34960b431f4e6170357dfe428e74e404f5ccdbf8dafddc3a0a380eaeecc6",
+ "benchmark": "/scratch/hongze/robomme_policy_learning_MotionJEPA/third_party/robomme_benchmark",
+ "policy_python": "/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/bin/python",
+ "sim_python": "/scratch/hongze/micromamba/envs/robomme/bin/python",
+ "stage2_python": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/venvs/wan-stage2/bin/python",
+ "gpus": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7
+ ],
+ "per_gpu": 4,
+ "mem_fraction": "0.18",
+ "gpu_free_mib": 2000,
+ "tmux_prefix": "f5e-",
+ "port_base": 9600,
+ "smoke_episode": "BinFill:0",
+ "smoke_seed": 42,
+ "smoke_timeout_seconds": 2400,
+ "worker_start_gap_seconds": 10,
+ "worker_death_limit": 16,
+ "models": {
+  "fs512c": {
+   "label": "FrameSamp@512 官方79999+续训5k",
+   "run": "orig100-ctx-framesamp512-official79999-cont5k-b64",
+   "train_root": "v1-store/train-runs/mme_vla_suite/orig100-ctx-framesamp512-official79999-cont5k-b64",
+   "policy_config": "mme_vla_suite",
+   "history_yaml": "perceptual-framesamp-context.yaml",
+   "model_kind": "history",
+   "sidecar": null,
+   "encoder_run": null,
+   "encoder_run_dir": null,
+   "target_contract": false
+  }
+ },
+ "items": [
+  {
+   "model": "fs512c",
+   "step": 4999,
+   "seed": 42
+  },
+  {
+   "model": "fs512c",
+   "step": 4999,
+   "seed": 7
+  },
+  {
+   "model": "fs512c",
+   "step": 4999,
+   "seed": 0
+  }
+ ],
+ "optional_tail_enabled": false,
+ "optional_tail": []
+}
