@@ -26,8 +26,10 @@ import time
 import uuid
 
 REPO = Path(__file__).resolve().parents[2]
-if str(REPO) not in sys.path:
-    sys.path.insert(0, str(REPO))
+# 主检出 .venv 的 editable 安装指向主检出 src；dry-run 解析配置必须 import 执行副本自己的源码，故放到最前。
+for _path in (REPO / "packages/openpi-client/src", REPO / "src", REPO):
+    if str(_path) not in sys.path:
+        sys.path.insert(0, str(_path))
 
 from scripts.evaluation.manifest import build_official_manifest, episode_key, make_manifest  # noqa: E402
 from scripts.evaluation.queue_store import QueueStore, publish, read_json, replace_json  # noqa: E402
