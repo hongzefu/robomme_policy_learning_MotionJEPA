@@ -134,3 +134,9 @@
 用户更正上一节的决定：RoboMME 官方协议是「Results are averaged over the last three checkpoints and three random seeds (nine runs total)」，仍需跑完 9 次。用户原话：「我搞错了  robomme官方Results are averaged over the last three checkpoints and three random seeds (nine runs total) 你还是要跑完的 给出恢复方案 并且给出eval完成的时间节点」「同意开始」。
 
 恢复方式：在同一执行副本（`f0149d8`）重启 `ev3-trigger`（`scripts/evaluation/eval3x3_1110_trigger.sh`）。冒烟阶段只重跑此前因端口冲突（`OSError: [Errno 98] Address already in use`）失败的 noxyz-60000、nostate-70000、nostate-60000，其余 8 个缓存 PASS；正式队列跳过已完成的 4 项，fs1024-70000-seed7 从已完成的 407/800 局续跑。上一节「协议变更」保留作历史记录；`final-ckpt-3seed/` 即 9 次中最后 checkpoint 的 3 次，汇总时复用。
+
+## 暂停（2026-11-10 美东 18:11）
+
+用户指令原话：「暂停现在的评测」。精确停掉 `ev3-trigger` 后执行 `eval_queue.py --stop`（`STOP_DONE sent=98 remaining=[]`），`ev3-` 会话 0、8 卡显存 0，非 `ev3-` 会话未受影响。暂停时进度：已完成 fs1024-79999 seed 42/7/0、fs1024-70000 seed 42；fs1024-70000-seed7 已完成 431/800 局（保留，可续跑）；其余 28 项未开始。11 个 checkpoint 冒烟均已 PASS（缓存有效）。
+
+续跑方法：在执行副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA-eval3x3-f0149d89` 重启 `tmux new-session -d -s ev3-trigger "bash scripts/evaluation/eval3x3_1110_trigger.sh"`，冒烟全部命中缓存，正式队列跳过已完成项并从 431 局续跑 70000 seed 7。
