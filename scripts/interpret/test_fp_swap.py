@@ -465,3 +465,258 @@ def test_swap_line_blind_and_excluded():
             {"task": "VideoRepick", "stage": "swap", "group": "Z", "key": "VideoRepick:1", "status": "invalid"}]
     summ = R.task_summary(runs, "VideoRepick")
     assert summ["excluded"] == 1 and summ["invalid"] == 1
+
+
+# ---------------------------------------------------------------- SP-W2：难度参数、按 n 均衡局池、W_k、Bsame_k/Z_k、FP_SWAP_K、路径根
+def test_scan_difficulties_and_tag(tmp_path):
+    assert F.scan_seeds("VideoUnmaskSwap", 100, 3) == [(0, 100, "easy"), (1, 200, "medium"), (2, 300, "easy")]
+    hard = F.scan_seeds("VideoUnmaskSwap", 2050000, 2, F.parse_difficulties("hard"))
+    assert hard == [(0, 2050000, "hard"), (1, 2050100, "hard")]
+    assert F.parse_difficulties("easy, medium,hard") == ("easy", "medium", "hard")
+    with pytest.raises(SystemExit):
+        F.parse_difficulties("easy,xhard")
+    assert F.scan_tag(("easy", "medium")) is None and F.scan_tag(("hard",)) == "hard" and F.scan_tag(("easy",), "x") == "x"
+    assert F.scan_file(tmp_path, "VideoRepick").name == "scan_VideoRepick.json"
+    assert F.scan_file(tmp_path, "VideoRepick", "hard").name == "scan_VideoRepick_hard.json"
+
+
+def test_swap_blind_k_and_order():
+    sched = [[0, 1, 64, 114], [1, 2, 114, 164]]
+    # 实际：物体 0 在槽 1；漏第 1 次 → 信念槽 0，实际占槽 0 的是物体 2；漏第 2 次（不涉及目标）→ 仍是目标
+    assert F.swap_blind_k(3, 0, sched, 1) == 2 and F.swap_blind_k(3, 0, sched, 2) == 0
+    assert F.swap_blind_k(3, 0, list(reversed(sched)), 1) == 2           # 按 start 排序定义第 k 次
+    for s in ([[0, 1, 0, 1]], [[1, 2, 0, 1]], [[0, 2, 0, 1]]):           # n=1 时等于 swap_blind_index
+        assert F.swap_blind_k(3, 0, s, 1) == F.swap_outcome(3, 0, s)[1]
+    s3 = [[0, 1, 10, 20], [0, 2, 20, 30], [1, 2, 30, 40]]
+    # 实际槽 [2,1,0]；漏第 1 次信念槽 2 → 物体 0（目标，第 1 次被第 2 次抵消）；漏第 2 次信念槽 1 → 物体 1
+    assert [F.swap_blind_k(3, 0, s3, k) for k in (1, 2, 3)] == [0, 1, 0]
+    with pytest.raises(ValueError):
+        F.swap_blind_k(3, 0, sched, 3)
+    fp = lambda i: {"index": i}
+    assert F.classify_pick_k(fp(2), 0, 2) == "swap_blind_k" and F.classify_pick_k(fp(0), 0, 0) == "correct"
+    assert F.classify_pick_k(fp(1), 0, 0) == "other" and F.classify_pick_k(None, 0, 2) == "none"
+
+
+def test_swap_windows_k():
+    sched = [[0, 1, 64, 114], [1, 2, 114, 164]]
+    assert F.swap_frames_k(sched, 1) == (65, 115) and F.swap_frames_k(sched, 2) == (115, 165)
+    assert F.swap_frames_k(sched, 3) is None
+    w1, w2 = F.swap_windows_k("VideoUnmaskSwap", 200, sched, 1), F.swap_windows_k("VideoUnmaskSwap", 200, sched, 2)
+    assert w1 == [64, 96] and w2 == [96, 128, 160]
+    assert sorted(set(w1) | set(w2)) == F.swap_windows("VideoUnmaskSwap", 200, sched)
+    # Button 取执行窗、带帧偏移；闭区间端点相交也算
+    assert F.swap_windows_k("ButtonUnmaskSwap", 0, sched, 2, offset=-4) == [96, 128, 160]   # [111,161] 含 160
+    assert F.swap_windows_k("ButtonUnmaskSwap", 0, sched, 2, offset=-6) == [96, 128]        # [109,159]
+    assert F.swap_windows_k("VideoRepick", 200, [[0, 1, 63, 80]], 1) == [32, 64]
+    lab = F.episode_labels("VideoUnmaskSwap", {"es": 200, "initial_env_step": None, "schedule": sched,
+                                               "target_index": 0}, 3)
+    assert lab["Wk"] == {1: [64, 96], 2: [96, 128, 160]} and lab["blind_k"] == {1: 2, 2: 0}
+
+
+def test_k_slots():
+    assert F.synthetic_ep(3, F.k_slot("Bsame_k", 1)) == 10000322 and F.synthetic_ep(3, F.k_slot("Z_k", 3)) == 10000327
+    codes = set(F.K_SLOTS.values())
+    assert len(codes) == 6 and not codes & set(F.SLOTS.values()) and max(codes) < 100
+    assert len(F.SLOTS) == 8
+
+
+def _scan_entry(task, i, seed, diff, sched):
+    moved, blind = F.swap_outcome(3, 0, sched)
+    return {"scan_index": i, "env_seed": seed, "difficulty": diff, "status": "ok", "n_objects": 3, "target_index": 0,
+            "swap_times": len(sched), "swap_schedule": sched, "moved": moved, "swap_blind_index": blind,
+            "es": 0 if task in F.BUTTON_TASKS else max(x[3] for x in sched) + 21}
+
+
+S3 = [[0, 1, 64, 114], [1, 2, 114, 164], [0, 2, 164, 214]]
+
+
+def fake_scan_by_n(out, per=4):
+    """easy/medium：n=1、2（VR 另有 n=3）；VUS/BUS 另写 hard 扫描文件（n=3 与混进来的 n=1，后者不得被取）。"""
+    for task in F.TASKS:
+        entries, hard = [], []
+        for i in range(4 * per):
+            n = 1 + i % (3 if task == "VideoRepick" else 2)
+            entries.append(_scan_entry(task, i, F.SEED0[task] + 100 * i, ("easy", "medium")[(i // 3) % 2], S3[:n]))
+        (out / f"scan_{task}.json").write_text(json.dumps({"task": task, "entries": entries}))
+        if task != "VideoRepick":
+            for i in range(2 * per):
+                n = 3 if i % 4 else 1
+                hard.append(_scan_entry(task, i, F.SEED0[task] + 50000 + 100 * i, "hard", S3[:n]))
+            (out / f"scan_{task}_hard.json").write_text(json.dumps({"task": task, "entries": hard}))
+
+
+def test_by_swap_times_pick_sources():
+    spec = [("easy", 1)] * 3 + [("medium", 2)] * 3 + [("hard", 3)] * 3 + [("hard", 1)] * 3 + [("medium", 3)] * 3
+    entries = [_scan_entry("VideoUnmaskSwap", i, 1000 + i, d, S3[:n]) for i, (d, n) in enumerate(spec)]
+    picked, _, _, bins = F.by_swap_times_pick("VideoUnmaskSwap", entries, 2)
+    assert bins == {1: 2, 2: 2, 3: 2}
+    assert all(e["difficulty"] == "hard" for e in picked if e["swap_times"] == 3)
+    assert all(e["difficulty"] != "hard" for e in picked if e["swap_times"] < 3)
+    picked, _, _, bins = F.by_swap_times_pick("VideoRepick", entries, 2)
+    assert bins[3] == 2 and all(e["difficulty"] == "medium" for e in picked if e["swap_times"] == 3)
+
+
+def test_pool_by_swap_times(tmp_path):
+    O = tmp_path / "fpk"
+    O.mkdir()
+    fake_scan_by_n(O)
+    assert F.main(["pool", "--out", str(O), "--by-swap-times", "--per-n", "3"]) == 0
+    pool = json.loads((O / "pool.json").read_text())
+    assert pool["mode"] == "by_swap_times" and pool["per_task"] == 9
+    for task in F.TASKS:
+        eps = [e for e in pool["episodes"] if e["task_name"] == task]
+        assert [e["episode_id"] for e in eps] == list(range(9))
+        assert {n: sum(e["swap_times"] == n for e in eps) for n in (1, 2, 3)} == {1: 3, 2: 3, 3: 3}
+        n3 = {e["difficulty"] for e in eps if e["swap_times"] == 3}
+        assert n3 <= ({"easy", "medium"} if task == "VideoRepick" else {"hard"})
+        assert all(e["difficulty"] != "hard" for e in eps if e["swap_times"] < 3)
+        assert json.loads((O / "metadata" / F.meta_name(task)).read_text())["record_count"] == 9
+    # 旧模式只读 scan_<T>.json：hard 文件不进局池
+    O2 = tmp_path / "fpold"
+    O2.mkdir()
+    fake_scan_by_n(O2)
+    F.main(["pool", "--out", str(O2), "--per-task", "6"])
+    assert all(e["difficulty"] != "hard" for e in json.loads((O2 / "pool.json").read_text())["episodes"])
+
+
+def _ns(**kw):
+    import argparse
+    base = {k: None for k in ("main", "store", "bench_src", "policy_python", "sim_python", "stage2_python",
+                              "mmevla_store", "log_dir", "gl_store")}
+    base.update(release=False, run_tree="/rel/abc1234")
+    base.update(kw)
+    return argparse.Namespace(**base)
+
+
+def test_roots_default_and_gl():
+    assert F.resolve_roots(_ns()) == F.default_roots()
+    gl = F.resolve_roots(_ns(gl_store="/g"))
+    assert gl["policy_python"] == "/g/envs/policy/bin/python" and gl["sim_python"] == "/g/envs/official-sim/bin/python"
+    assert gl["stage2_python"] == "/g/envs/stage2/bin/python" and gl["mmevla_store"] == "/g" and gl["release"]
+    assert gl["bench_src"] == "/rel/abc1234/third_party/robomme_benchmark/src"
+    assert F.resolve_roots(_ns(gl_store="/g", mmevla_store="/m"))["mmevla_store"] == "/m"
+    assert F.reroot(str(F.STORE / "assets/x"), gl) == "/g/assets/x" and F.reroot("/other/x", gl) == "/other/x"
+    env = F.render_env(gl, 0.3, "/rel/abc1234", "abc1234" + "0" * 33, "/o/motion")
+    assert "git rev-parse" not in env and "reason=release_name" in env and "MMEVLA_V1_STORE=/g " in env
+    assert "PYTHONPATH=$T:$T/src:/rel/abc1234/third_party/robomme_benchmark/src" in env and "FPS_M=/o/motion" in env
+    old = F.ENV_TEMPLATE.format(frac=0.3, run_tree="/t", commit=COMMIT, store=F.STORE, bench=F.BENCH_SRC, out="/o",
+                                py=F.SPEC_TEMPLATE["policy_python"], sim=F.SPEC_TEMPLATE["sim_python"])
+    assert F.render_env(F.default_roots(), 0.3, "/t", COMMIT, "/o") == old
+    assert F.parse_workers(None) == (list(F.P.WORKERS), list(F.P.ASSIGN_ORDER), dict(F.P.WORKER_CUDA))
+    assert F.parse_workers("a=0,b=1")[2] == {"a": "0", "b": "1"}
+    with pytest.raises(SystemExit):
+        F.parse_workers("a=0,a=1")
+
+
+def test_specs_gl_variant(tmp_path):
+    O = tmp_path / "fpgl"
+    O.mkdir()
+    fake_scan(O)
+    assert F.main(["pool", "--out", str(O), "--per-task", str(PER_TASK)]) == 0
+    Mdir = O / "motion"
+    rel = tmp_path / "releases" / COMMIT[:12]
+    assert F.main(["specs", "--out", str(Mdir), "--model", "motion", "--commit", COMMIT, "--run-tree", str(rel),
+                   "--gl-store", "/gl/v1-store", "--checkpoint", "/gl/v1-store/assets/vla-o16cc-59999-bd35/59999"]) == 0
+    plan = json.loads((Mdir / "plan.json").read_text())
+    assert plan["roots"]["release"] and plan["workers"]["order"] == list(F.GL_WORKERS)
+    assert {r["worker"] for r in plan["runs"] if r["stage"] == "n"} <= set(F.GL_WORKERS)
+    spec = json.loads(next((Mdir / "specs").glob("n-gl*.json")).read_text())
+    assert spec["policy_python"] == "/gl/v1-store/envs/policy/bin/python" and spec["cuda"] == "0"
+    assert spec["sim_python"] == "/gl/v1-store/envs/official-sim/bin/python"
+    assert spec["checkpoint"] == "/gl/v1-store/assets/vla-o16cc-59999-bd35/59999"
+    assert spec["target_contract"].startswith("/gl/v1-store/evaluation/") and spec["repo"] == str(rel)
+    assert not any(isinstance(v, str) and str(F.STORE) in v for v in spec.values())
+    env = (Mdir / "env.sh").read_text()
+    assert "git rev-parse" not in env and "MMEVLA_V1_STORE=/gl/v1-store" in env
+    assert (Mdir / "queues" / "n-gl15.sh").is_file() and not (Mdir / "queues" / "n-w00.sh").exists()
+    assert "/gl/v1-store/logs/fp-swap-1110" in (Mdir / "launch_stage.sh").read_text()
+
+
+def test_end_to_end_by_k(tmp_path):
+    O = tmp_path / "fpk"
+    O.mkdir()
+    fake_scan(O)
+    assert F.main(["pool", "--out", str(O), "--per-task", str(PER_TASK)]) == 0
+    pool = json.loads((O / "pool.json").read_text())
+    Mdir = O / "motion"
+    assert F.main(["specs", "--out", str(Mdir), "--model", "motion", "--commit", COMMIT,
+                   "--run-tree", str(tmp_path / "tree")]) == 0
+    plan = json.loads((Mdir / "plan.json").read_text())
+    assert "roots" not in plan and "workers" not in plan                 # 缺省：plan 与旧版同键
+    elig = {F.episode_key(e["task_name"], e["episode_id"]): e for e in pool["episodes"]}
+    for row in plan["runs"]:
+        if row["stage"] == "n":
+            e = elig[F.episode_key(row["task"], row["ep"])]
+            pick = 0 if row["ep"] % 2 == 0 else (e["swap_blind_index"] if e["moved"] else 2)
+            write_episode(row, pick, e["swap_schedule"], 0, record_dir=Mdir / "record", es=e["es"])
+    assert F.main(["donors", "--out", str(Mdir), "--by-k"]) == 0
+    plan = json.loads((Mdir / "plan.json").read_text())
+    assert not any(r["stage"] in ("swap", "seeds") for r in plan["runs"])   # 旧组不生成
+    ks = [r for r in plan["runs"] if r["stage"] == "kswap"]
+    assert ks and all(r["seed"] == F.MAIN_SEED for r in ks)
+    recv = plan["k_recv"]
+    assert recv and all(F.split_key(k)[1] % 2 == 0 for k in recv)
+    for key in recv:
+        for k in range(1, elig[key]["swap_times"] + 1):
+            assert sum(1 for r in ks if F.episode_key(r["task"], r["ep"]) == key and r["k"] == k
+                       and r["group"] == "Z_k") == 1
+    assert not any(r["k"] > elig[F.episode_key(r["task"], r["ep"])]["swap_times"] for r in ks)
+    assert any(r["group"] == "Bsame_k" for r in ks)
+    for r in ks:
+        e = elig[F.episode_key(r["task"], r["ep"])]
+        Wk = F.swap_windows_k(r["task"], e["es"], e["swap_schedule"], r["k"])
+        assert r["w_starts"] == Wk and r["donor"] == F.synthetic_ep(r["ep"], F.k_slot(r["group"], r["k"]))
+        with np.load(Mdir / F.DONOR_DIR / F.record_name(r["task"], r["donor"])) as z:
+            starts, embs = z["start_frames"].tolist(), z["embs"]
+        assert starts == Wk
+        if r["group"] == "Z_k":
+            assert not embs.any()
+        else:
+            d = elig[r["donor_src"]]
+            assert d["swap_times"] == e["swap_times"] and r["donor_src"] != F.episode_key(r["task"], r["ep"])
+            dW = F.swap_windows_k(r["task"], d["es"], d["swap_schedule"], r["k"])
+            with np.load(Mdir / "record" / F.record_name(*F.split_key(r["donor_src"]))) as z:
+                src = dict(zip(z["start_frames"].tolist(), z["embs"]))
+            m = min(len(dW), len(Wk))
+            assert np.array_equal(embs[:m], np.stack([src[s] for s in dW[:m]]))
+    per_spec = {}
+    for r in ks:                                                          # 同 (seed,k,组) 装同一 spec
+        per_spec.setdefault(r["spec"], set()).add((r["k"], r["group"]))
+    assert all(len(v) == 1 for v in per_spec.values())
+    kseeds = [r for r in plan["runs"] if r["stage"] == "kseeds"]
+    assert kseeds and {r["seed"] for r in kseeds} == {F.KSEED_SEED}
+    assert max(sum(1 for r in kseeds if r["task"] == t) for t in F.TASKS) <= F.KSEED_PER_TASK
+    # 读数输入：Bsame_k 拿 blind_k（≠目标时即 swap_blind_k），Z_k 拿对；replace_log = W_k
+    for row in plan["runs"]:
+        if row["stage"] not in ("kswap", "kseeds"):
+            continue
+        e = elig[F.episode_key(row["task"], row["ep"])]
+        bk = F.swap_blind_k(3, 0, e["swap_schedule"], row["k"])
+        mc = {"mode": "swap_exact", "donor": F.episode_key(row["task"], row["donor"]), "n_windows": 30,
+              "n_replaced": len(row["w_starts"]), "replace_log": [[s, s] for s in row["w_starts"]]}
+        write_episode(row, bk if row["group"] == "Bsame_k" else 0, e["swap_schedule"], 0, mc=mc, es=e["es"])
+    R.main(["--root", str(Mdir)])
+    out = json.loads((Mdir / "readout" / "readout.json").read_text())
+    lines = out["lines"]
+    assert any(l.startswith("SWAP_SCOPE=PASS") for l in lines)
+    klines = [l for l in lines if l.startswith("FP_SWAP_K=")]
+    n_cells = sum(len(R.k_cells(ks, t)) for t in F.TASKS)
+    assert n_cells and len(klines) == n_cells
+    assert all(l.startswith("FP_SWAP_K=PASS") and "invalid=0" in l for l in klines)
+    for cellmap in out["k_summaries"].values():
+        for s in cellmap.values():
+            assert s["groups"]["Bsame_k"]["cats"]["swap_blind_k"] <= s["k_matters"]
+            assert s["groups"]["Z_k"]["cats"]["correct"] == s["groups"]["Z_k"]["n"]
+    # VUS n=2（[0,1] 后 [1,2]，目标 0）：漏第 1 次时目标在物体 2（matters）；第 2 次不涉及目标
+    vus = out["k_summaries"]["VideoUnmaskSwap"]
+    assert vus["n2k1"]["k_matters"] == vus["n2k1"]["recv"] > 0 and vus["n2k2"]["k_matters"] == 0
+    assert vus["n2k1"]["groups"]["Bsame_k"]["cats"]["swap_blind_k"] == vus["n2k1"]["groups"]["Bsame_k"]["n"]
+    assert any(l.startswith("SEED_FIRST_PICK") and "pairs=0" not in l for l in lines)
+
+
+def test_bootstrap_ci():
+    assert R.bootstrap_ci([]) is None
+    assert R.bootstrap_ci([1, 1, 1]) == (1.0, 1.0)
+    lo, hi = R.bootstrap_ci([0, 1] * 20)
+    assert 0.25 < lo < 0.5 < hi < 0.75
+    assert R.bootstrap_ci([0, 1] * 20) == (lo, hi)                        # 固定 seed，可复现
