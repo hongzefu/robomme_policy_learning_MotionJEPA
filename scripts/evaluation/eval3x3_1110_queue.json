@@ -1,0 +1,307 @@
+{
+ "schema": "eval3x3-queue-v1",
+ "note": "论文主表 3 ckpt x 3 seed 官方 test 800 局评测队列；items 顺序即执行顺序（写死）；optional_tail 只在 optional_tail_enabled=true 时追加在末尾；encoder_run_dir 为占位，下载完成后核对。",
+ "out_root": "v1-store/evaluation/eval3x3-1110",
+ "manifest_sha256": "991c34960b431f4e6170357dfe428e74e404f5ccdbf8dafddc3a0a380eaeecc6",
+ "benchmark": "/scratch/hongze/robomme_policy_learning_MotionJEPA/third_party/robomme_benchmark",
+ "policy_python": "/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/bin/python",
+ "sim_python": "/scratch/hongze/micromamba/envs/robomme/bin/python",
+ "stage2_python": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/venvs/wan-stage2/bin/python",
+ "gpus": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7
+ ],
+ "per_gpu": 4,
+ "mem_fraction": "0.18",
+ "gpu_free_mib": 2000,
+ "tmux_prefix": "ev3-",
+ "port_base": 9300,
+ "smoke_episode": "BinFill:0",
+ "smoke_seed": 42,
+ "smoke_timeout_seconds": 2400,
+ "worker_start_gap_seconds": 10,
+ "worker_death_limit": 16,
+ "models": {
+  "fs1024": {
+   "label": "FrameSamp@1024",
+   "run": "orig100-ctx-framesamp1024-b64-80k-8gpu",
+   "train_root": "v1-store/train-runs/mme_vla_suite/orig100-ctx-framesamp1024-b64-80k-8gpu",
+   "policy_config": "mme_vla_suite",
+   "history_yaml": "perceptual-framesamp-context-1024.yaml",
+   "model_kind": "history",
+   "sidecar": null,
+   "encoder_run": null,
+   "encoder_run_dir": null,
+   "target_contract": false
+  },
+  "motionmem": {
+   "label": "MotionMem（stage2 concat 1x1024）",
+   "run": "orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k",
+   "train_root": "v1-store/train-runs/mme_vla_suite_orig16_b128_60k/orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k",
+   "policy_config": "mme_vla_suite_orig16_b128_60k",
+   "history_yaml": "perceptual-framesamp-ctx-32frame-4x4-motion-stage2-1x1024-orig16.yaml",
+   "model_kind": "stage2_pool4_concat",
+   "sidecar": "stage2",
+   "encoder_run": "stage2-full144-1025-a",
+   "encoder_run_dir": null,
+   "target_contract": false
+  },
+  "wanpool": {
+   "label": "Frozen Wan pooling（timepool1024）",
+   "run": "orig100-ctx32x4x4-wan-timepool8x8-b128-60k",
+   "train_root": "v1-store/train-runs/mme_vla_suite_orig16_b128_60k/orig100-ctx32x4x4-wan-timepool8x8-b128-60k",
+   "policy_config": "mme_vla_suite_orig16_b128_60k",
+   "history_yaml": "perceptual-framesamp-ctx-32frame-4x4-wan-timepool1024-orig16.yaml",
+   "model_kind": "wan_fixedpool1024",
+   "sidecar": "timepool",
+   "encoder_run": null,
+   "encoder_run_dir": null,
+   "target_contract": false
+  },
+  "noxyz": {
+   "label": "消融 noxyz（split 4x256）",
+   "run": "gl-orig100-ctx32x4x4-noxyz-motion-s2split4x256-b64-80k",
+   "train_root": "v1-store/train-runs/mme_vla_suite_orig16_b64_80k/gl-orig100-ctx32x4x4-noxyz-motion-s2split4x256-b64-80k",
+   "policy_config": "mme_vla_suite_orig16_b64_80k",
+   "history_yaml": "perceptual-framesamp-ctx-32frame-4x4-noxyz-motion-stage2-4x256-orig16.yaml",
+   "model_kind": "stage2_pool4_concat",
+   "sidecar": "stage2",
+   "encoder_run": "aws-stage2-noxyz-1101-a",
+   "encoder_run_dir": "/scratch/hongze/MotionJEPA/v1-store/runs/aws-stage2-noxyz-1101-a",
+   "target_contract": true
+  },
+  "nostate": {
+   "label": "消融 nostate（split 4x256）",
+   "run": "gl-orig100-ctx32x4x4-nostate-motion-s2split4x256-b64-80k",
+   "train_root": "v1-store/train-runs/mme_vla_suite_orig16_b64_80k/gl-orig100-ctx32x4x4-nostate-motion-s2split4x256-b64-80k",
+   "policy_config": "mme_vla_suite_orig16_b64_80k",
+   "history_yaml": "perceptual-framesamp-ctx-32frame-4x4-nostate-motion-stage2-4x256-orig16.yaml",
+   "model_kind": "stage2_pool4_concat",
+   "sidecar": "stage2",
+   "encoder_run": "aws-stage2-nostate-1101-a",
+   "encoder_run_dir": "/scratch/hongze/MotionJEPA/v1-store/runs/aws-stage2-nostate-1101-a",
+   "target_contract": true
+  }
+ },
+ "items": [
+  {
+   "model": "fs1024",
+   "step": 79999,
+   "seed": 42
+  },
+  {
+   "model": "fs1024",
+   "step": 79999,
+   "seed": 7
+  },
+  {
+   "model": "fs1024",
+   "step": 79999,
+   "seed": 0
+  },
+  {
+   "model": "fs1024",
+   "step": 70000,
+   "seed": 42
+  },
+  {
+   "model": "fs1024",
+   "step": 70000,
+   "seed": 7
+  },
+  {
+   "model": "fs1024",
+   "step": 70000,
+   "seed": 0
+  },
+  {
+   "model": "fs1024",
+   "step": 60000,
+   "seed": 42
+  },
+  {
+   "model": "fs1024",
+   "step": 60000,
+   "seed": 7
+  },
+  {
+   "model": "fs1024",
+   "step": 60000,
+   "seed": 0
+  },
+  {
+   "model": "motionmem",
+   "step": 55000,
+   "seed": 42
+  },
+  {
+   "model": "motionmem",
+   "step": 50000,
+   "seed": 42
+  },
+  {
+   "model": "wanpool",
+   "step": 55000,
+   "seed": 42
+  },
+  {
+   "model": "wanpool",
+   "step": 50000,
+   "seed": 42
+  },
+  {
+   "model": "noxyz",
+   "step": 70000,
+   "seed": 42
+  },
+  {
+   "model": "noxyz",
+   "step": 60000,
+   "seed": 42
+  },
+  {
+   "model": "nostate",
+   "step": 70000,
+   "seed": 42
+  },
+  {
+   "model": "nostate",
+   "step": 60000,
+   "seed": 42
+  },
+  {
+   "model": "motionmem",
+   "step": 55000,
+   "seed": 7
+  },
+  {
+   "model": "motionmem",
+   "step": 50000,
+   "seed": 7
+  },
+  {
+   "model": "wanpool",
+   "step": 55000,
+   "seed": 7
+  },
+  {
+   "model": "wanpool",
+   "step": 50000,
+   "seed": 7
+  },
+  {
+   "model": "noxyz",
+   "step": 70000,
+   "seed": 7
+  },
+  {
+   "model": "noxyz",
+   "step": 60000,
+   "seed": 7
+  },
+  {
+   "model": "nostate",
+   "step": 70000,
+   "seed": 7
+  },
+  {
+   "model": "nostate",
+   "step": 60000,
+   "seed": 7
+  },
+  {
+   "model": "motionmem",
+   "step": 55000,
+   "seed": 0
+  },
+  {
+   "model": "motionmem",
+   "step": 50000,
+   "seed": 0
+  },
+  {
+   "model": "wanpool",
+   "step": 55000,
+   "seed": 0
+  },
+  {
+   "model": "wanpool",
+   "step": 50000,
+   "seed": 0
+  },
+  {
+   "model": "noxyz",
+   "step": 70000,
+   "seed": 0
+  },
+  {
+   "model": "noxyz",
+   "step": 60000,
+   "seed": 0
+  },
+  {
+   "model": "nostate",
+   "step": 70000,
+   "seed": 0
+  },
+  {
+   "model": "nostate",
+   "step": 60000,
+   "seed": 0
+  }
+ ],
+ "optional_tail_enabled": false,
+ "optional_tail": [
+  {
+   "model": "motionmem",
+   "step": 59999,
+   "seed": 42
+  },
+  {
+   "model": "noxyz",
+   "step": 79999,
+   "seed": 42
+  },
+  {
+   "model": "nostate",
+   "step": 79999,
+   "seed": 42
+  },
+  {
+   "model": "motionmem",
+   "step": 59999,
+   "seed": 7
+  },
+  {
+   "model": "noxyz",
+   "step": 79999,
+   "seed": 7
+  },
+  {
+   "model": "nostate",
+   "step": 79999,
+   "seed": 7
+  },
+  {
+   "model": "motionmem",
+   "step": 59999,
+   "seed": 0
+  },
+  {
+   "model": "noxyz",
+   "step": 79999,
+   "seed": 0
+  },
+  {
+   "model": "nostate",
+   "step": 79999,
+   "seed": 0
+  }
+ ]
+}
