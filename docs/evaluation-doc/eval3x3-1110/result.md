@@ -96,3 +96,31 @@
 - All：32.00 / 31.88 / 32.62，均值 **32.17 ± 0.40**（样本标准差 ddof=1）。
 - 套件均值（三 seed 平均）：Counting 49.8、Permanence 25.3、Reference 23.2、Imitation 30.3。
 - 这是单个 checkpoint 的 3 seed；主表口径是 3 checkpoint × 3 seed 的 9 次均值，60000/70000 跑完后再汇总。
+
+## fs1024 70000 · seed 42
+
+- **结果：228/800 = 28.50%**，accepted=800，errors=0，retries=0。
+- 起止：首局完成 2026-11-10 16:56:29 美东，末局完成 17:39:06 美东。
+- checkpoint `/scratch/hongze/robomme_policy_learning_MotionJEPA-eval3x3-f0149d89/v1-store/train-runs/mme_vla_suite/orig100-ctx-framesamp1024-b64-80k-8gpu/70000`；`run_identity_sha256=b4f34751fe61acf8540c571f43304c322d946ff9b22550ac4723fcab5e3b6596`；执行代码 `f0149d897ebf`。
+- 逐局 CSV：`records/fs1024-70000-seed42.episodes.csv`（sha256 `39dc964b6ae45c39cd4ee5664cadf230653aeecab51f3594f16b748ea0478cd0`）。
+
+| 套件 | 任务 | 成功/50 | 成功率 |
+|---|---|---|---|
+| Counting | BinFill | 10 | 20.0 |
+| Counting | PickXtimes | 28 | 56.0 |
+| Counting | SwingXtimes | 38 | 76.0 |
+| Counting | StopCube | 18 | 36.0 |
+| Permanence | VideoUnmask | 12 | 24.0 |
+| Permanence | ButtonUnmask | 12 | 24.0 |
+| Permanence | VideoUnmaskSwap | 12 | 24.0 |
+| Permanence | ButtonUnmaskSwap | 10 | 20.0 |
+| Reference | PickHighlight | 8 | 16.0 |
+| Reference | VideoRepick | 10 | 20.0 |
+| Reference | VideoPlaceButton | 8 | 16.0 |
+| Reference | VideoPlaceOrder | 13 | 26.0 |
+| Imitation | MoveCube | 39 | 78.0 |
+| Imitation | InsertPeg | 0 | 0.0 |
+| Imitation | PatternLock | 6 | 12.0 |
+| Imitation | RouteStick | 4 | 8.0 |
+
+套件均值（逐任务等权）：Counting 47.0、Permanence 23.0、Reference 19.5、Imitation 24.5；All 28.50。
