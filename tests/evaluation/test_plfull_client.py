@@ -1,4 +1,4 @@
-"""plfull 口径（PatternLock 全因子交换自建 80 局清单）客户端与 metadata 覆盖路由的 CPU 测试；不创建仿真、不起模型。"""
+"""plfull 口径（自建 metadata 清单，局号 0–119）客户端与 metadata 覆盖路由的 CPU 测试；不创建仿真、不起模型。"""
 
 import json
 from pathlib import Path
@@ -68,11 +68,12 @@ def test_plfull_accepts_ep_0_to_79_and_passes_metadata(tmp_path, seed):
     assert record["outcome"] == "success" and "motion_downsample_steps" not in record
 
 
-def test_plfull_rejects_ep_80_and_bad_seed_and_missing_dir(tmp_path):
+def test_plfull_rejects_ep_120_and_bad_seed_and_missing_dir(tmp_path):
     meta = metadata_dir(tmp_path)
     with pytest.raises(candidate.ContractError):
-        candidate.load_chunk(make_args(tmp_path, [("PatternLock", 80, "easy")], profile="plfull"))
+        candidate.load_chunk(make_args(tmp_path, [("PatternLock", 120, "easy")], profile="plfull"))
     assert candidate.load_chunk(make_args(tmp_path, [("PatternLock", 79, "easy")], profile="plfull"))
+    assert candidate.load_chunk(make_args(tmp_path, [("PatternLock", 119, "easy")], profile="plfull"))
     with pytest.raises(candidate.ContractError, match="seed"):
         candidate.evaluate(make_args(tmp_path, [("PatternLock", 1, "easy")], profile="plfull",
                                      plfull_metadata_dir=meta, model_seed=7), runner_factory=FakeRunner)
