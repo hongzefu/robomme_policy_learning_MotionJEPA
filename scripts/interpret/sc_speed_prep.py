@@ -337,10 +337,11 @@ done
 HOLD_TEMPLATE = """#!/usr/bin/env bash
 # 由 scripts/interpret/sc_speed_prep.py specs 生成（GL 占位 {hold} 内的唯一作业步，阶段 {stage}）。
 # 两条通道各跑一个 worker 队列，第二条错开 {stagger} 秒启动；每条通道日志 {logs}/{prefix}-{stage}-<worker>.log，
-# 尾行 EXIT_CODE=。全部通道结束后，任一通道非零即非零退出。
+# 尾行 EXIT_CODE=。全部通道结束后，本次启动的任一通道非零即非零退出（因 SKIP_LOG_EXISTS 跳过的旧日志不计入）。
 SCS_M={root}
 mkdir -p {logs}
 pids=()
+chans=()
 started=0
 for w in {workers}; do
   q=$SCS_M/queues/{stage}-$w.sh
@@ -350,14 +351,15 @@ for w in {workers}; do
   if [ "$started" -gt 0 ]; then sleep {stagger}; fi
   ( set -o pipefail; PYTHONUNBUFFERED=1 bash "$q" 2>&1 | tee "$log"; echo "EXIT_CODE=$?" >> "$log" ) &
   pids+=($!)
+  chans+=("$w")
   started=$((started+1))
   echo "CHANNEL_STARTED $w $log"
 done
 rc=0
 for p in "${{pids[@]}}"; do wait "$p" || rc=1; done
-for w in {workers}; do
+for w in "${{chans[@]}}"; do
   log={logs}/{prefix}-{stage}-$w.log
-  [ -f "$log" ] && grep -q '^EXIT_CODE=0$' "$log" || {{ [ -f "$log" ] && rc=1; }}
+  grep -q '^EXIT_CODE=0$' "$log" || rc=1
 done
 echo "SCS_HOLD stage={stage} hold={hold} channels=$started rc=$rc"
 exit $rc
@@ -514,8 +516,9 @@ def build_n(b, eps, by_ep):
 
 
 def slot_items(root, eps, by_ep, need):
-    """[(slot, 接收局)]：donor 阶段要求 donor_cfg/slot<s>.json 含该局；iv 阶段要求 donors_sc 里有合成供体文件。"""
-    items = []
+    """返回 ([(slot, 接收局)], 缺失 [(slot, 接收局)])：donor 阶段要求 donor_cfg/slot<s>.json 含该局；
+    iv 阶段要求 donors_sc 里有合成供体文件。"""
+    items, missing = [], []
     for slot in SLOTS:
         if need == "cfg":
             path = Path(root) / CFG_DIR / f"slot{slot}.json"
@@ -525,7 +528,16 @@ def slot_items(root, eps, by_ep, need):
         else:
             have = {r for r in eps if (Path(root) / DONOR_DIR / record_name(syn_ep(r, slot))).is_file()}
         items += [(slot, r) for r in eps if r in have]
-    return items
+        missing += [(slot, r) for r in eps if r not in have]
+    return items, missing
+
+
+def missing_gate(missing, allow):
+    """打印 SCS_SPECS_MISSING 与逐项缺失；缺失 > 0 且未加 --allow-missing 时返回 False（调用方非零退出）。"""
+    print(f"SCS_SPECS_MISSING={len(missing)}", flush=True)
+    for slot, r in missing:
+        print(f"SCS_MISSING slot={slot} recv={episode_key(r)}", flush=True)
+    return not missing or bool(allow)
 
 
 def build_slot_stage(b, stage, items, by_ep):
@@ -626,7 +638,10 @@ def cmd_specs(args):
     if args.stage == "n":
         build_n(b, eps, by_ep)
     else:
-        items = slot_items(root, eps, by_ep, "cfg" if args.stage == "donor" else "donors")
+        items, missing = slot_items(root, eps, by_ep, "cfg" if args.stage == "donor" else "donors")
+        if not missing_gate(missing, args.allow_missing):
+            print("缺失 (slot, 接收局) > 0：未生成任何 spec；确认后加 --allow-missing 放行", flush=True)
+            return 2
         if not items:
             raise SystemExit(f"阶段 {args.stage} 没有可用的 (slot, 接收局)")
         build_slot_stage(b, args.stage, items, by_ep)
@@ -681,7 +696,8 @@ def reach_step(rows, button):
 
 
 def hold_step(rows, button):
-    """T_h 规则（〇′ B3）：就位步 → press_N − 16 → 最后一步；并保证 2 ≤ T_h ≤（press_N 或最后一步）。
+    """T_h 规则（〇′ B3）：就位步 → press_N − 16 → 最后一步；并保证 2 ≤ T_h ≤（press_N − 1 或最后一步），
+    即回放动作（步前值 < T_h）不含产生按下的那一步。
     返回 (T_h, 来源, press_N, reach)。"""
     press = first_press(rows)
     last = rows[-1]["env_step_after"]
@@ -692,7 +708,7 @@ def hold_step(rows, button):
         th, src = press - PRESS_FALLBACK, "press-16"
     else:
         th, src = last, "last"
-    upper = press if press is not None else last
+    upper = press - 1 if press is not None else last
     th = max(2, min(int(th), int(upper)))
     return th, src, press, reach
 
@@ -851,6 +867,17 @@ def move_override_check(trace, receipt, Mp, N):
     return maxdev <= MOVE_TOL, maxdev, None if maxdev <= MOVE_TOL else f"dev={maxdev}"
 
 
+def replay_line(model, replay):
+    """REPLAY_EQ 判定行：比较窗口总数为 0、任一局缺窗或 maxabs 超阈值即 FAIL；zero_window_eps = windows=0 的局数。"""
+    maxabs = max((x["maxabs"] for x in replay if x["maxabs"] is not None), default=None)
+    windows = sum(x["windows"] for x in replay)
+    ok = (bool(replay) and windows > 0
+          and all(x["maxabs"] is not None and x["maxabs"] <= REPLAY_TOL and not x["missing"] for x in replay))
+    return (f"REPLAY_EQ={'PASS' if ok else 'FAIL'} model={model} eps={len(replay)} windows={windows} "
+            f"maxabs={maxabs if maxabs is None else f'{maxabs:.3g}'} "
+            f"zero_window_eps={sum(1 for x in replay if x['windows'] == 0)}")
+
+
 def cmd_donors_finalize(args, root, plan, by_ep):
     prep = plan.get("donor_prep") or {}
     n_rec = root / "record" / "n"
@@ -899,14 +926,11 @@ def cmd_donors_finalize(args, root, plan, by_ep):
             replay.append({"ep": r, "t_hold": th, "windows": len(devs), "maxabs": max(devs) if devs else 0.0,
                            "missing": missing})
     maxabs = max((x["maxabs"] for x in replay if x["maxabs"] is not None), default=None)
-    rp_ok = bool(replay) and all(x["maxabs"] is not None and x["maxabs"] <= REPLAY_TOL and not x["missing"]
-                                 for x in replay)
     mv_ok = bool(moves) and all(m["ok"] for m in moves)
     mv_dev = max((m["maxdev"] for m in moves if m["maxdev"] is not None), default=None)
     lines = [
         f"DONOR_FILES={'PASS' if not problems and written else 'FAIL'} files={len(written)} problems={len(problems)}",
-        f"REPLAY_EQ={'PASS' if rp_ok else 'FAIL'} model={plan['model']} eps={len(replay)} "
-        f"windows={sum(x['windows'] for x in replay)} maxabs={maxabs if maxabs is None else f'{maxabs:.3g}'}",
+        replay_line(plan["model"], replay),
         f"MOVE_OVERRIDE={'PASS' if mv_ok else 'FAIL'} eps={len(moves)} maxdev={mv_dev}",
     ]
     for p in problems:
@@ -973,6 +997,7 @@ def main(argv=None):
     p.add_argument("--target-contract", default=None)
     p.add_argument("--extra", default=None)
     p.add_argument("--overwrite", action="store_true")
+    p.add_argument("--allow-missing", action="store_true", help="donor/iv 阶段有缺失 (slot, 接收局) 时仍生成")
     add_root_args(p)
     p = sub.add_parser("donors")
     p.add_argument("--out", required=True, help="<O>/<M>")
