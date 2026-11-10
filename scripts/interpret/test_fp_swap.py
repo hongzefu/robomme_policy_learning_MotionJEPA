@@ -173,13 +173,13 @@ def test_scope_check():
     base = {"task": "VideoRepick", "donor": 10000106, "group": "Z", "w_starts": [64, 96]}
     mc = {"mode": "swap_exact", "donor": "VideoRepick:10000106", "replace_log": [[64, 64], [96, 96]], "n_replaced": 2,
           "n_windows": 9}
-    assert R.scope_check(dict(base, motion_content=mc)) == (True, True)
+    assert R.scope_check(dict(base, motion_content=mc)) == (True, True, False)
     assert R.scope_check(dict(base, motion_content=dict(mc, replace_log=[[64, 64]], n_replaced=1)))[0] is False
     assert R.scope_check(dict(base, motion_content=dict(mc, replace_log=[[64, 64], [96, 64]])))[0] is False
     zall = dict(base, group="Zall", donor=10000108)
     mz = {"mode": "swap_exact", "donor": "VideoRepick:10000108", "replace_log": [[s, s] for s in range(0, 288, 32)],
           "n_replaced": 9, "n_windows": 9}
-    assert R.scope_check(dict(zall, motion_content=mz)) == (True, True)
+    assert R.scope_check(dict(zall, motion_content=mz)) == (True, True, False)
     assert R.scope_check(dict(zall, motion_content=dict(mz, n_windows=10)))[1] is False
 
 
@@ -379,3 +379,89 @@ def test_wan_gate_few():
     # 全部 moved、swap_times=1：B 无同 n 相反 moved → 回退 n=2 moved=否，也没有 → 记 short
     assert sum(r["group"] == "A" for r in runs) == 8 and not any(r["group"] == "B" for r in runs)
     assert len(notes["fallback"]) == 4 and len(notes["short"]) == 4
+
+
+# ---------------------------------------------------------------- 审查续改（单局跳过、交换表补全、早拿起、blind）
+def _info(task, ep, W, es, swap_times=1, moved=True, s0=32):
+    return {"task": task, "ep": ep, "key": f"{task}:{ep}", "status": "ok", "recv_ok": True, "donor_ok": True,
+            "swap_times": swap_times, "moved": moved, "labels": {"S0": s0, "W": W, "es": es}}
+
+
+def test_infeasible_donor_dropped_and_single_skip(tmp_path):
+    task = "VideoUnmaskSwap"
+    infos = {f"{task}:{i}": _info(task, i, [64, 96], 150) for i in range(4)}
+    infos[f"{task}:3"]["labels"]["W"] = [64]          # 只有一个交换窗，补齐窗 96 不在它的录制里
+    full = {s: np.full(DIM, s + 1, np.float32) for s in (0, 32, 64, 96, 128)}
+    records = {k: dict(full) for k in infos}
+    records[f"{task}:3"] = {0: full[0], 32: full[32], 64: full[64]}
+    runs, notes = F.assign_groups(infos, task, records=records)
+    assert all(r["donor_src"] != f"{task}:3" for r in runs if r["group"] == "A")
+    assert len(notes["infeasible"]) == 3                 # 3 个接收局各剔一次
+    # 单局问题：接收局 0 的录制缺 S0 窗 → 只跳过 S0，其余照常写出，ok 仍为真
+    records[f"{task}:0"] = {k: v for k, v in full.items() if k != 32}
+    ok, line, problems, done = F.write_donor_files(tmp_path / "d", runs, infos, records)
+    assert ok and line.startswith("DONOR_FILES=PASS") and "skipped=1" in line
+    assert problems == [f"{task}:0:S0:s0_missing"]
+    assert len(done) == len(runs) - 1
+
+
+def test_complete_schedule():
+    scan = [[0, 1, 64, 114], [1, 2, 114, 164]]
+    assert F.complete_schedule([[0, 1, 64, 114], [1, None, 114, 164]], scan) == (scan, [True, False])
+    assert F.complete_schedule([[0, 1, 64, 114], [None, None, 114, 164]], scan)[0] == scan
+    assert F.complete_schedule([[0, 1, 64, 114], [2, None, 114, 164]], scan)[0] is None   # 已知半对与扫描不符
+    assert F.complete_schedule([[0, 1, 64, 114], [1, None, 114, 164]], None)[0] is None
+    assert F.complete_schedule([[0, None, 64, 114]], scan)[0] is None                      # 条数不符补不了
+    assert F.complete_schedule([[0, 1, 64, 114]], scan)[0] == [[0, 1, 64, 114]]            # 已完整：原样（不符留给 FP_REPLAY）
+    rf = F.receipt_fields(receipt("ButtonUnmaskSwap", 0, [[0, 1, 64, 114], [1, None, 114, 164]], 0, None))
+    assert not rf["schedule_complete"] and F.apply_completion(rf, {"swap_schedule": scan})
+    assert rf["schedule"] == scan and rf["completed_from_scan"] and rf["raw_schedule"][1] == [1, None, 114, 164]
+    # FP_REPLAY 只比已确定部分：补全来的不当作不符；已确定部分不符照报
+    scan_entry = {"swap_times": 2, "swap_schedule": scan, "target_index": 0, "moved": True}
+    assert R.replay_mismatch(scan_entry, rf, moved=False) == []
+    rf2 = F.receipt_fields(receipt("ButtonUnmaskSwap", 0, [[0, 2, 64, 114], [1, None, 114, 164]], 0, None))
+    F.apply_completion(rf2, {"swap_schedule": [[0, 2, 64, 114], [1, 2, 114, 164]]})
+    assert R.replay_mismatch(scan_entry, rf2, moved=True) == ["swap_schedule"]
+
+
+def test_excluded_episode_info(tmp_path):
+    run_root = tmp_path / "run"
+    row = {"task": "ButtonUnmaskSwap", "ep": 0, "run_root": str(run_root), "attn_out": str(tmp_path / "attn")}
+    write_episode(row, 0, [[0, 1, 64, 114], [1, None, 114, 164]], 0, es=0)
+    run = F.find_run(run_root, tmp_path / "attn", "ButtonUnmaskSwap:0")
+    assert F.episode_info("ButtonUnmaskSwap", 0, run, tmp_path / "rec", None)["status"] == "excluded"
+    info = F.episode_info("ButtonUnmaskSwap", 0, run, tmp_path / "rec",
+                          {"swap_schedule": [[0, 1, 64, 114], [1, 2, 114, 164]]})
+    assert info["status"] == "ok" and info["labels"]["W"] == [64, 96, 128, 160]
+    r = R.load_run(dict(row, stage="n", group="N"), {})
+    assert r["status"] == "excluded"
+
+
+def test_scope_early_pick_button():
+    mc = {"mode": "swap_exact", "donor": "ButtonUnmaskSwap:10000106", "replace_log": [[64, 64]], "n_replaced": 1,
+          "n_windows": 3}
+    base = {"task": "ButtonUnmaskSwap", "donor": 10000106, "group": "Z", "w_starts": [64, 96], "motion_content": mc}
+    assert R.scope_check(dict(base, pick={"pick_frame": 120})) == (True, True, True)     # 96+32=128 > 120
+    assert R.scope_check(dict(base, pick={"pick_frame": 130}))[0] is False               # 窗 96 本应已编码
+    assert R.scope_check(dict(base, task="VideoRepick", pick={"pick_frame": None},
+                              motion_content=dict(mc, donor="VideoRepick:10000106")))[0] is False
+    empty = dict(base, motion_content=dict(mc, replace_log=[], n_replaced=0), pick={"pick_frame": 90})
+    assert R.scope_check(empty) == (True, True, True)
+    zall = {"task": "ButtonUnmaskSwap", "donor": 10000108, "group": "Zall", "pick": {"pick_frame": 70},
+            "motion_content": {"mode": "swap_exact", "donor": "ButtonUnmaskSwap:10000108",
+                               "replace_log": [[0, 0], [32, 32]], "n_replaced": 2, "n_windows": 2}}
+    assert R.scope_check(zall) == (True, True, False)
+
+
+def test_swap_line_blind_and_excluded():
+    rows = lambda cat, moved: {"category": cat, "moved": moved}
+    s = {"groups": {g: R.group_stats([rows("swap_blind", True), rows("correct", False)]) for g in F.GROUPS},
+         "invalid": 0, "excluded": 2, "scope_early_pick": 1, "runs": 14}
+    line = R.swap_line("motion", "ButtonUnmaskSwap", s)
+    assert line.startswith("FP_SWAP=PASS") and "excluded=2" in line and "scope_early_pick=1" in line
+    for g in ("Z", "Rnd", "S0", "A", "B"):
+        assert f"{g}_blind=1/1" in line
+    runs = [{"task": "VideoRepick", "stage": "swap", "group": "Z", "key": "VideoRepick:0", "status": "excluded"},
+            {"task": "VideoRepick", "stage": "swap", "group": "Z", "key": "VideoRepick:1", "status": "invalid"}]
+    summ = R.task_summary(runs, "VideoRepick")
+    assert summ["excluded"] == 1 and summ["invalid"] == 1

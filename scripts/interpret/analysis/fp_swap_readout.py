@@ -21,8 +21,10 @@ other / none。回执、轨迹字段统一经 fp_swap_prep.receipt_fields、trac
   SWAP_SCOPE=PASS|FAIL model=<m> runs=<n> scope_bad=<k> count_mismatch=<k>   replace_log 每条 [s,s]，起点集合 = plan 行
         w_starts；Zall：起点集合 = 本局编码窗全集且 n_replaced == n_windows
   MULTI_SWAP_EQ=PASS|FAIL runs=<n> differ=<k>          一局一服务端 vs 连跑：拿起物体、拿起步、终局 outcome 相同
-  FP_SWAP=PASS|FAIL model=<m> task=<t> runs=<n> invalid=<k> N=a/b Z=… Rnd=… S0=… A=… B=… Zall=… S0_blind=… B_blind=…
-        各组 correct/有效局；*_blind 为 moved 接收局上的 swap_blind/moved 数。PASS 只代表无效局为 0。
+  FP_SWAP=PASS|FAIL model=<m> task=<t> runs=<n> invalid=<k> excluded=<k> scope_early_pick=<k> N=a/b Z=… Rnd=… S0=… A=…
+        B=… Zall=… Z_blind=… Rnd_blind=… S0_blind=… A_blind=… B_blind=…
+        各组 correct/有效局；*_blind 为 moved 接收局上的 swap_blind/moved 数。PASS 只代表无效局为 0；excluded（回执交换表
+        有未确定交换对且无法用扫描补全）不算无效。
 另有信息行 SEED_FIRST_PICK（seed 1、2 与 seed 42 拿起物体是否相同）。
 """
 from __future__ import annotations
@@ -39,6 +41,7 @@ MAIN_STAGES = ("n", "swap")
 SCOPE_STAGES = ("smoke", "multieq", "swap", "seeds")
 FRAMEMAP_MAX_GAP = 40
 CATS = ("correct", "swap_blind", "other", "none")
+BLIND_GROUPS = ("Z", "Rnd", "S0", "A", "B")       # FP_SWAP 行报 moved 接收局 swap_blind/总数
 
 
 # ---------------------------------------------------------------- 单局
@@ -62,8 +65,9 @@ def load_run(row, pool_by_key):
         out["status"], out["reason"] = "invalid", "no_receipt" if run["trace"] else "no_trace"
         return out
     rf = F.receipt_fields(run["receipt"])
-    if not rf["schedule_complete"] or rf["target_index"] is None:
-        out["status"], out["reason"] = "invalid", "bad_schedule"
+    if not F.apply_completion(rf, pool_by_key.get(key)) or rf["target_index"] is None:
+        # 交换表补不全（Button 拿起即停后未确定的交换对且扫描对不上）：excluded，不算无效局、不进 FP_REPLAY
+        out["status"], out["reason"] = "excluded", "schedule_incomplete"
         return out
     rows =[F.trace_row_fields(r) for r in F.read_step_rows(run["trace"])]
     n_obj = len(rows[0]["objects"]) if rows and rows[0]["objects"] else None
@@ -114,23 +118,33 @@ def judge_label(runs, model):
 
 
 def replay_mismatch(scan, rf, moved):
-    """扫描标签 vs 回执；返回不符字段列表。"""
+    """扫描标签 vs 回执；返回不符字段列表。只比回执里已确定的部分：未确定的交换对（a/b 为 null）只比起止步，
+    有未确定交换对时 moved 不比（它由扫描补全推出）。"""
     diffs = []
     if scan is None:
         return ["no_scan"]
     if int(scan["swap_times"]) != rf["swap_times"]:
         diffs.append("swap_times")
-    if [list(map(int, x)) for x in scan["swap_schedule"]] != rf["schedule"]:
+    raw = rf.get("raw_schedule", rf["schedule"])
+    ref = [list(map(int, x)) for x in scan["swap_schedule"]]
+    if len(raw) != len(ref):
         diffs.append("swap_schedule")
+    else:
+        for item, want in zip(raw, ref):
+            item = list(item) + [None] * (4 - len(item))
+            if any(item[i] is not None and int(item[i]) != want[i] for i in range(4)) or None in item[2:4]:
+                diffs.append("swap_schedule")
+                break
     if int(scan["target_index"]) != rf["target_index"]:
         diffs.append("target_index")
-    if bool(scan["moved"]) != bool(moved):
+    if all(rf.get("determined") or [True]) and bool(scan["moved"]) != bool(moved):
         diffs.append("moved")
     return diffs
 
 
 def judge_replay(runs, model):
     rows = [r for r in runs if r["stage"] == "n" and r["status"] == "ok"]
+    n_sched = sum(1 for r in runs if r["stage"] == "n" and r["status"] == "excluded")
     excluded = [r for r in rows if not r["pick"]["f3_ok"]]
     checked = [r for r in rows if r["pick"]["f3_ok"]]
     bad = {}
@@ -139,7 +153,8 @@ def judge_replay(runs, model):
         if d:
             bad[r["key"]] = d
     verdict = "FAIL" if bad else "PASS"
-    return (f"FP_REPLAY={verdict} model={model} eps={len(checked)} excluded_f3={len(excluded)} mismatches={len(bad)}",
+    return (f"FP_REPLAY={verdict} model={model} eps={len(checked)} excluded_f3={len(excluded)} "
+            f"excluded_schedule={n_sched} mismatches={len(bad)}",
             {"mismatches": bad, "excluded_f3": [r["key"] for r in excluded]})
 
 
@@ -174,7 +189,10 @@ def judge_framemap(runs, model):
 
 
 def scope_check(r):
-    """返回 (scope_ok, count_ok)。"""
+    """返回 (scope_ok, count_ok, early_pick)。
+    普通组：replace_log 每条 [s,s]、起点集合 = w_starts。ButtonUnmaskSwap 例外：交换局可能拿起得比原样局早，
+    允许起点 ⊆ w_starts，前提是每个缺失窗的末帧（起点+32）> 拿起帧（拿起时该窗还没到齐、不可能被编码），记 early_pick。
+    Zall：起点集合大小 = n_windows（本局拿起前实际编码的窗数），n_replaced == n_windows == len(log)。"""
     mc = r["motion_content"]
     log = [list(x) for x in mc.get("replace_log", [])]
     starts = {int(x[0]) for x in log}
@@ -183,26 +201,36 @@ def scope_check(r):
     n_rep = int(mc.get("n_replaced", -1))
     if r["group"] == "Zall":
         n_win = int(mc.get("n_windows", -2))
-        return bool(log) and same and donor_ok and len(starts) == n_win, n_rep == n_win == len(log)
+        return ((bool(log) or n_win == 0) and same and donor_ok and len(starts) == n_win,
+                n_rep == n_win == len(log), False)
     want = {int(s) for s in (r.get("w_starts") or [])}
-    return bool(log) and same and donor_ok and starts == want, n_rep == len(want) == len(log)
+    missing = want - starts
+    early = False
+    if missing and starts <= want and r["task"] in F.BUTTON_TASKS:
+        pick_frame = (r.get("pick") or {}).get("pick_frame")
+        early = pick_frame is not None and all(f + F.MOTION_WINDOW - 1 > pick_frame for f in missing)
+    scope_ok = same and donor_ok and ((bool(log) and starts == want) or early)
+    return scope_ok, n_rep == len(starts) == len(log), early
 
 
 def judge_scope(runs, model):
-    details, bad, mismatch = [], 0, 0
+    details, bad, mismatch, n_early = [], 0, 0, 0
     for r in runs:
         if r["stage"] not in SCOPE_STAGES or r["group"] == "N" or r["status"] != "ok":
             continue
-        scope_ok, count_ok = scope_check(r)
+        scope_ok, count_ok, early = scope_check(r)
+        r["scope_early_pick"] = early
+        n_early += int(early)
         bad += 0 if scope_ok else 1
         mismatch += 0 if count_ok else 1
         details.append({"stage": r["stage"], "group": r["group"], "key": r["key"], "donor": r["donor"],
-                        "scope_ok": scope_ok, "count_ok": count_ok,
+                        "scope_ok": scope_ok, "count_ok": count_ok, "early_pick": early,
                         "starts": sorted({int(x[0]) for x in r["motion_content"].get("replace_log", [])}),
                         "w_starts": r.get("w_starts"), "n_replaced": r["motion_content"].get("n_replaced"),
                         "n_windows": r["motion_content"].get("n_windows")})
     verdict = "FAIL" if (bad or mismatch or not details) else "PASS"
-    return (f"SWAP_SCOPE={verdict} model={model} runs={len(details)} scope_bad={bad} count_mismatch={mismatch}",
+    return (f"SWAP_SCOPE={verdict} model={model} runs={len(details)} scope_bad={bad} count_mismatch={mismatch} "
+            f"scope_early_pick={n_early}",
             {"details": details})
 
 
@@ -256,17 +284,19 @@ def group_stats(rows):
 
 def task_summary(runs, task, recv=None):
     """一任务：N（全部 N 局）与各交换组（seed 42 swap 阶段）。recv 给出时只留这些接收局（交集用；N 也只留它们）。"""
-    out, invalid = {}, 0
+    out, invalid, excluded, early = {}, 0, 0, 0
     for group in F.GROUPS:
         stage = "n" if group == "N" else "swap"
         mine = [r for r in runs if r["task"] == task and r["stage"] == stage and r["group"] == group]
         if recv is not None:
             mine = [r for r in mine if r["key"] in recv]
-        invalid += sum(1 for r in mine if r["status"] != "ok")
+        invalid += sum(1 for r in mine if r["status"] not in ("ok", "excluded"))
+        excluded += sum(1 for r in mine if r["status"] == "excluded")   # 交换表补不全：不算无效
+        early += sum(1 for r in mine if r.get("scope_early_pick"))
         out[group] = group_stats([r for r in mine if r["status"] == "ok"])
     planned = sum(1 for r in runs if r["task"] == task and r["stage"] in MAIN_STAGES
                   and (recv is None or r["key"] in recv))
-    return {"groups": out, "invalid": invalid, "runs": planned}
+    return {"groups": out, "invalid": invalid, "excluded": excluded, "scope_early_pick": early, "runs": planned}
 
 
 def frac(stats, key="correct", den="n"):
@@ -277,8 +307,9 @@ def swap_line(model, task, s, gate=None):
     g = s["groups"]
     verdict = "PASS" if s["invalid"] == 0 else "FAIL"
     line = (f"FP_SWAP={verdict} model={model} task={task} runs={s['runs']} invalid={s['invalid']} "
-            + " ".join(f"{k}={frac(g[k])}" for k in F.GROUPS)
-            + f" S0_blind={frac(g['S0'], 'blind', 'moved')} B_blind={frac(g['B'], 'blind', 'moved')}")
+            f"excluded={s['excluded']} scope_early_pick={s['scope_early_pick']} "
+            + " ".join(f"{k}={frac(g[k])}" for k in F.GROUPS) + " "
+            + " ".join(f"{k}_blind={frac(g[k], 'blind', 'moved')}" for k in BLIND_GROUPS))
     if gate and gate.get("few"):
         line += f" gate=few recv={gate['recv']} groups={','.join(gate['groups'])}"
     return line

@@ -760,8 +760,42 @@ def load_record(path):
     return rec
 
 
-def episode_info(task, ep, run, record_dir):
-    """一局 N 阶段读数 → 标签、窗口、拿起、资格。status ∈ ok / no_terminal / no_receipt / no_trace。"""
+def complete_schedule(schedule, scan_schedule):
+    """回执交换表里未确定的交换对（Button 拿起即停后 idx2 为 None）用局池 / 扫描的同 seed 同难度交换表补全。
+    返回 (补全后的表或 None, 每条是否由回执确定的掩码)。条数或起止步不符、已确定的交换对与扫描不符时返回 None
+    （已确定部分的不符留给 FP_REPLAY 计数，这里只在无法补全时放弃）。"""
+    determined = [all(v is not None for v in (item or [])) and len(item or []) == 4 for item in schedule]
+    if all(determined) and schedule:
+        return [[int(v) for v in item] for item in schedule], determined
+    if not scan_schedule or len(scan_schedule) != len(schedule):
+        return None, determined
+    out = []
+    for item, ok, ref in zip(schedule, determined, scan_schedule):
+        if ok:
+            out.append([int(v) for v in item])
+            continue
+        item = list(item or [None] * 4) + [None] * (4 - len(item or []))
+        if any(item[i] is not None and int(item[i]) != int(ref[i]) for i in range(4)):
+            return None, determined
+        out.append([int(v) for v in ref])
+    return out, determined
+
+
+def apply_completion(rf, scan_entry):
+    """就地把 rf 的交换表补全；返回 True 表示可用（完整或已补全），False 为 excluded。"""
+    rf["raw_schedule"] = [list(item or []) for item in rf["schedule"]]
+    sched, mask = complete_schedule(rf["schedule"], (scan_entry or {}).get("swap_schedule"))
+    rf["determined"] = mask
+    rf["completed_from_scan"] = sched is not None and not all(mask)
+    if sched is None:
+        return False
+    rf["schedule"], rf["schedule_complete"] = sched, True
+    return True
+
+
+def episode_info(task, ep, run, record_dir, scan_entry=None):
+    """一局 N 阶段读数 → 标签、窗口、拿起、资格。status ∈ ok / excluded（交换表补不全或缺目标）/ no_terminal /
+    no_receipt / no_trace。"""
     info = {"task": task, "ep": int(ep), "key": episode_key(task, ep), "status": "ok", "record": None}
     if run["terminal"] is None:
         info["status"] = "no_terminal"
@@ -770,8 +804,8 @@ def episode_info(task, ep, run, record_dir):
         info["status"] = "no_receipt" if run["trace"] is not None else "no_trace"
         return info
     rf = receipt_fields(run["receipt"])
-    if not rf["schedule_complete"] or rf["target_index"] is None:
-        info["status"] = "bad_schedule"
+    if not apply_completion(rf, scan_entry) or rf["target_index"] is None:
+        info["status"] = "excluded"
         return info
     first = read_step_rows(run["trace"], limit=1)
     first_row = trace_row_fields(first[0]) if first else None
@@ -791,26 +825,42 @@ def episode_info(task, ep, run, record_dir):
     return info
 
 
-def collect_n(plan, record_dir):
+def collect_n(plan, record_dir, pool_by_key=None):
     infos = {}
     for row in plan["runs"]:
         if row["stage"] != "n":
             continue
         key = episode_key(row["task"], row["ep"])
-        infos[key] = episode_info(row["task"], row["ep"], find_run(row["run_root"], row["attn_out"], key), record_dir)
+        infos[key] = episode_info(row["task"], row["ep"], find_run(row["run_root"], row["attn_out"], key), record_dir,
+                                  (pool_by_key or {}).get(key))
     return infos
 
 
 # ---------------------------------------------------------------- donors：分组
-def assign_groups(infos, task, few=False):
+def assign_groups(infos, task, few=False, records=None):
     """返回 (runs, notes)：runs 为 [{group, slot, recv, donor_src, fallback}]，按接收局升序。
     A：同 swap_times、同 moved；B：同 swap_times、moved 相反（VideoRepick 无候选时取 swap_times=2、moved=否）。
+    给出 records 时先剔除按顺序对齐不可行的候选（供体窗或补齐窗不在录制里），计入 notes["infeasible"]。
     A/B 每组一个 default_rng(0)，按接收局升序逐局 choice(2, replace=False)。"""
     mine = {k: v for k, v in infos.items() if v["task"] == task and v["status"] == "ok"}
     recvs = sorted((v for v in mine.values() if v["recv_ok"]), key=lambda v: v["ep"])
     donors = sorted((v for v in mine.values() if v["donor_ok"]), key=lambda v: v["ep"])
     rng = {"A": np.random.default_rng(PAIR_SEED), "B": np.random.default_rng(PAIR_SEED)}
-    runs, notes = [], {"short": [], "fallback": [], "no_s0": []}
+    runs, notes = [], {"short": [], "fallback": [], "no_s0": [], "infeasible": []}
+
+    def feasible(r, d):
+        if records is None:
+            return True
+        rec = records.get(d["key"])
+        if rec is None:
+            return False
+        return aligned_rows(r["labels"]["W"], d["labels"]["W"], rec, d["labels"]["es"])[0] is not None
+
+    def filt(r, group, cands):
+        ok = [d for d in cands if feasible(r, d)]
+        kept = {d["key"] for d in ok}
+        notes["infeasible"] += [f"{r['key']}:{group}:{d['key']}" for d in cands if d["key"] not in kept]
+        return ok
     for r in recvs:
         base = {"recv": r["key"], "task": task, "ep": r["ep"]}
         runs.append(dict(base, group="Z", slot="Z", donor_src=None))
@@ -823,11 +873,12 @@ def assign_groups(infos, task, few=False):
         if not few:
             for group in ("A", "B"):
                 want_moved = r["moved"] if group == "A" else not r["moved"]
-                cands = [d for d in donors if d["key"] != r["key"] and d["swap_times"] == r["swap_times"]
-                         and d["moved"] == want_moved]
+                cands = filt(r, group, [d for d in donors if d["key"] != r["key"] and d["swap_times"] == r["swap_times"]
+                                        and d["moved"] == want_moved])
                 fallback = False
                 if group == "B" and not cands and task == "VideoRepick":
-                    cands = [d for d in donors if d["key"] != r["key"] and d["swap_times"] == 2 and not d["moved"]]
+                    cands = filt(r, group, [d for d in donors if d["key"] != r["key"] and d["swap_times"] == 2
+                                            and not d["moved"]])
                     fallback = True
                     notes["fallback"].append(r["key"])
                 k = min(2, len(cands))
@@ -901,9 +952,11 @@ def donor_payload(run, infos, records):
 
 
 def write_donor_files(folder, runs, infos, records):
-    """写 folder/<task>_ep<合成号>.npz 并读回核对。返回 (ok, 判定行, problems, done_runs)。"""
+    """写 folder/<task>_ep<合成号>.npz 并读回核对。返回 (ok, 判定行, problems, done_runs)。
+    单局问题（donor_missing_starts / no_pad_window / s0_missing）只记 problems 并跳过该局该组，不影响 ok；
+    读回不符（形状、逐位、范数）同样跳过该局，但判 DONOR_FILES=FAIL（文件写坏是脚本问题）。"""
     folder = Path(folder)
-    problems, done = [], []
+    problems, done, integrity = [], [], 0
     stats = {"files": 0, "pad_runs": 0, "pad_windows": 0, "maxabs": 0.0, "norm_maxrel": 0.0}
     for run in runs:
         starts, embs, meta = donor_payload(run, infos, records)
@@ -917,6 +970,7 @@ def write_donor_files(folder, runs, infos, records):
             b_starts, b_embs = np.asarray(back["start_frames"]).tolist(), np.asarray(back["embs"], np.float32)
         if b_starts != [int(s) for s in starts] or b_embs.shape != embs.shape:
             problems.append(f"{run['recv']}:{run['slot']}:readback_shape")
+            integrity += 1
             continue
         if run["slot"] == "Rnd":
             ref = np.stack([records[run["recv"]][f] for f in starts]).astype(np.float64)
@@ -926,21 +980,24 @@ def write_donor_files(folder, runs, infos, records):
             stats["norm_maxrel"] = max(stats["norm_maxrel"], rel)
             if not rel < 1e-5:
                 problems.append(f"{run['recv']}:Rnd:norm_rel={rel:g}")
+                integrity += 1
                 continue
         else:
             dev = float(np.max(np.abs(b_embs - embs))) if embs.size else 0.0
             stats["maxabs"] = max(stats["maxabs"], dev)
             if dev != 0.0:
                 problems.append(f"{run['recv']}:{run['slot']}:maxabs={dev}")
+                integrity += 1
                 continue
         stats["files"] += 1
         if meta["pad"]:
             stats["pad_runs"] += 1
             stats["pad_windows"] += meta["pad"]
         done.append(dict(run, w_starts=[int(s) for s in starts], pad=meta["pad"], src_starts=meta["src_starts"]))
-    ok = not problems
-    line = (f"DONOR_FILES={'PASS' if ok else 'FAIL'} files={stats['files']} pad_runs={stats['pad_runs']} "
-            f"pad_windows={stats['pad_windows']} maxabs={stats['maxabs']:g} norm_maxrel={stats['norm_maxrel']:.2e}")
+    ok = integrity == 0
+    line = (f"DONOR_FILES={'PASS' if ok else 'FAIL'} files={stats['files']} skipped={len(problems)} "
+            f"integrity={integrity} pad_runs={stats['pad_runs']} pad_windows={stats['pad_windows']} "
+            f"maxabs={stats['maxabs']:g} norm_maxrel={stats['norm_maxrel']:.2e}")
     return ok, line, problems, done
 
 
@@ -1077,7 +1134,7 @@ def cmd_donors(args):
         return cmd_donors_smoke(out)
     plan = P._read_json(out / "plan.json")
     pool, pool_by_key = load_pool(out.parent)
-    infos = collect_n(plan, out / "record")
+    infos = collect_n(plan, out / "record", pool_by_key)
     records = {k: load_record(v["record"]) for k, v in infos.items() if v.get("record")}
     gate_min = args.wan_gate
     swap_runs, notes, gate = [], {}, {}
@@ -1086,7 +1143,7 @@ def cmd_donors(args):
         n_recv = sum(1 for v in infos.values() if v["task"] == task and v["status"] == "ok" and v["recv_ok"])
         few = gate_min is not None and n_recv < gate_min
         gate[task] = {"recv": n_recv, "few": few, "groups": ["N", *GATE_GROUPS] if few else list(GROUPS)}
-        runs, notes[task] = assign_groups(infos, task, few=few)
+        runs, notes[task] = assign_groups(infos, task, few=few, records=records)
         swap_runs += runs
     ok, line, problems, done = write_donor_files(out / DONOR_DIR, swap_runs, infos, records)
     dline, dok, identical = distinct_line(done, infos, records)
@@ -1099,10 +1156,12 @@ def cmd_donors(args):
     for task in TASKS:
         n = notes[task]
         print(f"FP_GROUPS task={task} gate={'few' if gate[task]['few'] else ('ok' if gate_min is not None else 'off')} "
-              f"recv={gate[task]['recv']} short={len(n['short'])} fallback={len(n['fallback'])} no_s0={len(n['no_s0'])}",
+              f"recv={gate[task]['recv']} short={len(n['short'])} fallback={len(n['fallback'])} no_s0={len(n['no_s0'])} "
+              f"infeasible={len(n['infeasible'])} excluded={sum(1 for v in infos.values() if v['task'] == task and v['status'] == 'excluded')}",
               flush=True)
-    if not (ok and dok):
-        print("DONORS_SPECS=SKIP reason=donor_files", flush=True)
+    # 单局问题只跳过该局该组；只有 A/B 源编码逐位相同（DONOR_DISTINCT=FAIL）才整体不生成后续 spec。
+    if not dok:
+        print("DONORS_SPECS=SKIP reason=donor_distinct", flush=True)
         return 1
     recv_keys = sorted({r["recv"] for r in done})
     seed_runs = seedcheck_runs(done, recv_keys)
@@ -1118,13 +1177,16 @@ def cmd_donors(args):
                                "W": (v.get("labels") or {}).get("W"), "S0": (v.get("labels") or {}).get("S0"),
                                "w_end": (v.get("labels") or {}).get("w_end")} for k, v in infos.items()}
     plan["group_notes"] = notes
+    plan["donor_problems"] = {"count": len(problems), "integrity_ok": bool(ok), "items": problems}
     P._write_json(out / "plan.json", plan)
     counts = {}
     for row in b.rows:
         counts[f"{row['stage']}:{row['group']}"] = counts.get(f"{row['stage']}:{row['group']}", 0) + 1
     print("FPS_SWAP_SPECS " + " ".join(f"{k}={v}" for k, v in sorted(counts.items()))
           + f" total={len(b.rows)} specs={len(b.specs)}", flush=True)
-    return 0
+    print(f"DONORS={'PASS' if ok else 'FAIL'} problems={len(problems)} integrity_ok={int(ok)} swap_runs={len(done)}",
+          flush=True)
+    return 0 if ok else 1
 
 
 def main(argv=None):
