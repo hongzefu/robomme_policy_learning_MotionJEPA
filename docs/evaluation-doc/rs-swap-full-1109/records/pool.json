@@ -1,0 +1,1294 @@
+{
+  "task": "RouteStick",
+  "difficulty": "easy",
+  "scan": {
+    "start": 1400000,
+    "step": 100,
+    "count": 4000,
+    "skipped_split": 0,
+    "scanned": 4000,
+    "two_step": 1999,
+    "steps_hist": {
+      "2": 1999,
+      "3": 2001
+    }
+  },
+  "numbering": "类型 k 的 3 局按 env_seed 升序：R 局号 2k、2k+1，S 局号 32+k",
+  "side_note": "side=+1 记 L（下标增大，环境 _stick_side 措辞 left），side=-1 记 R",
+  "per_type_two_step": {
+    "0L-cw": 195,
+    "0L-ccw": 213,
+    "1R-cw": 115,
+    "1R-ccw": 74,
+    "1L-cw": 92,
+    "1L-ccw": 110,
+    "2R-cw": 87,
+    "2R-ccw": 99,
+    "2L-cw": 85,
+    "2L-ccw": 96,
+    "3R-cw": 106,
+    "3R-ccw": 101,
+    "3L-cw": 107,
+    "3L-ccw": 89,
+    "4R-cw": 216,
+    "4R-ccw": 214
+  },
+  "overlap": {
+    "train": [],
+    "test": [],
+    "val": []
+  },
+  "recheck_mismatch": 0,
+  "metadata_sha256": "cb9b55169e8b16b820e29dca4ffc55e26b74d14f3a15369ecb7752348f973b29",
+  "manifest_seal": "2b7cdd612f18fc0656a39518c3f57e00aca589682d9f165db8700f16acd92038",
+  "episodes": [
+    {
+      "episode_id": 0,
+      "role": "R",
+      "type": 0,
+      "type_label": "0L-cw",
+      "env_seed": 1400300,
+      "path": [
+        0,
+        2,
+        4
+      ],
+      "route_idx": [
+        0,
+        1,
+        2
+      ],
+      "swings": [
+        "clockwise",
+        "clockwise"
+      ],
+      "theta": -0.31229710406220107,
+      "start": 0,
+      "side": 1,
+      "swing": "cw",
+      "target": 2
+    },
+    {
+      "episode_id": 1,
+      "role": "R",
+      "type": 0,
+      "type_label": "0L-cw",
+      "env_seed": 1400400,
+      "path": [
+        0,
+        2,
+        4
+      ],
+      "route_idx": [
+        0,
+        1,
+        2
+      ],
+      "swings": [
+        "clockwise",
+        "clockwise"
+      ],
+      "theta": 0.25697018208715705,
+      "start": 0,
+      "side": 1,
+      "swing": "cw",
+      "target": 2
+    },
+    {
+      "episode_id": 2,
+      "role": "R",
+      "type": 1,
+      "type_label": "0L-ccw",
+      "env_seed": 1402600,
+      "path": [
+        0,
+        2,
+        4
+      ],
+      "route_idx": [
+        0,
+        1,
+        2
+      ],
+      "swings": [
+        "counterclockwise",
+        "counterclockwise"
+      ],
+      "theta": 0.2729821676639603,
+      "start": 0,
+      "side": 1,
+      "swing": "ccw",
+      "target": 2
+    },
+    {
+      "episode_id": 3,
+      "role": "R",
+      "type": 1,
+      "type_label": "0L-ccw",
+      "env_seed": 1403200,
+      "path": [
+        0,
+        2,
+        4
+      ],
+      "route_idx": [
+        0,
+        1,
+        2
+      ],
+      "swings": [
+        "counterclockwise",
+        "counterclockwise"
+      ],
+      "theta": -0.3932628396119803,
+      "start": 0,
+      "side": 1,
+      "swing": "ccw",
+      "target": 2
+    },
+    {
+      "episode_id": 4,
+      "role": "R",
+      "type": 2,
+      "type_label": "1R-cw",
+      "env_seed": 1400200,
+      "path": [
+        2,
+        0,
+        2
+      ],
+      "route_idx": [
+        1,
+        0,
+        1
+      ],
+      "swings": [
+        "clockwise",
+        "counterclockwise"
+      ],
+      "theta": 0.26255857596333615,
+      "start": 1,
+      "side": -1,
+      "swing": "cw",
+      "target": 0
+    },
+    {
+      "episode_id": 5,
+      "role": "R",
+      "type": 2,
+      "type_label": "1R-cw",
+      "env_seed": 1401400,
+      "path": [
+        2,
+        0,
+        2
+      ],
+      "route_idx": [
+        1,
+        0,
+        1
+      ],
+      "swings": [
+        "clockwise",
+        "clockwise"
+      ],
+      "theta": 6.17312418301961e-05,
+      "start": 1,
+      "side": -1,
+      "swing": "cw",
+      "target": 0
+    },
+    {
+      "episode_id": 6,
+      "role": "R",
+      "type": 3,
+      "type_label": "1R-ccw",
+      "env_seed": 1421000,
+      "path": [
+        2,
+        0,
+        2
+      ],
+      "route_idx": [
+        1,
+        0,
+        1
+      ],
+      "swings": [
+        "counterclockwise",
+        "counterclockwise"
+      ],
+      "theta": -0.1322853074864185,
+      "start": 1,
+      "side": -1,
+      "swing": "ccw",
+      "target": 0
+    },
+    {
+      "episode_id": 7,
+      "role": "R",
+      "type": 3,
+      "type_label": "1R-ccw",
+      "env_seed": 1422700,
+      "path": [
+        2,
+        0,
+        2
+      ],
+      "route_idx": [
+        1,
+        0,
+        1
+      ],
+      "swings": [
+        "counterclockwise",
+        "counterclockwise"
+      ],
+      "theta": -0.49125541236739706,
+      "start": 1,
+      "side": -1,
+      "swing": "ccw",
+      "target": 0
+    },
+    {
+      "episode_id": 8,
+      "role": "R",
+      "type": 4,
+      "type_label": "1L-cw",
+      "env_seed": 1401800,
+      "path": [
+        2,
+        4,
+        6
+      ],
+      "route_idx": [
+        1,
+        2,
+        3
+      ],
+      "swings": [
+        "clockwise",
+        "counterclockwise"
+      ],
+      "theta": -0.18370743193097186,
+      "start": 1,
+      "side": 1,
+      "swing": "cw",
+      "target": 4
+    },
+    {
+      "episode_id": 9,
+      "role": "R",
+      "type": 4,
+      "type_label": "1L-cw",
+      "env_seed": 1414000,
+      "path": [
+        2,
+        4,
+        6
+      ],
+      "route_idx": [
+        1,
+        2,
+        3
+      ],
+      "swings": [
+        "clockwise",
+        "counterclockwise"
+      ],
+      "theta": -0.23671471979061082,
+      "start": 1,
+      "side": 1,
+      "swing": "cw",
+      "target": 4
+    },
+    {
+      "episode_id": 10,
+      "role": "R",
+      "type": 5,
+      "type_label": "1L-ccw",
+      "env_seed": 1407800,
+      "path": [
+        2,
+        4,
+        6
+      ],
+      "route_idx": [
+        1,
+        2,
+        3
+      ],
+      "swings": [
+        "counterclockwise",
+        "counterclockwise"
+      ],
+      "theta": -0.4146840174519247,
+      "start": 1,
+      "side": 1,
+      "swing": "ccw",
+      "target": 4
+    },
+    {
+      "episode_id": 11,
+      "role": "R",
+      "type": 5,
+      "type_label": "1L-ccw",
+      "env_seed": 1409500,
+      "path": [
+        2,
+        4,
+        6
+      ],
+      "route_idx": [
+        1,
+        2,
+        3
+      ],
+      "swings": [
+        "counterclockwise",
+        "clockwise"
+      ],
+      "theta": -0.0643182739638019,
+      "start": 1,
+      "side": 1,
+      "swing": "ccw",
+      "target": 4
+    },
+    {
+      "episode_id": 12,
+      "role": "R",
+      "type": 6,
+      "type_label": "2R-cw",
+      "env_seed": 1402500,
+      "path": [
+        4,
+        2,
+        0
+      ],
+      "route_idx": [
+        2,
+        1,
+        0
+      ],
+      "swings": [
+        "clockwise",
+        "counterclockwise"
+      ],
+      "theta": -0.47707676352976125,
+      "start": 2,
+      "side": -1,
+      "swing": "cw",
+      "target": 2
+    },
+    {
+      "episode_id": 13,
+      "role": "R",
+      "type": 6,
+      "type_label": "2R-cw",
+      "env_seed": 1407400,
+      "path": [
+        4,
+        2,
+        0
+      ],
+      "route_idx": [
+        2,
+        1,
+        0
+      ],
+      "swings": [
+        "clockwise",
+        "clockwise"
+      ],
+      "theta": 0.046610333309376584,
+      "start": 2,
+      "side": -1,
+      "swing": "cw",
+      "target": 2
+    },
+    {
+      "episode_id": 14,
+      "role": "R",
+      "type": 7,
+      "type_label": "2R-ccw",
+      "env_seed": 1407000,
+      "path": [
+        4,
+        2,
+        0
+      ],
+      "route_idx": [
+        2,
+        1,
+        0
+      ],
+      "swings": [
+        "counterclockwise",
+        "clockwise"
+      ],
+      "theta": 0.30840079535768505,
+      "start": 2,
+      "side": -1,
+      "swing": "ccw",
+      "target": 2
+    },
+    {
+      "episode_id": 15,
+      "role": "R",
+      "type": 7,
+      "type_label": "2R-ccw",
+      "env_seed": 1415300,
+      "path": [
+        4,
+        2,
+        0
+      ],
+      "route_idx": [
+        2,
+        1,
+        0
+      ],
+      "swings": [
+        "counterclockwise",
+        "clockwise"
+      ],
+      "theta": -0.057126490663826975,
+      "start": 2,
+      "side": -1,
+      "swing": "ccw",
+      "target": 2
+    },
+    {
+      "episode_id": 16,
+      "role": "R",
+      "type": 8,
+      "type_label": "2L-cw",
+      "env_seed": 1405300,
+      "path": [
+        4,
+        6,
+        8
+      ],
+      "route_idx": [
+        2,
+        3,
+        4
+      ],
+      "swings": [
+        "clockwise",
+        "counterclockwise"
+      ],
+      "theta": 0.4679070837776981,
+      "start": 2,
+      "side": 1,
+      "swing": "cw",
+      "target": 6
+    },
+    {
+      "episode_id": 17,
+      "role": "R",
+      "type": 8,
+      "type_label": "2L-cw",
+      "env_seed": 1406600,
+      "path": [
+        4,
+        6,
+        8
+      ],
+      "route_idx": [
+        2,
+        3,
+        4
+      ],
+      "swings": [
+        "clockwise",
+        "counterclockwise"
+      ],
+      "theta": -0.458956490637186,
+      "start": 2,
+      "side": 1,
+      "swing": "cw",
+      "target": 6
+    },
+    {
+      "episode_id": 18,
+      "role": "R",
+      "type": 9,
+      "type_label": "2L-ccw",
+      "env_seed": 1401700,
+      "path": [
+        4,
+        6,
+        8
+      ],
+      "route_idx": [
+        2,
+        3,
+        4
+      ],
+      "swings": [
+        "counterclockwise",
+        "counterclockwise"
+      ],
+      "theta": -0.32373198957489074,
+      "start": 2,
+      "side": 1,
+      "swing": "ccw",
+      "target": 6
+    },
+    {
+      "episode_id": 19,
+      "role": "R",
+      "type": 9,
+      "type_label": "2L-ccw",
+      "env_seed": 1408300,
+      "path": [
+        4,
+        6,
+        8
+      ],
+      "route_idx": [
+        2,
+        3,
+        4
+      ],
+      "swings": [
+        "counterclockwise",
+        "clockwise"
+      ],
+      "theta": 0.3353378375459959,
+      "start": 2,
+      "side": 1,
+      "swing": "ccw",
+      "target": 6
+    },
+    {
+      "episode_id": 20,
+      "role": "R",
+      "type": 10,
+      "type_label": "3R-cw",
+      "env_seed": 1400600,
+      "path": [
+        6,
+        4,
+        2
+      ],
+      "route_idx": [
+        3,
+        2,
+        1
+      ],
+      "swings": [
+        "clockwise",
+        "clockwise"
+      ],
+      "theta": 0.49384431703614434,
+      "start": 3,
+      "side": -1,
+      "swing": "cw",
+      "target": 4
+    },
+    {
+      "episode_id": 21,
+      "role": "R",
+      "type": 10,
+      "type_label": "3R-cw",
+      "env_seed": 1400900,
+      "path": [
+        6,
+        4,
+        2
+      ],
+      "route_idx": [
+        3,
+        2,
+        1
+      ],
+      "swings": [
+        "clockwise",
+        "counterclockwise"
+      ],
+      "theta": -0.23584842261633246,
+      "start": 3,
+      "side": -1,
+      "swing": "cw",
+      "target": 4
+    },
+    {
+      "episode_id": 22,
+      "role": "R",
+      "type": 11,
+      "type_label": "3R-ccw",
+      "env_seed": 1400000,
+      "path": [
+        6,
+        4,
+        2
+      ],
+      "route_idx": [
+        3,
+        2,
+        1
+      ],
+      "swings": [
+        "counterclockwise",
+        "clockwise"
+      ],
+      "theta": -0.2170504168382241,
+      "start": 3,
+      "side": -1,
+      "swing": "ccw",
+      "target": 4
+    },
+    {
+      "episode_id": 23,
+      "role": "R",
+      "type": 11,
+      "type_label": "3R-ccw",
+      "env_seed": 1404600,
+      "path": [
+        6,
+        4,
+        2
+      ],
+      "route_idx": [
+        3,
+        2,
+        1
+      ],
+      "swings": [
+        "counterclockwise",
+        "counterclockwise"
+      ],
+      "theta": 0.32919935526309335,
+      "start": 3,
+      "side": -1,
+      "swing": "ccw",
+      "target": 4
+    },
+    {
+      "episode_id": 24,
+      "role": "R",
+      "type": 12,
+      "type_label": "3L-cw",
+      "env_seed": 1400100,
+      "path": [
+        6,
+        8,
+        6
+      ],
+      "route_idx": [
+        3,
+        4,
+        3
+      ],
+      "swings": [
+        "clockwise",
+        "counterclockwise"
+      ],
+      "theta": -0.21903480474546938,
+      "start": 3,
+      "side": 1,
+      "swing": "cw",
+      "target": 8
+    },
+    {
+      "episode_id": 25,
+      "role": "R",
+      "type": 12,
+      "type_label": "3L-cw",
+      "env_seed": 1402800,
+      "path": [
+        6,
+        8,
+        6
+      ],
+      "route_idx": [
+        3,
+        4,
+        3
+      ],
+      "swings": [
+        "clockwise",
+        "clockwise"
+      ],
+      "theta": -0.21305392750363986,
+      "start": 3,
+      "side": 1,
+      "swing": "cw",
+      "target": 8
+    },
+    {
+      "episode_id": 26,
+      "role": "R",
+      "type": 13,
+      "type_label": "3L-ccw",
+      "env_seed": 1403800,
+      "path": [
+        6,
+        8,
+        6
+      ],
+      "route_idx": [
+        3,
+        4,
+        3
+      ],
+      "swings": [
+        "counterclockwise",
+        "counterclockwise"
+      ],
+      "theta": 0.09994481547606698,
+      "start": 3,
+      "side": 1,
+      "swing": "ccw",
+      "target": 8
+    },
+    {
+      "episode_id": 27,
+      "role": "R",
+      "type": 13,
+      "type_label": "3L-ccw",
+      "env_seed": 1408800,
+      "path": [
+        6,
+        8,
+        6
+      ],
+      "route_idx": [
+        3,
+        4,
+        3
+      ],
+      "swings": [
+        "counterclockwise",
+        "clockwise"
+      ],
+      "theta": 0.4430786409943495,
+      "start": 3,
+      "side": 1,
+      "swing": "ccw",
+      "target": 8
+    },
+    {
+      "episode_id": 28,
+      "role": "R",
+      "type": 14,
+      "type_label": "4R-cw",
+      "env_seed": 1401100,
+      "path": [
+        8,
+        6,
+        4
+      ],
+      "route_idx": [
+        4,
+        3,
+        2
+      ],
+      "swings": [
+        "clockwise",
+        "clockwise"
+      ],
+      "theta": 0.34430815472333137,
+      "start": 4,
+      "side": -1,
+      "swing": "cw",
+      "target": 6
+    },
+    {
+      "episode_id": 29,
+      "role": "R",
+      "type": 14,
+      "type_label": "4R-cw",
+      "env_seed": 1401300,
+      "path": [
+        8,
+        6,
+        4
+      ],
+      "route_idx": [
+        4,
+        3,
+        2
+      ],
+      "swings": [
+        "clockwise",
+        "clockwise"
+      ],
+      "theta": 0.12406799910730293,
+      "start": 4,
+      "side": -1,
+      "swing": "cw",
+      "target": 6
+    },
+    {
+      "episode_id": 30,
+      "role": "R",
+      "type": 15,
+      "type_label": "4R-ccw",
+      "env_seed": 1403900,
+      "path": [
+        8,
+        6,
+        4
+      ],
+      "route_idx": [
+        4,
+        3,
+        2
+      ],
+      "swings": [
+        "counterclockwise",
+        "counterclockwise"
+      ],
+      "theta": -0.49426020709106305,
+      "start": 4,
+      "side": -1,
+      "swing": "ccw",
+      "target": 6
+    },
+    {
+      "episode_id": 31,
+      "role": "R",
+      "type": 15,
+      "type_label": "4R-ccw",
+      "env_seed": 1406900,
+      "path": [
+        8,
+        6,
+        4
+      ],
+      "route_idx": [
+        4,
+        3,
+        2
+      ],
+      "swings": [
+        "counterclockwise",
+        "clockwise"
+      ],
+      "theta": 0.066666183359843,
+      "start": 4,
+      "side": -1,
+      "swing": "ccw",
+      "target": 6
+    },
+    {
+      "episode_id": 32,
+      "role": "S",
+      "type": 0,
+      "type_label": "0L-cw",
+      "env_seed": 1400800,
+      "path": [
+        0,
+        2,
+        4
+      ],
+      "route_idx": [
+        0,
+        1,
+        2
+      ],
+      "swings": [
+        "clockwise",
+        "counterclockwise"
+      ],
+      "theta": 0.3943710683265355,
+      "start": 0,
+      "side": 1,
+      "swing": "cw",
+      "target": 2
+    },
+    {
+      "episode_id": 33,
+      "role": "S",
+      "type": 1,
+      "type_label": "0L-ccw",
+      "env_seed": 1408600,
+      "path": [
+        0,
+        2,
+        4
+      ],
+      "route_idx": [
+        0,
+        1,
+        2
+      ],
+      "swings": [
+        "counterclockwise",
+        "counterclockwise"
+      ],
+      "theta": -0.1716009928987159,
+      "start": 0,
+      "side": 1,
+      "swing": "ccw",
+      "target": 2
+    },
+    {
+      "episode_id": 34,
+      "role": "S",
+      "type": 2,
+      "type_label": "1R-cw",
+      "env_seed": 1403300,
+      "path": [
+        2,
+        0,
+        2
+      ],
+      "route_idx": [
+        1,
+        0,
+        1
+      ],
+      "swings": [
+        "clockwise",
+        "clockwise"
+      ],
+      "theta": 0.34675025263698805,
+      "start": 1,
+      "side": -1,
+      "swing": "cw",
+      "target": 0
+    },
+    {
+      "episode_id": 35,
+      "role": "S",
+      "type": 3,
+      "type_label": "1R-ccw",
+      "env_seed": 1426000,
+      "path": [
+        2,
+        0,
+        2
+      ],
+      "route_idx": [
+        1,
+        0,
+        1
+      ],
+      "swings": [
+        "counterclockwise",
+        "clockwise"
+      ],
+      "theta": 0.35722246783345213,
+      "start": 1,
+      "side": -1,
+      "swing": "ccw",
+      "target": 0
+    },
+    {
+      "episode_id": 36,
+      "role": "S",
+      "type": 4,
+      "type_label": "1L-cw",
+      "env_seed": 1419100,
+      "path": [
+        2,
+        4,
+        6
+      ],
+      "route_idx": [
+        1,
+        2,
+        3
+      ],
+      "swings": [
+        "clockwise",
+        "clockwise"
+      ],
+      "theta": 0.13994940656690819,
+      "start": 1,
+      "side": 1,
+      "swing": "cw",
+      "target": 4
+    },
+    {
+      "episode_id": 37,
+      "role": "S",
+      "type": 5,
+      "type_label": "1L-ccw",
+      "env_seed": 1411900,
+      "path": [
+        2,
+        4,
+        6
+      ],
+      "route_idx": [
+        1,
+        2,
+        3
+      ],
+      "swings": [
+        "counterclockwise",
+        "clockwise"
+      ],
+      "theta": 0.191183840572449,
+      "start": 1,
+      "side": 1,
+      "swing": "ccw",
+      "target": 4
+    },
+    {
+      "episode_id": 38,
+      "role": "S",
+      "type": 6,
+      "type_label": "2R-cw",
+      "env_seed": 1418000,
+      "path": [
+        4,
+        2,
+        0
+      ],
+      "route_idx": [
+        2,
+        1,
+        0
+      ],
+      "swings": [
+        "clockwise",
+        "clockwise"
+      ],
+      "theta": -0.00835106980605402,
+      "start": 2,
+      "side": -1,
+      "swing": "cw",
+      "target": 2
+    },
+    {
+      "episode_id": 39,
+      "role": "S",
+      "type": 7,
+      "type_label": "2R-ccw",
+      "env_seed": 1415800,
+      "path": [
+        4,
+        2,
+        0
+      ],
+      "route_idx": [
+        2,
+        1,
+        0
+      ],
+      "swings": [
+        "counterclockwise",
+        "clockwise"
+      ],
+      "theta": 0.31704173360363735,
+      "start": 2,
+      "side": -1,
+      "swing": "ccw",
+      "target": 2
+    },
+    {
+      "episode_id": 40,
+      "role": "S",
+      "type": 8,
+      "type_label": "2L-cw",
+      "env_seed": 1410500,
+      "path": [
+        4,
+        6,
+        8
+      ],
+      "route_idx": [
+        2,
+        3,
+        4
+      ],
+      "swings": [
+        "clockwise",
+        "counterclockwise"
+      ],
+      "theta": -0.15863044131651324,
+      "start": 2,
+      "side": 1,
+      "swing": "cw",
+      "target": 6
+    },
+    {
+      "episode_id": 41,
+      "role": "S",
+      "type": 9,
+      "type_label": "2L-ccw",
+      "env_seed": 1417400,
+      "path": [
+        4,
+        6,
+        8
+      ],
+      "route_idx": [
+        2,
+        3,
+        4
+      ],
+      "swings": [
+        "counterclockwise",
+        "counterclockwise"
+      ],
+      "theta": 0.19376369465467919,
+      "start": 2,
+      "side": 1,
+      "swing": "ccw",
+      "target": 6
+    },
+    {
+      "episode_id": 42,
+      "role": "S",
+      "type": 10,
+      "type_label": "3R-cw",
+      "env_seed": 1401000,
+      "path": [
+        6,
+        4,
+        2
+      ],
+      "route_idx": [
+        3,
+        2,
+        1
+      ],
+      "swings": [
+        "clockwise",
+        "clockwise"
+      ],
+      "theta": -0.5207156956588279,
+      "start": 3,
+      "side": -1,
+      "swing": "cw",
+      "target": 4
+    },
+    {
+      "episode_id": 43,
+      "role": "S",
+      "type": 11,
+      "type_label": "3R-ccw",
+      "env_seed": 1405000,
+      "path": [
+        6,
+        4,
+        2
+      ],
+      "route_idx": [
+        3,
+        2,
+        1
+      ],
+      "swings": [
+        "counterclockwise",
+        "clockwise"
+      ],
+      "theta": -0.3963623221959662,
+      "start": 3,
+      "side": -1,
+      "swing": "ccw",
+      "target": 4
+    },
+    {
+      "episode_id": 44,
+      "role": "S",
+      "type": 12,
+      "type_label": "3L-cw",
+      "env_seed": 1405700,
+      "path": [
+        6,
+        8,
+        6
+      ],
+      "route_idx": [
+        3,
+        4,
+        3
+      ],
+      "swings": [
+        "clockwise",
+        "counterclockwise"
+      ],
+      "theta": 0.15213555317835242,
+      "start": 3,
+      "side": 1,
+      "swing": "cw",
+      "target": 8
+    },
+    {
+      "episode_id": 45,
+      "role": "S",
+      "type": 13,
+      "type_label": "3L-ccw",
+      "env_seed": 1410800,
+      "path": [
+        6,
+        8,
+        6
+      ],
+      "route_idx": [
+        3,
+        4,
+        3
+      ],
+      "swings": [
+        "counterclockwise",
+        "clockwise"
+      ],
+      "theta": -0.3835247830266454,
+      "start": 3,
+      "side": 1,
+      "swing": "ccw",
+      "target": 8
+    },
+    {
+      "episode_id": 46,
+      "role": "S",
+      "type": 14,
+      "type_label": "4R-cw",
+      "env_seed": 1403600,
+      "path": [
+        8,
+        6,
+        4
+      ],
+      "route_idx": [
+        4,
+        3,
+        2
+      ],
+      "swings": [
+        "clockwise",
+        "clockwise"
+      ],
+      "theta": 0.20972649497510001,
+      "start": 4,
+      "side": -1,
+      "swing": "cw",
+      "target": 6
+    },
+    {
+      "episode_id": 47,
+      "role": "S",
+      "type": 15,
+      "type_label": "4R-ccw",
+      "env_seed": 1407600,
+      "path": [
+        8,
+        6,
+        4
+      ],
+      "route_idx": [
+        4,
+        3,
+        2
+      ],
+      "swings": [
+        "counterclockwise",
+        "clockwise"
+      ],
+      "theta": -0.20613216377106378,
+      "start": 4,
+      "side": -1,
+      "swing": "ccw",
+      "target": 6
+    }
+  ]
+}

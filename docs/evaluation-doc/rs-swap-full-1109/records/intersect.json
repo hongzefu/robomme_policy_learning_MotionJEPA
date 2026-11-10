@@ -1,0 +1,525 @@
+{
+  "line": "RS_SWAP_INTERSECT models=motion,wan recv=10 motion:Z=6/10,Rnd=6/10,A=9/10,Bsw_swing=8/10,Bside_dir=8/10,C_own=24/30,D1_swing=16/30,D2_dir=18/70,D2_abs=0/70,W0_swing=3/10,W0_dir=4/10 wan:Z=1/10,Rnd=4/10,A=10/10,Bsw_swing=0/10,Bside_dir=0/10,C_own=30/30,D1_swing=0/30,D2_dir=0/70,D2_abs=0/70,W0_swing=0/10,W0_dir=0/10",
+  "recv": [
+    0,
+    2,
+    3,
+    6,
+    10,
+    14,
+    18,
+    20,
+    28,
+    29
+  ],
+  "tables": {
+    "motion": {
+      "Z": {
+        "n": 10,
+        "success": 6,
+        "step1_success": 6,
+        "official_step1": 6,
+        "official_known": 10,
+        "reach": {
+          "own": 7,
+          "donor_dir": 0,
+          "donor_abs": 0,
+          "other": 3,
+          "none": 0
+        },
+        "swing": {
+          "own_swing": 8,
+          "donor_swing": 0,
+          "other_swing": 2,
+          "none": 0
+        },
+        "success_ci95": [
+          0.3,
+          0.9
+        ],
+        "step1_ci95": [
+          0.3,
+          0.9
+        ]
+      },
+      "Rnd": {
+        "n": 10,
+        "success": 6,
+        "step1_success": 6,
+        "official_step1": 6,
+        "official_known": 10,
+        "reach": {
+          "own": 7,
+          "donor_dir": 0,
+          "donor_abs": 0,
+          "other": 3,
+          "none": 0
+        },
+        "swing": {
+          "own_swing": 8,
+          "donor_swing": 0,
+          "other_swing": 2,
+          "none": 0
+        },
+        "success_ci95": [
+          0.3,
+          0.9
+        ],
+        "step1_ci95": [
+          0.3,
+          0.9
+        ]
+      },
+      "A": {
+        "n": 10,
+        "success": 9,
+        "step1_success": 9,
+        "official_step1": 9,
+        "official_known": 10,
+        "reach": {
+          "own": 10,
+          "donor_dir": 0,
+          "donor_abs": 0,
+          "other": 0,
+          "none": 0
+        },
+        "swing": {
+          "own_swing": 9,
+          "donor_swing": 0,
+          "other_swing": 1,
+          "none": 0
+        },
+        "success_ci95": [
+          0.7,
+          1.0
+        ],
+        "step1_ci95": [
+          0.7,
+          1.0
+        ]
+      },
+      "Bsw": {
+        "n": 10,
+        "success": 2,
+        "step1_success": 2,
+        "official_step1": 2,
+        "official_known": 10,
+        "reach": {
+          "own": 9,
+          "donor_dir": 0,
+          "donor_abs": 0,
+          "other": 1,
+          "none": 0
+        },
+        "swing": {
+          "own_swing": 2,
+          "donor_swing": 8,
+          "other_swing": 0,
+          "none": 0
+        },
+        "success_ci95": [
+          0.0,
+          0.5
+        ],
+        "step1_ci95": [
+          0.0,
+          0.5
+        ]
+      },
+      "Bside": {
+        "n": 10,
+        "success": 2,
+        "step1_success": 2,
+        "official_step1": 2,
+        "official_known": 10,
+        "reach": {
+          "own": 2,
+          "donor_dir": 8,
+          "donor_abs": 0,
+          "other": 0,
+          "none": 0
+        },
+        "swing": {
+          "own_swing": 5,
+          "donor_swing": 3,
+          "other_swing": 2,
+          "none": 0
+        },
+        "success_ci95": [
+          0.0,
+          0.5
+        ],
+        "step1_ci95": [
+          0.0,
+          0.5
+        ]
+      },
+      "C": {
+        "n": 30,
+        "success": 22,
+        "step1_success": 22,
+        "official_step1": 22,
+        "official_known": 30,
+        "reach": {
+          "own": 24,
+          "donor_dir": 0,
+          "donor_abs": 2,
+          "other": 4,
+          "none": 0
+        },
+        "swing": {
+          "own_swing": 27,
+          "donor_swing": 0,
+          "other_swing": 3,
+          "none": 0
+        },
+        "success_ci95": [
+          0.5666666666666667,
+          0.8666666666666667
+        ],
+        "step1_ci95": [
+          0.5666666666666667,
+          0.8666666666666667
+        ]
+      },
+      "D1": {
+        "n": 30,
+        "success": 11,
+        "step1_success": 11,
+        "official_step1": 11,
+        "official_known": 30,
+        "reach": {
+          "own": 26,
+          "donor_dir": 0,
+          "donor_abs": 2,
+          "other": 2,
+          "none": 0
+        },
+        "swing": {
+          "own_swing": 14,
+          "donor_swing": 16,
+          "other_swing": 0,
+          "none": 0
+        },
+        "success_ci95": [
+          0.2,
+          0.5333333333333333
+        ],
+        "step1_ci95": [
+          0.2,
+          0.5333333333333333
+        ]
+      },
+      "D2": {
+        "n": 70,
+        "success": 38,
+        "step1_success": 38,
+        "official_step1": 38,
+        "official_known": 70,
+        "reach": {
+          "own": 52,
+          "donor_dir": 18,
+          "donor_abs": 0,
+          "other": 0,
+          "none": 0
+        },
+        "swing": {
+          "own_swing": 47,
+          "donor_swing": 8,
+          "other_swing": 15,
+          "none": 0
+        },
+        "success_ci95": [
+          0.42857142857142855,
+          0.6571428571428571
+        ],
+        "step1_ci95": [
+          0.42857142857142855,
+          0.6571428571428571
+        ]
+      },
+      "W0": {
+        "n": 20,
+        "success": 13,
+        "step1_success": 13,
+        "official_step1": 13,
+        "official_known": 20,
+        "reach": {
+          "own": 16,
+          "donor_dir": 4,
+          "donor_abs": 0,
+          "other": 0,
+          "none": 0
+        },
+        "swing": {
+          "own_swing": 16,
+          "donor_swing": 4,
+          "other_swing": 0,
+          "none": 0
+        },
+        "success_ci95": [
+          0.45,
+          0.85
+        ],
+        "step1_ci95": [
+          0.45,
+          0.85
+        ]
+      }
+    },
+    "wan": {
+      "Z": {
+        "n": 10,
+        "success": 0,
+        "step1_success": 1,
+        "official_step1": 1,
+        "official_known": 10,
+        "reach": {
+          "own": 7,
+          "donor_dir": 0,
+          "donor_abs": 0,
+          "other": 3,
+          "none": 0
+        },
+        "swing": {
+          "own_swing": 2,
+          "donor_swing": 0,
+          "other_swing": 8,
+          "none": 0
+        },
+        "success_ci95": [
+          0.0,
+          0.0
+        ],
+        "step1_ci95": [
+          0.0,
+          0.3
+        ]
+      },
+      "Rnd": {
+        "n": 10,
+        "success": 3,
+        "step1_success": 4,
+        "official_step1": 4,
+        "official_known": 10,
+        "reach": {
+          "own": 6,
+          "donor_dir": 0,
+          "donor_abs": 0,
+          "other": 0,
+          "none": 4
+        },
+        "swing": {
+          "own_swing": 4,
+          "donor_swing": 0,
+          "other_swing": 2,
+          "none": 4
+        },
+        "success_ci95": [
+          0.0,
+          0.6
+        ],
+        "step1_ci95": [
+          0.1,
+          0.7
+        ]
+      },
+      "A": {
+        "n": 10,
+        "success": 10,
+        "step1_success": 10,
+        "official_step1": 10,
+        "official_known": 10,
+        "reach": {
+          "own": 10,
+          "donor_dir": 0,
+          "donor_abs": 0,
+          "other": 0,
+          "none": 0
+        },
+        "swing": {
+          "own_swing": 10,
+          "donor_swing": 0,
+          "other_swing": 0,
+          "none": 0
+        },
+        "success_ci95": [
+          1.0,
+          1.0
+        ],
+        "step1_ci95": [
+          1.0,
+          1.0
+        ]
+      },
+      "Bsw": {
+        "n": 10,
+        "success": 10,
+        "step1_success": 10,
+        "official_step1": 10,
+        "official_known": 10,
+        "reach": {
+          "own": 10,
+          "donor_dir": 0,
+          "donor_abs": 0,
+          "other": 0,
+          "none": 0
+        },
+        "swing": {
+          "own_swing": 10,
+          "donor_swing": 0,
+          "other_swing": 0,
+          "none": 0
+        },
+        "success_ci95": [
+          1.0,
+          1.0
+        ],
+        "step1_ci95": [
+          1.0,
+          1.0
+        ]
+      },
+      "Bside": {
+        "n": 10,
+        "success": 10,
+        "step1_success": 10,
+        "official_step1": 10,
+        "official_known": 10,
+        "reach": {
+          "own": 10,
+          "donor_dir": 0,
+          "donor_abs": 0,
+          "other": 0,
+          "none": 0
+        },
+        "swing": {
+          "own_swing": 10,
+          "donor_swing": 0,
+          "other_swing": 0,
+          "none": 0
+        },
+        "success_ci95": [
+          1.0,
+          1.0
+        ],
+        "step1_ci95": [
+          1.0,
+          1.0
+        ]
+      },
+      "C": {
+        "n": 30,
+        "success": 30,
+        "step1_success": 30,
+        "official_step1": 30,
+        "official_known": 30,
+        "reach": {
+          "own": 30,
+          "donor_dir": 0,
+          "donor_abs": 0,
+          "other": 0,
+          "none": 0
+        },
+        "swing": {
+          "own_swing": 30,
+          "donor_swing": 0,
+          "other_swing": 0,
+          "none": 0
+        },
+        "success_ci95": [
+          1.0,
+          1.0
+        ],
+        "step1_ci95": [
+          1.0,
+          1.0
+        ]
+      },
+      "D1": {
+        "n": 30,
+        "success": 30,
+        "step1_success": 30,
+        "official_step1": 30,
+        "official_known": 30,
+        "reach": {
+          "own": 30,
+          "donor_dir": 0,
+          "donor_abs": 0,
+          "other": 0,
+          "none": 0
+        },
+        "swing": {
+          "own_swing": 30,
+          "donor_swing": 0,
+          "other_swing": 0,
+          "none": 0
+        },
+        "success_ci95": [
+          1.0,
+          1.0
+        ],
+        "step1_ci95": [
+          1.0,
+          1.0
+        ]
+      },
+      "D2": {
+        "n": 70,
+        "success": 70,
+        "step1_success": 70,
+        "official_step1": 70,
+        "official_known": 70,
+        "reach": {
+          "own": 70,
+          "donor_dir": 0,
+          "donor_abs": 0,
+          "other": 0,
+          "none": 0
+        },
+        "swing": {
+          "own_swing": 70,
+          "donor_swing": 0,
+          "other_swing": 0,
+          "none": 0
+        },
+        "success_ci95": [
+          1.0,
+          1.0
+        ],
+        "step1_ci95": [
+          1.0,
+          1.0
+        ]
+      },
+      "W0": {
+        "n": 20,
+        "success": 20,
+        "step1_success": 20,
+        "official_step1": 20,
+        "official_known": 20,
+        "reach": {
+          "own": 20,
+          "donor_dir": 0,
+          "donor_abs": 0,
+          "other": 0,
+          "none": 0
+        },
+        "swing": {
+          "own_swing": 20,
+          "donor_swing": 0,
+          "other_swing": 0,
+          "none": 0
+        },
+        "success_ci95": [
+          1.0,
+          1.0
+        ],
+        "step1_ci95": [
+          1.0,
+          1.0
+        ]
+      }
+    }
+  }
+}

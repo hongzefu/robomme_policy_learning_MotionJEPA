@@ -206,5 +206,13 @@ python -m scripts.interpret.analysis.rs_full_readout --root $O --intersect motio
 <h2>七、留档与 commit 纪律</h2>
 <p>起跑前建 <code>docs/evaluation-doc/rs-swap-full-1109/</code>，<code>launch.md</code> 记版本、命令、tmux 会话清单；跑完写 <code>result.md</code> 与 <code>records/</code>（读数、清单、配对表、清洗后日志）。只 <code>git add</code> 逐个明确路径；每次 commit 后立即 push。根目录未跟踪文件 <code>TODO_RoboMME_Qwen3VL_FrameSamp_Context.en (1).html</code> 不属本轮，不碰。</p>
 
+<h2>八、实施中调整与实测结果（追加，美东 2026-11-09）</h2>
+<table>
+<tr><th>调整</th><th>旧 → 新</th><th>理由</th></tr>
+<tr><td>官方 50 局重评</td><td>两模型各跑 → 取消</td><td>用户「不用这个！」；运行器代码同上一轮，上一轮已 <code>MODEL_REPRO=PASS</code></td></tr>
+<tr><td>W2</td><td>条件派发 → 未派</td><td>S0 核实 plfull 口径无任务硬编码</td></tr>
+<tr><td>调度</td><td>按阶段逐个起 → multieq 之后每个 worker 位置一条顺序链 <code>rsf-chain-&lt;w&gt;</code></td><td>减少手动接替；规模与 spec 不变，各段日志与 EXIT_CODE 照旧</td></tr>
+</table>
+<p>最终判定行：<code>RS_SWAP_FULL=PASS model=motion runs=410 invalid=0 N=29/48 Z=8/18 Rnd=8/18 A=13/18 Bsw_swing=15/18 Bside_dir=16/20 C_own=40/54 D1_swing=32/54 D2_dir=39/124 D2_abs=0/124 W0_swing=9/18 W0_dir=7/20</code>；<code>RS_SWAP_FULL=PASS model=wan runs=311 invalid=0 N=18/48 Z=1/13 Rnd=6/13 A=13/13 Bsw_swing=0/13 Bside_dir=0/16 C_own=39/39 D1_swing=0/39 D2_dir=0/88 D2_abs=0/88 W0_swing=0/13 W0_dir=0/16</code>。详见 <a href="docs/evaluation-doc/rs-swap-full-1109/result.md">result.md</a>。</p>
 </body>
 </html>

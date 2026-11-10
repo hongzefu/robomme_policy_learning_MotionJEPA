@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-09T21:38:51Z",
-    "America/New_York": "2026-11-09T16:38:51-0500"
+    "utc": "2026-11-10T00:50:00Z",
+    "America/New_York": "2026-11-09T19:50:00-0500"
   },
   "repo": {
     "branch": "v4.2-plswap-full",
@@ -2219,9 +2219,9 @@
         "file": "1109-routestick-swap-full-factorial-plan.html",
         "sha": "9e1038d"
       },
-      "state": "running",
-      "state_changed_at": "2026-11-09T21:38:51Z",
-      "state_reason": "开工令已给；开工前审查与 S0 核实进行中。",
+      "state": "done",
+      "state_changed_at": "2026-11-10T00:50:00Z",
+      "state_reason": "两模型完成：motion RS_SWAP_FULL=PASS runs=410 invalid=0；wan RS_SWAP_FULL=PASS runs=311 invalid=0（R 13/32 过 8 局门槛）；全部 rsf- 会话 EXIT_CODE=0 并已退出。",
       "owner": {
         "session": "bb27e5ee-343a-4725-ba31-e23ba7d6da8f",
         "host": "sled-aspen.eecs.umich.edu"
@@ -2232,27 +2232,27 @@
       "pre_handoff": [
         {
           "what": "MotionMem 第一步交换读数",
-          "evidence": "RS_SWAP_FULL=PASS model=motion",
-          "where": "docs/evaluation-doc/rs-swap-full-1109/",
-          "status": "pending"
+          "evidence": "RS_SWAP_FULL=PASS model=motion runs=410 invalid=0 N=29/48 Z=8/18 Rnd=8/18 A=13/18 Bsw_swing=15/18 Bside_dir=16/20 C_own=40/54 D1_swing=32/54 D2_dir=39/124 D2_abs=0/124 W0_swing=9/18 W0_dir=7/20",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/rs-swap-full-1109/records/motion/readout.md",
+          "status": "pass"
         },
         {
           "what": "Wan 第一步交换读数",
-          "evidence": "RS_SWAP_FULL=PASS|PARTIAL model=wan",
-          "where": "docs/evaluation-doc/rs-swap-full-1109/",
-          "status": "pending"
+          "evidence": "RS_SWAP_FULL=PASS model=wan runs=311 invalid=0 N=18/48 Z=1/13 Rnd=6/13 A=13/13 Bsw_swing=0/13 Bside_dir=0/16 C_own=39/39 D1_swing=0/39 D2_dir=0/88 D2_abs=0/88 W0_swing=0/13 W0_dir=0/16",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/rs-swap-full-1109/records/wan/readout.md",
+          "status": "pass"
         },
         {
           "what": "留档 commit 已 push",
-          "evidence": "",
+          "evidence": "见本 handoff commit",
           "where": "origin/v4.2-plswap-full",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "全部 rsf- tmux 会话退出",
-          "evidence": "",
-          "where": "tmux ls",
-          "status": "pending"
+          "evidence": "tmux ls 无 rsf- 会话；46 份 rsf- 日志末行 EXIT_CODE=0",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/rs-swap-full-1109/records/logs/",
+          "status": "pass"
         }
       ],
       "long_tail": [],
@@ -2268,9 +2268,9 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "S0 核实 + W1 写 rs_full_prep/rs_full_readout",
-          "command": "Agent opus worktree",
-          "verdict_line": "RS_REPLAY=PASS; RS_POOL=PASS"
+          "what": "下游稿件仓库写入",
+          "command": "读 docs/evaluation-doc/rs-swap-full-1109/result.md",
+          "verdict_line": "—"
         }
       ]
     }
