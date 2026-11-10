@@ -276,5 +276,19 @@ uv run python -m scripts.interpret.analysis.sc_speed_readout --root $O/motion</p
 <li>合并提交按 <code>commitV4.5.&lt;n&gt;</code> 依次编号，body 按第 11 条的六项写；所有 commit 立即 push。</li>
 <li>状态机：开工令一条 <code>kind: go</code> 的小提交，<code>planned→running</code>、收尾 <code>done</code> 各一条 <code>handoff:</code> 提交。</li>
 </ul>
+<h1>附：实施中调整与实测（追加，不改写原计划）</h1>
+<table>
+<tr><th>调整</th><th>旧 → 新</th><th>理由与审查</th></tr>
+<tr><td>干预回合关超时（commitV4.5.4）</td><td>R 回合用真实环境原超时 → R 回合只改 stop_time=99 并跑到 H=max(M,M′)·N+32（move_interval、官方成功窗口不变）</td><td>冒烟慢组 nopress=3/3：T(M′,N) ≥ M·N（仅 (60,80,N=2) 取等），慢组被结构截断；<code>ADJUST_REVIEW=PASS scale=same findings=5</code>；读数加对称截断口径 SPEED_FOLLOW_SYM 与 SPEED_LATE</td></tr>
+<tr><td>动作表口径</td><td>actions[j−1]=env_step_after==j → 按步前值 env_step_before 对齐</td><td>真实首步 env_step_before=1/after=2；审查确认与〇′ B3 一致</td></tr>
+<tr><td>stop_after_press（K8）</td><td>实现 → 不实现</td><td>环境按下后自行判终局</td></tr>
+<tr><td>资源</td><td>8 个 GL 占位 → 实际排到 4 个，排不到的占位名下的队列由已运行占位接着跑；aspen 名下的 n 队列改写为 GL 路径后在 GL 跑</td><td>排队；首两次漏改 cuda 失败已归档</td></tr>
+</table>
+<p>实测（详见 <code>docs/evaluation-doc/sc-speed-1110/result.md</code>）：</p>
+<ul>
+<li>MotionMem：<code>SPEED_FOLLOW beta=0.913 ci=[0.837,0.967]</code>；新速度成功 76/144，基线 2/144。</li>
+<li>Wan：<code>beta=0.055 ci=[-0.001,0.132]</code>；新速度成功 18/144，基线 14/144。</li>
+<li><code>PRESS_LABEL</code> 两模型均为 FAIL：mismatch 分别为 13 和 7，全部落在几何窗口入口 0–1 步处；窗口起点收紧 2 步后，结论不变。</li>
+</ul>
 </body>
 </html>
