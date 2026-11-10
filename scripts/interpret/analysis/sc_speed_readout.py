@@ -15,7 +15,7 @@ button_pressed_after 为真的 env_step_after。
   PRESS_LABEL=PASS|FAIL model=<m> runs=<n> mismatch=<k>     「p ∈ W(M,N)」与官方 task_success 逐局一致（N/S/R）
   SPEED_SCOPE=PASS|FAIL model=<m> runs=<n> unreplaced=<k> scope_bad=<k>
         每个 R 回合：最后一次推理时已齐的窗口（起点 s=32u、s+32 ≤ 该次推理前的帧号）都在 replace_log 里且为 [s,s]，
-        另加 n_windows − n_replaced；scope_bad = 模式不是 swap_exact、供体键不符或缺 episode.json
+        另加 n_windows − n_replaced；scope_bad = 模式不是 swap_exact、供体键不符、缺 episode.json 或取不到推理帧号
   SEED_PRESS model=<m> pairs=<n> mad=<步> mean_abs=<步> press_change=<k>   N 与 S 都按下的局 |p_S − p_N| 的中位数
   SPEED_FOLLOW model=<m> beta=<b> ci=[..] beta0=<过原点> same_delta=<d> ci=[..] n=<n>
         Δ = p_R − p_N（两者都按下），Δ* = T(M′,N) − T(M,N)，β 为带截距 OLS 斜率（只用 M′ ≠ M），接收局重采样 2000 次
@@ -222,7 +222,9 @@ def scope_check(r):
     bad = [x for x in log if len(x) != 2 or int(x[0]) != int(x[1])]
     replaced = {int(x[0]) for x in log if len(x) == 2 and int(x[0]) == int(x[1])}
     F = r.get("last_frame")
-    expected = set() if F is None else {s for s in range(0, F + 1, C.MOTION_STRIDE) if s + C.MOTION_WINDOW - 1 <= F}
+    if F is None:
+        return 0, "no_last_frame"
+    expected = {s for s in range(0, F + 1, C.MOTION_STRIDE) if s + C.MOTION_WINDOW - 1 <= F}
     extra = max(0, int(mc.get("n_windows", 0)) - int(mc.get("n_replaced", 0)))
     return len(expected - replaced) + extra, ("non_identity_log" if bad else None)
 

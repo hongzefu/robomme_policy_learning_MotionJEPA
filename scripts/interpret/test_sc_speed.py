@@ -309,3 +309,72 @@ def test_line_formats():
                R.follow_line("motion", fs, {"n": 0})]
     for pat, line in zip(LINE_FORMATS, samples):
         assert re.match(pat, line), line
+
+
+# ---------------------------------------------------------------- 审查非阻断项修补
+def test_hold_step_upper_is_press_minus_one(monkeypatch):
+    monkeypatch.setattr(C, "reach_step", lambda rows, button: 200)     # 构造就位晚于按下的极端情况
+    th, src, press, _ = C.hold_step(fake_rows(300, press_at=150), BUTTON)
+    assert (th, src, press) == (149, "reach", 150)
+    acts = C.replay_actions(fake_rows(300, press_at=150), th)
+    assert acts[-1] == [148.0] * 8                                     # 不含产生按下的那一步（步前值 149）
+    monkeypatch.setattr(C, "reach_step", lambda rows, button: None)
+    th, _, _, _ = C.hold_step(fake_rows(300), BUTTON)
+    assert th == 301                                                   # 未按下时上界仍为最后一步
+
+
+def test_replay_line_zero_windows_fail():
+    ok = [{"ep": 0, "windows": 2, "maxabs": 1e-6, "missing": []}, {"ep": 1, "windows": 0, "maxabs": 0.0, "missing": []}]
+    line = C.replay_line("motion", ok)
+    assert line.startswith("REPLAY_EQ=PASS model=motion eps=2 windows=2") and line.endswith("zero_window_eps=1")
+    zero = [{"ep": 0, "windows": 0, "maxabs": 0.0, "missing": []}]
+    assert C.replay_line("motion", zero).startswith("REPLAY_EQ=FAIL")
+    assert C.replay_line("motion", zero).endswith("zero_window_eps=1")
+    assert C.replay_line("motion", []).startswith("REPLAY_EQ=FAIL")
+    big = [{"ep": 0, "windows": 3, "maxabs": 2e-4, "missing": []}]
+    assert C.replay_line("motion", big).startswith("REPLAY_EQ=FAIL")
+
+
+def test_scope_no_last_frame_is_bad():
+    syn = C.syn_ep(1, 0)
+    r = {"syn": syn, "last_frame": None,
+         "motion_content": {"mode": "swap_exact", "donor": f"StopCube:{syn}", "n_windows": 0, "n_replaced": 0,
+                            "replace_log": []}}
+    assert R.scope_check(r) == (0, "no_last_frame")
+    r["last_frame"] = 70
+    assert R.scope_check(r) == (2, None)                               # 起点 0、32 未替换
+    r["motion_content"]["replace_log"] = [[0, 0], [32, 32]]
+    assert R.scope_check(r) == (0, None)
+
+
+def test_slot_items_missing_gate(tmp_path, capsys):
+    (tmp_path / C.CFG_DIR).mkdir()
+    for slot in C.SLOTS:
+        eps = {f"StopCube:{r}": {} for r in (0, 1, 2) if not (slot == 1 and r == 2)}
+        (tmp_path / C.CFG_DIR / f"slot{slot}.json").write_text(json.dumps({"schema_version": 1, "episodes": eps}))
+    items, missing = C.slot_items(tmp_path, [0, 1, 2], {}, "cfg")
+    assert len(items) == 8 and missing == [(1, 2)]
+    assert C.missing_gate(missing, False) is False
+    assert "SCS_SPECS_MISSING=1" in capsys.readouterr().out
+    assert C.missing_gate(missing, True) is True
+    assert C.missing_gate([], False) is True
+    items, missing = C.slot_items(tmp_path, [0, 1], {}, "donors")     # iv：donors_sc 为空 → 全缺
+    assert items == [] and len(missing) == 6
+
+
+def test_hold_script_ignores_skipped_old_logs(tmp_path):
+    import subprocess
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    (tmp_path / "queues").mkdir()
+    for w in ("g0a", "g0b"):
+        (tmp_path / "queues" / f"iv-{w}.sh").write_text("run_spec() { :; }\nrun_spec iv x y\necho ran\n")
+    (logs / "scs-motion-iv-g0a.log").write_text("old\nEXIT_CODE=1\n")   # 旧日志：被跳过，不得计入 rc
+    text = C.HOLD_TEMPLATE.format(hold=0, stage="iv", stagger=0, logs=logs, prefix="scs-motion", root=tmp_path,
+                                  workers="g0a g0b")
+    script = tmp_path / "hold.sh"
+    script.write_text(text)
+    out = subprocess.run(["bash", str(script)], capture_output=True, text=True, timeout=60)
+    assert out.returncode == 0, out.stdout + out.stderr
+    assert "SKIP_LOG_EXISTS" in out.stdout and "channels=1 rc=0" in out.stdout
+    assert (logs / "scs-motion-iv-g0b.log").read_text().endswith("EXIT_CODE=0\n")
