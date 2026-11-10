@@ -15,7 +15,8 @@ target_index、swap_schedule（[[a,b,start,end],...]，a/b 为物体下标）、
 VideoRepick 另加 num_repeats。两个 Swap 任务在开关关闭时，行与 receipt 与改动前逐字节一致。
 
 拿起即停（--stop-after-first-pick）：只看执行段每步步后状态（示范在 reset 内，不经过 step），容器 z>0.15
-（同 is_bin_pickup），方块 z>0.05 且 agent.is_grasping（同 is_obj_pickup）。第一次检测到即写 first_pick，并以
+且 agent.is_grasping（ButtonUnmaskSwap 开局环境自己抬起全部容器，只看高度会误判），方块 z>0.05 且
+agent.is_grasping（同 is_obj_pickup）。第一次检测到即写 first_pick，并以
 stop=True 交回官方循环结束该局：步前子目标是「第一次拿起」且拿的是目标 → success，否则 fail；
 终局记录另带 truncated_first_pick=true。
 """
@@ -118,10 +119,9 @@ def picked_index(u, task):
     位姿是 float32 张量，官方判定里阈值也按 float32 比较，这里同样转 float32 再比，边界值才一致。"""
     for index, actor in enumerate(objects_of(u, task)):
         z = np.float32(position(actor)[2])
-        if task in CUBE_TASKS:
-            if z > np.float32(CUBE_PICK_Z) and bool(scalar_value(u.agent.is_grasping(actor))):
-                return index
-        elif z > np.float32(BIN_PICK_Z):
+        threshold = CUBE_PICK_Z if task in CUBE_TASKS else BIN_PICK_Z
+        # 容器也要求夹爪抓着：ButtonUnmaskSwap 开局 0–64 步环境自己把全部容器抬起再放下，z 会超过 0.15。
+        if z > np.float32(threshold) and bool(scalar_value(u.agent.is_grasping(actor))):
             return index
     return None
 

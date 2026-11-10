@@ -57,11 +57,14 @@ def make_unwrapped(task="ButtonUnmaskSwap"):
         return make_cube_unwrapped()
     bins = [actor(0.1, 0.0, 0.05), actor(0.2, 0.0, 0.05), actor(0.3, 0.0, 0.05)]
     # 第一目标不是 spawned_bins 的第 0 个，才能测出下标确实按对象身份取。
-    return SimpleNamespace(elapsed_steps=None, agent=SimpleNamespace(tcp=actor(0.0, 0.0, 0.3)), spawned_bins=bins,
-                           selected_bins=[bins[2], bins[0], bins[1]], swap_times=2, pick_times=1,
-                           swap_schedule=[(bins[0], bins[1], 64, 114), (bins[1], bins[2], 114, 164)],
-                           color_names=["red", "green", "blue"], task_list=[{"name": n} for n in TASK_NAMES.get(task, [])],
-                           successflag=np.asarray([False]), failureflag=np.asarray([False]))
+    u = SimpleNamespace(elapsed_steps=None, spawned_bins=bins,
+                        selected_bins=[bins[2], bins[0], bins[1]], swap_times=2, pick_times=1,
+                        swap_schedule=[(bins[0], bins[1], 64, 114), (bins[1], bins[2], 114, 164)],
+                        color_names=["red", "green", "blue"], task_list=[{"name": n} for n in TASK_NAMES.get(task, [])],
+                        successflag=np.asarray([False]), failureflag=np.asarray([False]), grasped=[])
+    u.agent = SimpleNamespace(tcp=actor(0.0, 0.0, 0.3),
+                              is_grasping=lambda obj: np.asarray([any(obj is g for g in u.grasped)]))
+    return u
 
 
 def make_cube_unwrapped():
@@ -440,6 +443,7 @@ def test_bin_stop_uses_container_threshold(tmp_path, monkeypatch):
     def plan(u, n):
         u.timestep = 2 if n >= 3 else 0
         lift(u.spawned_bins[2], {5: 0.15, 6: 0.151}.get(n, 0.05))  # 恰好 0.15 不算，超过才算
+        u.grasped = [u.spawned_bins[2]] if n >= 5 else []
         if n >= 6:
             u.timestep = 3  # 拿对时同一步 evaluate 里子目标已前进
     _, evaluator, _, outcome, rows, receipt = run_episode(tmp_path, monkeypatch, "ButtonUnmaskSwap", args=STOP,
@@ -460,6 +464,7 @@ def test_bin_stop_wrong_container_is_fail(tmp_path, monkeypatch):
         u.timestep = 1
         if n == 4:
             lift(u.spawned_bins[0], 0.2)
+            u.grasped = [u.spawned_bins[0]]
             u.failureflag = np.asarray([True])
     _, _, _, outcome, rows, receipt = run_episode(tmp_path, monkeypatch, "VideoUnmaskSwap", args=STOP,
                                                   sim=install_plan_sim(plan))
@@ -473,6 +478,7 @@ def test_button_pick_before_buttons_is_fail(tmp_path, monkeypatch):
         u.timestep = 1  # 第二个按钮还没按
         if n == 2:
             lift(u.spawned_bins[2], 0.3)
+            u.grasped = [u.spawned_bins[2]]
     _, _, _, outcome, _, receipt = run_episode(tmp_path, monkeypatch, "ButtonUnmaskSwap", args=STOP,
                                                sim=install_plan_sim(plan))
     assert outcome == "fail" and receipt["first_pick"]["is_target"] is True
@@ -502,6 +508,28 @@ def test_cube_grasped_but_low_is_not_pick():
     assert runner.picked_index(u, "VideoRepick") is None
     lift(u.spawned_cubes[0], 0.0501)
     assert runner.picked_index(u, "VideoRepick") == 0
+
+
+def test_bin_lifted_by_env_without_grasp_is_not_pick(tmp_path, monkeypatch):
+    """ButtonUnmaskSwap 开局环境抬起全部容器（未抓取）：不算拿起，开关打开也跑到底。"""
+    def plan(u, n):
+        u.timestep = 0
+        for b in u.spawned_bins:
+            lift(b, 0.3 if n <= 4 else 0.05)
+    _, _, _, outcome, rows, receipt = run_episode(tmp_path, monkeypatch, "ButtonUnmaskSwap", args=STOP,
+                                                  sim=install_plan_sim(plan))
+    assert outcome == "fail" and len(rows) == TERMINAL_STEPS
+    assert receipt["first_pick"] is None and receipt["truncated_first_pick"] is False
+
+
+def test_bin_pick_needs_grasp_and_height():
+    u = make_unwrapped("ButtonUnmaskSwap")
+    lift(u.spawned_bins[1], 0.3)
+    assert runner.picked_index(u, "ButtonUnmaskSwap") is None  # 抬高未抓取
+    u.grasped = [u.spawned_bins[1]]
+    assert runner.picked_index(u, "ButtonUnmaskSwap") == 1
+    lift(u.spawned_bins[1], 0.15)
+    assert runner.picked_index(u, "ButtonUnmaskSwap") is None  # 抓取但恰好 0.15 不算
 
 
 def test_stop_switch_without_pick_runs_to_end(tmp_path, monkeypatch):
@@ -546,6 +574,7 @@ def test_truncation_reaches_terminal_record(tmp_path, monkeypatch):
         u.timestep = 1
         if n == 2:
             lift(u.spawned_bins[2], 0.3)
+            u.grasped = [u.spawned_bins[2]]
     _, _, _, outcome, _, _ = run_episode(tmp_path, monkeypatch, "VideoUnmaskSwap", nonce="cutnonce", args=STOP,
                                          sim=install_plan_sim(plan))
     assert outcome == "success"
