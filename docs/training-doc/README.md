@@ -10,7 +10,8 @@
 
 | 目录 | 内容 | 状态 |
 |---|---|---|
-| [`orig100-ctx-tokendrop-framesamp1024-b64-80k/`](orig100-ctx-tokendrop-framesamp1024-b64-80k/launch.md) | 官方 b64 80k，context，tokendrop（GPU 0–3）与 framesample（GPU 4–7），budget 1024 | 训练中 |
+| [`orig100-ctx-tokendrop-framesamp1024-b64-80k/`](orig100-ctx-tokendrop-framesamp1024-b64-80k/launch.md) | 官方 b64 80k，context，tokendrop（GPU 0–3）与 framesample（GPU 4–7），budget 1024 | 11-06 约 15k 步用户叫停放弃 |
+| [`orig100-ctx-framesamp1024-b64-80k-8gpu/`](orig100-ctx-framesamp1024-b64-80k-8gpu/result.md) | 官方 b64 80k，context，framesample budget 1024，8 卡从头重训 | 完成：79999，HF 回读 PASS，未评估 |
 
 ### 官方16×100两条串行60k（2026-10-27美东开工）
 

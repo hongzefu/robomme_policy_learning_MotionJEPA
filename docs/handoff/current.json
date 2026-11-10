@@ -1,8 +1,8 @@
 {
  "schema_version": 1,
  "written_at": {
-  "utc": "2026-11-09T15:25:38Z",
-  "america_new_york": "2026-11-09T10:25:38-05:00"
+  "utc": "2026-11-10T20:05:55Z",
+  "america_new_york": "2026-11-10T15:05:55-05:00"
  },
  "repo": {
   "branch": "v12-ctx-fs1024-8gpu-b64-80k",
@@ -1478,9 +1478,9 @@
     "file": "1109-ctx-framesamp1024-8gpu-b64-80k-plan.html",
     "sha": "aa810db"
    },
-   "state": "running",
-   "state_changed_at": "2026-11-09T11:28:17Z",
-   "state_reason": "正式训练进行中（1.4–1.5 s/步）；第 10000 步已存盘并上传；预计 11-10 美东约 14:00–14:40 完成",
+   "state": "closed",
+   "state_changed_at": "2026-11-10T20:05:55Z",
+   "state_reason": "80k 训练完成（11-10 美东 14:58，EXIT_CODE=0），8 份 checkpoint 上传并全量回读 PASS，79999 EMA CPU 恢复 PASS；档案 docs/training-doc/orig100-ctx-framesamp1024-b64-80k-8gpu/result.md。未评估（D3）。",
    "owner": {
     "session": "https://claude.ai/code/session_01WvPQiSRg72o9g9BhMh9rT9",
     "host": "ip-10-242-11-177"
@@ -1521,9 +1521,9 @@
     },
     {
      "what": "正式训练完成",
-     "evidence": "CTX1024_TRAIN=PASS run=orig100-ctx-framesamp1024-b64-80k-8gpu step=79999",
+     "evidence": "CTX1024_TRAIN=PASS run=orig100-ctx-framesamp1024-b64-80k-8gpu step=79999（EXIT_CODE=0，8 份 ckpt，墙钟 32:43:02）；CKPT_CPU_RESTORE=PASS leaves=55 params=3359793680 nonfinite_leaves=0",
      "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx-framesamp1024-b64-80k-8gpu.log",
-     "status": "pending"
+     "status": "pass"
     }
    ],
    "long_tail": [
@@ -1532,21 +1532,11 @@
      "tmux": "fs8-inc",
      "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx-framesamp1024-b64-80k-8gpu-inc.log",
      "done_line": "HF_VERIFY=PASS bucket=HongzeFu/robomme-vla-orig100-ctx-framesamp1024-b64-80k-8gpu-v1 steps=8 mismatches=0",
-     "status": "pending"
+     "status": "pass",
+     "evidence": "HF_VERIFY=PASS bucket=HongzeFu/robomme-vla-orig100-ctx-framesamp1024-b64-80k-8gpu-v1 steps=8 mismatches=0；EXIT_CODE=0"
     }
    ],
-   "running_handles": [
-    {
-     "tmux": "fs8-train",
-     "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx-framesamp1024-b64-80k-8gpu.log",
-     "done_line": "EXIT_CODE=0"
-    },
-    {
-     "tmux": "fs8-inc",
-     "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx-framesamp1024-b64-80k-8gpu-inc.log",
-     "done_line": "HF_VERIFY=PASS bucket=HongzeFu/robomme-vla-orig100-ctx-framesamp1024-b64-80k-8gpu-v1 steps=8 mismatches=0"
-    }
-   ],
+   "running_handles": [],
    "authorizations": [
     {
      "kind": "go",
@@ -1558,9 +1548,9 @@
    "pending_decisions": [],
    "next_steps": [
     {
-     "what": "Monitor 正式日志直到 EXIT_CODE=0、8 份 ckpt；inc 日志直到 HF_VERIFY=PASS；然后 79999 EMA CPU 恢复、写训练档案、状态改 done",
-     "command": "tail -F /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx-framesamp1024-b64-80k-8gpu.log",
-     "verdict_line": "CTX1024_TRAIN=PASS run=orig100-ctx-framesamp1024-b64-80k-8gpu step=79999"
+     "what": "评估需另出方案（用户未授权）",
+     "command": "—",
+     "verdict_line": "—"
     }
    ]
   }
