@@ -132,6 +132,22 @@ pre{background:#f6f6f6;padding:8px;overflow-x:auto;font-size:13px}
 <li><b>R6</b> 新 env_seed：PatternLock 2300000 起、RouteStick 2400000 起，步长 100，与官方 metadata 不交；交换任务沿用已扫描的 2000000/2100000/2200000 区间。</li>
 </ol>
 
+<h2>〇′、开工审查裁决（PLAN_CONSISTENCY_REVIEW=FAIL base=ac6ff45 findings=12 blocking=2）</h2>
+<p>用户开工令「开工呢哦，有问题尽可能在十五分钟内问我，之后就尽可能自己做」；以下由主代理裁决，均按用户「每一个长度位置都要分析」的意图补全，覆盖正文冲突写法。</p>
+<ol>
+<li><b>F1 局池上限</b>：PatternLock、RouteStick 局池改为每任务 120 局（≤ <code>PLFULL_EPISODES=120</code>），长局照样多抽：PL m=1:8、2:12、3:18、4:20、5:20、6:21、7:21；RS m=2:15、3:15、4:20、5:20、6:25、7:25。eval.py 不改。</li>
+<li><b>F2 交换任务 n=3</b>：VUS、BUS 的 n=3 只在 hard 档，<b>补扫 hard</b>：VUS 2050000 起、BUS 2150000 起各 150 个 seed（与已扫 2000000–2029900、2100000–2129900 不重叠），SP-W2 把难度改成参数。局池每任务 90 局按 n=1/2/3 各 30；VR 仍只用 easy、medium（n=1–3）。三任务各 6 个 (n,k)。</li>
+<li><b>F3 seed 区间</b>：PL 2300000–2399900、RS 2400000–2499900（各至多 1000 个，按需扫到各层凑满为止）。</li>
+<li><b>F4</b>：GL 上 Wan 目录有 1.2G 残留，rsync 补齐后逐文件 sha256 复核（<code>VLA_SYNC</code>）。</li>
+<li><b>F5 GL release</b>：主仓库 <code>git archive</code> + 子模块 <code>git -C third_party/robomme_benchmark archive</code> 解到同一 release 目录；<code>GL_RELEASE</code> 核对 <code>third_party/robomme_benchmark/src</code> 文件数与本机一致。SP-W1、SP-W2 的 prep 增加路径根参数（仓库、store、bench_src、三个解释器、<code>MMEVLA_V1_STORE</code>），GL 端用 <code>…-eval/v1-store/envs/{official-sim,policy,stage2}</code>。</li>
+<li><b>F6 基线口径</b>：「不筛选」指不再按第 j 步本身是否正确二次筛选；干预集与基线都限定在「N 运行走到第 j 步起点」的同一 (局,j) 集合。</li>
+<li><b>F7 窗数不等</b>：按 W_j 内顺序对齐；供体窗少时沿用 FP 补齐规则（供体该段之后的下一个窗），多出的供体窗不用；补齐数入记录。</li>
+<li><b>F8</b>：交换任务窗口集合沿用 <code>fp_swap_prep</code>（Button 取执行窗）。段统一写成闭区间 <code>[a_j, b_j−1]</code> 与窗口真实帧闭区间求交。</li>
+<li><b>F9</b>：示范帧归属复用 <code>subgoal_trace_runner</code> 回执的 <code>demo_task_index</code>（第 j 步 = task_index j），风险 3 降级。</li>
+<li><b>F10 数据流</b>：S3 拆成三道屏障：N 全部完成 → 供体生成 → 干预。metadata、spec、供体 npz 与全部运行产物落 NFS <code>/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/sp-swap-1110/</code>（aspen 与 GL 都能直接读写），读数在 aspen 读该目录。</li>
+<li><b>F11</b>：同一 (j, 组) 的不同接收局装进同一 spec（每个接收局一个供体），减少服务端启动次数；单局耗时冒烟实测后更新估计。</li>
+<li><b>F12</b>：占位 8 个、每个 4 CPU / 64G 均超 <code>greatlakes.md</code> 默认（4 个、1 CPU / 24G）；随计划经用户开工令放行，已于 00:1x 提交 65812859–65812866。</li>
+</ol>
 <h2>一、逐文件改动</h2>
 <table>
 <tr><th>文件</th><th>改什么</th></tr>
