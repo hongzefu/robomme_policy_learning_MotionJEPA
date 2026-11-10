@@ -12,13 +12,18 @@ except ImportError:
     from queue_store import read_json
 
 
+# 与 policy_config.create_trained_policy 写进服务端 metadata 的 model_kind 一一对应：
+# 无 motion 的 framesamp 为 history；stage2 concat/split 同为 stage2_pool4_concat；Wan 零参数池化为 wan_fixedpool1024。
+MODEL_KINDS = ("stage2_pool4_concat", "wan_fixedpool1024", "history")
+
+
 def validate_spec(spec):
     required = {"repo", "policy_python", "stage2_python", "sim_python", "checkpoint",
                 "policy_config", "run_identity_sha256", "model_kind"}
     if any(not isinstance(spec.get(k), str) or not spec[k] for k in required):
         raise ValueError("spec缺少明确的模型、解释器、代码或运行身份")
-    if spec["model_kind"] != "stage2_pool4_concat":
-        raise ValueError("当前执行对象必须为stage2_pool4_concat")
+    if spec["model_kind"] not in MODEL_KINDS:
+        raise ValueError(f"model_kind必须为{MODEL_KINDS}之一")
     value = spec["run_identity_sha256"]
     if len(value) != 64 or any(c not in "0123456789abcdef" for c in value):
         raise ValueError("运行身份必须为SHA256")

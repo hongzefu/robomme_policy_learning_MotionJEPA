@@ -17,6 +17,8 @@ except ImportError:
     from utils import EpisodeState, RolloutRecorder, TASK_NAME_LIST, TASK_WITH_VIDEO_DEMO, pack_buffer
     from env_runner import EnvRunner
 
+OFFICIAL_SEEDS = (0, 7, 42)
+
 
 @dataclasses.dataclass
 class Args:
@@ -293,8 +295,8 @@ def evaluate(args: Args, *, runner_factory=EnvRunner, client_factory=EvaluationC
                 or args.max_steps <= 0 or args.model_seed <= 0):
             raise ContractError("testx 评估固定 test、16 步和历史模式，max_steps、model_seed 与 RPC 超时须为正")
     elif (args.dataset != "test" or args.max_steps != 1300 or args.obs_horizon != 16 or not args.use_history
-            or args.rpc_timeout_seconds <= 0 or args.model_seed != 42):
-        raise ContractError("官方评估固定 test、1300、16 步和历史模式，RPC 超时须为正")
+            or args.rpc_timeout_seconds <= 0 or args.model_seed not in OFFICIAL_SEEDS):
+        raise ContractError("官方评估固定 test、1300、16 步和历史模式，seed 须为官方 0／7／42，RPC 超时须为正")
     require_sha256(args.run_identity_sha256)
     if not all((args.episode_manifest, args.chunk, args.attempt_output, args.run_identity_sha256,
                 args.expected_server_nonce, args.model_kind)):

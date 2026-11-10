@@ -52,6 +52,10 @@ def _motion_gates(history_config, frame_meta: StoreMeta) -> str | None:
         raise ValueError(f"motion.stride={mcfg.stride} != motion store stride {mmeta.spec.grid_stride}")
     manifest = load_manifest(os.environ.get("MMEVLA_FRAMESAMP_MANIFEST") or frame_meta.manifest_path)
     ms.check_same_source(frame_meta.manifest_sha256, mmeta, manifest)
+    if mmeta.spec.family == ms.TIMEPOOL_LAYOUT_SPEC.family:
+        # 零参数池化没有 source_run；身份已由 check_motion_contract 严格核对。
+        logging.info("motion memory 开启（Wan 零参数池化）：store=%s rows=%d", motion_root, mmeta.num_rows)
+        return str(motion_root)
     want = _parse_source_run(str(mcfg.source_run))
     enc = mmeta.provenance.get("encoder", {})
     got = {k: enc.get(k) for k in ("run_name", "checkpoint_name", "epoch", "state_key")}
