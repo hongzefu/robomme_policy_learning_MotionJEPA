@@ -409,3 +409,217 @@ def test_query_batch_size_command_and_identity(tmp_path, monkeypatch):
     spec_path.write_text(json.dumps(dict(small, query_batch_size=3)))
     with pytest.raises(SystemExit, match="query_batch_size"):
         local.load_spec(spec_path)
+
+
+# ---------------- speed_donor：改速度、回放后悬停、horizon 收尾 ----------------
+
+def donor_table(t_hold=10, horizon=40, **changes):
+    actions = [[1000.0 + j] * 8 for j in range(1, t_hold)]
+    table = {"env_seed": 105, "move_interval_override": 120, "stop_time_override": 99, "first_env_step": 1,
+             "actions": actions, "t_hold": t_hold, "hold_qpos": actions[-1], "horizon": horizon,
+             "orig_move_interval": 80, "target_pass": 3}
+    return table | changes
+
+
+def donor_sim(monkeypatch, *, terminal_steps=10_000, trigger=None):
+    """假环境：步前值从 1 起，逐步记下当时的 move_interval／stop_time，供检查改写发生在第一步之前。"""
+    setup_sim(monkeypatch)
+    old_initial = runner.EnvRunner.get_init_obs
+
+    def initial(self):
+        result = old_initial(self)
+        self.env.elapsed = 1
+        self.env.seen = []
+        return result
+
+    def step(self, action):
+        u = self.env.unwrapped
+        self.env.seen.append((u.move_interval, u.stop_time))
+        self.env.actions.append(np.asarray(action).copy())
+        self.env.state = np.asarray(action, dtype=np.float32).copy()
+        self.env.elapsed += 1
+        image = np.full((256, 256, 3), self.env.elapsed % 256, dtype=np.uint8)
+        return (image, image, self.env.state.copy()), len(self.env.actions) == terminal_steps, "fail"
+
+    def snapshot(env):
+        u = env.unwrapped
+        return {"env_step": env.elapsed, "tcp": [0, 0, 0.15],
+                "button_pressed": trigger is not None and env.elapsed >= trigger,
+                "cube_position": [float(env.elapsed), 0, 0], "target_position": [1, 0, 0], "stop_timestep": None,
+                "move_interval": u.move_interval, "target_pass": u.stop_time}
+
+    monkeypatch.setattr(runner.EnvRunner, "get_init_obs", initial)
+    monkeypatch.setattr(runner.EnvRunner, "step", step)
+    monkeypatch.setattr(runner, "snapshot", snapshot)
+
+
+def donor_runner():
+    env = make_runner()
+    env.env.unwrapped = SimpleNamespace(move_interval=80, stop_time=3, cube_half_size=0.02)
+    return env
+
+
+def donor_episode(tmp_path, monkeypatch, table=None, **sim):
+    donor_sim(monkeypatch, **sim)
+    env = donor_runner()
+    evaluator = runner.TraceEvaluator(runner.Args(stopcube_mode="speed_donor"), tmp_path)
+    evaluator.config = {"StopCube:0": table or donor_table()}
+    client = Client()
+    outcome = evaluator.eval_each_episode(env, tmp_path / "videos", client, "donor")
+    directory = tmp_path / "traces" / "donor"
+    rows = [json.loads(line) for line in (directory / "step_trace.jsonl").read_text().splitlines()]
+    receipt = json.loads((directory / "meta" / "hold_receipt.json").read_text())
+    donor = json.loads((directory / "meta" / "speed_donor_receipt.json").read_text())
+    return env, evaluator, client, outcome, rows, receipt, donor
+
+
+def test_speed_donor_replay_hold_and_horizon(tmp_path, monkeypatch):
+    env, evaluator, client, outcome, rows, receipt, donor = donor_episode(tmp_path, monkeypatch)
+    # 步前值 1..39 共 39 步，env_step_after 达到 horizon=40 即收尾，不算 infra。
+    assert outcome == runner.SPEED_DONOR_HORIZON and evaluator.terminal_observed
+    assert evaluator.actions_executed == 39 and rows[-1]["env_step_after"] == 40
+    # 推理照常按 16 步节奏请求（服务端靠它编码 motion 窗口）。
+    assert client.frames == [4, 16, 16]
+    # 改写发生在第一步之前，全程生效。
+    assert env.env.seen == [(120, 99)] * 39
+    # 下标对齐：步前值 j（1..t_hold-1）执行 actions[j-1]，j>=t_hold 执行 hold_qpos。
+    for row in rows:
+        j = row["env_step_before"]
+        expected = [1000.0 + j] * 8 if j < 10 else [1009.0] * 8
+        assert row["executed_action"] == expected
+    assert np.array_equal(env.env.actions[:9], np.repeat((1000.0 + np.arange(1, 10))[:, None], 8, axis=1))
+    assert np.array_equal(env.env.actions[9:], np.full((30, 8), 1009.0))
+    # 模型命令照常记录，与执行动作分列。
+    assert rows[0]["command_action"] == [0] * 8 and rows[16]["command_action"] == [100] * 8
+    assert rows[5]["move_interval"] == 120 and rows[5]["target_pass"] == 99
+    assert {"cube_position_before", "cube_position_after", "target_position_after", "button_pressed_after",
+            "env_step_before"} <= rows[0].keys()
+    assert receipt["trajectory_kind"] == "speed_donor" and receipt["outcome"] == runner.SPEED_DONOR_HORIZON
+    assert donor == donor | {"orig_move_interval": 80, "move_interval_applied": 120, "orig_stop_time": 3,
+                             "stop_time_applied": 99, "t_hold": 10, "horizon": 40, "cube_half_size": 0.02,
+                             "button_ever_pressed": False, "first_button_step": None, "last_env_step": 40,
+                             "termination": "horizon", "outcome": runner.SPEED_DONOR_HORIZON,
+                             "actions_executed": 39, "first_env_step": 1, "target_pass": 3, "env_seed": 105}
+
+
+def test_speed_donor_button_and_env_terminal(tmp_path, monkeypatch):
+    _, _, _, outcome, _, _, donor = donor_episode(tmp_path, monkeypatch, trigger=15, terminal_steps=20)
+    assert outcome == "fail"
+    assert donor["button_ever_pressed"] is True and donor["first_button_step"] == 15
+    assert donor["termination"] == "env_terminal:fail" and donor["last_env_step"] == 21
+
+
+@pytest.mark.parametrize("changes", [
+    {"env_seed": 106},
+    {"orig_move_interval": 60},
+    {"target_pass": 4},
+    {"first_env_step": 2},
+    {"actions": [[0.0] * 7] * 9},
+    {"actions": [[0.0] * 8] * 8},
+    {"hold_qpos": [0.0] * 8},
+    {"move_interval_override": 70},
+    {"stop_time_override": 0},
+    {"horizon": 200, "stop_time_override": 1},
+    {"t_hold": 1, "actions": [], "hold_qpos": [0.0] * 8},
+    {"actions": [[float("nan")] * 8] * 9},
+    {"horizon": 40.0},
+])
+def test_speed_donor_rejects_bad_table(tmp_path, monkeypatch, changes):
+    donor_sim(monkeypatch)
+    env = donor_runner()
+    env.begin_trace(runner.Args(stopcube_mode="speed_donor"), "bad", tmp_path, {"StopCube:0": donor_table() | changes})
+    try:
+        with pytest.raises(runner.official.ContractError):
+            env.get_init_obs()
+        # 校验失败时不得已改写环境。
+        assert (env.env.unwrapped.move_interval, env.env.unwrapped.stop_time) == (80, 3)
+    finally:
+        env.trace_stream.close()
+
+
+def test_speed_donor_missing_field_or_episode(tmp_path, monkeypatch):
+    donor_sim(monkeypatch)
+    table = donor_table()
+    del table["horizon"]
+    env = donor_runner()
+    env.begin_trace(runner.Args(stopcube_mode="speed_donor"), "a", tmp_path, {"StopCube:0": table})
+    try:
+        with pytest.raises(runner.official.ContractError, match="缺字段"):
+            env.get_init_obs()
+    finally:
+        env.trace_stream.close()
+    with pytest.raises(runner.official.ContractError, match="缺局"):
+        donor_runner().begin_trace(runner.Args(stopcube_mode="speed_donor"), "b", tmp_path, {})
+
+
+def test_stopcube_modes_match_driver():
+    assert local.STOPCUBE_MODES == runner.STOPCUBE_MODES
+
+
+def stopcube_plfull_spec(tmp_path, **changes):
+    from scripts.evaluation import manifest as M
+    meta = tmp_path / "metadata"
+    meta.mkdir(exist_ok=True)
+    (meta / "record_dataset_StopCube_metadata.json").write_text("[]")
+    rows = [{"task_name": "StopCube", "episode_id": ep, "env_seed": 2500000 + ep, "difficulty": "easy"}
+            for ep in (0, 71)]
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(json.dumps(M.make_manifest(rows, metadata_sha256={"m": "0" * 64}, chunk_size=5,
+                                                   official=False)))
+    config = tmp_path / "config.json"
+    config.write_text(json.dumps({"schema_version": 1, "episodes": {}}))
+    values = dict(repo="/repo", policy_python="/policy/python", sim_python="/sim/python",
+                  stage2_python="/stage2/python", checkpoint="/ckpt", policy_config="cfg",
+                  model_kind="stage2_pool4_concat", cuda="0", attn_out=str(tmp_path / "attn"),
+                  run_root=str(tmp_path / "run"), manifest=str(manifest), xla_mem_fraction=0.5, model_seed=42,
+                  profile="plfull", plfull_metadata_dir=str(meta), save_attn=False,
+                  stopcube_mode="normal", stopcube_config=str(config), run_identity_sha256="a" * 64)
+    return values | changes
+
+
+def load_stopcube(tmp_path, spec):
+    path = tmp_path / "spec.json"
+    path.write_text(json.dumps(spec))
+    return local.load_spec(path)
+
+
+@pytest.mark.parametrize("mode", ["normal", "speed_donor"])
+def test_plfull_accepts_normal_and_speed_donor(tmp_path, mode):
+    spec = load_stopcube(tmp_path, stopcube_plfull_spec(
+        tmp_path, stopcube_mode=mode, record_motion=str(tmp_path / "record"),
+        ablate="motion_swap_exact:/donors", swap_map={"StopCube:0": "StopCube:20000000"}))
+    grant = tmp_path / "grant.json"
+    grant.write_text(json.dumps({"chunk_id": "c"}))
+    command = local.build_client_command(spec, grant, tmp_path / "out", "nonce", 9000, tmp_path / "drain")
+    assert command[1] == "/repo/scripts/interpret/stopcube_runner.py"
+    i = command.index("--profile")
+    assert command[i:i + 4] == ["--profile", "plfull", "--plfull-metadata-dir", spec["plfull_metadata_dir"]]
+    j = command.index("--stopcube-mode")
+    assert command[j:j + 4] == ["--stopcube-mode", mode, "--stopcube-config", spec["stopcube_config"]]
+    server = local.build_server_command(spec, "nonce", 9000, episodes=[{"episode_key": "StopCube:0"}])
+    assert server[server.index("--record-motion") + 1] == str(tmp_path / "record")
+    assert server[server.index("--swap-map") + 1] == "StopCube:0=StopCube:20000000"
+    assert "--no-save-attn" in server
+    # 模式进入身份
+    other = "speed_donor" if mode == "normal" else "normal"
+    assert local.run_identity(spec, {"sha256": "b" * 64}) != local.run_identity(
+        dict(spec, stopcube_mode=other), {"sha256": "b" * 64})
+
+
+@pytest.mark.parametrize("changes", [
+    {"stopcube_mode": "hold_extended"}, {"stopcube_mode": "oracle_query"}, {"stopcube_mode": "oracle_calibrate"},
+    {"stopcube_mode": "speed_donor", "stopcube_config": None}, {"stopcube_mode": "fast"},
+])
+def test_plfull_rejects_other_stopcube_modes(tmp_path, changes):
+    with pytest.raises(SystemExit):
+        load_stopcube(tmp_path, stopcube_plfull_spec(tmp_path, **changes))
+
+
+def test_speed_donor_without_plfull(tmp_path):
+    spec = stopcube_plfull_spec(tmp_path, stopcube_mode="speed_donor")
+    del spec["profile"], spec["plfull_metadata_dir"]
+    loaded = load_stopcube(tmp_path, spec)
+    grant = tmp_path / "grant.json"
+    grant.write_text(json.dumps({"chunk_id": "c"}))
+    command = local.build_client_command(loaded, grant, tmp_path / "out", "nonce", 9000, tmp_path / "drain")
+    assert "--profile" not in command and command[-4:-2] == ["--stopcube-mode", "speed_donor"]

@@ -11,7 +11,8 @@ xla_mem_fraction；可选 port（起始端口，缺省 0=临时端口）、start
 rpc_timeout_seconds、save_prefix（缺省 false；为真时服务端加 --save-prefix，另写 prefix_<seq>.npz）、
 ablate（缺省 "none"；其他值原样透传 --ablate，语义见 serve_policy_attn 文档，如 mask_motion / mask_vis / heads:L3H0 /
 motion_zero / motion_swap:<供体目录> / motion_swap_exact:<供体目录> / motion_shift）。
-StopCube 可选键：stopcube_mode（normal、hold_extended、oracle_query、oracle_calibrate）、stopcube_config（固定 JSON 表路径）；
+StopCube 可选键：stopcube_mode（normal、hold_extended、oracle_query、oracle_calibrate、speed_donor）、stopcube_config（固定 JSON 表路径）；
+speed_donor 录速度供体（改写方块单程步数、回放接收局动作后悬停、照常推理以便 --record-motion），配置格式见 stopcube_runner；
 同时提供时改用 interpret 记录入口，模式与配置文件字节 sha256 并入身份，其他任务不受影响。
 Oracle 另用 query_interval=4（节奏诊断可16）、query_record=10；校准另需 calibration_plan、calibration_kind，
 多模型选点文件由 model_id（默认 model_kind）选择。校准选点文件内容也并入身份。
@@ -38,7 +39,9 @@ S8 motion 内容替换的可选键：
 plfull 口径（PatternLock 全因子交换，计划 1109 第二部分〇′）：
   profile         "official"（缺省，旧行为逐字不变）或 "plfull"；plfull 时 plfull_metadata_dir 必填（自建 metadata 目录，
                   含 record_dataset_<task>_metadata.json），model_seed 只能 42、1、2；客户端加
-                  --profile plfull --plfull-metadata-dir <目录>，局号允许 0–79；身份并入 profile 与 metadata 文件 sha256。
+                  --profile plfull --plfull-metadata-dir <目录>，局号上限按 eval.py::PLFULL_EPISODES（0–119）；身份并入 profile 与
+                  metadata 文件 sha256。plfull 只接受 stopcube_mode=normal 或 speed_donor（自定种子 StopCube），
+                  hold_extended、oracle_* 与 movecube_force 仍拒绝。
                   plfull 下 swap_map 不再拆单局块：清单分块原样（每块 1–5 局），服务端加 --swap-map <整份映射>，
                   客户端 reset 的 eval_rpc 带 episode_key，服务端 reset 时按它确定本局供体（--swap-donor 不再使用）。
 Wan 时间池化模型（model_kind=wan_fixedpool1024）：policy_config 与 motion 模型同为 mme_vla_suite_orig16_b128_60k，
@@ -90,6 +93,10 @@ WAN_MODEL_KIND = "wan_fixedpool1024"
 MOTION_KINDS = (MOTION_MODEL_KIND, WAN_MODEL_KIND)
 # testx 由 resident_worker.client_command 原样处理（先导轮 pl_swap_prep 用），此处只放行，不改其行为
 PROFILES = ("official", "testx", "plfull")
+# 与 stopcube_runner.STOPCUBE_MODES 同值（测试盯住）；驱动端不导入客户端模块。
+STOPCUBE_MODES = ("normal", "hold_extended", "oracle_query", "oracle_calibrate", "speed_donor")
+# plfull 自定种子路径允许的 StopCube 模式
+PLFULL_STOPCUBE_MODES = ("normal", "speed_donor")
 # 与 examples/robomme/eval.py::PLFULL_SEEDS 同值（测试盯住）
 PLFULL_SEEDS = (42, 1, 2)
 XLA_FLAGS = "--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0"
@@ -133,8 +140,8 @@ def load_spec(path):
         spec["plfull_metadata_dir"] = str(Path(spec["plfull_metadata_dir"]).resolve())
         if type(spec["model_seed"]) is not int or spec["model_seed"] not in PLFULL_SEEDS:
             raise SystemExit(f"spec: plfull 的 model_seed 只能是 {PLFULL_SEEDS}")
-        if spec.get("stopcube_mode") is not None or spec.get("movecube_force"):
-            raise SystemExit("spec: plfull 不接受 stopcube_mode、movecube_force")
+        if spec.get("stopcube_mode") not in (None, *PLFULL_STOPCUBE_MODES) or spec.get("movecube_force"):
+            raise SystemExit(f"spec: plfull 的 stopcube_mode 只能是 {PLFULL_STOPCUBE_MODES}，且不接受 movecube_force")
     elif spec.get("plfull_metadata_dir"):
         raise SystemExit("spec: plfull_metadata_dir 只用于 profile=plfull")
     if spec["model_kind"] == WAN_MODEL_KIND:
@@ -151,7 +158,7 @@ def load_spec(path):
     if uses_motion and spec["model_kind"] not in MOTION_KINDS:
         raise SystemExit(f"spec: motion_zero / motion_swap / motion_swap_exact / motion_shift / record_motion 只适用于 {MOTION_KINDS}")
     if spec.get("stopcube_mode") is not None:
-        if spec["stopcube_mode"] not in ("normal", "hold_extended", "oracle_query", "oracle_calibrate") or not spec.get("stopcube_config"):
+        if spec["stopcube_mode"] not in STOPCUBE_MODES or not spec.get("stopcube_config"):
             raise SystemExit("spec: stopcube_mode 非法或未提供 stopcube_config")
         spec["stopcube_config"] = str(Path(spec["stopcube_config"]).resolve())
         if spec["stopcube_mode"].startswith("oracle_"):
