@@ -31,8 +31,9 @@
         Bsame（另一局同位置 j、子目标不同且从接收局第 j 步起点可执行）、Bcross（另一局不同位置 j′，条件同上，按
         default_rng(0) 选一半 (局,j)）、Z（零）。供体按 W 内顺序对齐，供体窗少时用供体该段之后的下一个窗补齐（〇′ F7）。
         合成供体键 ep = 10000000 + recv×100 + slot，slot = j×10 + 组号（all：Bsame=1、Bcross=2、Z=3；core：4、5、6）。
-        写 <M>/donors_sp/<task>_ep<合成号>.npz 并读回核对；打印 SP_SEGMENT、SP_RECV、DONOR_FILES、DONOR_DISTINCT、
-        SP_GROUPS；再生成 multieq、swap（Bsame+Z）、cross（Bcross）、seeds（每任务 20 对 seed 1）四阶段 spec。
+        供体对齐后编码与接收局自身同位置原编码逐位相同的 (局,j,组) 跳过（SP_GROUPS 的 same_as_recv）。
+        写 <M>/donors_sp/<task>_ep<合成号>.npz 并读回核对；打印 SP_SEGMENT、SP_RECV、DONOR_FILES、DONOR_DISTINCT
+        （PASS|WARN，只记录不阻断）、SP_GROUPS；再生成 multieq、swap（Bsame+Z）、cross（Bcross）、seeds（每任务 20 对 seed 1）四阶段 spec。
 
 路径根参数（〇′ F5）：所有写死路径都可覆盖，默认 aspen 值。aspen 端 --repo（运行工作树，默认主检出下
 v1-store/worktrees/sp-swap-run）、--store、--bench-src、--sim-python、--policy-python、--stage2-python、--mmevla-store、
@@ -1301,8 +1302,35 @@ def write_donor_files(folder, runs, infos, records):
     return ok, line, problems, done
 
 
-def distinct_line(runs, infos, records):
-    """各 (供体局, j′) 源编码（对齐前，供体 W_j′ 拼接）两两按字节比较。"""
+def drop_same_as_recv(runs, infos, records):
+    """剔除供体对齐后编码与接收局自身同位置原编码逐位相同的干预 run（这次「交换」等于没换）。
+    接收局 W 窗原编码取自其 N 录制；录制缺窗或供体对齐不可行时不判、原样保留（由 write_donor_files 处理）。
+    返回 (保留的 runs, 被剔除的 "<接收局>:<j>:<组>" 列表)。Z 组不判。"""
+    kept, same = [], []
+    for run in runs:
+        if run["group"] not in ("Bsame", "Bcross"):
+            kept.append(run)
+            continue
+        rec = records.get(run["recv"])
+        W = run["w_starts"]
+        starts, embs, _ = donor_payload(run, infos, records)
+        if rec is None or starts is None or any(f not in rec for f in W):
+            kept.append(run)
+            continue
+        own = np.stack([rec[f] for f in W]).astype(np.float32)
+        if own.shape == embs.shape and own.tobytes() == embs.astype(np.float32).tobytes():
+            same.append(f"{run['recv']}:{run['j']}:{run['group']}")
+            continue
+        kept.append(run)
+    return kept, same
+
+
+def distinct_line(runs, infos, records, pool_by_key=None, same_as_recv=0):
+    """各 (供体局, j′) 源编码（对齐前，供体 W_j′ 拼接）两两按字节比较。只记录不阻断：本计划每 (局,j,组) 只有
+    一个供体，不同供体之间全同不影响读数（如 PatternLock 不同 seed 同场景同路径，示范编码逐位相同）；
+    真正有意义的「供体与接收局同编码」由 drop_same_as_recv 剔除，其跳过数 same_as_recv 一并写进判定行。
+    给 pool_by_key 时对每个全同对注明两侧子目标是否相同（subgoal_differs 口径），统计 same_subgoal / diff_subgoal；
+    子目标不同而编码相同是要记录的发现，不阻断。identical 的每项为 (a, b, 子目标相同 True|False|None)。"""
     srcs = sorted({(r["donor_src"], r["donor_j"], r["variant"]) for r in runs if r["group"] in ("Bsame", "Bcross")})
     digests = {}
     for key, jp, variant in srcs:
@@ -1312,9 +1340,22 @@ def distinct_line(runs, infos, records):
             continue
         digests[(key, jp, variant)] = hashlib.sha256(np.stack([rec[f] for f in W]).astype(np.float32).tobytes()).hexdigest()
     keys = sorted(digests)
-    identical = [(a, b) for i, a in enumerate(keys) for b in keys[i + 1:] if digests[a] == digests[b]]
+    identical = []
+    for i, a in enumerate(keys):
+        for b in keys[i + 1:]:
+            if digests[a] != digests[b]:
+                continue
+            same_sg = None
+            if pool_by_key is not None:
+                ea, eb = pool_by_key[a[0]], pool_by_key[b[0]]
+                same_sg = not subgoal_differs(ea["task"], subgoals(ea)[a[1] - 1], subgoals(eb)[b[1] - 1])
+            identical.append((a, b, same_sg))
     ok = not identical and len(digests) == len(srcs)
-    return f"DONOR_DISTINCT={'PASS' if ok else 'FAIL'} donors={len(digests)} identical_pairs={len(identical)}", ok, identical
+    n_same = sum(1 for t in identical if t[2] is True)
+    n_diff = sum(1 for t in identical if t[2] is False)
+    line = (f"DONOR_DISTINCT={'PASS' if ok else 'WARN'} donors={len(digests)} identical_pairs={len(identical)} "
+            f"same_subgoal={n_same} diff_subgoal={n_diff} same_as_recv={same_as_recv}")
+    return line, ok, identical
 
 
 def segment_line(infos):
@@ -1467,22 +1508,26 @@ def cmd_donors(args):
     for task in TASKS:
         print(recv_line(task, infos, recv_positions(infos, task, args.variant)), flush=True)
         runs, notes[task] = assign_groups(infos, pool_by_key, task, records, args.variant, args.cross_frac)
+        runs, notes[task]["same_as_recv"] = drop_same_as_recv(runs, infos, records)
         all_runs += runs
     ok, line, problems, done = write_donor_files(out / DONOR_DIR, all_runs, infos, records)
-    dline, dok, identical = distinct_line(done, infos, records)
+    n_same_recv = sum(len(notes[t]["same_as_recv"]) for t in TASKS)
+    dline, _, identical = distinct_line(done, infos, records, pool_by_key, n_same_recv)
     for p in problems:
         print(f"DONOR_PROBLEM {p}", flush=True)
-    for a, b_ in identical:
-        print(f"DONOR_IDENTICAL {a} {b_}", flush=True)
+    for a, b_, same_sg in identical:
+        sg = {True: "same", False: "diff", None: "unknown"}[same_sg]
+        print(f"DONOR_IDENTICAL {a} {b_} subgoal={sg}", flush=True)
     print(line, flush=True)
     print(dline, flush=True)
     for task in TASKS:
         cnt = {g: sum(1 for r in done if r["task"] == task and r["group"] == g) for g in SWAP_GROUPS}
         print(f"SP_GROUPS task={task} variant={args.variant} " + " ".join(f"{g}={n}" for g, n in cnt.items())
-              + f" no_donor={len(notes[task]['no_donor'])} infeasible={notes[task]['infeasible']}", flush=True)
-    if not dok:
-        print("DONORS_SPECS=SKIP reason=donor_distinct", flush=True)
-        return 1
+              + f" no_donor={len(notes[task]['no_donor'])} infeasible={notes[task]['infeasible']}"
+              + f" same_as_recv={len(notes[task]['same_as_recv'])}", flush=True)
+    for task in TASKS:
+        for item in notes[task]["same_as_recv"]:
+            print(f"DONOR_SAME_AS_RECV {item}", flush=True)
     seed_runs = seedcheck_runs(done, infos) if args.variant == "all" else []
     b = builder_from_plan(out, plan, pool)
     build_swap_specs(b, pool_by_key, done, seed_runs, args.variant)
@@ -1497,13 +1542,17 @@ def cmd_donors(args):
     plan.setdefault("group_notes", {})[args.variant] = notes
     plan.setdefault("donor_problems", {})[args.variant] = {"count": len(problems), "integrity_ok": bool(ok),
                                                           "items": problems}
+    plan.setdefault("donor_distinct", {})[args.variant] = {
+        "line": dline, "same_as_recv": n_same_recv,
+        "identical": [{"a": list(a), "b": list(b_), "same_subgoal": sg} for a, b_, sg in identical]}
     P._write_json(out / "plan.json", plan)
     counts = {}
     for row in b.rows:
         counts[f"{row['stage']}:{row['group']}"] = counts.get(f"{row['stage']}:{row['group']}", 0) + 1
     print("SPS_SWAP_SPECS " + " ".join(f"{k}={v}" for k, v in sorted(counts.items()))
           + f" total={len(b.rows)} specs={len(b.specs)}", flush=True)
-    print(f"DONORS={'PASS' if ok else 'FAIL'} problems={len(problems)} integrity_ok={int(ok)} runs={len(done)}", flush=True)
+    print(f"DONORS={'PASS' if ok else 'FAIL'} problems={len(problems)} integrity_ok={int(ok)} runs={len(done)} "
+          f"same_as_recv={n_same_recv}", flush=True)
     return 0 if ok else 1
 
 

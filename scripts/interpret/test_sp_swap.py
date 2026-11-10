@@ -415,3 +415,71 @@ def test_donors_and_readout(built):
     zstats = out["summaries"]["PatternLock"]["groups"]["Z"]
     assert zstats["diag"][0] == zstats["diag"][1] > 0          # 合成运行全对
     assert (model_dir / "readout" / "matrix_PatternLock_Bsame.png").is_file()
+
+
+def test_drop_same_as_recv_and_distinct_warn():
+    """供体与接收局同位置原编码逐位相同 → 该 (局,j,组) 跳过；不同供体之间全同只记 WARN 并注明子目标异同。"""
+    base = {"task": "PatternLock", "status": "ok", "m": 1, "es": 64, "W_all": [[0, 32]], "W_core": [[0, 32]]}
+    infos = {k: dict(base, key=k, ep=int(k.split(":")[1])) for k in ("PatternLock:1", "PatternLock:2", "PatternLock:3")}
+    a = {0: np.ones(DIM, np.float32), 32: np.full(DIM, 2.0, np.float32)}
+    b = {0: np.zeros(DIM, np.float32), 32: np.full(DIM, 3.0, np.float32)}
+    records = {"PatternLock:1": a, "PatternLock:2": {k: v.copy() for k, v in a.items()}, "PatternLock:3": b}
+
+    def mk(recv, src, group):
+        return {"recv": recv, "task": "PatternLock", "ep": int(recv.split(":")[1]), "m": 1, "j": 1, "variant": "all",
+                "group": group, "donor_src": src, "donor_j": 1 if src else None, "w_starts": [0, 32]}
+
+    runs = [mk("PatternLock:1", "PatternLock:2", "Bsame"),   # 供体与接收局全同 → 跳过
+            mk("PatternLock:1", None, "Z"),                  # Z 不判
+            mk("PatternLock:3", "PatternLock:1", "Bsame"),   # 不同 → 保留
+            mk("PatternLock:3", "PatternLock:2", "Bcross")]  # 不同 → 保留
+    kept, same = S.drop_same_as_recv(runs, infos, records)
+    assert same == ["PatternLock:1:1:Bsame"]
+    assert [(r["recv"], r["group"]) for r in kept] == [("PatternLock:1", "Z"), ("PatternLock:3", "Bsame"),
+                                                       ("PatternLock:3", "Bcross")]
+    line, ok, identical = S.distinct_line(kept, infos, records, same_as_recv=len(same))
+    assert not ok and line.startswith("DONOR_DISTINCT=WARN") and "identical_pairs=1" in line
+    assert "same_as_recv=1" in line
+    assert identical == [(("PatternLock:1", 1, "all"), ("PatternLock:2", 1, "all"), None)]
+    pe = lambda cells: {"task": "PatternLock", "grid": 3, "cells": cells}
+    same_pool = {"PatternLock:1": pe([0, 1]), "PatternLock:2": pe([4, 5]), "PatternLock:3": pe([0, 3])}
+    line, _, identical = S.distinct_line(kept, infos, records, same_pool)
+    assert "same_subgoal=1 diff_subgoal=0" in line and identical[0][2] is True
+    diff_pool = dict(same_pool, **{"PatternLock:2": pe([4, 7])})
+    line, _, identical = S.distinct_line(kept, infos, records, diff_pool)
+    assert "same_subgoal=0 diff_subgoal=1" in line and identical[0][2] is False
+
+
+def test_donors_identical_records_still_write_specs(built, capsys):
+    """所有 N 录制编码相同：DONOR_DISTINCT=WARN 不阻断 spec；Bsame（同位置同编码）全部按 same_as_recv 跳过。"""
+    O, model_dir = built
+    pool, by_key = S.load_pool(O)
+    plan = json.loads((model_dir / "plan.json").read_text())
+    pick = {}
+    for task in S.TASKS:
+        for e in [e for e in pool["episodes"] if e["task_name"] == task and e["m"] in (2, 3)][:6]:
+            pick[S.episode_key(task, e["episode_id"])] = e
+    for row in plan["runs"]:
+        key = S.episode_key(row["task"], row["ep"])
+        if row["stage"] == "n" and key in pick:
+            _write_n_run(row, by_key[key])
+            rec = Path(row["record_dir"]) / S.record_name(row["task"], row["ep"])
+            with np.load(rec) as z:
+                starts = np.asarray(z["start_frames"])
+            emb = np.arange(len(starts) * DIM, dtype=np.float32).reshape(len(starts), DIM)
+            np.savez(rec, start_frames=starts, embs=emb, counts=np.ones(len(starts), np.int32))
+    capsys.readouterr()
+    assert S.main(["donors", "--out", str(model_dir)]) == 0
+    out = capsys.readouterr().out
+    assert "DONOR_DISTINCT=WARN" in out and "DONORS_SPECS=SKIP" not in out and "SPS_SWAP_SPECS" in out
+    assert "DONOR_IDENTICAL" in out and "DONOR_SAME_AS_RECV" in out and "DONOR_FILES=PASS" in out
+    dline = next(l for l in out.splitlines() if l.startswith("DONOR_DISTINCT"))
+    assert "same_as_recv=0" not in dline and "same_subgoal=" in dline and "diff_subgoal=" in dline
+    gl = [l for l in out.splitlines() if l.startswith("SP_GROUPS")]
+    assert all("Bsame=0" in l for l in gl) and any("same_as_recv=0" not in l for l in gl)
+    plan = json.loads((model_dir / "plan.json").read_text())
+    notes = plan["group_notes"]["all"]
+    assert sum(len(n["same_as_recv"]) for n in notes.values()) > 0
+    assert plan["donor_distinct"]["all"]["same_as_recv"] > 0 and plan["donor_distinct"]["all"]["identical"]
+    swaps = [r for r in plan["runs"] if r["stage"] in ("swap", "cross")]
+    assert swaps and not any(r["group"] == "Bsame" for r in swaps)
