@@ -18,9 +18,9 @@ except ImportError:
     from env_runner import EnvRunner
 
 OFFICIAL_SEEDS = (0, 7, 42)
-# plfull：PatternLock 全因子交换自建 80 局清单（局号 0–79），主 seed 42，seed 复核 1、2。
+# plfull：自建 metadata 清单的局号上限（局号 0–119）；PatternLock／RouteStick 用 0–79，三交换任务第一次拿起实验用 0–119。主 seed 42，seed 复核 1、2。
 PLFULL_SEEDS = (42, 1, 2)
-PLFULL_EPISODES = 80
+PLFULL_EPISODES = 120
 
 
 @dataclasses.dataclass
