@@ -12,6 +12,7 @@ from openpi.training import checkpoints as _checkpoints
 import openpi.transforms as transforms
 
 import mme_vla_suite.policies.policy as _policy
+from mme_vla_suite.shared.wan_timepool import TIMEPOOL_ENCODER_KIND, TIMEPOOL_READOUT
 import mme_vla_suite.training.config as _config
 
 
@@ -61,6 +62,17 @@ def _assert_param_tree_exact(model, params) -> None:
     extra = sorted(ckpt_paths - model_paths)
     if missing or extra:
         raise ValueError(f"严格恢复失败：模型有而 checkpoint 缺 {missing[:5]}…（{len(missing)}），checkpoint 多出 {extra[:5]}…（{len(extra)}）")
+
+
+def _check_motion_identity(mcfg, prov: dict) -> bool:
+    """配置 kind、readout 与快照 timepool 段必须同为固定池化或同不是；返回是否固定池化。"""
+    is_timepool = mcfg.get("encoder_kind") == TIMEPOOL_ENCODER_KIND
+    if (mcfg.get("readout") == TIMEPOOL_READOUT) != is_timepool or (prov.get("timepool") is not None) != is_timepool:
+        raise ValueError(f"motion 配置与快照身份混用: encoder_kind={mcfg.get('encoder_kind')!r} "
+                         f"readout={mcfg.get('readout')!r} 快照含 timepool={prov.get('timepool') is not None}")
+    if is_timepool and (mcfg.get("source_run") is not None or mcfg.get("checkpoint_sha256") is not None):
+        raise ValueError("固定池化配置不得带 motion.source_run 或 motion.checkpoint_sha256")
+    return is_timepool
 
 
 def create_trained_policy(
@@ -144,24 +156,34 @@ def create_trained_policy(
     # ── motion memory 在线编码句柄（S3）：开启态建 MotionEncoderClient（sidecar），provenance 与 run 内 motion_provenance.json 同源核对；
     #    motion_stub=True 时用 stub 档（P1–P4 测试）；关闭态为 None
     motion_enc_fn = None
+    model_kind = "history"
     mcfg = getattr(train_config.model.history_config, "motion", None) if not isinstance(train_config.model.history_config, str) else None
     if mcfg is not None and mcfg.get("enabled", False):
-        from mme_vla_suite.policies.motion_client import MotionEncoderClient
+        from mme_vla_suite.policies.motion_client import MotionEncoderClient, verify_timepool_snapshot
         prov_path = run_root / "motion_provenance.json"
         prov = json.loads(prov_path.read_text(encoding="utf-8")) if prov_path.is_file() else {}
         encoder_kind = str(mcfg.get("encoder_kind", "v10"))
-        if encoder_kind == "stage2_pool4_concat":
-            store_prov = prov
+        if encoder_kind in ("stage2_pool4_concat", TIMEPOOL_ENCODER_KIND):
+            model_kind = encoder_kind
+        if _check_motion_identity(mcfg, prov):
+            # 固定池化恢复只消费 run 根快照，不依赖任何 stage2 encoder 路径或 checkpoint。
+            motion_enc_fn = MotionEncoderClient(
+                online_gpu=mcfg.get("online_gpu", 1), stub=motion_stub, encoder_kind=encoder_kind,
+                store_provenance=None if motion_stub else verify_timepool_snapshot(run_root)["timepool"],
+                stage2_python=mcfg.get("stage2_python"), eval_target_contract=eval_target_contract)
         else:
-            store_prov = {"vae": prov.get("vae"), "encoder": prov.get("encoder")}
-        if not motion_stub and (store_prov.get("vae") is None or store_prov.get("encoder") is None):
-            raise ValueError(f"开启态 run 缺 motion_provenance.json 的 vae / encoder 字段，无法核对 sidecar 同源: {run_root}")
-        motion_enc_fn = MotionEncoderClient(
-            source_run=str(mcfg.source_run),
-            online_gpu=mcfg.get("online_gpu", 1), stub=motion_stub, store_provenance=store_prov,
-            encoder_kind=encoder_kind, provenance_root=run_root,
-            stage2_python=mcfg.get("stage2_python"), eval_target_contract=eval_target_contract,
-            expected_ckpt_sha256=(store_prov["encoder"] or {}).get("checkpoint_sha256") if not motion_stub else None)
+            if encoder_kind == "stage2_pool4_concat":
+                store_prov = prov
+            else:
+                store_prov = {"vae": prov.get("vae"), "encoder": prov.get("encoder")}
+            if not motion_stub and (store_prov.get("vae") is None or store_prov.get("encoder") is None):
+                raise ValueError(f"开启态 run 缺 motion_provenance.json 的 vae / encoder 字段，无法核对 sidecar 同源: {run_root}")
+            motion_enc_fn = MotionEncoderClient(
+                source_run=str(mcfg.source_run),
+                online_gpu=mcfg.get("online_gpu", 1), stub=motion_stub, store_provenance=store_prov,
+                encoder_kind=encoder_kind, provenance_root=run_root,
+                stage2_python=mcfg.get("stage2_python"), eval_target_contract=eval_target_contract,
+                expected_ckpt_sha256=(store_prov["encoder"] or {}).get("checkpoint_sha256") if not motion_stub else None)
 
     return _policy.MME_VLA_Policy(
         model,
@@ -181,8 +203,7 @@ def create_trained_policy(
         ],
         sample_kwargs=sample_kwargs,
         metadata={**(train_config.policy_metadata or {}), "model_seed": seed,
-                  "model_kind": "stage2_pool4_concat" if mcfg is not None and mcfg.get("enabled", False)
-                  and mcfg.get("encoder_kind") == "stage2_pool4_concat" else "history"},
+                  "model_kind": model_kind},
         norm_stats=norm_stats,
         use_quantiles=data_config.use_quantile_norm,
         motion_enc_fn=motion_enc_fn,
