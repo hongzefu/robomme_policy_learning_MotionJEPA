@@ -6,6 +6,12 @@
 normal 仅记录，hold_extended 仅替换接管区间内送入环境的动作。
 oracle_query 消费 Oracle 动作表，独立按4步询问并丢弃模型执行权；
 oracle_calibrate 消费固定选点，交还前仅提交真实历史，交还后按16步执行新推理。
+speed_donor 录速度供体：reset 后、第一步前核对身份并改写方块单程步数 move_interval 与超时用 stop_time，
+推理照常按16步节奏请求（服务端照常编码 motion 窗口），送入环境的动作换成接收局回放表，
+从 t_hold 起固定为 hold_qpos 悬停，env_step_after 达到 horizon 时由运行器正常收尾。配置每局为
+{"env_seed", "move_interval_override", "stop_time_override", "first_env_step", "actions", "t_hold",
+"hold_qpos", "horizon", "orig_move_interval", "target_pass"}；actions[i] 是步前值 first_env_step+i 那一步的动作，
+共 t_hold-first_env_step 行，hold_qpos 等于末行。
 """
 from __future__ import annotations
 
@@ -44,6 +50,13 @@ def load_config(path):
 
 
 ORACLE_MODES = ("oracle_query", "oracle_calibrate")
+STOPCUBE_MODES = ("normal", "hold_extended", *ORACLE_MODES, "speed_donor")
+# 速度供体只允许官方三种单程步数
+SPEED_INTERVALS = (60, 80, 120)
+SPEED_DONOR_KEYS = ("env_seed", "move_interval_override", "stop_time_override", "first_env_step", "actions",
+                    "t_hold", "hold_qpos", "horizon", "orig_move_interval", "target_pass")
+# 运行器在 horizon 主动收尾时的终局值，不属于官方 success/fail/timeout，也不是 infra 故障
+SPEED_DONOR_HORIZON = "speed_donor_horizon"
 CALIBRATION_KINDS = ("fixed_release", "high_probability", "low_probability", "early_press")
 
 
@@ -105,6 +118,11 @@ class TraceRunner(EnvRunner):
         self.key = f"{self.env_id}:{self.episode_id}"
         self.schedule = config.get(self.key) if self.mode == "hold_extended" else None
         self.oracle = config.get(self.key) if self.mode in ORACLE_MODES else None
+        self.donor = config.get(self.key) if self.mode == "speed_donor" else None
+        if self.mode == "speed_donor" and self.donor is None:
+            raise official.ContractError(f"速度供体表缺局 {self.key}")
+        self.donor_receipt = None
+        self.horizon_reached = False
         if self.mode in ORACLE_MODES and self.oracle is None:
             raise official.ContractError(f"Oracle 动作表缺局 {self.key}")
         self.control_source = None
@@ -165,7 +183,46 @@ class TraceRunner(EnvRunner):
                                 execution_infers=0, query_steps=[], query_records=[],
                                 button_trigger_step=None, calibration_stop=None)
             self.receipt["extra"].update(hover_z=table["z_hover"], hover_source="oracle_table")
+        if self.donor is not None:
+            self.apply_speed_donor(first)
         return result
+
+    def apply_speed_donor(self, first):
+        """第一步之前核对接收局身份与原始参数，再改写方块速度与超时；不改任务类与其他物理状态。"""
+        table = self.donor
+        missing = [key for key in SPEED_DONOR_KEYS if key not in table]
+        if missing:
+            raise official.ContractError(f"速度供体表缺字段 {missing}")
+        u = self.env.unwrapped
+        ints = [table[key] for key in SPEED_DONOR_KEYS if key not in ("actions", "hold_qpos")]
+        if any(type(value) is not int for value in ints):
+            raise official.ContractError("速度供体表的种子、步数与次数字段须为整数")
+        if table["env_seed"] != self.env_seed:
+            raise official.ContractError(f"速度供体表种子 {table['env_seed']} 与现场 {self.env_seed} 不符")
+        if table["orig_move_interval"] != u.move_interval or table["target_pass"] != u.stop_time:
+            raise official.ContractError("速度供体表的原始单程步数或目标经过次数与现场不符")
+        actions = np.asarray(table["actions"], dtype=np.float64)
+        qpos = np.asarray(table["hold_qpos"], dtype=np.float64)
+        first_step, t_hold, horizon = table["first_env_step"], table["t_hold"], table["horizon"]
+        override, stop_time = table["move_interval_override"], table["stop_time_override"]
+        if (first_step != first["env_step"] or t_hold < 2 or t_hold <= first_step
+                or actions.ndim != 2 or actions.shape != (t_hold - first_step, 8) or not np.isfinite(actions).all()
+                or qpos.shape != (8,) or not np.isfinite(qpos).all() or not np.array_equal(qpos, actions[-1])
+                or horizon <= first_step or override not in SPEED_INTERVALS
+                or stop_time <= 0 or override * stop_time < horizon):
+            raise official.ContractError("速度供体表须从现场首步起连续到 t_hold-1、有限 8 维且 hold_qpos 为末行，"
+                                         "改写后的超时不得早于 horizon")
+        orig_stop_time = scalar_value(u.stop_time)
+        u.move_interval = override
+        u.stop_time = stop_time
+        self.donor_actions, self.donor_hold = actions, qpos
+        self.donor_receipt = {
+            "schema_version": 1, "episode_key": self.key, "env_seed": self.env_seed,
+            "orig_move_interval": table["orig_move_interval"], "move_interval_applied": scalar_value(u.move_interval),
+            "orig_stop_time": orig_stop_time, "stop_time_applied": scalar_value(u.stop_time),
+            "target_pass": table["target_pass"], "first_env_step": first_step, "t_hold": t_hold, "horizon": horizon,
+            "cube_half_size": self.receipt["extra"]["cube_half_size"], "button_ever_pressed": False,
+            "first_button_step": None, "last_env_step": first["env_step"], "termination": None}
 
     def oracle_action(self):
         """按真实步前值查表，绝不复用末行填补越界。"""
@@ -195,6 +252,12 @@ class TraceRunner(EnvRunner):
                 if self.row_in_chunk != 0 or self.chunk_start_env_step != elapsed:
                     raise official.ContractError("恢复步必须执行当前边界的新推理动作")
                 self.receipt["actual_release_step"] = elapsed
+        if self.donor is not None:
+            index = elapsed - self.donor["first_env_step"]
+            if int(index) != index or index < 0:
+                raise official.ContractError(f"速度供体回放步号越界 env_step={elapsed}")
+            index = int(index)
+            executed = (self.donor_actions[index] if index < len(self.donor_actions) else self.donor_hold).copy()
         result = super().step(executed)
         after = snapshot(self.env)
         self.last_state = np.asarray(result[0][2]).copy()
@@ -210,6 +273,11 @@ class TraceRunner(EnvRunner):
             record["control_source"] = self.control_source
             if after["button_pressed"] and self.receipt["button_trigger_step"] is None:
                 self.receipt["button_trigger_step"] = after["env_step"]
+        if self.donor_receipt is not None:
+            self.donor_receipt["last_env_step"] = after["env_step"]
+            if after["button_pressed"] and not self.donor_receipt["button_ever_pressed"]:
+                self.donor_receipt.update(button_ever_pressed=True, first_button_step=after["env_step"])
+            self.horizon_reached = after["env_step"] >= self.donor["horizon"]
         for key in ("env_step", "tcp", "button_pressed", "cube_position", "target_position"):
             record[f"{key}_before"] = before[key]
             record[f"{key}_after"] = after[key]
@@ -226,6 +294,9 @@ class TraceRunner(EnvRunner):
                             video_path=str((Path(video_dir) / f"StopCube_ep{self.episode_id}_{outcome}.mp4").resolve())
                             if outcome else None)
         official.write_record(self.trace_dir / "meta" / "hold_receipt.json", self.receipt)
+        if self.donor_receipt is not None:
+            self.donor_receipt.update(outcome=outcome, actions_executed=self.action_index)
+            official.write_record(self.trace_dir / "meta" / "speed_donor_receipt.json", self.donor_receipt)
 
 
 class TraceEvaluator(official.EpisodeEvaluator):
@@ -253,11 +324,60 @@ class TraceEvaluator(official.EpisodeEvaluator):
         try:
             if self.args.stopcube_mode in ORACLE_MODES:
                 outcome = self.eval_oracle(env_runner, video_save_dir, client, episode_nonce)
+            elif self.args.stopcube_mode == "speed_donor":
+                outcome = self.eval_speed_donor(env_runner, video_save_dir, client, episode_nonce)
             else:
                 outcome = super().eval_each_episode(env_runner, video_save_dir, client, episode_nonce)
             return outcome
         finally:
             env_runner.finish_trace(outcome, video_save_dir)
+
+    def eval_speed_donor(self, env_runner, video_save_dir, client, episode_nonce):
+        """官方循环逐句照搬（推理节奏、续包、终局优先级不变），只多一个 horizon 收尾；
+        送入环境的动作由 TraceRunner.step 替换。"""
+        self.episode_nonce = episode_nonce
+        self.batch_seq = self.replan_seq = self.next_global_frame = 0
+        rpc = {"episode_nonce": episode_nonce, "expected_run_identity_sha256": self.args.run_identity_sha256,
+               "expected_server_nonce": self.args.expected_server_nonce}
+        if self.args.profile == "plfull":
+            rpc["episode_key"] = self.episode_key
+        official.require_ack(client.request({"reset": True, "eval_rpc": rpc}), "reset_finished", rpc)
+        state = official.EpisodeState()
+        prompt, self.recorder = self.init_episode(env_runner, state, video_save_dir)
+        img, wrist, robot_state = state.get_current_obs()
+        receipt = env_runner.donor_receipt
+        while True:
+            if not state.action_plan:
+                state.action_plan.extend(self.get_action_chunk(client, state, img, wrist, robot_state, prompt, 16))
+                state.clear_buffers()
+            action = state.action_plan.popleft()
+            self.step_in_flight = True
+            obs, stop, outcome = env_runner.step(action)
+            state.count += 1
+            self.actions_executed = state.count
+            self.terminal_observed = stop and outcome in ("success", "fail", "timeout")
+            if outcome == "error" or obs is None or any(item is None for item in obs):
+                raise RuntimeError("环境 step 未返回完整观测")
+            self.step_in_flight = False
+            if state.count > self.args.max_steps:
+                self.terminal_observed = True
+                receipt["termination"] = "max_steps"
+                return "timeout"
+            if stop:
+                self.terminal_observed = outcome in ("success", "fail", "timeout")
+            img, wrist, robot_state = obs
+            state.add_observation(img, wrist, robot_state)
+            self.record_frame(image=img.copy(), wrist_image=wrist.copy(), state=robot_state.copy(),
+                              action=np.asarray(action).copy())
+            if stop:
+                if not self.terminal_observed:
+                    raise official.ContractError(f"环境终止但没有正常终局状态：{outcome}")
+                receipt["termination"] = f"env_terminal:{outcome}"
+                return outcome
+            if env_runner.horizon_reached:
+                self.terminal_observed = True
+                receipt["termination"] = "horizon"
+                return SPEED_DONOR_HORIZON
 
     def oracle_context(self):
         runner = self.trace_runner
@@ -410,7 +530,7 @@ class TraceEvaluator(official.EpisodeEvaluator):
 
 def evaluate(args):
     """在独立客户端进程里复用官方主入口，结束后恢复模块内的评估器绑定。"""
-    if args.stopcube_mode not in ("normal", "hold_extended", *ORACLE_MODES) or not args.stopcube_config:
+    if args.stopcube_mode not in STOPCUBE_MODES or not args.stopcube_config:
         raise official.ContractError("必须提供 StopCube 模式与配置文件")
     episodes = official.load_chunk(args)
     if any(episode["task_name"] != "StopCube" for episode in episodes):
