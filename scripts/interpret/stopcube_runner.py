@@ -12,6 +12,11 @@ speed_donor 录速度供体：reset 后、第一步前核对身份并改写方�
 {"env_seed", "move_interval_override", "stop_time_override", "first_env_step", "actions", "t_hold",
 "hold_qpos", "horizon", "orig_move_interval", "target_pass"}；actions[i] 是步前值 first_env_step+i 那一步的动作，
 共 t_hold-first_env_step 行，hold_qpos 等于末行。
+normal 可选逐局「关超时」条目 {"env_seed", "orig_move_interval", "target_pass", "stop_time_override", "horizon"}：
+reset 后、第一步前核对种子与原始 move_interval／stop_time，只把超时用 stop_time 改写为 stop_time_override
+（move_interval 不改，官方成功窗口 stop_time_range 在初始化时已算好、不受影响），env_step_after 达到 horizon 时
+由运行器正常收尾（终局值 timeout_off_horizon），环境自行终局照常结束；回执写 meta/timeout_off_receipt.json。
+normal 表里没有该局条目时与官方循环逐位一致。
 """
 from __future__ import annotations
 
@@ -57,6 +62,9 @@ SPEED_DONOR_KEYS = ("env_seed", "move_interval_override", "stop_time_override", 
                     "t_hold", "hold_qpos", "horizon", "orig_move_interval", "target_pass")
 # 运行器在 horizon 主动收尾时的终局值，不属于官方 success/fail/timeout，也不是 infra 故障
 SPEED_DONOR_HORIZON = "speed_donor_horizon"
+# normal 关超时条目（干预回合按新速度按下不被原超时截断）
+TIMEOUT_OFF_KEYS = ("env_seed", "orig_move_interval", "target_pass", "stop_time_override", "horizon")
+TIMEOUT_OFF_HORIZON = "timeout_off_horizon"
 CALIBRATION_KINDS = ("fixed_release", "high_probability", "low_probability", "early_press")
 
 
@@ -122,6 +130,9 @@ class TraceRunner(EnvRunner):
         if self.mode == "speed_donor" and self.donor is None:
             raise official.ContractError(f"速度供体表缺局 {self.key}")
         self.donor_receipt = None
+        # normal 模式下表里有该局条目才关超时；没有条目（含空表）时与官方循环逐位一致
+        self.timeout_off = config.get(self.key) if self.mode == "normal" else None
+        self.timeout_receipt = None
         self.horizon_reached = False
         if self.mode in ORACLE_MODES and self.oracle is None:
             raise official.ContractError(f"Oracle 动作表缺局 {self.key}")
@@ -185,7 +196,42 @@ class TraceRunner(EnvRunner):
             self.receipt["extra"].update(hover_z=table["z_hover"], hover_source="oracle_table")
         if self.donor is not None:
             self.apply_speed_donor(first)
+        if self.timeout_off is not None:
+            self.apply_timeout_off(first)
         return result
+
+    def apply_timeout_off(self, first):
+        """第一步之前核对接收局身份与原始参数，只改写超时用 stop_time；move_interval 与其他物理状态不动。"""
+        table = self.timeout_off
+        missing = [key for key in TIMEOUT_OFF_KEYS if key not in table]
+        if missing:
+            raise official.ContractError(f"关超时条目缺字段 {missing}")
+        if any(type(table[key]) is not int for key in TIMEOUT_OFF_KEYS):
+            raise official.ContractError("关超时条目的种子、步数与次数字段须为整数")
+        u = self.env.unwrapped
+        if table["env_seed"] != self.env_seed:
+            raise official.ContractError(f"关超时条目种子 {table['env_seed']} 与现场 {self.env_seed} 不符")
+        move_interval, stop_time = scalar_value(u.move_interval), scalar_value(u.stop_time)
+        if table["orig_move_interval"] != move_interval or table["target_pass"] != stop_time:
+            raise official.ContractError("关超时条目的原始单程步数或目标经过次数与现场不符")
+        override, horizon = table["stop_time_override"], table["horizon"]
+        if (first["env_step"] is None or horizon <= first["env_step"] or override <= 0
+                or override * move_interval < horizon):
+            raise official.ContractError("关超时条目须 horizon 晚于现场首步，且 stop_time_override×M 不早于 horizon")
+        u.stop_time = override
+        self.timeout_receipt = {
+            "schema_version": 1, "episode_key": self.key, "env_seed": self.env_seed,
+            "move_interval": move_interval, "orig_stop_time": stop_time, "stop_time_applied": scalar_value(u.stop_time),
+            "target_pass": table["target_pass"], "horizon": horizon, "first_env_step": first["env_step"],
+            "button_ever_pressed": False, "first_button_step": None, "last_env_step": first["env_step"],
+            "termination": None}
+
+    def horizon_receipt(self):
+        """horizon 收尾所用回执：速度供体或关超时，二者互斥。"""
+        return self.donor_receipt if self.donor_receipt is not None else self.timeout_receipt
+
+    def horizon_limit(self):
+        return (self.donor or self.timeout_off)["horizon"]
 
     def apply_speed_donor(self, first):
         """第一步之前核对接收局身份与原始参数，再改写方块速度与超时；不改任务类与其他物理状态。"""
@@ -273,11 +319,12 @@ class TraceRunner(EnvRunner):
             record["control_source"] = self.control_source
             if after["button_pressed"] and self.receipt["button_trigger_step"] is None:
                 self.receipt["button_trigger_step"] = after["env_step"]
-        if self.donor_receipt is not None:
-            self.donor_receipt["last_env_step"] = after["env_step"]
-            if after["button_pressed"] and not self.donor_receipt["button_ever_pressed"]:
-                self.donor_receipt.update(button_ever_pressed=True, first_button_step=after["env_step"])
-            self.horizon_reached = after["env_step"] >= self.donor["horizon"]
+        tracked = self.horizon_receipt()
+        if tracked is not None:
+            tracked["last_env_step"] = after["env_step"]
+            if after["button_pressed"] and not tracked["button_ever_pressed"]:
+                tracked.update(button_ever_pressed=True, first_button_step=after["env_step"])
+            self.horizon_reached = after["env_step"] >= self.horizon_limit()
         for key in ("env_step", "tcp", "button_pressed", "cube_position", "target_position"):
             record[f"{key}_before"] = before[key]
             record[f"{key}_after"] = after[key]
@@ -297,6 +344,9 @@ class TraceRunner(EnvRunner):
         if self.donor_receipt is not None:
             self.donor_receipt.update(outcome=outcome, actions_executed=self.action_index)
             official.write_record(self.trace_dir / "meta" / "speed_donor_receipt.json", self.donor_receipt)
+        if self.timeout_receipt is not None:
+            self.timeout_receipt.update(outcome=outcome, actions_executed=self.action_index)
+            official.write_record(self.trace_dir / "meta" / "timeout_off_receipt.json", self.timeout_receipt)
 
 
 class TraceEvaluator(official.EpisodeEvaluator):
@@ -326,15 +376,18 @@ class TraceEvaluator(official.EpisodeEvaluator):
                 outcome = self.eval_oracle(env_runner, video_save_dir, client, episode_nonce)
             elif self.args.stopcube_mode == "speed_donor":
                 outcome = self.eval_speed_donor(env_runner, video_save_dir, client, episode_nonce)
+            elif env_runner.timeout_off is not None:
+                outcome = self.eval_speed_donor(env_runner, video_save_dir, client, episode_nonce,
+                                                horizon_outcome=TIMEOUT_OFF_HORIZON)
             else:
                 outcome = super().eval_each_episode(env_runner, video_save_dir, client, episode_nonce)
             return outcome
         finally:
             env_runner.finish_trace(outcome, video_save_dir)
 
-    def eval_speed_donor(self, env_runner, video_save_dir, client, episode_nonce):
+    def eval_speed_donor(self, env_runner, video_save_dir, client, episode_nonce, horizon_outcome=SPEED_DONOR_HORIZON):
         """官方循环逐句照搬（推理节奏、续包、终局优先级不变），只多一个 horizon 收尾；
-        送入环境的动作由 TraceRunner.step 替换。"""
+        速度供体送入环境的动作由 TraceRunner.step 替换；normal 关超时条目共用本循环、动作不替换。"""
         self.episode_nonce = episode_nonce
         self.batch_seq = self.replan_seq = self.next_global_frame = 0
         rpc = {"episode_nonce": episode_nonce, "expected_run_identity_sha256": self.args.run_identity_sha256,
@@ -345,7 +398,7 @@ class TraceEvaluator(official.EpisodeEvaluator):
         state = official.EpisodeState()
         prompt, self.recorder = self.init_episode(env_runner, state, video_save_dir)
         img, wrist, robot_state = state.get_current_obs()
-        receipt = env_runner.donor_receipt
+        receipt = env_runner.horizon_receipt()
         while True:
             if not state.action_plan:
                 state.action_plan.extend(self.get_action_chunk(client, state, img, wrist, robot_state, prompt, 16))
@@ -377,7 +430,7 @@ class TraceEvaluator(official.EpisodeEvaluator):
             if env_runner.horizon_reached:
                 self.terminal_observed = True
                 receipt["termination"] = "horizon"
-                return SPEED_DONOR_HORIZON
+                return horizon_outcome
 
     def oracle_context(self):
         runner = self.trace_runner

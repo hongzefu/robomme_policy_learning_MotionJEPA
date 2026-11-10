@@ -15,7 +15,11 @@
            stopcube_config=<根>/normal_cfg.json（{"schema_version":1,"episodes":{}}）。
         donor：按 slot（0=M′60、1=M′80、2=M′120）拆独立 spec（每份 spec 内每接收局只出现一次），stopcube_mode=speed_donor，
            stopcube_config=<根>/donor_cfg/slot<s>.json（由 donors 生成），record_motion=<根>/record/donor-s<s>。
-        iv：按 slot 拆独立 spec，ablate=motion_swap_exact:<根>/donors_sc，swap_map 接收局 → 合成键，model_seed 42，不录。
+        iv：按 slot 拆独立 spec，ablate=motion_swap_exact:<根>/donors_sc，swap_map 接收局 → 合成键，model_seed 42，不录；
+           stopcube_mode=normal，stopcube_config=<根>/iv_cfg/slot<s>.json：每接收局一条关超时条目
+           {env_seed, orig_move_interval=M, target_pass=N, stop_time_override=99, horizon=max(M,M′)·N+32}
+           （实施中调整：干预回合是真实环境，M′>M 时按新速度的按下步 ≥ M·N 会被原超时截断，故同供体一样关超时、跑到 horizon）。
+        运行目录 <根>/runs/<spec 名> 已存在时拒绝生成（run_local 不能续跑）；重跑前先把旧运行目录改名留档。
         所有 spec：profile=plfull、plfull_metadata_dir=<O>/metadata、save_attn=false、不带 subgoal_trace。
         --smoke 只用冒烟 3 局，全部产物（runs、specs、queues、plan.json、record、donors_sc）写在 <O>/<M>/smoke/ 下。
         生成 env-aspen.sh / env-gl.sh、queues/<阶段>-<worker>.sh、launch_stage.sh（aspen tmux，会话前缀 scs-）、
@@ -84,6 +88,7 @@ CHUNK = 5
 POOL_NAME = "sc-pool.json"
 DONOR_DIR = "donors_sc"
 CFG_DIR = "donor_cfg"
+IV_CFG_DIR = "iv_cfg"
 NORMAL_CFG = "normal_cfg.json"
 GL_STAGGER = 45
 GL_CPUS = 4
@@ -146,6 +151,12 @@ def delta_star(M, Mp, N):
 def horizon(M, Mp, N):
     """供体回合主动结束步 H = max(M,M′)·N + 32（〇′ B1）。"""
     return max(int(M), int(Mp)) * int(N) + HORIZON_PAD
+
+
+def timeout_off_entry(e, Mp):
+    """iv 阶段接收局的关超时条目：只改 stop_time，horizon 同供体 H = max(M,M′)·N + 32。"""
+    return {"env_seed": int(e["env_seed"]), "orig_move_interval": int(e["M"]), "target_pass": int(e["N"]),
+            "stop_time_override": STOP_TIME_OVERRIDE, "horizon": horizon(e["M"], Mp, e["N"])}
 
 
 def speed_group(M, Mp):
@@ -540,8 +551,24 @@ def missing_gate(missing, allow):
     return not missing or bool(allow)
 
 
+def iv_configs(root, items, by_ep):
+    """iv：每个 slot 一份关超时配置 {路径: 内容}，每接收局一条（键 StopCube:<接收局>）。"""
+    cfgs = {}
+    for slot, r in sorted(items):
+        path = Path(root) / IV_CFG_DIR / f"slot{slot}.json"
+        cfgs.setdefault(path, {"schema_version": 1, "episodes": {}})["episodes"][episode_key(r)] = (
+            timeout_off_entry(by_ep[r], SLOTS[slot]))
+    return cfgs
+
+
+def existing_run_dirs(root, names):
+    """已存在的 <根>/runs/<spec 名>：run_local 不能续跑，生成前拦下。"""
+    return sorted(n for n in names if (Path(root) / "runs" / n).exists())
+
+
 def build_slot_stage(b, stage, items, by_ep):
-    """donor / iv：按 slot 拆独立 spec，每份 spec 内每接收局只出现一次（〇′ N4）。"""
+    """donor / iv：按 slot 拆独立 spec，每份 spec 内每接收局只出现一次（〇′ N4）。
+    iv 返回各 slot 关超时配置 {路径: 内容}（由调用方核对运行目录后写盘），donor 返回空表。"""
     per = distribute(sorted(items), b.order)
     for worker in b.order:
         mine = per.get(worker, [])
@@ -557,8 +584,9 @@ def build_slot_stage(b, stage, items, by_ep):
                       rows=rows)
             else:
                 b.add(f"iv-s{slot}-{worker}-{i:02d}", stage, worker, es, seed=MAIN_SEED, mode="normal",
-                      config=b.root / NORMAL_CFG, ablate=f"motion_swap_exact:{b.root / DONOR_DIR}",
+                      config=b.root / IV_CFG_DIR / f"slot{slot}.json", ablate=f"motion_swap_exact:{b.root / DONOR_DIR}",
                       swap_map={episode_key(e["ep"]): episode_key(syn_ep(e["ep"], slot)) for e in es}, rows=rows)
+    return iv_configs(b.root, items, by_ep) if stage == "iv" else {}
 
 
 def write_launchers(root, stage_tag, model, roots, workers, gl_jobs):
@@ -635,6 +663,7 @@ def cmd_specs(args):
         raise SystemExit(f"阶段 {args.stage} 已生成；确需重写加 --overwrite（不删任何运行目录）")
     b = SCBuilder(root, models, roots, workers, args.frac, meta_dir, shas)
     eps = recv_eps(pool, by_ep, args.smoke)
+    cfgs = {}
     if args.stage == "n":
         build_n(b, eps, by_ep)
     else:
@@ -644,7 +673,13 @@ def cmd_specs(args):
             return 2
         if not items:
             raise SystemExit(f"阶段 {args.stage} 没有可用的 (slot, 接收局)")
-        build_slot_stage(b, args.stage, items, by_ep)
+        cfgs = build_slot_stage(b, args.stage, items, by_ep)
+    stale = existing_run_dirs(root, b.specs)
+    if stale:
+        raise SystemExit(f"这些 spec 的运行目录已存在：{', '.join(str(root / 'runs' / n) for n in stale)}；"
+                         "run_local 不能续跑，重跑前先把旧运行目录改名留档（如 mv <目录> <目录>.old-<时间>），再生成 spec")
+    for path, payload in cfgs.items():
+        P._write_once(path, P._json_bytes(payload), args.overwrite)
     for site, r in roots.items():
         if r is None:
             continue
@@ -745,13 +780,14 @@ def donor_entry(env_seed, M, N, Mp, actions, t_hold, first_env_step=FIRST_ENV_ST
 
 
 def find_sc_run(row):
-    """sp_swap_prep.find_run + 供体回执 meta/speed_donor_receipt.json。"""
+    """sp_swap_prep.find_run + 供体回执 meta/speed_donor_receipt.json + 关超时回执 meta/timeout_off_receipt.json。"""
     run = S.find_run(row["run_root"], row["attn_out"], episode_key(row["ep"]))
-    run["donor_receipt"] = None
+    run["donor_receipt"] = run["timeout_receipt"] = None
     if run["trace"] is not None:
-        p = Path(run["trace"]).parent / "meta" / "speed_donor_receipt.json"
-        if p.is_file():
-            run["donor_receipt"] = P._read_json(p)
+        for key, name in (("donor_receipt", "speed_donor_receipt.json"), ("timeout_receipt", "timeout_off_receipt.json")):
+            p = Path(run["trace"]).parent / "meta" / name
+            if p.is_file():
+                run[key] = P._read_json(p)
     return run
 
 

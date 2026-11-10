@@ -22,6 +22,13 @@ button_pressed_after 为真的 env_step_after。
   SPEED_SUCCESS model=<m> group=<fast|slow|all> new_speed=<k>/<n> base=<k>/<n> diff=<d> ci=[..] true_speed=<k>/<n>
         neither=<k> nopress=<k> overlap=<k>
   SPEED_SAME model=<m> true_speed=<k>/<n> base_true=<k>/<n> nopress=<k>   R_same 只报真实成功（〇′ N2）
+  SPEED_FOLLOW_SYM model=<m> beta=… ci=… beta0=… same_delta=… ci=… n=<n>
+        对称截断口径：R 的按下步也只认 ≤ M·N（超出视为未按，与 N 回合受原超时截断一致），其余同 SPEED_FOLLOW
+  SPEED_LATE model=<m> group=<fast|slow|same> runs=<n> late_after_MN=<k> after_cube_stop=<k> timeout_off=<k>/<n>
+        R 回合按下步 > M·N 的局数、按下步 > 5·M（方块已静止）的局数；timeout_off = 有 meta/timeout_off_receipt.json
+        （关超时跑到 horizon）的 R 回合数，兼容旧口径（未关超时）冒烟
+  SPEED_NEWWIN_LATE model=<m> group=slow w_new_after_MN=<k>/<n>     slow 组 W(M′,N) 整体在 M·N 之后的局数
+R 回合「未按」= horizon（max(M,M′)·N+32）内未按。
   SC_INVALID model=<m> …                                    各类无效单独计数，不静默丢弃
 另写补充：按 (M→M′) 格与 (M→M′,N) 格的 Δ 均值、「减 R_same」版斜率、各条件按下率、新速度成功分格表。
 """
@@ -42,6 +49,7 @@ from scripts.interpret.hover_points import press_step
 BOOT_N, BOOT_SEED = 2000, 20261110
 GROUPS = ("fast", "slow")
 DONOR_OUTCOME = "speed_donor_horizon"
+CUBE_STOP_PASSES = 5          # 方块至多经过 5 次后静止：按下步 > 5·M 记 after_cube_stop
 
 
 # ---------------------------------------------------------------- 纯计算
@@ -148,10 +156,28 @@ def fmt_num(x, nd=2):
     return "na" if x is None else f"{x:.{nd}f}"
 
 
-def follow_line(model, fs, same):
-    return (f"SPEED_FOLLOW model={model} beta={fmt_num(fs.get('beta'), 3)} ci={fmt_ci(fs.get('ci'), 3)} "
+def follow_line(model, fs, same, name="SPEED_FOLLOW"):
+    return (f"{name} model={model} beta={fmt_num(fs.get('beta'), 3)} ci={fmt_ci(fs.get('ci'), 3)} "
             f"beta0={fmt_num(fs.get('beta0'), 3)} same_delta={fmt_num(same.get('mean'), 1)} "
             f"ci={fmt_ci(same.get('ci'), 1)} n={fs['n']}")
+
+
+def sym_press(p, M, N):
+    """对称截断口径：按下步只认 ≤ M·N，超出视为未按。"""
+    return p if p is not None and p <= int(M) * int(N) else None
+
+
+def late_stats(rows):
+    """rows：R 回合 {press, M, N, timeout_off}。返回 late_after_MN、after_cube_stop 与 timeout_off 计数。"""
+    return {"runs": len(rows),
+            "late_after_MN": sum(1 for r in rows if r["press"] is not None and r["press"] > r["M"] * r["N"]),
+            "after_cube_stop": sum(1 for r in rows if r["press"] is not None and r["press"] > CUBE_STOP_PASSES * r["M"]),
+            "timeout_off": sum(1 for r in rows if r.get("timeout_off"))}
+
+
+def late_line(model, group, st):
+    return (f"SPEED_LATE model={model} group={group} runs={st['runs']} late_after_MN={st['late_after_MN']} "
+            f"after_cube_stop={st['after_cube_stop']} timeout_off={st['timeout_off']}/{st['runs']}")
 
 
 def success_line(model, group, st):
@@ -173,6 +199,8 @@ def load_run(row):
     out["success"] = out["outcome"] == "success"
     out["motion_content"] = run["motion_content"]
     out["donor_receipt"] = run["donor_receipt"]
+    out["timeout_receipt"] = run.get("timeout_receipt")
+    out["timeout_off"] = out["timeout_receipt"] is not None
     if out["outcome"] == "error":
         out["status"] = "error_outcome"
         return out
@@ -188,7 +216,10 @@ def load_run(row):
     if not rows:
         out["status"] = "empty_trace"
         return out
-    out.update(status="ok", trace=trace, press=C.first_press(rows), last_step=rows[-1]["env_step_after"],
+    press = C.first_press(rows)
+    if row.get("group") == "R" and press is not None and press > C.horizon(row["M"], row["M_prime"], row["N"]):
+        press = None                      # R 回合「未按」= horizon 内未按
+    out.update(status="ok", trace=trace, press=press, last_step=rows[-1]["env_step_after"],
                first_env_step=rows[0]["env_step_before"], move_interval=rows[0].get("move_interval"),
                target_pass=rows[0].get("target_pass"))
     starts = [r.get("chunk_start_env_step") for r in rows if isinstance(r.get("chunk_start_env_step"), int)]
@@ -327,8 +358,11 @@ def analyze(plan, by_ep, runs):
         dstar = C.delta_star(M, Mp, Nn)
         both = r["press"] is not None and n["press"] is not None
         sp = same_press.get(r["ep"])
+        p_sym, n_sym = sym_press(r["press"], M, Nn), sym_press(n["press"], M, Nn)
         base = {"recv": r["recv"], "M": M, "Mp": Mp, "N": Nn, "kind": r["kind"], "dstar": dstar,
                 "delta": (r["press"] - n["press"]) if both else None,
+                "delta_sym": (p_sym - n_sym) if (p_sym is not None and n_sym is not None) else None,
+                "timeout_off": bool(r.get("timeout_off")),
                 "delta_same": (r["press"] - sp) if (r["press"] is not None and sp is not None) else None,
                 "p_R": r["press"], "p_N": n["press"]}
         drows.append(base)
@@ -341,12 +375,16 @@ def analyze(plan, by_ep, runs):
                               "base_true": in_window(n["press"], wt)})
             continue
         srows.append(dict(base, cat=classify_press(r["press"], wt, wn), true=in_window(r["press"], wt),
+                          w_new_after_MN=wn[0] > M * Nn,
                           base_new=in_window(n["press"], wn), w_true=list(wt), w_new=list(wn)))
 
     diff_rows = [d for d in drows if d["kind"] != "same"]
     fs = follow_stats(diff_rows)
     same = mean_stats([d for d in drows if d["kind"] == "same"], "delta")
     lines.append(follow_line(model, fs, same))
+    fs_sym = follow_stats(diff_rows, "delta_sym")
+    same_sym = mean_stats([d for d in drows if d["kind"] == "same"], "delta_sym")
+    lines.append(follow_line(model, fs_sym, same_sym, "SPEED_FOLLOW_SYM"))
     fs_adj = follow_stats(diff_rows, "delta_same")
     lines.append(f"SPEED_FOLLOW_ADJ model={model} beta={fmt_num(fs_adj.get('beta'), 3)} "
                  f"ci={fmt_ci(fs_adj.get('ci'), 3)} beta0={fmt_num(fs_adj.get('beta0'), 3)} n={fs_adj['n']}")
@@ -356,6 +394,15 @@ def analyze(plan, by_ep, runs):
         rows = [r for r in srows if group == "all" or r["kind"] == group]
         succ[group] = success_stats(rows)
         lines.append(success_line(model, group, succ[group]))
+    slow_rows = [r for r in srows if r["kind"] == "slow"]
+    lines.append(f"SPEED_NEWWIN_LATE model={model} group=slow "
+                 f"w_new_after_MN={sum(r['w_new_after_MN'] for r in slow_rows)}/{len(slow_rows)}")
+    late = {}
+    for group in GROUPS + ("same",):
+        late[group] = late_stats([dict(press=r["press"], M=by_ep[r["ep"]]["M"], N=by_ep[r["ep"]]["N"],
+                                       timeout_off=r.get("timeout_off"))
+                                  for r in R_ if r["status"] == "ok" and r["kind"] == group])
+        lines.append(late_line(model, group, late[group]))
     lines.append(f"SPEED_SAME model={model} true_speed={sum(r['true'] for r in same_rows)}/{len(same_rows)} "
                  f"base_true={sum(r['base_true'] for r in same_rows)}/{len(same_rows)} "
                  f"nopress={sum(r['nopress'] for r in same_rows)}")
@@ -380,7 +427,9 @@ def analyze(plan, by_ep, runs):
         rates[name] = {"pressed": sum(r["press"] is not None for r in ok), "valid": len(ok),
                        "success": sum(bool(r["success"]) for r in ok), "planned": len(rs)}
     detail = {"pool_mismatch": mism, "unresolved": unresolved, "label_bad": label_bad, "scope": scope_detail,
-              "invalid": dict(invalid), "follow": fs, "follow_adj": fs_adj, "same_delta": same, "by_cell": by_cell,
+              "invalid": dict(invalid), "follow": fs, "follow_adj": fs_adj, "follow_sym": fs_sym,
+              "same_delta_sym": same_sym, "late": late,
+              "r_timeout_off": {f"{r['recv']}:s{r['slot']}": bool(r.get("timeout_off")) for r in R_ if r["status"] == "ok"}, "same_delta": same, "by_cell": by_cell,
               "success": succ, "success_by_cell": succ_by_cell, "press_rates": rates, "delta_rows": drows,
               "success_rows": srows, "same_rows": same_rows,
               "windows": {f"{C.episode_key(k[0])}:s{k[1]}": (list(v) if v else None) for k, v in win.items()}}
