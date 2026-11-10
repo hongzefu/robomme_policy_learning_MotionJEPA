@@ -378,3 +378,90 @@ def test_hold_script_ignores_skipped_old_logs(tmp_path):
     assert out.returncode == 0, out.stdout + out.stderr
     assert "SKIP_LOG_EXISTS" in out.stdout and "channels=1 rc=0" in out.stdout
     assert (logs / "scs-motion-iv-g0b.log").read_text().endswith("EXIT_CODE=0\n")
+
+
+# ---------------------------------------------------------------- 实施中调整：干预回合关超时
+def test_iv_stage_timeout_off_configs(tmp_path):
+    eps = {i: {"task_name": "StopCube", "episode_id": i, "ep": i, "env_seed": 2500000 + i, "M": (60, 80, 120)[i % 3],
+               "N": 2 + i % 4, "difficulty": "easy"} for i in range(6)}
+    roots = {"aspen": {k: f"/a/{k}" for k in C.ASPEN}, "gl": None}
+    b = C.SCBuilder(tmp_path, {"aspen": dict(C.MODELS["motion"])}, roots, C.make_workers(0, 2), 0.3, tmp_path, {"m": "x"})
+    items = [(s, r) for s in C.SLOTS for r in eps]
+    cfgs = C.build_slot_stage(b, "iv", items, eps)
+    assert sorted(p.name for p in cfgs) == ["slot0.json", "slot1.json", "slot2.json"]
+    for path, payload in cfgs.items():
+        slot = int(path.stem[4:])
+        assert path.parent == tmp_path / C.IV_CFG_DIR and len(payload["episodes"]) == len(eps)
+        for r, e in eps.items():
+            entry = payload["episodes"][f"StopCube:{r}"]
+            assert entry == {"env_seed": e["env_seed"], "orig_move_interval": e["M"], "target_pass": e["N"],
+                             "stop_time_override": 99,
+                             "horizon": max(e["M"], C.SLOTS[slot]) * e["N"] + 32}
+            assert entry["stop_time_override"] * e["M"] >= entry["horizon"]
+    for name, (spec, *_rest) in b.specs.items():
+        slot = int(name.split("-")[1][1:])
+        assert spec["stopcube_mode"] == "normal" and spec["stopcube_config"] == str(tmp_path / C.IV_CFG_DIR / f"slot{slot}.json")
+    assert C.build_slot_stage(C.SCBuilder(tmp_path, {"aspen": dict(C.MODELS["motion"])}, roots, C.make_workers(0, 2),
+                                          0.3, tmp_path, {"m": "x"}), "donor", items, eps) == {}
+    assert C.timeout_off_entry(eps[0], 120)["horizon"] == C.horizon(60, 120, 2) == 272
+
+
+def test_existing_run_dirs(tmp_path):
+    (tmp_path / "runs" / "iv-s0-w00-00").mkdir(parents=True)
+    assert C.existing_run_dirs(tmp_path, ["iv-s0-w00-00", "iv-s1-w00-00"]) == ["iv-s0-w00-00"]
+    assert C.existing_run_dirs(tmp_path / "none", ["a"]) == []
+
+
+def test_late_stats_and_sym_press():
+    rows = [{"press": 130, "M": 60, "N": 2, "timeout_off": True},     # > M·N
+            {"press": 310, "M": 60, "N": 2, "timeout_off": True},     # > M·N 且 > 5·M
+            {"press": 100, "M": 60, "N": 2, "timeout_off": False},
+            {"press": None, "M": 60, "N": 2}]
+    assert R.late_stats(rows) == {"runs": 4, "late_after_MN": 2, "after_cube_stop": 1, "timeout_off": 2}
+    assert R.late_line("motion", "slow", R.late_stats(rows)) == \
+        "SPEED_LATE model=motion group=slow runs=4 late_after_MN=2 after_cube_stop=1 timeout_off=2/4"
+    assert R.sym_press(120, 60, 2) == 120 and R.sym_press(121, 60, 2) is None and R.sym_press(None, 60, 2) is None
+
+
+def test_analyze_sym_and_late(monkeypatch):
+    """R 完全按 token：slow 组按下步全部晚于 M·N → 对称口径只剩 fast 组。"""
+    by_ep, runs = {}, []
+    for i, (M, N) in enumerate(((60, 2), (80, 3), (120, 2))):
+        by_ep[i] = {"ep": i, "M": M, "N": N}
+        T = press_step(M, N)
+        common = {"ep": i, "recv": f"StopCube:{i}", "status": "ok", "M": M, "N": N, "move_interval": M,
+                  "target_pass": N, "last_frame": None}
+        runs.append(dict(common, group="N", press=T + 2, success=True, outcome="success", slot=None))
+        for slot, Mp in C.SLOTS.items():
+            runs.append(dict(common, group="D", slot=slot, M_prime=Mp, outcome=R.DONOR_OUTCOME, press=None))
+            runs.append(dict(common, group="R", slot=slot, M_prime=Mp, syn=C.syn_ep(i, slot),
+                             kind=C.speed_group(M, Mp), press=press_step(Mp, N) + 2, success=(Mp == M),
+                             outcome="success" if Mp == M else "fail", timeout_off=(i != 2), motion_content=None))
+    monkeypatch.setattr(R, "donor_window", lambda d, N: ((press_step(d["M_prime"], N) - 10,
+                                                          press_step(d["M_prime"], N) + 10), None))
+    lines, detail = R.analyze({"model": "motion"}, by_ep, runs)
+    text = "\n".join(lines)
+    assert re.search(r"^SPEED_FOLLOW model=motion beta=1\.000 .* n=6$", text, re.M)
+    assert re.search(r"^SPEED_FOLLOW_SYM model=motion beta=1\.000 ci=\[\S+\] beta0=1\.000 same_delta=0\.0 "
+                     r"ci=\[\S+\] n=3$", text, re.M)
+    assert "SPEED_NEWWIN_LATE model=motion group=slow w_new_after_MN=2/3" in text
+    assert "SPEED_LATE model=motion group=slow runs=3 late_after_MN=3 after_cube_stop=0 timeout_off=3/3" in text
+    assert "SPEED_LATE model=motion group=fast runs=3 late_after_MN=0 after_cube_stop=0 timeout_off=1/3" in text
+    assert "SPEED_LATE model=motion group=same runs=3 late_after_MN=0 after_cube_stop=0 timeout_off=2/3" in text
+    assert detail["r_timeout_off"]["StopCube:2:s0"] is False and detail["r_timeout_off"]["StopCube:0:s2"] is True
+
+
+def test_load_run_press_capped_at_horizon(monkeypatch):
+    rows = fake_rows(400, press_at=300)
+    monkeypatch.setattr(C, "find_sc_run", lambda row: {"terminal": {"outcome": "timeout_off_horizon"},
+                                                       "motion_content": None, "donor_receipt": None,
+                                                       "timeout_receipt": {"horizon": 152}, "trace": "x"})
+    monkeypatch.setattr(C, "load_trace", lambda path: {"rows": rows})
+    row = {"stage": "iv", "group": "R", "ep": 0, "M": 60, "N": 2, "slot": 1, "M_prime": 80, "syn": C.syn_ep(0, 1)}
+    out = R.load_run(row)                      # horizon = max(60,80)·2+32 = 192 < 300 → horizon 内未按
+    assert out["status"] == "ok" and out["press"] is None and out["timeout_off"] is True
+    rows[:] = fake_rows(400, press_at=180)
+    assert R.load_run(row)["press"] == 180
+    monkeypatch.setattr(C, "find_sc_run", lambda row: {"terminal": {"outcome": "fail"}, "motion_content": None,
+                                                       "donor_receipt": None, "trace": "x"})
+    assert R.load_run(row)["timeout_off"] is False          # 旧口径（未关超时）冒烟没有回执

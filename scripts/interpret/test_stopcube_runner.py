@@ -623,3 +623,86 @@ def test_speed_donor_without_plfull(tmp_path):
     grant.write_text(json.dumps({"chunk_id": "c"}))
     command = local.build_client_command(loaded, grant, tmp_path / "out", "nonce", 9000, tmp_path / "drain")
     assert "--profile" not in command and command[-4:-2] == ["--stopcube-mode", "speed_donor"]
+
+
+# ---------------- normal 关超时：只改 stop_time、跑到 horizon、无条目逐位不变 ----------------
+
+def timeout_table(**changes):
+    table = {"env_seed": 105, "orig_move_interval": 80, "target_pass": 3, "stop_time_override": 99, "horizon": 40}
+    return table | changes
+
+
+def timeout_episode(tmp_path, monkeypatch, config, **sim):
+    donor_sim(monkeypatch, **sim)
+    env = donor_runner()
+    evaluator = runner.TraceEvaluator(runner.Args(stopcube_mode="normal"), tmp_path)
+    evaluator.config = config
+    client = Client()
+    outcome = evaluator.eval_each_episode(env, tmp_path / "videos", client, "toff")
+    directory = tmp_path / "traces" / "toff"
+    rows = [json.loads(line) for line in (directory / "step_trace.jsonl").read_text().splitlines()]
+    path = directory / "meta" / "timeout_off_receipt.json"
+    receipt = json.loads(path.read_text()) if path.exists() else None
+    return env, evaluator, client, outcome, rows, receipt
+
+
+def test_timeout_off_only_stop_time_and_horizon(tmp_path, monkeypatch):
+    env, evaluator, client, outcome, rows, receipt = timeout_episode(
+        tmp_path, monkeypatch, {"StopCube:0": timeout_table()})
+    # env_step_after 达到 horizon=40 即正常收尾，终局值可辨识、不算 infra。
+    assert outcome == runner.TIMEOUT_OFF_HORIZON and evaluator.terminal_observed
+    assert evaluator.actions_executed == 39 and rows[-1]["env_step_after"] == 40
+    # 第一步之前只改 stop_time，move_interval 保持原值。
+    assert env.env.seen == [(80, 99)] * 39
+    # 动作不替换：执行动作即模型命令，推理节奏同官方。
+    assert all(row["executed_action"] == row["command_action"] for row in rows)
+    assert client.frames == [4, 16, 16]
+    assert not (tmp_path / "traces" / "toff" / "meta" / "speed_donor_receipt.json").exists()
+    assert receipt == receipt | {"orig_stop_time": 3, "stop_time_applied": 99, "move_interval": 80, "horizon": 40,
+                                 "termination": "horizon", "first_button_step": None, "last_env_step": 40,
+                                 "outcome": runner.TIMEOUT_OFF_HORIZON, "actions_executed": 39, "env_seed": 105}
+
+
+def test_timeout_off_env_terminal(tmp_path, monkeypatch):
+    _, _, _, outcome, _, receipt = timeout_episode(tmp_path, monkeypatch, {"StopCube:0": timeout_table()},
+                                                   trigger=15, terminal_steps=20)
+    assert outcome == "fail"
+    assert receipt["termination"] == "env_terminal:fail" and receipt["first_button_step"] == 15
+    assert receipt["button_ever_pressed"] is True and receipt["last_env_step"] == 21
+
+
+def test_normal_without_entry_unchanged(tmp_path, monkeypatch):
+    # 表里只有别的局：本局不改写、不按 horizon 收尾、不写关超时回执。
+    env, evaluator, _, outcome, rows, receipt = timeout_episode(
+        tmp_path, monkeypatch, {"StopCube:5": timeout_table()}, terminal_steps=50)
+    assert outcome == "fail" and evaluator.actions_executed == 50 and receipt is None
+    assert env.env.seen == [(80, 3)] * 50 and env.timeout_off is None
+
+
+@pytest.mark.parametrize("changes", [
+    {"env_seed": 106}, {"orig_move_interval": 60}, {"target_pass": 4}, {"stop_time_override": 0},
+    {"horizon": 400, "stop_time_override": 4}, {"horizon": 40.0}, {"horizon": 1},
+])
+def test_timeout_off_rejects_bad_entry(tmp_path, monkeypatch, changes):
+    donor_sim(monkeypatch)
+    env = donor_runner()
+    env.begin_trace(runner.Args(stopcube_mode="normal"), "bad", tmp_path, {"StopCube:0": timeout_table(**changes)})
+    try:
+        with pytest.raises(runner.official.ContractError):
+            env.get_init_obs()
+        assert (env.env.unwrapped.move_interval, env.env.unwrapped.stop_time) == (80, 3)
+    finally:
+        env.trace_stream.close()
+
+
+def test_timeout_off_missing_field(tmp_path, monkeypatch):
+    donor_sim(monkeypatch)
+    table = timeout_table()
+    del table["horizon"]
+    env = donor_runner()
+    env.begin_trace(runner.Args(stopcube_mode="normal"), "a", tmp_path, {"StopCube:0": table})
+    try:
+        with pytest.raises(runner.official.ContractError, match="缺字段"):
+            env.get_init_obs()
+    finally:
+        env.trace_stream.close()
