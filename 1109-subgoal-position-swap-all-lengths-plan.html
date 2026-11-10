@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>逐子目标位置交换计划</title>
+<style>
+body{font-family:-apple-system,"Noto Sans CJK SC","PingFang SC",sans-serif;max-width:1100px;margin:24px auto;padding:0 16px;line-height:1.65;color:#1d1d1f;background:#fff}
+h1{border-bottom:2px solid #333;padding-bottom:4px;margin-top:40px}
+h2{margin-top:28px;border-left:4px solid #3b6fb6;padding-left:8px}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:14px}
+th,td{border:1px solid #bbb;padding:4px 6px;vertical-align:top;text-align:left}
+th{background:#eef2f8}
+code{background:#f3f3f3;padding:0 3px;border-radius:3px;font-size:13px}
+pre{background:#f6f6f6;padding:8px;overflow-x:auto;font-size:13px}
+.box{border:1px solid #c9a227;background:#fffbe8;padding:8px 12px;margin:12px 0}
+.warn{color:#a40000}
+</style>
+</head>
+<body>
+
+<div class="box">
+<p><b>权威性与边界</b>：本计划取代并吸收 <code>1109-swap-tasks-first-pick-motion-swap-plan.html</code>（任务 <code>fp-swap-1110</code>，已按用户「你先暂停」停工）。<b>只规划不实施</b>：用户对本计划不改而明确同意后才开工；开工前派一个审查子代理查自相矛盾。</p>
+<p>代码锚点：分支 <code>v4.2-plswap-full</code>，HEAD <code>d166f67</code>（代码同 <code>876246a</code>：已合入 FP-W1/W2/W3）。环境 A（sled-aspen，2 × RTX A6000）+ GreatLakes（account <code>chaijy2</code>、partition <code>spgpu</code>、A40）。第三方 gitlink 不改。commit 体例 <code>commitV4.4.x:</code>、<code>docs:</code>、<code>handoff:</code>、子代理 <code>sub/SP-Wn:</code>。</p>
+<p>模型：MotionMem（orig100 concat 1×1024，aspen <code>v1-store/assets/vla-o16cc-59999/59999</code>，GL 同包 <code>…-eval/v1-store/assets/vla-o16cc-59999-bd35a857…</code>）；Frozen Wan pooling（aspen <code>v1-store/assets/vla-o16wan/vla59k-8bf3feb9…/59999</code>，GL 上没有，需 rsync 11 GB 并逐文件 sha256 复核）。纯评测，P-LINEAGE 不适用。</p>
+</div>
+
+<h1>第一部分（给人看）</h1>
+
+<h2>一、要做什么</h2>
+<p>回应审稿意见「干预只在简化的单子目标局上，与正式多步任务之间还差一步」：在<b>多步局的每个长度、每个子目标位置 j</b> 上，只替换覆盖第 j 个子目标的示范 motion 窗口，读第 j 步是否跟供体走，同时读其他各步是否不受影响，做成「干预位置 j × 被影响子目标 i」矩阵，看有没有对角结构。三个交换任务的「位置」是第 k 次交换，读数仍是第一次拿起。</p>
+
+<table>
+<tr><th>任务</th><th>长度（子目标数 m 或交换次数 n）</th><th>位置数</th><th>读什么</th></tr>
+<tr><td>PatternLock</td><td>easy m=1–3、medium 2–4、hard 3–7（m = 节点数 − 1）</td><td>m=1..7 共 28 个 (m,j)</td><td>每一步到达哪个格</td></tr>
+<tr><td>RouteStick</td><td>easy 2–3、medium 4–5、hard 4–7</td><td>m=2..7 共 27 个</td><td>每一步到达哪个格、绕向</td></tr>
+<tr><td>VideoUnmaskSwap / ButtonUnmaskSwap</td><td>交换 n=1–3（三档都有）</td><td>各 6 个 (n,k)</td><td>第一次拿起拿的是谁</td></tr>
+<tr><td>VideoRepick</td><td>easy、medium，n=1–3（hard 不交换，不纳入）</td><td>6 个</td><td>同上</td></tr>
+</table>
+
+<h2>二、已定口径</h2>
+<ol>
+<li><b>K1</b> 用户：「我需要在每一个长度上都做分析。但是分析的都是一个 sub goal 的 steerable 的可能性，但是我每一个长度位置都要分析。」</li>
+<li><b>K2</b> 用户：「尽可能压缩在……明天早上之前能够完成」「你可以 query 八个 Great Lakes 的 job，呃，单卡的 job 来完成。」</li>
+<li><b>K3</b> 用户：「Video Repick Hard 这个不考虑，因为它这个没有交换。」</li>
+<li><b>K4（审查意见，全部采纳）</b>：①覆盖子目标 j 的所有窗口一起换，跨界窗口单独标注；②主读数只解释第 j 步，j 之后只在第 j 步没被带偏的局上报；③特异性矩阵；④供体分「同位置 j」与「不同位置 j′」，供体子目标须从接收局第 j 步的实际起点可执行（在盘内）；⑤反向对照「换帧 token、保留 motion」；⑥长局多抽，每个 j 单独报 n 和按接收局重采样的置信区间；⑦主分析不筛选，跟随率与「未修改运行碰巧到达供体目标」的基线比；条件「未修改时正确执行到第 j 步之前」的结果作补充；两模型交集继续报；固定噪声 seed 成对比较。</li>
+<li><b>K5</b> 两模型都跑；时间不够时按第六节的优先级保 MotionMem 的 PatternLock/RouteStick。</li>
+</ol>
+
+<h2>三、机制</h2>
+<p><b>子目标在示范里的帧段</b>：示范只保留 move 段（<code>DemonstrationWrapper._filter_no_record_from_step_batch</code>）。RouteStick 每步固定 50 帧（<code>solve_swingonto_withDirection</code> 45 步 + 5 保持），第 j 步是帧 <code>[50(j−1), 50j)</code>。PatternLock 每步帧数随规划长度变化（单步 17–48 帧），所以由新扫描在 reset 时记录每个示范帧所属的子目标，得到第 j 步的帧段 <code>[a_j, b_j)</code>。</p>
+<p><b>第 j 个子目标的窗口集合 W_j</b>：示范窗起点 <code>s=0,32,…</code>（<code>s+16 ≤ es−1</code>，尾窗补帧），真实帧范围与 <code>[a_j, b_j)</code> 相交即入 W_j。跨两个子目标的窗口记为「跨界」，同时属于两个 W；矩阵按「跨界窗是否算入」报两版（全部 / 只换完全落在第 j 段里的窗）。交换任务第 k 次交换同理用交换帧区间 <code>[start_k+1, end_k+1]</code>。</p>
+<p><b>替换</b>：沿用 <code>motion_swap_exact</code> + 合成供体键（FP 计划〇′ F2），供体按「W_j 内顺序」对齐，服务端不改。</p>
+<p class="warn">⚠ 第 j 段的 token 在开局就全部可见，所以它也可能影响 j 之前的步——这正是特异性矩阵要测的；j 之后的步一旦第 j 步被带偏，起点就变了，只在第 j 步走回自己目标的局上解读。</p>
+
+<h2>四、分组（每个接收局、每个位置 j）</h2>
+<table>
+<tr><th>组</th><th>W_j 换成什么</th><th>说明</th></tr>
+<tr><td>N 原样</td><td>不换</td><td>每局一次；给出「碰巧到达供体目标」基线与筛选条件</td></tr>
+<tr><td>Bsame</td><td>另一局<b>同位置 j</b>、子目标不同的窗口</td><td>PatternLock：方向不同且从接收局第 j 步起点走供体方向仍在盘内；RouteStick：左右或绕向不同且可执行；交换任务：另一局第 k 次交换窗口</td></tr>
+<tr><td>Bcross</td><td>另一局<b>不同位置 j′≠j</b>、子目标不同的窗口（条件同上）</td><td>测 token 是否与时序位置绑定；交换任务不做（交换位置语义不同）</td></tr>
+<tr><td>Z</td><td>零向量</td><td>去掉第 j 段 motion</td></tr>
+<tr><td>F（反向对照，优先级 3）</td><td>第 j 段<b>帧 token</b> 换成同一供体的帧，motion 保留原样</td><td>需要新写服务端替换示范帧的路径；赶不及就不做并在结果中写明</td></tr>
+</table>
+<p><b>只在 N 运行里走到第 j 步起点的 (局, j) 上做干预</b>（第 j 步之前的步在 N 里都完成；不要求整局成功）。走不到的位置读不出第 j 步，干预它没有信息量。</p>
+
+<h2>五、读数与矩阵</h2>
+<ul>
+<li>每次运行逐步复原：第 i 步到达的格（step_trace 的 task_index 跳变时 tcp 最近格）与 RouteStick 绕向。</li>
+<li><b>第 j 步</b>：own / donor_dir（从接收局实际起点走供体方向）/ donor_abs / other / none；RouteStick 另 own_swing / donor_swing。</li>
+<li><b>矩阵 M[j][i]</b>：i&lt;j 为「与 N 同一结果」的保持率；i=j 为跟随供体率；i&gt;j 为第 j 步 own 的局上后续步正确率。PatternLock、RouteStick 各按 m 分块，再合并按 j 汇总。</li>
+<li><b>主分析（不筛选）</b>：全部干预局的跟随率 − N 中到达同一供体目标的比率；<b>补充</b>：只看 N 中第 j 步本身正确的局。</li>
+<li>统计：每个 (m,j) 报 n；置信区间按接收局重采样 2000 次。</li>
+</ul>
+
+<h2>六、规模、算力与时间</h2>
+<table>
+<tr><th>项</th><th>每模型</th><th>说明</th></tr>
+<tr><td>PatternLock 局池</td><td>150 局，长局多抽（m=1:12、2:15、3:23、4:25、5:25、6:25、7:25）</td><td>新 env_seed，自建 metadata 按难度生成</td></tr>
+<tr><td>RouteStick 局池</td><td>150 局（m=2:20、3:20、4:25、5:25、6:30、7:30）</td><td>同上</td></tr>
+<tr><td>交换任务局池</td><td>各 90 局，按交换次数均衡</td><td>复用已扫描的 VUS/BUS/VR 局池（VR 只用 easy/medium）</td></tr>
+<tr><td>N</td><td>570</td><td></td></tr>
+<tr><td>干预（PL/RS 每 (局,j) 约 2.5 局：Bsame、Z 全做，Bcross 做一半；交换任务每 (局,k) 2 局：Bsame、Z）</td><td>估 PL ≈ 680、RS ≈ 680、交换 ≈ 920</td><td>按历史走到第 j 步的比例估（MotionMem m≥2 的 PatternLock 只有约 1/3 走过第 1 步），Wan 更少</td></tr>
+<tr><td>seed 复核</td><td>每任务 20 对 × seed 1</td><td>约 100</td></tr>
+<tr><td>合计</td><td>约 2900（MotionMem）+ 约 2300（Wan）≈ 5200 局</td><td>超出 5 倍才停</td></tr>
+</table>
+<p><b>算力</b>：GreatLakes 8 个单卡占位 job（每个 1×A40、4 CPU、64 G、48 h，每卡 2 个 worker），加 aspen 4 个 worker，共 20 个 worker。8 个超出 <code>greatlakes.md</code> 默认「一次最多 4 个」，本计划即请用户放行这 8 个（先例：10-31 放行 10 个）。chaijy2 当前别人占 12 张、余约 8 张，排队时间不确定。</p>
+<p><b>时间（美东）</b>：写代码 + 审查 + GL 准备（release 快照 0.5 GB、Wan 权重 11 GB）约 2–2.5 小时，与占位排队并行；单局估 60–90 秒，5200 局 / 20 worker ≈ 4.5–6.5 小时。<b>全部做完预计 11-10 上午 8–10 点</b>。按优先级排队，保证先完成：</p>
+<ol>
+<li>MotionMem 的 PatternLock、RouteStick（N + Bsame + Z）——预计 5–6 点前；</li>
+<li>Wan 的 PatternLock、RouteStick，两模型的 Bcross；</li>
+<li>三个交换任务两模型；</li>
+<li>反向对照 F（代码赶得上才跑）。</li>
+</ol>
+
+<h2>七、验收判定行</h2>
+<table>
+<tr><th>判定</th><th>查什么</th></tr>
+<tr><td><code>SP_SCAN=PASS task=&lt;t&gt; seeds=&lt;n&gt; errors=&lt;k&gt;</code></td><td>扫描新 seed：m、路径/绕向、示范每帧子目标归属；场景生成失败的 seed 计为跳过</td></tr>
+<tr><td><code>SP_SEGMENT=PASS task=&lt;t&gt; eps=&lt;n&gt; bad=0</code></td><td>每局示范帧段 [a_j,b_j) 连续、覆盖示范全长、段数 = m；RouteStick 每段 50 帧</td></tr>
+<tr><td><code>SP_REPLAY=PASS mismatches=0</code></td><td>扫描路径与 N 运行环境中实际目标逐步一致</td></tr>
+<tr><td><code>SWAP_SCOPE=PASS scope_bad=0</code></td><td>每局 replace_log 起点 = W_j（两版口径各自）</td></tr>
+<tr><td><code>GL_RELEASE=PASS sha=&lt;sha&gt; files=&lt;n&gt;</code>、<code>VLA_SYNC=PASS model=wan files=35 sha_mismatch=0</code></td><td>GL 代码快照与 Wan 权重逐文件 sha256</td></tr>
+<tr><td><code>GL_SMOKE=PASS model=&lt;m&gt; task=&lt;t&gt;</code></td><td>GL 上每模型每任务 1 局，与 aspen 同局结果一致（同 seed）</td></tr>
+<tr><td><code>SP_MATRIX=PASS model=&lt;m&gt; task=&lt;t&gt; runs=&lt;n&gt; invalid=0</code></td><td>每模型每任务一行，附 j=i 跟随率、i&lt;j 保持率</td></tr>
+<tr><td><code>FP_SWAP_K=PASS model=&lt;m&gt; task=&lt;t&gt; …</code></td><td>交换任务按 (n,k) 的第一次拿起读数</td></tr>
+</table>
+
+<h2>八、步骤</h2>
+<table>
+<tr><th>阶段</th><th>内容</th><th>判据</th></tr>
+<tr><td>S0</td><td>开工即提交 8 个 GL 占位 job；登记状态机；派计划审查</td><td>JobID 入清单；<code>PLAN_CONSISTENCY_REVIEW</code></td></tr>
+<tr><td>S1</td><td>并行写代码 SP-W1（多步扫描/分段/供体/读数）、SP-W2（交换任务按第 k 次交换）、SP-W3（帧替换反向对照，可选）；主会话同时做 GL release 与 Wan 同步</td><td><code>PRE_MERGE_REVIEW</code>、<code>GL_RELEASE</code>、<code>VLA_SYNC</code></td></tr>
+<tr><td>S2</td><td>扫描局池、aspen 冒烟、GL 冒烟</td><td><code>SP_SCAN</code>、<code>SP_SEGMENT</code>、<code>GL_SMOKE</code></td></tr>
+<tr><td>S3</td><td>按优先级跑 N → 选位置、做供体 → 干预 → seed 复核；aspen 与 GL 共用一份队列清单（静态分片）</td><td><code>SP_REPLAY</code>、<code>SWAP_SCOPE</code></td></tr>
+<tr><td>S4</td><td>读数、矩阵图、留档 <code>docs/evaluation-doc/sp-swap-1110/</code>、释放占位、handoff</td><td><code>SP_MATRIX</code>、<code>FP_SWAP_K</code></td></tr>
+</table>
+
+<h2>九、子代理分工与合并（简述）</h2>
+<p>三块并行写，文件不重叠：<b>SP-W1</b> 新写多步任务的扫描（含示范帧子目标归属）、局池、按位置的供体与读数矩阵；<b>SP-W2</b> 扩展已合入的 <code>fp_swap_prep</code> / <code>fp_swap_readout</code>，按第 k 次交换生成 W_k 与读数；<b>SP-W3</b>（可选）在服务端加「替换示范帧 token、motion 不变」的模式。主会话做 GL 准备与运行。每块完成后在自己 worktree 复跑单测，派 sonnet 审查固定 sha，PASS 后 <code>--no-ff</code> 合入、跑短测、push；GL 用合入后的 sha 导出 release。</p>
+<p>逐文件细节见第二部分。</p>
+
+<h1>第二部分（技术细节，供 agent 追踪）</h1>
+
+<h2>〇、红线</h2>
+<ol>
+<li><b>R1</b> 不改 <code>third_party/</code>；SP-W3 之外不改 <code>serve_policy_attn.py</code>。</li>
+<li><b>R2</b> 不碰根目录未跟踪 <code>TODO_RoboMME_Qwen3VL_FrameSamp_Context.en (1).html</code>。</li>
+<li><b>R3</b> tmux 前缀 <code>sps-</code>；GL 只用自己清单里的 JobID 逐个 <code>scancel</code>，绝不 <code>scancel -u</code>；GPU 0 上他人进程不动。</li>
+<li><b>R4</b> GL 工作负载一律 <code>srun --jobid=&lt;hold&gt; --overlap --exact --ntasks=1 --cpus-per-task=4 --gpu_cmode=shared</code> 塞进占位；不写 <code>--qos</code>；遇 <code>AssocGrpMemLimit</code> 先降 <code>--mem</code> 到 48G、每卡 1 worker。</li>
+<li><b>R5</b> GL 产物写 <code>/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/sp-swap-1110/</code>，跑完 rsync 回 aspen <code>v1-store/evaluation/sp-swap-1110/</code> 统一读数。</li>
+<li><b>R6</b> 新 env_seed：PatternLock 2300000 起、RouteStick 2400000 起，步长 100，与官方 metadata 不交；交换任务沿用已扫描的 2000000/2100000/2200000 区间。</li>
+</ol>
+
+<h2>一、逐文件改动</h2>
+<table>
+<tr><th>文件</th><th>改什么</th></tr>
+<tr><td><code>scripts/interpret/sp_swap_prep.py</code>（新，SP-W1）</td><td><code>scan</code>：EnvRunner + 自建 metadata（各难度），reset 后读 <code>selected_buttons</code>（PatternLock）/ 路线与绕向（RouteStick）、m、示范每帧子目标归属（从示范 batch 的子目标字段或按 move 任务边界记录；W1 先核实可得字段，必要时在 env 包装层只读记录）；<code>pool</code>：按 m 分层；<code>specs</code>：subgoal_trace=true、<code>--record-motion</code>、路径根参数可换成 GL 路径；<code>donors</code>：W_j（两版口径）、Bsame/Bcross/Z、可执行性筛选、合成供体键 <code>10000000+recv×100+slot</code>（slot = j×10 + 组号）。</td></tr>
+<tr><td><code>scripts/interpret/analysis/sp_swap_readout.py</code>（新，SP-W1）</td><td>逐步复原到达格与绕向；M[j][i]；主分析与补充分析；接收局重采样 CI；<code>SP_MATRIX</code> 行；矩阵热力图（最近邻放大，规则第 5 条）。</td></tr>
+<tr><td><code>scripts/interpret/test_sp_swap.py</code>（新，SP-W1）</td><td>分段、W_j 两版、可执行性、供体对齐、矩阵、重采样。</td></tr>
+<tr><td><code>scripts/interpret/fp_swap_prep.py</code>、<code>analysis/fp_swap_readout.py</code>、<code>test_fp_swap.py</code>（改，SP-W2）</td><td>新增按第 k 次交换的 W_k、组 Bsame_k / Z_k、读数 <code>FP_SWAP_K</code>（correct / swap_blind_k = 若第 k 次交换没发生时的答案 / other / none）；局池每任务 90 局按 n 均衡；路径根参数。</td></tr>
+<tr><td><code>scripts/interpret/serve_policy_attn.py</code>、新测（改，SP-W3，可选）</td><td>新模式 <code>frame_swap_exact:&lt;DIR&gt;</code>：替换指定示范帧区间送入帧记忆的图像为供体帧，motion 编码仍用原帧；默认关闭时逐字节不变。</td></tr>
+</table>
+
+<h2>二、子代理分配表</h2>
+<table>
+<tr><th>编号</th><th>可写文件</th><th>禁触</th><th>验收（CPU，worktree 内）</th><th>合并顺序</th></tr>
+<tr><td>SP-W1（opus，worktree）</td><td>sp_swap_prep.py、analysis/sp_swap_readout.py、test_sp_swap.py</td><td>其余全部</td><td><code>pytest scripts/interpret/test_sp_swap.py scripts/interpret/test_rs_full.py scripts/interpret/test_pl_full.py -q</code> 全过</td><td>1</td></tr>
+<tr><td>SP-W2（opus，worktree）</td><td>fp_swap_prep.py、analysis/fp_swap_readout.py、test_fp_swap.py</td><td>其余全部</td><td><code>pytest scripts/interpret/test_fp_swap.py -q</code> 全过</td><td>2</td></tr>
+<tr><td>SP-W3（opus，worktree，可选）</td><td>serve_policy_attn.py、scripts/interpret/test_frame_swap.py</td><td>其余全部</td><td><code>pytest scripts/interpret/test_frame_swap.py scripts/interpret/test_motion_swap_modes.py scripts/interpret/test_plfull_swap_wan.py -q</code> 全过</td><td>3</td></tr>
+<tr><td>主会话</td><td>留档、计划、current.json、GL 运行脚本（不入库，写在产物目录）</td><td>—</td><td>各判定行</td><td>—</td></tr>
+</table>
+
+<h2>三、runbook（摘要）</h2>
+<pre># S0 占位（每个单独一次 sbatch，JobID 立即记入清单）
+sbatch --account=chaijy2 --partition=spgpu --nodes=1 --ntasks-per-node=1 --gres=gpu:1 \
+  --cpus-per-task=4 --mem=64G --time=48:00:00 --job-name=sps-hold-&lt;i&gt; --wrap='sleep infinity'
+# S1 GL 准备
+git archive &lt;merged-sha&gt; | ssh greatlakes "mkdir -p …-eval/releases/&lt;sha&gt; &amp;&amp; tar -x -C …-eval/releases/&lt;sha&gt;"
+rsync -a --info=progress2 v1-store/assets/vla-o16wan/ greatlakes:…-eval/v1-store/assets/vla-o16wan/
+# S3 每个占位 2 个 worker
+srun --jobid=&lt;hold&gt; --overlap --exact --ntasks=1 --cpus-per-task=4 --gpu_cmode=shared bash &lt;queue_w.sh&gt;</pre>
+<p>GL 端解释器：<code>v1-store/envs/official-sim</code>（仿真）、<code>envs/policy</code>（策略）、<code>envs/stage2</code>（Wan sidecar）；<code>MMEVLA_V1_STORE</code> 指 GL v1-store。监听：每份日志一个 Monitor（GL 日志经 ssh <code>tail -F</code>），过滤 <code>EXIT_CODE=|Traceback|out of memory|Killed|ContractError|rc=[1-9]</code>。</p>
+
+<h2>四、风险</h2>
+<ol>
+<li>深位置样本少：MotionMem 在 PatternLock m≥2 局约 1/3 走过第 1 步；m=6、7 的 j≥5 可能只有个位数 n，如实报 n 与区间，不扩池（扩池超 5 倍才停，5 倍内自行决定并告知）。</li>
+<li>GL 排队：余量约 8 张，可能只排到一部分；排不到的按 aspen 跑，优先级不变。</li>
+<li>PatternLock 示范帧的子目标归属取不到可靠字段时，改用示范 tcp 轨迹按到达格切段（SP-W1 自行决定并在交回里写明）。</li>
+<li>反向对照 F 需要改服务端，审查不过就不跑。</li>
+<li>时间：全部完成可能晚于上午 8 点；优先级 1 预计凌晨 5–6 点完成。</li>
+</ol>
+
+<h2>五、盲区</h2>
+<ul>
+<li>GL 与 aspen 的数值不保证逐位相同（A40 对 A6000），GL_SMOKE 只比结果类别；同一 (局, 组) 不跨机器拆分。</li>
+<li>多步局单局耗时未实测。</li>
+</ul>
+
+<h2>六、交接与状态机</h2>
+<p>任务 id <code>sp-swap-1110</code>；<code>fp-swap-1110</code> 改 <code>closed</code>（并入本任务）。交接前须完成：各 <code>SP_MATRIX</code>、<code>FP_SWAP_K</code> 行、留档 push、GL 占位全部 scancel。长尾：无。</p>
+
+<h2>七、留档</h2>
+<p><code>docs/evaluation-doc/sp-swap-1110/{launch.md,result.md,records/}</code>，索引加一行；合并提交 <code>commitV4.4.1–3</code>，结果 <code>commitV4.4.4</code>，<code>handoff:</code>。</p>
+
+</body>
+</html>
