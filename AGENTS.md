@@ -39,7 +39,7 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
 
 下方标记块 `common-agents` 是 [AgentMetaRules-hongzefu](https://github.com/hongzefu/AgentMetaRules-hongzefu) 正本 `AGENTS.md`「强制规则」第 1–26 条与附录 A 的逐字副本（标记行 `src=` 记正本 commit、`blob=` 记块内容 blob id，**块内禁止手改**；同步核对命令 `uv run --no-project python /data/hongzefu/AgentMetaRules-hongzefu/scripts/sync_rules.py check --repo policy`）。上方「运行环境判定」是正本第 0 条的本仓库实例（判据表两列：环境 A = sled-vail 本机 + turbo 归档 + GreatLakes；环境 B = AWS 单机）。优先级：系统 / 开发者 / 用户当前指令 > 标记块外明确写出的覆盖项 > 标记块内的正本条目。平时只读本文件，不需要去读 GitHub 上的正本；正本改动经同步脚本回流。标记块之后是本仓库的覆盖项、占位符取值、项目 scope 与规则来源。
 
-<!-- AGENTMETARULES:BEGIN common-agents src=d691f6b819370ee3300eb27c762d54ddac9c9146 blob=dc44aa392b6483b250d4653b86557c76021dc8a3 -->
+<!-- AGENTMETARULES:BEGIN common-agents src=f2a5d13b8570bcb32db52e2bd6a04c89c4c9573a blob=fb808dcbacf6db5a3ca1a4ff6346daf2e1257086 -->
 
 ## 强制规则（最高优先级）
 
@@ -466,8 +466,12 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
       | sled-vail → greatlakes | `Master running` | 同上 |
       | sled-vail → sled-aspen | 2026-10-19 复测：`ssh -o BatchMode=yes sled-aspen hostname`（走 `~/.ssh/config` 别名，`IdentityFile ~/.ssh/id_ed25519_umich`，该公钥本已在 aspen `authorized_keys`）返回 `sled-aspen.eecs.umich.edu`，rc=0；此前的 `Permission denied (publickey,password)` 是因为用完整域名 `sled-aspen.eecs.umich.edu` 登录、不走别名、没用这把钥匙 | 直接 SSH 操作，**必须用别名 `ssh sled-aspen`** |
       | 任意 ↔ AWS | 不尝试 SSH | 只能发消息唤醒 AWS 上的会话（`SendMessage`／`ListAgents` 可达的会话） |
+      | MacBook → sled-aspen／sled-vail／sled-whistler | 2026-11-09 实测：`ssh -o BatchMode=yes <aspen｜vail｜whistler> hostname`（走 MacBook `~/.ssh/config` 别名）分别返回 `sled-aspen.eecs.umich.edu`、`sled-vail`、`sled-whistler`，rc=0 | 直接 SSH 操作，不必等用户要求（见下条） |
+      | sled-aspen ↔ sled-vail | 2026-11-09 复测：aspen 上 `ssh sled-vail.eecs.umich.edu hostname` 返回 `sled-vail`；vail 上 `ssh sled-aspen hostname` 返回 `sled-aspen.eecs.umich.edu` | 直接 SSH 操作 |
+      | sled-aspen／sled-vail ↔ sled-whistler | 2026-11-09 实测四个方向都报 `Host key verification failed.`（对端主机密钥还不在各自的 `known_hosts` 里，不是权限问题） | 规则上允许直连；首次连接前须由用户确认并接受主机密钥，agent 不自行关闭 `StrictHostKeyChecking`、不自行写 `known_hosts`；未打通前经 MacBook 中转或发消息 |
 
-      - 结论：sled-aspen、sled-vail、greatlakes 三者互通，直接 SSH 操作（greatlakes 的 ControlMaster 断了先问用户 Okta 验证方式）；AWS 仍只发消息。
+      - **MacBook 与 SLED 服务器之间的 SSH 是长期授权（2026-11-09 新增）**：用户的 MacBook 上的 agent 需要读文件、查结果、补数据、查看运行状态时，可以直接 `ssh` 到 sled-aspen、sled-vail、sled-whistler 等 SLED 实验室服务器，**不必等用户逐次提出或批准**；这几台服务器之间也可以互相 SSH。本项只放开「连接」本身：连上之后做什么仍受其余条目约束——开工令（第 2 条）、他人在途改动与破坏性操作（第 11、14 条）、对方会话的任务与运行（本条「唤醒范围」）、tmux 清理红线（第 7 条）都不因能连上而放宽；项目 `AGENTS.md` 里早于本项写下的「不 ssh」类红线，只约束集群（greatlakes）与训练评估，不再阻止 MacBook 为读取数据而连接 SLED 服务器。**AWS 不支持 SSH，也不在校园网内**：任何机器都不尝试 SSH 到 AWS，只发消息。用户原话（2026-11-09）：「写进agentmetarules 本机macbook可以不用用户请求随意连接aspen vail whistler等 aspen vail whistler也可以互相连接 aws不支持ssh也不在校园网内」。
+      - 结论：MacBook、sled-aspen、sled-vail、sled-whistler、greatlakes 之间直接 SSH 操作（greatlakes 的 ControlMaster 断了先问用户 Okta 验证方式；whistler 与 aspen／vail 之间待接受主机密钥）；AWS 仍只发消息。
       - 目标机器上**没有可唤醒的会话**时停下，在汇报里写清缺什么、在哪台机器、建议怎么补。
       - 补数据仍受第 14、15 条约束：落点按目标机器的存储边界；大下载先问用户；同步只用 `rsync`，权威源一侧不动。
     - **留痕**：跨会话达成的约定（排队时点、交接产物与路径、谁占哪张卡、谁先谁后）连同 `req` 编号写进当轮给用户的汇报；涉及任务状态、依赖或交接的，写进第 27 条 `docs/handoff/current.json` 的对应任务条目，不只留在会话消息里。
@@ -528,7 +532,7 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
 | `<COMMIT_SUBJECT_STYLE>` | commit subject 体例 | 第 11 条 |
 | `<PLAN_EXEMPLAR>` | 计划密度标杆文档 | 第 2 条 |
 
-<!-- AGENTMETARULES:END common-agents src=d691f6b819370ee3300eb27c762d54ddac9c9146 blob=dc44aa392b6483b250d4653b86557c76021dc8a3 -->
+<!-- AGENTMETARULES:END common-agents src=f2a5d13b8570bcb32db52e2bd6a04c89c4c9573a blob=fb808dcbacf6db5a3ca1a4ff6346daf2e1257086 -->
 
 ## 项目专属规则
 
