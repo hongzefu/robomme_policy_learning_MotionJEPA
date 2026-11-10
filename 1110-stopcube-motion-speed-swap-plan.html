@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StopCube 速度替换计划</title>
+<style>
+:root{--bg:#fff;--fg:#1d1d1f;--muted:#5b5b66;--line:#d9d9e0;--code:#f4f4f7;--accent:#2457c5;--warn:#a4401a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17171a;--fg:#e8e8ec;--muted:#a0a0aa;--line:#36363d;--code:#232328;--accent:#7ea3f2;--warn:#f08a5d}}
+:root[data-theme="dark"]{--bg:#17171a;--fg:#e8e8ec;--muted:#a0a0aa;--line:#36363d;--code:#232328;--accent:#7ea3f2;--warn:#f08a5d}
+body{background:var(--bg);color:var(--fg);font:15px/1.65 -apple-system,"PingFang SC","Noto Sans CJK SC",sans-serif;max-width:1040px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:1.5em;border-bottom:2px solid var(--line);padding-bottom:6px;margin-top:2.2em}
+h2{font-size:1.2em;margin-top:1.8em}
+h3{font-size:1.05em;margin-top:1.4em}
+code{background:var(--code);padding:1px 4px;border-radius:3px;font-size:.92em}
+pre{background:var(--code);padding:10px 12px;border-radius:6px;overflow-x:auto;font-size:.88em;line-height:1.5}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:.92em;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+th{background:var(--code)}
+.intro{border-left:4px solid var(--accent);padding:8px 14px;background:var(--code);border-radius:4px}
+.warn{color:var(--warn)}
+.muted{color:var(--muted)}
+</style>
+</head>
+<body>
+<p style="font-size:1.6em;font-weight:700;margin:0">StopCube motion 速度替换：把 motion token 换成「另一种方块速度」的真实 token，按钮按下时刻会不会跟着变</p>
+
+<div class="intro">
+<p><b>权威性与锚点</b>：本计划写于美东 2026-11-10，代码锚点为分支 <code>v4.2-plswap-full</code> 上的 <code>f773b8d</code>（sp-swap-1110 交接提交）。工作副本为环境 A <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code>，GreatLakes 运行代码用 <code>git archive</code> 打的 release（同 sp-swap-1110 做法）。功能提交按 <code>commitV4.5.&lt;n&gt;: …</code> 编号，子代理提交按 <code>sub/SC-W&lt;n&gt;: …</code>，状态机提交按 <code>handoff: …</code>。</p>
+<p><b>外部依赖锚点</b>：MotionMem concat 1×1024 checkpoint <code>vla-o16cc-59999</code>（aspen <code>v1-store/assets/vla-o16cc-59999/59999</code>，GL 副本 <code>vla-o16cc-59999-bd35a857…</code>）；Frozen Wan pooling <code>vla-o16wan/vla59k-8bf3feb9…/59999</code>；两者 policy_config 都是 <code>mme_vla_suite_orig16_b128_60k</code>，与 sp-swap-1110 完全相同。本实验只评测，不建库、不训练，因此 P-LINEAGE 的 <code>DATA_LINEAGE</code> 闸门不适用。</p>
+<p><b>授权边界</b>：本文件只规划。用户对本计划不作修改、直接说「同意」或「开工」后才开始改代码、提交占位 job 或运行。</p>
+</div>
+
+<h1>第一部分（给人看）</h1>
+
+<h2>1. 要做什么与运行一览</h2>
+<p>StopCube 里，方块在轨道上来回移动，单程步数 M 从 {60, 80, 120} 中随机取。模型要在方块第 N 次（N 取 2–5）经过目标中心时按按钮，正确时刻是 <code>T(M,N)=M·N−M/2</code>（<code>scripts/interpret/hover_points.py::press_step</code>）。StopCube 没有示范段，所以 motion token 全部来自执行过程中的画面。1105 的探针显示 MotionMem 的表征读得出速度 M，但那只是相关性。</p>
+<p><b>本实验做的是因果干预</b>：同一局、同一场景，只把 motion token 换成「方块单程步数为 M′」时的真实 token，画面帧不动，然后看按下步是否朝 <code>T(M′,N)</code> 移动。</p>
+<p>供体 token 的造法：同一种子、同一场景，在环境里把方块的 <code>move_interval</code> 改成 M′。机械臂原样回放接收局自己的动作，到机械臂移到按钮上方就位为止，之后原地悬停、不按按钮。这样录下来的 motion token 和原局只差方块的运动，都是 motion 编码器在真实仿真画面上的输出，没有置零或删除。</p>
+
+<table>
+<tr><th>每个接收局跑的条件</th><th>做什么</th><th>作用</th></tr>
+<tr><td>N（原样）</td><td>不干预，固定噪声种子 42</td><td>得到原按下步 press_N</td></tr>
+<tr><td>S（换噪声种子）</td><td>不干预，噪声种子换成 1</td><td>量模型自身的按下步抖动</td></tr>
+<tr><td>D(M′)：录供体 ×3</td><td>M′ 取三个值（含 M′=M），回放 N 的动作到就位，之后悬停，同时录 motion token</td><td>得到三套供体 token</td></tr>
+<tr><td>R_same（M′=M）</td><td>换成同速供体，噪声种子同 N</td><td>对照组：换录制版 token 本身不应改变按下步</td></tr>
+<tr><td>R_fast / R_slow（M′≠M 的两个值）</td><td>换成异速供体，噪声种子同 N</td><td>主读数</td></tr>
+</table>
+<p>规模：每个模型 72 个接收局 × 8 个回合 = 576 回合，两模型合计 1152 回合，<b>不存注意力</b>。资源为 GreatLakes 8 个单卡 A40 占位（每个占位一个长作业步、内含两条通道）加 aspen 2 卡。预计改代码加冒烟约 1.5–2 小时，正式运行约 3–4 小时，先跑 MotionMem 再跑 Wan。</p>
+
+<h2>2. 已定死口径</h2>
+<table>
+<tr><th>编号</th><th>口径</th><th>依据</th></tr>
+<tr><td>K1</td><td>主模型为 MotionMem concat 1×1024（<code>stage2_pool4_concat</code>，59999）。Frozen Wan pooling（<code>wan_fixedpool1024</code>）作对照，第二优先级，可整体删掉。FrameSamp 没有 motion 输入，不做。384 tokens 的 split 变体不考虑。</td><td>用户 11-09 原话「384 tokens完全不考虑」；Wan 在前几轮一直作对照</td></tr>
+<tr><td>K2</td><td>「调速度」= 用同局同种子、环境方块单程步数改为 M′ 录下的真实 motion token，经 <code>motion_swap_exact</code> 逐窗口替换。帧 token 不动，不置零、不删 token。</td><td>用户原话「只能接受把 motion token 换成别的…这种形式」；§3.2</td></tr>
+<tr><td>K3</td><td>M′ 取 {60, 80, 120} 全部三个值。M′=M 为同速对照（R_same），另两个为异速（R_fast、R_slow）。</td><td>§3.1</td></tr>
+<tr><td>K4</td><td>接收局为 72 个自定种子（起点 2500000），按 (M,N) 12 格各取 6 局，不按原样是否成功来筛。</td><td>沿用 sp-swap「不筛成功、配基线」</td></tr>
+<tr><td>K5</td><td>主读数 Δ = press_R − press_N，对照「完全按 token 时钟」的预测 Δ* = T(M′,N) − T(M,N) = (M′−M)(N−½)。报两项：①按 (M→M′) 格的平均 Δ；②Δ 对 Δ* 的回归斜率 β。区间都用接收局重采样 2000 次的 95% 区间。β≈1 表示完全跟 token，β≈0 表示不跟。</td><td>§3.1</td></tr>
+<tr><td>K6</td><td>R_* 与 N 用同一个噪声种子，做配对比较。S 只用来量自然抖动，不参与 Δ。</td><td>沿用 sp-swap</td></tr>
+<tr><td>K7</td><td>「到步数上限也没按」单独作一类，报告各条件的按下率。计算 Δ 时只用 N 与 R 都按下的局，并另报按下率的变化。</td><td>1105：未按占一类</td></tr>
+<tr><td>K8</td><td>按下即停（stop_after_press），只读第一次按下的步号与官方成功。</td><td>省算力</td></tr>
+<tr><td>K9</td><td>资源为 GL 8 个占位（1×A40、4 CPU、64G、48h），每个占位只起一个 srun 作业步、内含两条通道（错开 45 秒）；aspen 2 卡共 4 个 worker。</td><td>sp-swap-1110 ⑦ 的经验</td></tr>
+<tr><td>K10</td><td>改 M′ 会同时改变方块在同一时刻的位置（相位），所以这不是「纯速度」。结论写成「换成另一周期的方块运动 token」，不写成「只改了速度」。</td><td>§3.3 局限</td></tr>
+</table>
+
+<h2>3. 机制</h2>
+<h3>3.1 按 token 时钟预测的偏移量 Δ*</h3>
+<p>方块位置 <code>cube_position(t,M)</code> 是周期 2M 的平滑往返，第 k 次经过中心在 <code>t=M·k−M/2</code>。如果模型完全按 motion token 里的速度数次数，就会在 <code>T(M′,N)</code> 按下：</p>
+<table>
+<tr><th>M → M′</th><th>N=2</th><th>N=3</th><th>N=4</th><th>N=5</th></tr>
+<tr><td>60→80</td><td>+30</td><td>+50</td><td>+70</td><td>+90</td></tr>
+<tr><td>60→120</td><td>+90</td><td>+150</td><td>+210</td><td>+270</td></tr>
+<tr><td>80→120</td><td>+60</td><td>+100</td><td>+140</td><td>+180</td></tr>
+<tr><td>反方向（80→60、120→60、120→80）</td><td colspan="4">同表取负</td></tr>
+</table>
+<p>例子：M=60、N=3 时正确按下步是 150。换成 M′=120 的 token 后，若完全按 token 时钟，模型会拖到 300 才按（Δ*=+150）；若完全不读 token 速度，就仍在 150 附近。</p>
+<p>可作参照的先验：1105 rollout 里 MotionMem 在 M=120 时 15/16 按对，在 M=60、80 时多数按晚（17 局）。这说明它可能对速度有偏好，但没有因果证据。</p>
+
+<h3>3.2 供体怎么录</h3>
+<ul>
+<li><b>改速度</b>：<code>third_party/robomme_benchmark/src/robomme/robomme_env/StopCube.py::_initialize_episode</code> 设置 <code>self.move_interval</code>，<code>step</code> 用它计算方块位置。录供体时，由 <code>stopcube_runner</code> 在 reset 之后、第一步之前改写 <code>env.unwrapped.move_interval=M′</code>。这是运行时覆盖，不改 third_party 文件。<b>正式干预回合不做这一改写</b>，环境里的方块仍按真实 M 运动，官方成功判定照常。</li>
+<li><b>动作</b>：逐步回放接收局 N 回合实际执行的动作，直到就位步 T_h，取「把机械臂移到按钮上方」这个子目标完成的那一步。从 T_h 起按现有 <code>hold_extended</code> 机制固定关节悬停，一直到官方步数上限，全程不按按钮。如果 N 回合没有到达就位，就取它按下前 16 步作 T_h；如果它从未按下，就取最后一步。</li>
+<li><b>录 token</b>：服务端加 <code>--record-motion</code>，录下每个窗口（33 帧，起点 32u）的编码，按 sp-swap 的合成供体键写成 <code>motion_swap_exact</code> 供体文件。键号为 <code>ep = 20000000 + recv×10 + slot</code>，slot 取 0=M′60、1=M′80、2=M′120。每个模型用自己的编码器分别录制。</li>
+</ul>
+<p class="warn">⚠ 陷阱与反例：</p>
+<ul>
+<li>如果干预回合比供体覆盖的时间更长，超出部分找不到同起点窗口，<code>motion_swap_exact</code> 不会替换。供体已经录到官方上限，理论上不会发生；仍用 <code>SPEED_SCOPE</code> 逐回合统计未替换的窗口数。</li>
+<li>在 M′=M 时，回放必须重现 N 回合的 token，否则 R_same 混进了回放误差。闸门是 <code>REPLAY_EQ</code>：比较 T_h 之前的窗口与 N 回合 <code>--record-motion</code> 的编码。</li>
+<li>回放之所以能用，是因为方块是运动学驱动的，不和机械臂发生碰撞。录制前用 <code>MOVE_OVERRIDE</code> 核对：环境里方块的实际位置要与 <code>cube_position(t,M′)</code> 吻合。</li>
+</ul>
+
+<h3>3.3 能说明什么、不能说明什么</h3>
+<ul>
+<li>β 显著大于 0，且 R_same 的 Δ≈0：MotionMem 的按下时机因果地依赖 motion token 里的方块运动。</li>
+<li>β≈0：按下时机主要来自帧和文本，与交换任务上的结论同向。</li>
+<li>Wan 作对照：按前几轮的经验，预期 β≈0。</li>
+<li>局限（K10）：M′ 同时改变速度和相位，区分不了「读速度」和「读位置相位」。还有一点，画面帧仍是真实速度，所以 β 的上限受帧信息竞争的影响。</li>
+</ul>
+
+<h2>4. 我们这一侧要改什么</h2>
+<p>服务端 <code>motion_swap_exact</code> 与 <code>--record-motion</code> 已经可用，不用改。需要补的是客户端的「改速度、回放、悬停」录制模式，以及自定种子、准备与读数脚本。</p>
+<table>
+<tr><th>文件</th><th>锚点</th><th>改什么</th><th>默认（关闭）时</th><th>开启时</th></tr>
+<tr><td><code>scripts/interpret/stopcube_runner.py</code></td><td>新模式 <code>speed_donor</code>；<code>normal</code> 增加逐步动作日志；自定种子</td><td>reset 后改写 move_interval；逐步回放动作表；从 T_h 起悬停；记录 T_h；增加 stop_after_press</td><td>行为与现状逐位一致</td><td>只用于录供体</td></tr>
+<tr><td><code>scripts/interpret/run_local.py</code></td><td>spec 校验</td><td>放行 <code>stopcube_mode=speed_donor</code>、<code>stop_after_press</code>，以及 StopCube 自定种子清单（局号上限沿用 120）</td><td>旧 spec 不变</td><td>—</td></tr>
+<tr><td><code>scripts/interpret/sc_speed_prep.py</code>（新）</td><td><code>pool / specs / donors</code></td><td>按 (M,N) 均衡选 72 个种子；生成各阶段 spec（GL 8×2 通道加 aspen）；从 N 的动作日志生成回放表；把录下的 token 改名成合成供体键</td><td>—</td><td>—</td></tr>
+<tr><td><code>scripts/interpret/analysis/sc_speed_readout.py</code>（新）</td><td>读数</td><td>Δ、Δ*、β、按格均值、按下率、成功率、bootstrap，以及全部判定行</td><td>—</td><td>—</td></tr>
+<tr><td><code>scripts/interpret/test_sc_speed.py</code>（新）</td><td>CPU 单测</td><td>Δ* 公式、种子均衡、供体键、回放表对齐、读数的合成样例</td><td>—</td><td>—</td></tr>
+</table>
+
+<h2>5. 验收判定行</h2>
+<table>
+<tr><th>判定行</th><th>查什么 / 怎么查</th><th>过了说明什么</th></tr>
+<tr><td><code>SC_POOL=PASS eps=72 cells=12 per_cell=6</code></td><td>用 <code>task_params</code> 重算 (M,N)，并与环境 reset 后的 <code>move_interval</code>、<code>stop_time</code> 逐局比对</td><td>种子与格子标注一致</td></tr>
+<tr><td><code>MOVE_OVERRIDE=PASS eps=&lt;n&gt; maxdev=&lt;d&gt;</code></td><td>冒烟时取 3 局 × 3 个 M′，逐步读方块位置，与 <code>cube_position(t,M′)</code> 的轨道插值比对</td><td>改写确实只改了方块速度</td></tr>
+<tr><td><code>REPLAY_EQ=PASS model=&lt;m&gt; eps=72 windows=&lt;n&gt; maxabs=&lt;x&gt;</code></td><td>M′=M 时，T_h 之前的窗口编码与 N 回合录到的编码比对，阈值 1e-4（GPU 非确定性）</td><td>回放重现原局，R_same 是干净的对照</td></tr>
+<tr><td><code>SPEED_SCOPE=PASS model=&lt;m&gt; runs=216 unreplaced=0</code></td><td>每个 R 回合中，按下前的窗口全部被替换</td><td>干预覆盖完整</td></tr>
+<tr><td><code>PRESS_LABEL=PASS model=&lt;m&gt; runs=&lt;n&gt; mismatch=0</code></td><td>用按下步落在窗口内与否推出的成功，与官方成功逐局比对</td><td>按下步读数可靠</td></tr>
+<tr><td><code>SEED_PRESS model=&lt;m&gt; pairs=72 mad=&lt;步&gt;</code></td><td>N 与 S 的按下步差</td><td>自然抖动的量级（报告项，不设阈值）</td></tr>
+<tr><td><code>SPEED_FOLLOW model=&lt;m&gt; beta=&lt;b&gt; ci=[..] same_delta=&lt;d&gt; ci=[..] n=&lt;n&gt;</code></td><td>K5 主读数</td><td>回答用户的问题（报告项，不设阈值）</td></tr>
+</table>
+
+<h2>6. 步骤</h2>
+<table>
+<tr><th>阶段</th><th>内容</th><th>判据</th></tr>
+<tr><td>0</td><td>开工前计划审查（sonnet，一个），登记状态机，派 SC-W1/W2 写代码，同时提交 8 个占位</td><td><code>PLAN_CONSISTENCY_REVIEW</code>；各块 <code>PRE_MERGE_REVIEW=PASS</code></td></tr>
+<tr><td>1</td><td>合并后打 release，在 aspen 冒烟：1 个接收局跑完 8 个回合，含 MOVE_OVERRIDE</td><td><code>MOVE_OVERRIDE=PASS</code>、<code>REPLAY_EQ=PASS</code>（1 局）、<code>SPEED_SCOPE=PASS</code></td></tr>
+<tr><td>2</td><td>MotionMem 正式运行：N 与 S（144 回合）→ 生成回放表 → 3 个供体录制（216 回合）→ R 干预（216 回合）</td><td><code>SC_POOL</code>、<code>REPLAY_EQ</code>、<code>SPEED_SCOPE</code>、<code>PRESS_LABEL</code></td></tr>
+<tr><td>3</td><td>Wan：与阶段 2 相同，可在 MotionMem 的 R 阶段尾部提前起跑</td><td>同上</td></tr>
+<tr><td>4</td><td>读数、留档、释放占位、交接</td><td><code>SPEED_FOLLOW</code> 两行；<code>HANDOFF_WRITE=PASS</code></td></tr>
+</table>
+
+<h2>7. 交接顺序与状态机登记</h2>
+<ul>
+<li>任务 id：<code>sc-speed-1110</code>，依赖为空（sp-swap-1110 已经 done）。</li>
+<li>交接前必须完成：两模型的 <code>REPLAY_EQ</code>、<code>SPEED_SCOPE</code>、<code>PRESS_LABEL</code>、<code>SPEED_FOLLOW</code>，留档提交，8 个占位已 scancel。</li>
+<li>长尾：无。</li>
+<li>本任务 done 之后：没有自动解锁的下游。</li>
+</ul>
+
+<h2>8. 子代理分工与合并（简述）</h2>
+<p>代码分成两块，并行写，写集不重叠：</p>
+<ul>
+<li><b>SC-W1</b>：录制模式和运行入口，即 <code>stopcube_runner.py</code> 与 <code>run_local.py</code>。</li>
+<li><b>SC-W2</b>：新增的准备脚本、读数脚本和单测。</li>
+</ul>
+<p>两块按接口契约对齐：动作日志与回放表的格式、T_h 的记录字段、供体键规则。合并顺序先 W1 后 W2，每次合并前派一个 sonnet 审查 BASE..TIP，合并后跑定向单测。运行由主会话自己按 spec 起跑和监听；遇到代码问题时另派修复代理，不让运行方改代码。</p>
+<p class="muted">逐文件细节、分配表、闸门与 runbook 见第二部分。</p>
+
+<h1>第二部分（技术细节，供 agent 追踪）</h1>
+
+<h2>〇 前置声明与红线</h2>
+<ol>
+<li>R1：不修改 <code>third_party/</code>。方块速度只在 <code>speed_donor</code> 模式下于运行时改写 <code>env.unwrapped.move_interval</code>。</li>
+<li>R2：所有 spec 都不写注意力（<code>save_attn=false</code>）。<code>motion_swap_exact</code> 本身已禁止写 <code>infer_*.npz</code>。</li>
+<li>R3：只用真实 token，不置零。</li>
+<li>R4：tmux 会话一律以 <code>scs-</code> 为前缀，只按确切名字逐个清理；scancel 只针对本轮登记的 JobID。</li>
+<li>R5：不碰未跟踪文件 <code>TODO_RoboMME_Qwen3VL_FrameSamp_Context.en (1).html</code>，也不碰别人的 GPU 进程。</li>
+<li>R6：<code>run_local</code> 不能续跑。中途失败的 spec 整体归档到 <code>runs-failed/</code> 后重跑。</li>
+<li>R7：产物落在 NFS <code>…-eval/v1-store/evaluation/sc-speed-1110/</code>，日志落在 <code>…-eval/v1-store/logs/sc-speed-1110/</code>，aspen 侧放 <code>v1-store/evaluation|logs/sc-speed-1110/</code>。</li>
+</ol>
+
+<h2>一 逐文件改动清单</h2>
+<h3>1.1 <code>scripts/interpret/stopcube_runner.py</code>（SC-W1）</h3>
+<ul>
+<li><code>normal</code> 模式新增可选逐步动作日志 <code>actions.npz</code>，键为 <code>env_steps</code>（int）、<code>actions</code>（[T,8]）、<code>env_seed</code>，同时记录子目标切换步。关闭时输出逐位不变。</li>
+<li>新模式 <code>speed_donor</code>，配置为 <code>{"schema_version":1,"episodes":{"StopCube:&lt;ep&gt;":{"move_interval":M′,"action_table":&lt;路径&gt;,"t_hold":T_h}}}</code>。流程：reset → 校验 env_seed → 改写 move_interval → 逐步按表送动作 → 从 T_h 起复用 <code>hold_extended</code> 的固定关节逻辑悬停到官方上限 → 回执记录 <code>move_interval_applied</code>、<code>t_hold</code>、<code>button_trigger_step</code>（必须为 null）。</li>
+<li>自定种子：沿用 bin_trace_runner／plfull 的 metadata 机制，局号上限为 120。</li>
+<li><code>stop_after_press</code>：<code>button_trigger_step</code> 非空就结束回合。</li>
+</ul>
+<h3>1.2 <code>scripts/interpret/run_local.py</code>（SC-W1）</h3>
+<ul>
+<li>放行 <code>stopcube_mode=speed_donor</code>（需要 <code>stopcube_config</code>），以及 <code>stop_after_press</code>（布尔，只能与 normal 同用）。plfull 的自定种子路径开放给 StopCube。</li>
+</ul>
+<h3>1.3 <code>scripts/interpret/sc_speed_prep.py</code>（SC-W2，新）</h3>
+<ul>
+<li><code>pool --out O</code>：从 2500000 起扫种子，用 <code>task_params</code> 算 (M,N)，每个 (M,N) 格取前 6 个，写 <code>sc-pool.json</code>，输出 <code>SC_POOL</code>。</li>
+<li><code>specs --out O/&lt;M&gt; --model &lt;motion|wan&gt; --phase &lt;n|donor|iv&gt; --gl-jobs 8 --gl-per-job 2 …</code>：参数沿用 <code>sp_swap_prep specs</code>。n 阶段每个接收局出 N 和 S；donor 阶段出 3 个录制回合；iv 阶段出 3 个 R 回合（<code>ablate=motion_swap_exact:&lt;donor_dir&gt;</code>，swap_map 指向合成键）。</li>
+<li><code>donors --out O/&lt;M&gt;</code>：由 N 的动作日志与子目标步生成回放表和 T_h；录制完成后把 <code>--record-motion</code> 产物改名为合成键文件，并做 <code>REPLAY_EQ</code>。</li>
+</ul>
+<h3>1.4 <code>scripts/interpret/analysis/sc_speed_readout.py</code>（SC-W2，新）</h3>
+<ul>
+<li>读取各回合回执，计算 press、成功、Δ、Δ*、β（带截距的 OLS，同时报过原点的版本）、按 (M→M′) 格的均值、按下率，接收局 bootstrap 2000 次，写 <code>readout.md/json</code> 和全部判定行。</li>
+</ul>
+<h3>1.5 <code>scripts/interpret/test_sc_speed.py</code>（SC-W2，新）</h3>
+<ul><li>覆盖 Δ* 表、池均衡、供体键唯一、回放表与 env_steps 对齐、读数合成样例（β=1 与 β=0 两种）、判定行格式。</li></ul>
+
+<h2>二 子代理分配表</h2>
+<table>
+<tr><th>编号</th><th>目标</th><th>可写文件</th><th>禁触</th><th>接口契约 / 依赖</th><th>合并顺序</th><th>验收</th><th>资源</th></tr>
+<tr><td>SC-W1</td><td>录制模式、自定种子、按下即停、spec 放行</td><td><code>scripts/interpret/stopcube_runner.py</code>、<code>scripts/interpret/run_local.py</code>、<code>scripts/interpret/test_stopcube_runner.py</code></td><td><code>third_party/</code>、服务端、其他 runner</td><td>actions.npz 与 speed_donor 配置格式见 1.1；无依赖</td><td>1</td><td><code>uv run python -m pytest scripts/interpret/test_stopcube_runner.py scripts/interpret/test_run_local*.py -q</code> 全过；worktree 内 CPU 运行</td><td>无 GPU</td></tr>
+<tr><td>SC-W2</td><td>准备、读数、单测</td><td><code>scripts/interpret/sc_speed_prep.py</code>、<code>scripts/interpret/analysis/sc_speed_readout.py</code>、<code>scripts/interpret/test_sc_speed.py</code></td><td>同上，另加 W1 的文件</td><td>按 1.1 的格式消费；可与 W1 并行</td><td>2</td><td><code>uv run python -m pytest scripts/interpret/test_sc_speed.py -q</code> 全过</td><td>无 GPU</td></tr>
+<tr><td>主会话</td><td>release、冒烟、起跑、监听、读数、留档</td><td><code>docs/evaluation-doc/sc-speed-1110/</code>、<code>docs/handoff/current.json</code></td><td>—</td><td>依赖 W1、W2 合入</td><td>—</td><td>阶段 1–4 判据</td><td>8×A40 + aspen 2 卡</td></tr>
+</table>
+
+<h2>三 闸门总表</h2>
+<p>除第一部分 §5 的判定行外，另有：<code>GL_RELEASE=PASS</code>（release 文件数与 <code>.release_sha</code> 严格比对）、<code>ENV_CHECK=PASS</code>（env.sh 用完整 sha）、<code>PRE_MERGE_REVIEW</code>／<code>POST_MERGE_REVIEW</code> 每块各一行。</p>
+
+<h2>四 Runbook</h2>
+<pre>O=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/sc-speed-1110
+uv run python -m scripts.interpret.sc_speed_prep pool --out $O
+uv run python -m scripts.interpret.sc_speed_prep specs --out $O/motion --model motion --phase n  --gl-jobs 8 --gl-per-job 2 --gl-release &lt;release&gt; …
+# 每个占位只起一个作业步、内含两条通道：
+srun --jobid=&lt;hold&gt; --overlap --exact --ntasks=1 --cpus-per-task=4 --gpu_cmode=shared bash holdN-&lt;tag&gt;.sh
+uv run python -m scripts.interpret.sc_speed_prep donors --out $O/motion          # 生成回放表
+uv run python -m scripts.interpret.sc_speed_prep specs  --out $O/motion --model motion --phase donor …
+uv run python -m scripts.interpret.sc_speed_prep donors --out $O/motion --finalize   # 改名合成键并做 REPLAY_EQ
+uv run python -m scripts.interpret.sc_speed_prep specs  --out $O/motion --model motion --phase iv …
+uv run python -m scripts.interpret.analysis.sc_speed_readout --root $O/motion</pre>
+<p>每份通道日志各挂一个 Monitor，过滤词为 <code>EXIT_CODE=|Traceback|Error|out of memory|no supported devices|address already in use|Killed</code>。占位提交按 <code>greatlakes.md</code> 标准块（chaijy2／spgpu，1 GPU、4 CPU、64G、48h），每个 JobID 当场登记。</p>
+
+<h2>五 风险登记</h2>
+<table>
+<tr><th>风险</th><th>处置</th></tr>
+<tr><td>回放在 M′=M 时达不到阈值（GPU 非确定性导致 token 差异）</td><td>如实记录 maxabs；Δ 统一以 R_same 为参照，报 R_fast/slow − R_same</td></tr>
+<tr><td>部分接收局 N 回合从未就位或从未按下</td><td>按 §3.2 的 T_h 兜底规则处理；这类局 Δ 不可算，单独计数</td></tr>
+<tr><td>同卡两个通道 OOM、撞端口</td><td>沿用 45 秒错开与每占位一个作业步</td></tr>
+<tr><td>GL 排队慢</td><td>aspen 2 卡先跑 MotionMem 的 n 阶段</td></tr>
+</table>
+
+<h2>六 盲区诚实清单</h2>
+<ul>
+<li>速度和相位是混在一起的（K10）。纯速度的版本要对帧做时间重采样后再编码，本计划不做。</li>
+<li>只测了三个离散的 M′，β 是在这三档上拟合出来的。</li>
+<li>每格 6 局，单格的均值很宽，主结论靠全体的 β。</li>
+<li>帧仍显示真实速度：β 小不等于模型没读 token，可能是帧信息占了上风。</li>
+</ul>
+
+<h2>七 留档与 commit 纪律</h2>
+<ul>
+<li>留档放在 <code>docs/evaluation-doc/sc-speed-1110/{launch.md,result.md,records/}</code>，并在 README 索引加一行。注意力不归档，归档 readout 与 pool。</li>
+<li>合并提交按 <code>commitV4.5.&lt;n&gt;</code> 依次编号，body 按第 11 条的六项写；所有 commit 立即 push。</li>
+<li>状态机：开工令一条 <code>kind: go</code> 的小提交，<code>planned→running</code>、收尾 <code>done</code> 各一条 <code>handoff:</code> 提交。</li>
+</ul>
+</body>
+</html>
