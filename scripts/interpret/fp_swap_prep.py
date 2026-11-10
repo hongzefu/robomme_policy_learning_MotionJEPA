@@ -26,6 +26,25 @@
         合成供体键 npz（<M>/donors_fp/<task>_ep<10000000+recv×100+slot>.npz），A/B 按交换段内顺序对齐并改写起点。
         打印 DONOR_FILES、DONOR_DISTINCT（改写前源编码）、FP_RECV；再生成 multieq、swap、seeds 三阶段 spec。
 
+逐子目标位置扩展（计划 1109-subgoal-position-swap-all-lengths-plan.html〇′ F2、F5、F7、F8、F10、F11，SP-W2）：
+  scan  另加 --difficulties easy,medium,hard（缺省 easy,medium，旧行为不变；按 seed 序号轮转）与 --tag（缺省：难度非缺省时
+        取难度名拼接）；带 tag 时写 <O>/scan_<T>_<tag>.json，元数据目录 <O>/scan_meta/<T>-<tag>/。
+        F2 补扫：VUS --seed0 2050000、BUS --seed0 2150000 各 --count 150 --difficulties hard。
+  pool  --by-swap-times [--per-n 30]：读 <O>/scan_<T>.json 与全部 <O>/scan_<T>_*.json，每任务按 swap_times n=1/2/3 各取
+        per-n 局（SWAP_TIMES_SOURCES：VR 全部取 easy/medium；VUS/BUS 的 n=1、2 取 easy/medium，n=3 取 hard），格内按
+        （难度，moved）轮转。判定行 FP_POOL 另带 bins=n1:..,n2:..,n3:..。不加该开关时与旧模式完全相同（只读 scan_<T>.json）。
+  specs 路径根参数（F5）：--main、--store、--bench-src、--policy-python、--sim-python、--stage2-python、--mmevla-store、
+        --log-dir、--release（运行树是 git archive 解出的 release 目录，env.sh 不查 git，改查目录名与 commit 前缀一致）、
+        --workers 名=GPU,…；预设 --gl-store <GLSTORE> 一次设好 store、三个解释器（<GLSTORE>/envs/{policy,official-sim,
+        stage2}/bin/python）、MMEVLA_V1_STORE、--release、16 个 worker gl00..gl15（GPU 0），bench_src 缺省取
+        <run-tree>/third_party/robomme_benchmark/src。spec 里以旧 STORE/MAIN 开头的路径整体改根。路径根与 worker 表写进
+        plan.json，donors 沿用。全部缺省时与旧行为逐字节一致。
+  donors --by-k：按第 k 次交换的窗口 W_k（交换帧区间 [start_k+1, end_k+1]，与 segment_starts 窗口真实帧闭区间相交，F8）
+        给每个 (接收局, k≤n) 生成 Bsame_k（同 n 另一局的 W_k，default_rng(0) 每 (任务,k) 一个，按 W_k 内顺序对齐、沿用补齐
+        规则 F7）与 Z_k（零）；合成键 10000000+recv×100+slot，slot=20+2k+组（Bsame=0、Z=1）。写 kswap（seed 42）、
+        kseeds（每任务 default_rng(0) 抽 KSEED_PER_TASK 局，seed 1）两阶段 spec；同 (k,组) 的接收局装进同一 spec（F11）。
+        打印 FP_K_GROUPS、DONOR_FILES；不动旧组的行。
+
 trace 与回执字段（FP-W1 提供）只在 receipt_fields、trace_row_fields 两个函数里读，合并后按实际字段名在这里改。
 窗口与帧号（F1）：帧 k = 第 k 步之后的观测（帧 0 为 reset）；示范窗起点 s=0,32,… 满足 s+16 ≤ es−1，真实帧
 [s, min(s+32, es−1)]；执行窗起点 es+32u，真实帧 [f, f+32]，最多到 es+MAX_STEPS；交换帧区间 [第一次 start+1, 最后 end+1]
@@ -81,7 +100,25 @@ SEEDCHECK_SEEDS = (1, 2)
 MULTIEQ_GROUPS = ("S0", "A", "B", "Z")
 MULTIEQ_PER_GROUP = 3
 DONOR_DIR = "donors_fp"
-STAGES = ("smoke", "n", "multieq", "swap", "seeds")
+BASE_STAGES = ("smoke", "n", "multieq", "swap", "seeds")
+K_STAGES = ("kswap", "kseeds")
+STAGES = BASE_STAGES + K_STAGES
+# ---- 按第 k 次交换（SP-W2）
+K_GROUPS = ("Bsame_k", "Z_k")
+K_GROUP_CODE = {"Bsame_k": 0, "Z_k": 1}
+K_SLOT_BASE = 20                            # slot = 20 + 2k + 组号；旧 slot 1–8 不冲突
+K_MAX = 3
+K_SLOTS = {f"{g}{k}": K_SLOT_BASE + 2 * k + c for k in range(1, K_MAX + 1) for g, c in K_GROUP_CODE.items()}
+KSEED_PER_TASK = 20
+KSEED_SEED = 1
+PER_N = 30
+SWAP_TIMES_NS = (1, 2, 3)
+SWAP_TIMES_SOURCES = {                      # 〇′ F2：VR 不用 hard；VUS/BUS 的 n=3 只在 hard
+    "VideoRepick": {1: ("easy", "medium"), 2: ("easy", "medium"), 3: ("easy", "medium")},
+    "VideoUnmaskSwap": {1: ("easy", "medium"), 2: ("easy", "medium"), 3: ("hard",)},
+    "ButtonUnmaskSwap": {1: ("easy", "medium"), 2: ("easy", "medium"), 3: ("hard",)},
+}
+GL_WORKERS = tuple(f"gl{i:02d}" for i in range(16))   # 8 个占位 × 每卡 2 worker；srun 内可见 GPU 为 0
 RUN_TREE = STORE / "worktrees/fp-swap-run"
 LOG_DIR = STORE / "logs/fp-swap-1110"
 OFFICIAL_META = BENCH_SRC / "robomme/env_metadata"
@@ -111,7 +148,12 @@ def split_key(key):
 
 
 def synthetic_ep(recv_ep, slot):
-    return SYN_BASE + int(recv_ep) * 100 + SLOTS[slot]
+    code = SLOTS[slot] if slot in SLOTS else K_SLOTS[slot]
+    return SYN_BASE + int(recv_ep) * 100 + code
+
+
+def k_slot(group, k):
+    return f"{group}{int(k)}"
 
 
 # ---------------------------------------------------------------- 交换序列组合
@@ -128,6 +170,45 @@ def swap_outcome(n_objects, target_index, schedule):
     t = int(target_index)
     blind = slot.index(t)
     return slot[t] != t, blind
+
+
+def ordered_schedule(schedule):
+    """交换按时间先后（start、end）排序；第 k 次交换 = 排序后第 k 条（1 起）。"""
+    return sorted((list(x) for x in schedule), key=lambda x: (int(x[2]), int(x[3])))
+
+
+def _slots_after(n_objects, schedule):
+    slot = list(range(int(n_objects)))
+    for item in schedule:
+        a, b = int(item[0]), int(item[1])
+        if not (0 <= a < n_objects and 0 <= b < n_objects) or a == b:
+            raise ValueError(f"交换对下标非法: {item}（物体数 {n_objects}）")
+        slot[a], slot[b] = slot[b], slot[a]
+    return slot
+
+
+def swap_blind_k(n_objects, target_index, schedule, k):
+    """若第 k 次交换没发生（其余交换照常）时目标所在的物体：按「漏掉第 k 次」的序列组合出目标的信念槽位，
+    返回实际（全部交换后）占着该槽位的物体下标。漏掉全部交换时退化为 swap_blind_index。"""
+    sched = ordered_schedule(schedule)
+    k = int(k)
+    if not 1 <= k <= len(sched):
+        raise ValueError(f"k={k} 超出交换次数 {len(sched)}")
+    actual = _slots_after(n_objects, sched)
+    belief = _slots_after(n_objects, sched[:k - 1] + sched[k:])[int(target_index)]
+    return actual.index(belief)
+
+
+def classify_pick_k(first_pick, target_index, blind_k):
+    """correct / swap_blind_k（blind_k ≠ 目标时才可能）/ other / none。"""
+    if first_pick is None:
+        return "none"
+    idx = int(first_pick["index"])
+    if idx == int(target_index):
+        return "correct"
+    if blind_k is not None and int(blind_k) != int(target_index) and idx == int(blind_k):
+        return "swap_blind_k"
+    return "other"
 
 
 # ---------------------------------------------------------------- 窗口（F1）
@@ -191,6 +272,28 @@ def swap_windows(task, es, schedule, offset=0, max_steps=MAX_STEPS):
         if a <= hi and b >= lo:
             out.append(f)
     return out
+
+
+def swap_frames_k(schedule, k, offset=0):
+    """第 k 次交换的帧区间 [start_k+1, end_k+1]（闭区间）。"""
+    sched = ordered_schedule(schedule)
+    if not 1 <= int(k) <= len(sched):
+        return None
+    item = sched[int(k) - 1]
+    return int(item[2]) + 1 + offset, int(item[3]) + 1 + offset
+
+
+def windows_in_span(task, es, span, max_steps=MAX_STEPS):
+    """segment_starts 中真实帧闭区间与 span（闭区间）相交的起点（升序，〇′ F8）。"""
+    if span is None:
+        return []
+    lo, hi = span
+    return [f for f in segment_starts(task, es, max_steps) if real_range(f, es)[0] <= hi and real_range(f, es)[1] >= lo]
+
+
+def swap_windows_k(task, es, schedule, k, offset=0, max_steps=MAX_STEPS):
+    """W_k：第 k 次交换帧区间相交的窗口起点。"""
+    return windows_in_span(task, es, swap_frames_k(schedule, k, offset), max_steps)
 
 
 def s0_start(task, es, schedule, offset=0, max_steps=MAX_STEPS):
@@ -316,8 +419,11 @@ def episode_labels(task, rf, n_objects=None):
     n_obj = n_objects if n_objects is not None else (max([max(x[0], x[1]) for x in sched] + [rf["target_index"]]) + 1)
     moved, blind = swap_outcome(n_obj, rf["target_index"], sched)
     W = swap_windows(task, es, sched, offset)
+    ks = range(1, len(sched) + 1)
     return {"moved": bool(moved), "swap_blind_index": int(blind), "W": W, "S0": s0_start(task, es, sched, offset),
-            "w_end": last_window_end(W, es), "offset": offset, "es": es}
+            "w_end": last_window_end(W, es), "offset": offset, "es": es, "n_objects": int(n_obj),
+            "Wk": {k: swap_windows_k(task, es, sched, k, offset) for k in ks},
+            "blind_k": {k: swap_blind_k(n_obj, rf["target_index"], sched, k) for k in ks}}
 
 
 def classify_pick(first_pick, target_index, swap_blind_index, moved):
@@ -349,14 +455,35 @@ def pick_status(task, rf, labels, first_row):
 
 
 # ---------------------------------------------------------------- scan（official-sim）
-def scan_seeds(task, seed0, count):
-    return [(i, int(seed0) + SEED_STEP * i, DIFFICULTIES[i % len(DIFFICULTIES)]) for i in range(int(count))]
+def scan_seeds(task, seed0, count, difficulties=DIFFICULTIES):
+    diffs = tuple(difficulties)
+    return [(i, int(seed0) + SEED_STEP * i, diffs[i % len(diffs)]) for i in range(int(count))]
 
 
-def split_metadata_seeds(task):
+def parse_difficulties(text):
+    diffs = tuple(d.strip() for d in str(text).split(",") if d.strip())
+    bad = [d for d in diffs if d not in ("easy", "medium", "hard")]
+    if not diffs or bad:
+        raise SystemExit(f"--difficulties 只能取 easy/medium/hard 的逗号列表：{text}")
+    return diffs
+
+
+def scan_tag(difficulties, tag=None):
+    """扫描输出后缀：显式 tag 优先；难度为缺省 easy,medium 时无后缀（旧文件名）；否则难度名拼接。"""
+    if tag:
+        return str(tag)
+    return None if tuple(difficulties) == DIFFICULTIES else "-".join(difficulties)
+
+
+def scan_file(out, task, tag=None):
+    return Path(out) / (f"scan_{task}.json" if not tag else f"scan_{task}_{tag}.json")
+
+
+def split_metadata_seeds(task, official_meta=None):
     seeds = set()
+    root = Path(official_meta) if official_meta else OFFICIAL_META
     for ds in ("train", "test", "val"):
-        path = OFFICIAL_META / ds / meta_name(task)
+        path = root / ds / meta_name(task)
         if path.is_file():
             seeds |= {int(r["seed"]) for r in json.loads(path.read_text())["records"]}
     return seeds
@@ -463,12 +590,15 @@ def scan_verdict(task, entries):
 def cmd_scan(args):
     out = Path(args.out).resolve()
     task = args.task
-    items = scan_seeds(task, args.seed0, args.count)
-    banned = split_metadata_seeds(task)
+    diffs = parse_difficulties(args.difficulties)
+    tag = scan_tag(diffs, args.tag)
+    items = scan_seeds(task, args.seed0, args.count, diffs)
+    banned = split_metadata_seeds(task, official_meta(args))
     keep = [it for it in items if it[1] not in banned]
-    meta_dir = out / "scan_meta" / task
+    sub = task if not tag else f"{task}-{tag}"
+    meta_dir = out / "scan_meta" / sub
     P._write_once(meta_dir / meta_name(task), P._json_bytes(scan_metadata(task, keep)), args.overwrite)
-    video_dir = out / "scan_tmp" / task
+    video_dir = out / "scan_tmp" / sub
     video_dir.mkdir(parents=True, exist_ok=True)
     workers = max(1, int(args.workers))
     chunks = [keep[i::workers] for i in range(workers)]
@@ -484,8 +614,10 @@ def cmd_scan(args):
             print(f"SCAN_ERROR seed={e['env_seed']} {e['reason']}", flush=True)
     line = scan_verdict(task, entries)
     payload = {"task": task, "seed0": int(args.seed0), "step": SEED_STEP, "count": int(args.count),
-               "difficulties": list(DIFFICULTIES), "metadata_dir": str(meta_dir), "verdict": line, "entries": entries}
-    P._write_json(out / f"scan_{task}.json", payload)
+               "difficulties": list(diffs), "metadata_dir": str(meta_dir), "verdict": line, "entries": entries}
+    if tag:
+        payload["tag"] = tag
+    P._write_json(scan_file(out, task, tag), payload)
     print(line, flush=True)
     return 0 if line.startswith("FP_SCAN=PASS") else 1
 
@@ -516,6 +648,51 @@ def stratified_pick(entries, per_task):
     counts = {f"{k[0]}|n{k[1]}|{'moved' if k[2] else 'stay'}": pos[k] for k in order}
     avail = {f"{k[0]}|n{k[1]}|{'moved' if k[2] else 'stay'}": len(cells[k]) for k in order}
     return sorted(picked, key=lambda e: e["env_seed"]), counts, avail
+
+
+def official_meta(args):
+    bench = getattr(args, "bench_src", None)
+    return Path(bench) / "robomme/env_metadata" if bench else None
+
+
+def load_scan_entries(out, task, all_scans=False):
+    """读 <O>/scan_<T>.json（all_scans 时另读全部 scan_<T>_*.json）。返回 (全部条目, 可用条目, 文件名列表)。
+    同一 env_seed 出现在多份扫描里：内容相同只留一份，不同则报错（避免两份难度口径混进同一局）。"""
+    out = Path(out)
+    files = [scan_file(out, task)] if scan_file(out, task).is_file() or not all_scans else []
+    if all_scans:
+        files += sorted(out.glob(f"scan_{task}_*.json"))
+    if not files:
+        raise SystemExit(f"{out} 下没有 {task} 的扫描文件")
+    entries, usable, seen = [], [], {}
+    for path in files:
+        for e in P._read_json(path)["entries"]:
+            entries.append(e)
+            if e["status"] != "ok":
+                continue
+            prev = seen.get(int(e["env_seed"]))
+            if prev is not None:
+                if {k: v for k, v in prev.items() if k != "scan_index"} != {k: v for k, v in e.items() if k != "scan_index"}:
+                    raise SystemExit(f"{task} env_seed={e['env_seed']} 在多份扫描里内容不同")
+                continue
+            seen[int(e["env_seed"])] = e
+            usable.append(e)
+    return entries, usable, [p.name for p in files]
+
+
+def by_swap_times_pick(task, entries, per_n=PER_N, sources=None):
+    """每个 n ∈ {1,2,3} 只从 SWAP_TIMES_SOURCES[task][n] 的难度里取 per_n 局，格内（难度，n，moved）轮转。
+    返回 (picked 按 env_seed 升序, counts 格→取数, avail 格→可用数, bins n→取数)。"""
+    sources = (sources or SWAP_TIMES_SOURCES)[task]
+    picked, counts, avail, bins = [], {}, {}, {}
+    for n in SWAP_TIMES_NS:
+        mine = [e for e in entries if int(e["swap_times"]) == n and e["difficulty"] in sources[n]]
+        got, c, a = stratified_pick(mine, per_n)
+        picked += got
+        counts.update(c)
+        avail.update(a)
+        bins[n] = len(got)
+    return sorted(picked, key=lambda e: e["env_seed"]), counts, avail, bins
 
 
 def pool_episodes(task, picked):
@@ -551,24 +728,35 @@ def eval_episode_limit(path=EVAL_PY):
 
 def cmd_pool(args):
     out = Path(args.out).resolve()
-    per_task = int(args.per_task)
+    by_n = bool(getattr(args, "by_swap_times", False))
+    per_n = int(getattr(args, "per_n", PER_N))
+    per_task = per_n * len(SWAP_TIMES_NS) if by_n else int(args.per_task)
     all_eps, tasks_info, lines, ok_all = [], {}, [], True
     meta_shas = {}
     for task in TASKS:
-        scan = P._read_json(out / f"scan_{task}.json")
-        usable = [e for e in scan["entries"] if e["status"] == "ok"]
-        picked, counts, avail = stratified_pick(usable, per_task)
+        if by_n:
+            scanned, usable, files = load_scan_entries(out, task, all_scans=True)
+            picked, counts, avail, bins = by_swap_times_pick(task, usable, per_n)
+        else:
+            scan = P._read_json(out / f"scan_{task}.json")
+            scanned, files, bins = scan["entries"], [f"scan_{task}.json"], None
+            usable = [e for e in scan["entries"] if e["status"] == "ok"]
+            picked, counts, avail = stratified_pick(usable, per_task)
         eps = pool_episodes(task, picked)
-        banned = split_metadata_seeds(task)
+        banned = split_metadata_seeds(task, official_meta(args))
         overlap = sorted({e["env_seed"] for e in eps} & banned)
         meta_bytes = P._json_bytes(metadata_payload(task, eps))
         meta_shas[meta_name(task)] = hashlib.sha256(meta_bytes).hexdigest()
         P._write_once(out / "metadata" / meta_name(task), meta_bytes, args.overwrite)
-        ok = len(eps) == per_task and not overlap
+        ok = len(eps) == per_task and not overlap and (bins is None or all(v == per_n for v in bins.values()))
         ok_all &= ok
-        tasks_info[task] = {"scanned": len(scan["entries"]), "usable": len(usable), "cells_taken": counts,
+        tasks_info[task] = {"scanned": len(scanned), "usable": len(usable), "cells_taken": counts,
                             "cells_available": avail, "overlap": overlap}
-        lines.append(f"FP_POOL={'PASS' if ok else 'FAIL'} task={task} eps={len(eps)} cells={len(counts)} overlap={len(overlap)}")
+        line = f"FP_POOL={'PASS' if ok else 'FAIL'} task={task} eps={len(eps)} cells={len(counts)} overlap={len(overlap)}"
+        if by_n:
+            tasks_info[task].update(scan_files=files, bins={str(k): v for k, v in bins.items()})
+            line += " bins=" + ",".join(f"n{k}:{v}" for k, v in bins.items())
+        lines.append(line)
         all_eps.extend(eps)
     limit = eval_episode_limit()
     limit_ok = limit is not None and per_task <= limit
@@ -577,6 +765,9 @@ def cmd_pool(args):
     P._write_once(out / "manifest.json", P._json_bytes(manifest), args.overwrite)
     pool = {"tasks": tasks_info, "per_task": per_task, "metadata_sha256": meta_shas, "manifest_seal": manifest["sha256"],
             "numbering": "每任务局号按 env_seed 升序 0..per_task−1", "episodes": all_eps}
+    if by_n:
+        pool.update(mode="by_swap_times", per_n=per_n,
+                    sources={t: {str(n): list(d) for n, d in v.items()} for t, v in SWAP_TIMES_SOURCES.items()})
     P._write_once(out / "pool.json", P._json_bytes(pool), args.overwrite)
     for line in lines:
         print(line, flush=True)
@@ -616,12 +807,122 @@ done
 """
 
 
-class Builder(P.Builder):
-    """沿用 pl_full_prep.Builder；清单为多任务自建 metadata，spec 改用 bin_trace + 拿起即停。"""
+ENV_GIT_CHECK = ('test "$(git rev-parse HEAD)" = {commit} || {{ echo "ENV_CHECK=FAIL reason=head"; return 2; }}\n'
+                 'test -z "$(git status --porcelain)" || {{ echo "ENV_CHECK=FAIL reason=dirty"; return 2; }}\n')
+assert ENV_GIT_CHECK in ENV_TEMPLATE and "MMEVLA_V1_STORE={store}" in ENV_TEMPLATE
+# F5：release 目录（git archive 解出，无 .git）不查 git；改查目录名与 commit 互为前缀、且入口脚本在。
+ENV_RELEASE_CHECK = ('b=$(basename "$T"); case "{commit}" in "$b"*) ;; *) case "$b" in {commit}*) ;; '
+                     '*) echo "ENV_CHECK=FAIL reason=release_name"; return 2;; esac;; esac\n'
+                     'test -f "$T/scripts/interpret/run_local.py" || {{ echo "ENV_CHECK=FAIL reason=release_files"; return 2; }}\n')
 
-    def __init__(self, *a, meta_shas=None, **kw):
+
+def default_roots():
+    """旧行为的路径根（aspen 主检出）。"""
+    return {"main": str(P.MAIN), "store": str(STORE), "bench_src": str(BENCH_SRC),
+            "policy_python": SPEC_TEMPLATE["policy_python"], "sim_python": SPEC_TEMPLATE["sim_python"],
+            "stage2_python": SPEC_TEMPLATE["stage2_python"], "mmevla_store": str(STORE), "log_dir": str(LOG_DIR),
+            "release": False}
+
+
+def resolve_roots(args):
+    """命令行 → 路径根。--gl-store 是预设：store、三个解释器、MMEVLA_V1_STORE、release；bench_src 缺省取
+    <run-tree>/third_party/robomme_benchmark/src。显式参数优先于预设。"""
+    roots = default_roots()
+    gl = getattr(args, "gl_store", None)
+    store = getattr(args, "store", None) or gl
+    if store:
+        roots.update(store=str(store), mmevla_store=str(store), log_dir=str(Path(store) / "logs/fp-swap-1110"))
+    if gl:
+        g = Path(gl)
+        roots.update(policy_python=str(g / "envs/policy/bin/python"), sim_python=str(g / "envs/official-sim/bin/python"),
+                     stage2_python=str(g / "envs/stage2/bin/python"), release=True,
+                     bench_src=str(Path(args.run_tree) / "third_party/robomme_benchmark/src"))
+    for key in ("main", "bench_src", "policy_python", "sim_python", "stage2_python", "mmevla_store", "log_dir"):
+        value = getattr(args, key, None)
+        if value:
+            roots[key] = str(value)
+    if getattr(args, "release", False):
+        roots["release"] = True
+    return roots
+
+
+def parse_workers(text, gl=False):
+    """'名=GPU,…' → (写出顺序, 轮转顺序, 名→GPU)。缺省为旧 4 worker（轮转两卡交替）；--gl-store 缺省 gl00..gl15。"""
+    if not text:
+        if gl:
+            return list(GL_WORKERS), list(GL_WORKERS), {w: "0" for w in GL_WORKERS}
+        return list(P.WORKERS), list(P.ASSIGN_ORDER), dict(P.WORKER_CUDA)
+    cuda = {}
+    for part in str(text).split(","):
+        name, _, gpu = part.strip().partition("=")
+        if not name or not gpu or name in cuda or not re.fullmatch(r"[A-Za-z0-9_]+", name):
+            raise SystemExit(f"--workers 格式为 名=GPU,…（名只含字母数字下划线、不重复）：{text}")
+        cuda[name] = gpu
+    return list(cuda), list(cuda), cuda
+
+
+def reroot(value, roots):
+    """以旧 STORE / MAIN 开头的路径换成新根（STORE 优先，它在 MAIN 之下）。"""
+    if not isinstance(value, str):
+        return value
+    for old, key in ((str(STORE), "store"), (str(P.MAIN), "main")):
+        if roots[key] != old and (value == old or value.startswith(old + "/")):
+            return roots[key] + value[len(old):]
+    return value
+
+
+def render_env(roots, frac, run_tree, commit, out):
+    text = ENV_TEMPLATE.replace("MMEVLA_V1_STORE={store}", "MMEVLA_V1_STORE={mmevla}")
+    if roots.get("release"):
+        text = text.replace(ENV_GIT_CHECK, ENV_RELEASE_CHECK)
+    return text.format(frac=frac, run_tree=run_tree, commit=commit, store=roots["store"], bench=roots["bench_src"],
+                       out=out, py=roots["policy_python"], sim=roots["sim_python"], mmevla=roots["mmevla_store"])
+
+
+class Builder(P.Builder):
+    """沿用 pl_full_prep.Builder；清单为多任务自建 metadata，spec 改用 bin_trace + 拿起即停。
+    roots / workers 缺省时与旧行为一致；给出时 spec 路径改根、worker 与 GPU 用自定义表。"""
+
+    def __init__(self, *a, meta_shas=None, roots=None, workers=None, **kw):
         super().__init__(*a, **kw)
         self.meta_shas = dict(meta_shas or {})
+        self.roots = dict(roots or default_roots())
+        order, assign, cuda = workers or (list(P.WORKERS), list(P.ASSIGN_ORDER), dict(P.WORKER_CUDA))
+        self.workers, self.assign_order, self.worker_cuda = list(order), list(assign), dict(cuda)
+
+    def round_robin(self, items):
+        return [(self.assign_order[i % len(self.assign_order)], item) for i, item in enumerate(items)]
+
+    def add_spec(self, name, stage, worker, episodes, *, seed=MAIN_SEED, profile="plfull", ablate="none",
+                 swap_map=None, record=None, manifest=None, chunk=P.CHUNK, record_dir=None, rows=()):
+        """同 pl_full_prep.Builder.add_spec，GPU 取自 self.worker_cuda。"""
+        if name in self.specs:
+            raise ValueError(f"spec 重名 {name}")
+        if worker not in self.worker_cuda:
+            raise ValueError(f"未知 worker {worker}")
+        run_dir = self.out / "runs" / name
+        spec = P.base_spec(self.model, self.run_tree)
+        spec.update(model_seed=int(seed), cuda=self.worker_cuda[worker], attn_out=str(run_dir / "attn"),
+                    run_root=str(run_dir / "run"), xla_mem_fraction=self.frac,
+                    manifest=str(self.out / "manifests" / f"{name}.json"), ablate=ablate)
+        if profile == "plfull":
+            spec.update(profile="plfull", plfull_metadata_dir=str(self.meta_dir))
+        if swap_map:
+            spec["swap_map"] = dict(swap_map)
+        if record:
+            spec["record_motion"] = str(record)
+        if manifest is None:
+            manifest = manifest_for(episodes, self.meta_shas, chunk=chunk)
+        self.specs[name] = (spec, manifest, stage, worker)
+        self.queue.setdefault((stage, worker), []).append(
+            f"run_spec {stage} {name} {shlex.quote(str(self.out / 'specs' / f'{name}.json'))}\n")
+        for row in rows:
+            row = dict(row)
+            row.update(stage=stage, worker=worker, cuda=self.worker_cuda[worker], seed=int(seed), spec=name,
+                       spec_path=str(self.out / "specs" / f"{name}.json"), attn_out=spec["attn_out"],
+                       run_root=spec["run_root"], record_dir=str(record_dir or self.out / "record"))
+            self.rows.append(row)
+        return spec
 
     def add(self, name, stage, worker, episodes, **kw):
         chunk = kw.pop("chunk", P.CHUNK)
@@ -629,6 +930,10 @@ class Builder(P.Builder):
         spec = self.add_spec(name, stage, worker, episodes, **kw)
         spec.pop("subgoal_trace", None)          # 与 bin_trace 互斥
         spec.update(bin_trace=True, stop_after_first_pick=True)
+        for key in list(spec):
+            spec[key] = reroot(spec[key], self.roots)
+        spec.update(policy_python=self.roots["policy_python"], sim_python=self.roots["sim_python"],
+                    stage2_python=self.roots["stage2_python"])
         return spec
 
     def write(self, stages):
@@ -638,11 +943,11 @@ class Builder(P.Builder):
         written = []
         (self.out / "queues").mkdir(parents=True, exist_ok=True)
         for stage in stages:
-            for worker in P.WORKERS:
+            for worker in self.workers:
                 lines = self.queue.get((stage, worker), [])
                 n_spec = sum(1 for x in lines if x.startswith("run_spec "))
                 path = self.out / "queues" / f"{stage}-{worker}.sh"
-                text = [QUEUE_HEAD.format(stage=stage, worker=worker, cuda=P.WORKER_CUDA[worker], n=n_spec,
+                text = [QUEUE_HEAD.format(stage=stage, worker=worker, cuda=self.worker_cuda[worker], n=n_spec,
                                           env=shlex.quote(str(self.out / "env.sh")), frac=self.frac)]
                 text += lines
                 text.append(QUEUE_TAIL.format(stage=stage, worker=worker, n=n_spec))
@@ -652,13 +957,22 @@ class Builder(P.Builder):
         return written
 
 
-def make_builder(out, model_name, model, run_tree, frac, pool):
+def make_builder(out, model_name, model, run_tree, frac, pool, roots=None, workers=None):
     pool_root = Path(out).parent
     meta_dir = pool_root / "metadata"
     shas = {name: hashlib.sha256((meta_dir / name).read_bytes()).hexdigest() for name in pool["metadata_sha256"]}
     if shas != pool["metadata_sha256"]:
         raise SystemExit("metadata 与 pool.json 记录的 sha256 不符")
-    return Builder(out, pool_root, model_name, model, run_tree, frac, meta_dir, None, meta_shas=shas)
+    return Builder(out, pool_root, model_name, model, run_tree, frac, meta_dir, None, meta_shas=shas, roots=roots,
+                   workers=workers)
+
+
+def plan_workers(plan):
+    """plan.json 记录的 worker 表 → Builder 的 workers 参数；旧 plan 没有该键时为旧 4 worker。"""
+    w = plan.get("workers")
+    if not w:
+        return None
+    return list(w["order"]), list(w["assign"]), dict(w["cuda"])
 
 
 def model_entry(name, overrides=None):
@@ -686,10 +1000,11 @@ def build_stage_specs(b, pool_by_key, stages):
     if "smoke" in stages:
         smoke = out / "smoke"
         eps = smoke_episodes(pool_by_key)
-        b.add("smoke-n", "smoke", "w00", eps, record=smoke / "record", record_dir=smoke / "record",
+        w0 = b.workers[0]
+        b.add("smoke-n", "smoke", w0, eps, record=smoke / "record", record_dir=smoke / "record",
               rows=[n_row(e) for e in eps])
-        b.add_cmd("smoke", "w00", f"\"$py\" -m scripts.interpret.fp_swap_prep donors --out {shlex.quote(str(out))} --smoke")
-        b.add("smoke-zall", "smoke", "w00", eps, ablate=f"motion_swap_exact:{smoke / DONOR_DIR}",
+        b.add_cmd("smoke", w0, f"\"$py\" -m scripts.interpret.fp_swap_prep donors --out {shlex.quote(str(out))} --smoke")
+        b.add("smoke-zall", "smoke", w0, eps, ablate=f"motion_swap_exact:{smoke / DONOR_DIR}",
               swap_map={episode_key(e["task_name"], e["episode_id"]):
                         episode_key(e["task_name"], synthetic_ep(e["episode_id"], "Zall")) for e in eps},
               record_dir=smoke / "record",
@@ -697,9 +1012,9 @@ def build_stage_specs(b, pool_by_key, stages):
     if "n" in stages:
         keys = sorted(pool_by_key, key=lambda k: (TASKS.index(split_key(k)[0]), split_key(k)[1]))
         per_worker = {}
-        for worker, key in P.round_robin(keys):
+        for worker, key in b.round_robin(keys):
             per_worker.setdefault(worker, []).append(key)
-        for worker in P.WORKERS:
+        for worker in b.workers:
             mine = per_worker.get(worker, [])
             for i in range(0, len(mine), P.SPEC_MAX):
                 eps = [pool_by_key[k] for k in mine[i:i + P.SPEC_MAX]]
@@ -723,20 +1038,22 @@ def cmd_specs(args):
     if plan_path.exists() and not args.overwrite:
         raise SystemExit(f"{plan_path} 已存在；确需重写 spec 加 --overwrite（不删任何运行目录）")
     out.mkdir(parents=True, exist_ok=True)
-    b = make_builder(out, args.model, model, args.run_tree, args.frac, pool)
+    roots = resolve_roots(args)
+    workers = parse_workers(args.workers, gl=bool(args.gl_store))
+    b = make_builder(out, args.model, model, args.run_tree, args.frac, pool, roots=roots, workers=workers)
     stages = ("smoke", "n")
     build_stage_specs(b, pool_by_key, stages)
-    (out / "env.sh").write_text(ENV_TEMPLATE.format(frac=args.frac, run_tree=args.run_tree, commit=args.commit,
-                                                    store=STORE, bench=BENCH_SRC, out=out,
-                                                    py=SPEC_TEMPLATE["policy_python"], sim=SPEC_TEMPLATE["sim_python"]))
+    (out / "env.sh").write_text(render_env(roots, args.frac, args.run_tree, args.commit, out))
     launch = out / "launch_stage.sh"
-    launch.write_text(LAUNCH_TEMPLATE.format(out=out, model=args.model, logs=LOG_DIR, workers=" ".join(P.WORKERS),
-                                             stages="|".join(STAGES)))
+    launch.write_text(LAUNCH_TEMPLATE.format(out=out, model=args.model, logs=roots["log_dir"],
+                                             workers=" ".join(b.workers), stages="|".join(STAGES)))
     launch.chmod(0o755)
-    queues = b.write(STAGES)   # multieq/swap/seeds 先写空队列，donors 再覆盖
+    queues = b.write(BASE_STAGES)   # multieq/swap/seeds 先写空队列，donors 再覆盖；kswap/kseeds 由 donors --by-k 写
     plan = {"tasks": list(TASKS), "model": args.model, "commit": args.commit, "run_tree": str(args.run_tree),
             "out": str(out), "pool_root": str(out.parent), "record_dir": str(out / "record"), "model_entry": model,
             "manifest_seal": pool["manifest_seal"], "frac": float(args.frac), "gate": None, "runs": b.rows}
+    if roots != default_roots() or b.workers != list(P.WORKERS):
+        plan.update(roots=roots, workers={"order": b.workers, "assign": b.assign_order, "cuda": b.worker_cuda})
     P._write_json(plan_path, plan)
     counts = {st: sum(1 for r in b.rows if r["stage"] == st) for st in stages}
     print("FPS_SPECS model=" + args.model + " " + " ".join(f"{k}={v}" for k, v in counts.items())
@@ -1074,20 +1391,21 @@ def multieq_runs(swap_runs):
 def build_swap_specs(b, pool_by_key, infos, swap_runs, seed_runs):
     ablate = f"motion_swap_exact:{b.out / DONOR_DIR}"
     chosen = multieq_runs(swap_runs)
-    singles = ("w00", "w01", "w11")
+    multi_w = b.workers[min(2, len(b.workers) - 1)]          # 缺省 4 worker 时 = 旧的 w10；singles = w00、w01、w11
+    singles = [w for w in b.workers if w != multi_w][:3] or [multi_w]
     for i, run in enumerate(chosen):
         b.add(f"multieq-single-{i:02d}", "multieq", singles[i % len(singles)], [pool_by_key[run["recv"]]], ablate=ablate,
               swap_map={run["recv"]: episode_key(run["task"], run["donor"])}, chunk=1,
               rows=[dict(run_row(run, infos), variant="single", pair_index=i)])
     if chosen:
-        b.add("multieq-multi", "multieq", "w10", [pool_by_key[r["recv"]] for r in chosen], ablate=ablate,
+        b.add("multieq-multi", "multieq", multi_w, [pool_by_key[r["recv"]] for r in chosen], ablate=ablate,
               swap_map={r["recv"]: episode_key(r["task"], r["donor"]) for r in chosen},
               rows=[dict(run_row(r, infos), variant="multi", pair_index=i) for i, r in enumerate(chosen)])
     for stage, members in (("swap", [dict(r, seed=MAIN_SEED) for r in swap_runs]), ("seeds", seed_runs)):
         per_worker = {}
-        for worker, run in P.round_robin(members):
+        for worker, run in b.round_robin(members):
             per_worker.setdefault(worker, []).append(run)
-        for worker in P.WORKERS:
+        for worker in b.workers:
             items = [((run["seed"], "none" if run["group"] == "N" else "fp"), run["recv"], run)
                      for run in per_worker.get(worker, [])]
             for i, ((seed, kind), bin_) in enumerate(P.pack(items)):
@@ -1132,6 +1450,8 @@ def cmd_donors(args):
     out = Path(args.out).resolve()
     if args.smoke:
         return cmd_donors_smoke(out)
+    if getattr(args, "by_k", False):
+        return cmd_donors_k(out)
     plan = P._read_json(out / "plan.json")
     pool, pool_by_key = load_pool(out.parent)
     infos = collect_n(plan, out / "record", pool_by_key)
@@ -1165,7 +1485,8 @@ def cmd_donors(args):
         return 1
     recv_keys = sorted({r["recv"] for r in done})
     seed_runs = seedcheck_runs(done, recv_keys)
-    b = make_builder(out, plan["model"], plan["model_entry"], plan["run_tree"], plan.get("frac", XLA_MEM_FRACTION), pool)
+    b = make_builder(out, plan["model"], plan["model_entry"], plan["run_tree"], plan.get("frac", XLA_MEM_FRACTION), pool,
+                     roots=plan.get("roots"), workers=plan_workers(plan))
     build_swap_specs(b, pool_by_key, infos, done, seed_runs)
     b.write(("multieq", "swap", "seeds"))
     plan["runs"] = [r for r in plan["runs"] if r["stage"] not in ("multieq", "swap", "seeds")] + b.rows
@@ -1189,6 +1510,201 @@ def cmd_donors(args):
     return 0 if ok else 1
 
 
+# ---------------------------------------------------------------- donors --by-k：按第 k 次交换（SP-W2）
+def k_windows(info, k):
+    return list(((info.get("labels") or {}).get("Wk") or {}).get(int(k)) or [])
+
+
+def assign_k_groups(infos, task, records=None):
+    """返回 (runs, notes)。接收局 = recv_ok（N 第一次拿起满足 F3/F4 资格）且 n ≥ k、W_k 非空且 W_k 全在录制里；
+    Bsame_k 供体 = 同 swap_times 的另一局（donor_ok、W_k 非空、按 W_k 内顺序对齐可行），每 (任务,k) 一个
+    default_rng(0)，按接收局升序逐局 choice 1 个；Z_k 为零向量。"""
+    mine = {k_: v for k_, v in infos.items() if v["task"] == task and v["status"] == "ok"}
+    recvs = sorted((v for v in mine.values() if v["recv_ok"]), key=lambda v: v["ep"])
+    donors = sorted((v for v in mine.values() if v["donor_ok"]), key=lambda v: v["ep"])
+    runs, notes = [], {"short": [], "infeasible": [], "no_wk": []}
+
+    def has(rec_key, W):
+        rec = (records or {}).get(rec_key) if records is not None else None
+        return records is None or (rec is not None and all(f in rec for f in W))
+
+    def feasible(r, d, k):
+        if records is None:
+            return True
+        rec = records.get(d["key"])
+        return rec is not None and aligned_rows(k_windows(r, k), k_windows(d, k), rec, d["labels"]["es"])[0] is not None
+    for k in range(1, K_MAX + 1):
+        rng = np.random.default_rng(PAIR_SEED)
+        for r in recvs:
+            if int(r["swap_times"]) < k:
+                continue
+            Wr = k_windows(r, k)
+            if not Wr or not has(r["key"], Wr):
+                notes["no_wk"].append(f"{r['key']}:k{k}")
+                continue
+            base = {"recv": r["key"], "task": task, "ep": r["ep"], "k": k, "swap_times": int(r["swap_times"])}
+            cands = [d for d in donors if d["key"] != r["key"] and int(d["swap_times"]) == int(r["swap_times"])
+                     and k_windows(d, k)]
+            ok = [d for d in cands if feasible(r, d, k)]
+            notes["infeasible"] += [f"{r['key']}:k{k}:{d['key']}" for d in cands if d not in ok]
+            if ok:
+                idx = int(rng.choice(len(ok)))
+                runs.append(dict(base, group="Bsame_k", slot=k_slot("Bsame_k", k), donor_src=ok[idx]["key"]))
+            else:
+                notes["short"].append(f"{r['key']}:k{k}")
+            runs.append(dict(base, group="Z_k", slot=k_slot("Z_k", k), donor_src=None))
+    for run in runs:
+        run["donor"] = synthetic_ep(run["ep"], run["slot"])
+        run["fallback"] = False
+    return runs, notes
+
+
+def donor_payload_k(run, infos, records):
+    """一条 kswap 局 → (starts=W_k, embs, meta) 或 (None, None, 问题)。"""
+    r = infos[run["recv"]]
+    W = k_windows(r, run["k"])
+    rec = records[run["recv"]]
+    dim = next(iter(rec.values())).shape[0]
+    meta = {"pad": 0, "src_starts": None}
+    if run["group"] == "Z_k":
+        return W, np.zeros((len(W), dim), np.float32), meta
+    d = infos[run["donor_src"]]
+    embs, pad, srcs, why = aligned_rows(W, k_windows(d, run["k"]), records[run["donor_src"]], d["labels"]["es"])
+    if embs is None:
+        return None, None, why
+    meta.update(pad=pad, src_starts=srcs)
+    return W, embs, meta
+
+
+def write_k_donor_files(folder, runs, infos, records):
+    """写 kswap 合成供体并逐位读回核对；返回 (ok, 判定行, problems, done)。"""
+    folder = Path(folder)
+    problems, done, integrity, pads = [], [], 0, [0, 0]
+    for run in runs:
+        starts, embs, meta = donor_payload_k(run, infos, records)
+        if starts is None:
+            problems.append(f"{run['recv']}:{run['slot']}:{meta}")
+            continue
+        path = folder / record_name(run["task"], run["donor"])
+        P._savez_atomic(path, start_frames=np.asarray(starts, np.int32), embs=embs.astype(np.float32),
+                        counts=np.ones(len(starts), np.int32))
+        with np.load(path) as back:
+            ok = (np.asarray(back["start_frames"]).tolist() == [int(s) for s in starts]
+                  and np.array_equal(np.asarray(back["embs"], np.float32), embs.astype(np.float32)))
+        if not ok:
+            problems.append(f"{run['recv']}:{run['slot']}:readback")
+            integrity += 1
+            continue
+        if meta["pad"]:
+            pads[0] += 1
+            pads[1] += meta["pad"]
+        done.append(dict(run, w_starts=[int(s) for s in starts], pad=meta["pad"], src_starts=meta["src_starts"]))
+    ok = integrity == 0
+    line = (f"DONOR_FILES={'PASS' if ok else 'FAIL'} mode=k files={len(done)} skipped={len(problems)} "
+            f"integrity={integrity} pad_runs={pads[0]} pad_windows={pads[1]}")
+    return ok, line, problems, done
+
+
+def k_run_row(run, infos):
+    row = run_row(run, infos)
+    row.update(k=int(run["k"]), src_starts=run.get("src_starts"))
+    return row
+
+
+def kseed_runs(done):
+    """每任务 default_rng(0) 从 kswap 局里抽 KSEED_PER_TASK 局，seed KSEED_SEED 再跑一次。"""
+    out = []
+    for task in TASKS:
+        pool = [r for r in done if r["task"] == task]
+        if not pool:
+            continue
+        rng = np.random.default_rng(PAIR_SEED)
+        idx = sorted(rng.choice(len(pool), size=min(KSEED_PER_TASK, len(pool)), replace=False).tolist())
+        out += [dict(pool[i], seed=KSEED_SEED) for i in idx]
+    return out
+
+
+def build_k_specs(b, pool_by_key, infos, done, seed_runs):
+    """kswap / kseeds：同 (seed, k, 组) 的接收局装进同一 spec（每 spec ≤ SPEC_MAX、接收局唯一，F11），箱按序轮转给 worker。"""
+    ablate = f"motion_swap_exact:{b.out / DONOR_DIR}"
+    for stage, members in (("kswap", [dict(r, seed=MAIN_SEED) for r in done]), ("kseeds", seed_runs)):
+        items = sorted((((r["seed"], r["k"], r["group"]), r["recv"], r) for r in members),
+                       key=lambda x: (x[0], TASKS.index(x[2]["task"]), x[2]["ep"]))
+        bins = P.pack(items)
+        counter = {}
+        for worker, (key, bin_) in b.round_robin(bins):
+            seed, k, group = key
+            i = counter.get((worker, key), 0)
+            counter[(worker, key)] = i + 1
+            runs = [item[2] for item in bin_]
+            name = f"{stage}-{worker}-{group.replace('_', '')}{k}-s{seed}-{i:02d}"
+            b.add(name, stage, worker, [pool_by_key[r["recv"]] for r in runs], seed=seed, ablate=ablate,
+                  swap_map={r["recv"]: episode_key(r["task"], r["donor"]) for r in runs},
+                  rows=[k_run_row(r, infos) for r in runs])
+
+
+def cmd_donors_k(out):
+    plan = P._read_json(out / "plan.json")
+    pool, pool_by_key = load_pool(out.parent)
+    infos = collect_n(plan, out / "record", pool_by_key)
+    records = {k: load_record(v["record"]) for k, v in infos.items() if v.get("record")}
+    runs, notes = [], {}
+    for task in TASKS:
+        print(recv_line(task, infos), flush=True)
+        r, notes[task] = assign_k_groups(infos, task, records=records)
+        runs += r
+    ok, line, problems, done = write_k_donor_files(out / DONOR_DIR, runs, infos, records)
+    for problem in problems:
+        print(f"DONOR_PROBLEM {problem}", flush=True)
+    print(line, flush=True)
+    for task in TASKS:
+        n = notes[task]
+        per = {}
+        for r in done:
+            if r["task"] == task:
+                per[(r["swap_times"], r["k"], r["group"])] = per.get((r["swap_times"], r["k"], r["group"]), 0) + 1
+        print(f"FP_K_GROUPS task={task} short={len(n['short'])} no_wk={len(n['no_wk'])} infeasible={len(n['infeasible'])} "
+              + " ".join(f"n{a}k{k}{g}={v}" for (a, k, g), v in sorted(per.items())), flush=True)
+    seed_runs = kseed_runs(done)
+    b = make_builder(out, plan["model"], plan["model_entry"], plan["run_tree"], plan.get("frac", XLA_MEM_FRACTION), pool,
+                     roots=plan.get("roots"), workers=plan_workers(plan))
+    build_k_specs(b, pool_by_key, infos, done, seed_runs)
+    b.write(K_STAGES)
+    plan["runs"] = [r for r in plan["runs"] if r["stage"] not in K_STAGES] + b.rows
+    plan["k_recv"] = sorted({r["recv"] for r in done})
+    plan["k_eligibility"] = {k: {"status": v["status"], "recv_ok": v.get("recv_ok"), "donor_ok": v.get("donor_ok"),
+                                 "swap_times": v.get("swap_times"),
+                                 "Wk": {str(kk): w for kk, w in ((v.get("labels") or {}).get("Wk") or {}).items()},
+                                 "blind_k": {str(kk): w for kk, w in ((v.get("labels") or {}).get("blind_k") or {}).items()}}
+                             for k, v in infos.items()}
+    plan["k_group_notes"] = notes
+    plan["k_donor_problems"] = {"count": len(problems), "integrity_ok": bool(ok), "items": problems}
+    P._write_json(out / "plan.json", plan)
+    counts = {}
+    for row in b.rows:
+        counts[f"{row['stage']}:{row['group']}"] = counts.get(f"{row['stage']}:{row['group']}", 0) + 1
+    print("FPS_K_SPECS " + " ".join(f"{k}={v}" for k, v in sorted(counts.items()))
+          + f" total={len(b.rows)} specs={len(b.specs)}", flush=True)
+    print(f"DONORS_K={'PASS' if ok else 'FAIL'} problems={len(problems)} runs={len(done)}", flush=True)
+    return 0 if ok else 1
+
+
+def add_root_args(p):
+    """F5 路径根参数（specs 用；scan / pool 只用 --bench-src 找官方 metadata）。"""
+    p.add_argument("--main", default=None, help="替换 spec 里以旧 MAIN 开头的路径")
+    p.add_argument("--store", default=None, help="v1-store 根（缓存、MMEVLA_V1_STORE 缺省、spec 里旧 STORE 前缀）")
+    p.add_argument("--bench-src", default=None, help="robomme_benchmark/src（PYTHONPATH 与官方 metadata）")
+    p.add_argument("--policy-python", default=None)
+    p.add_argument("--sim-python", default=None)
+    p.add_argument("--stage2-python", default=None)
+    p.add_argument("--mmevla-store", default=None, help="MMEVLA_V1_STORE（缺省 = --store）")
+    p.add_argument("--log-dir", default=None, help="launch_stage.sh 的日志目录（缺省 <store>/logs/fp-swap-1110）")
+    p.add_argument("--release", action="store_true", help="运行树是 release 目录（无 .git），env.sh 改查目录名")
+    p.add_argument("--workers", default=None, help="名=GPU,…（缺省 w00=0,w01=0,w10=1,w11=1；--gl-store 时 gl00..gl15=0）")
+    p.add_argument("--gl-store", default=None,
+                   help="GreatLakes 预设：store/解释器/MMEVLA_V1_STORE 取该目录，--release，16 worker，bench_src 取运行树")
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -1198,10 +1714,16 @@ def main(argv=None):
     p.add_argument("--seed0", type=int, required=True)
     p.add_argument("--count", type=int, default=SCAN_COUNT)
     p.add_argument("--workers", type=int, default=6)
+    p.add_argument("--difficulties", default=",".join(DIFFICULTIES), help="逗号列表，按 seed 序号轮转（缺省 easy,medium）")
+    p.add_argument("--tag", default=None, help="扫描文件后缀（缺省：难度非 easy,medium 时取难度名拼接）")
+    p.add_argument("--bench-src", default=None, help="robomme_benchmark/src（找官方 metadata）")
     p.add_argument("--overwrite", action="store_true")
     p = sub.add_parser("pool")
     p.add_argument("--out", required=True)
     p.add_argument("--per-task", type=int, default=PER_TASK)
+    p.add_argument("--by-swap-times", action="store_true", help="每任务按 n=1/2/3 各取 --per-n 局（读全部扫描文件）")
+    p.add_argument("--per-n", type=int, default=PER_N)
+    p.add_argument("--bench-src", default=None, help="robomme_benchmark/src（找官方 metadata）")
     p.add_argument("--overwrite", action="store_true")
     p = sub.add_parser("specs")
     p.add_argument("--out", required=True, help="<O>/<M>")
@@ -1215,7 +1737,9 @@ def main(argv=None):
     p.add_argument("--target-contract", default=None)
     p.add_argument("--extra", default=None, help="并入 spec 的额外键（JSON 对象）")
     p.add_argument("--overwrite", action="store_true")
+    add_root_args(p)
     p = sub.add_parser("donors")
+    p.add_argument("--by-k", action="store_true", help="按第 k 次交换生成 Bsame_k / Z_k 与 kswap、kseeds 阶段")
     p.add_argument("--out", required=True, help="<O>/<M>")
     p.add_argument("--wan-gate", type=int, nargs="?", const=WAN_GATE_DEFAULT, default=None,
                    help="某任务接收局 < 该值（缺省 8）时该任务只跑 N、Z、S0、Zall")

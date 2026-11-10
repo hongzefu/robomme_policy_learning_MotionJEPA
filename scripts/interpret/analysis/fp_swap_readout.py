@@ -25,7 +25,14 @@ other / none。回执、轨迹字段统一经 fp_swap_prep.receipt_fields、trac
         B=… Zall=… Z_blind=… Rnd_blind=… S0_blind=… A_blind=… B_blind=…
         各组 correct/有效局；*_blind 为 moved 接收局上的 swap_blind/moved 数。PASS 只代表无效局为 0；excluded（回执交换表
         有未确定交换对且无法用扫描补全）不算无效。
-另有信息行 SEED_FIRST_PICK（seed 1、2 与 seed 42 拿起物体是否相同）。
+另有信息行 SEED_FIRST_PICK（seed 1、2 与 seed 42 拿起物体是否相同；kseeds 与 kswap 比）。
+
+按第 k 次交换（计划 1109-subgoal-position-swap-all-lengths-plan.html 五、七节，SP-W2；plan 里有 kswap 行时才输出）：
+  FP_SWAP_K=PASS|FAIL model=<m> task=<t> n=<n> k=<k> runs=<计划局数> invalid=<k> excluded=<k>
+        Bsame_k=correct:a/N,swap_blind_k:b/N,other:c/N,none:d/N Bsame_k_correct_ci=[lo,hi] Bsame_k_blind_ci=[lo,hi]
+        Z_k=…（同上） N_blind=<N 中 swap_times=n 且 blind_k≠目标的局里拿到 blind_k 的数>/<这些局数> k_matters=<x>/<接收局>
+        swap_blind_k = 若第 k 次交换没发生（其余照常）时目标所在物体（fp_swap_prep.swap_blind_k）；CI 为按接收局重采样
+        2000 次的 95% 分位区间（default_rng(0)）。SWAP_SCOPE 对 kswap/kseeds 行按 W_k（plan 行 w_starts）核对。
 """
 from __future__ import annotations
 
@@ -38,7 +45,10 @@ from scripts.interpret.analysis.pl_swap_readout import attempts_for, read_json
 from scripts.interpret import fp_swap_prep as F
 
 MAIN_STAGES = ("n", "swap")
-SCOPE_STAGES = ("smoke", "multieq", "swap", "seeds")
+SCOPE_STAGES = ("smoke", "multieq", "swap", "seeds", "kswap", "kseeds")
+K_CATS = ("correct", "swap_blind_k", "other", "none")
+BOOT_N = 2000
+BOOT_SEED = 0
 FRAMEMAP_MAX_GAP = 40
 CATS = ("correct", "swap_blind", "other", "none")
 BLIND_GROUPS = ("Z", "Rnd", "S0", "A", "B")       # FP_SWAP 行报 moved 接收局 swap_blind/总数
@@ -48,7 +58,7 @@ BLIND_GROUPS = ("Z", "Rnd", "S0", "A", "B")       # FP_SWAP 行报 moved 接收�
 def load_run(row, pool_by_key):
     key = F.episode_key(row["task"], row["ep"])
     out = {k: row.get(k) for k in ("stage", "worker", "group", "seed", "task", "ep", "slot", "donor", "donor_src",
-                                    "spec", "variant", "pair_index", "w_starts", "pad", "fallback")}
+                                    "spec", "variant", "pair_index", "w_starts", "pad", "fallback", "k", "swap_times")}
     out["key"] = key
     out["attempts"] = attempts_for(row["run_root"], key)
     run = F.find_run(row["run_root"], row["attn_out"], key)
@@ -78,6 +88,9 @@ def load_run(row, pool_by_key):
                picked=None if fp is None else fp["index"], pick_step=None if fp is None else fp["env_step"],
                category=F.classify_pick(fp, rf["target_index"], labels["swap_blind_index"], labels["moved"]),
                scan=pool_by_key.get(key), status="ok")
+    if row.get("k") is not None:
+        bk = labels["blind_k"].get(int(row["k"]))
+        out.update(blind_k=bk, category_k=F.classify_pick_k(fp, rf["target_index"], bk))
     if row["group"] != "N" and run["motion_content"] is None:
         out["status"], out["reason"] = "invalid", "no_episode_json"
     return out
@@ -256,10 +269,10 @@ def judge_multieq(runs):
 
 def seed_first_pick(runs):
     base = {(r["group"], r["key"], r.get("slot")): r for r in runs
-            if r["stage"] in MAIN_STAGES and r["status"] == "ok"}
+            if r["stage"] in MAIN_STAGES + ("kswap",) and r["status"] == "ok"}
     pairs = {}
     for r in runs:
-        if r["stage"] == "seeds" and r["status"] == "ok":
+        if r["stage"] in ("seeds", "kseeds") and r["status"] == "ok":
             pairs.setdefault((r["group"], r["key"], r.get("slot")), {})[r["seed"]] = r.get("picked")
     rows, agree = [], 0
     for key, seeds in sorted(pairs.items(), key=lambda kv: str(kv[0])):
@@ -315,6 +328,73 @@ def swap_line(model, task, s, gate=None):
     return line
 
 
+# ---------------------------------------------------------------- 按第 k 次交换（SP-W2）
+def bootstrap_ci(values, n_boot=BOOT_N, seed=BOOT_SEED):
+    """0/1 值（每接收局一个）按接收局重采样均值的 95% 分位区间；空返回 None。"""
+    import numpy as np
+    v = np.asarray(values, np.float64)
+    if v.size == 0:
+        return None
+    rng = np.random.default_rng(seed)
+    means = v[rng.integers(0, v.size, size=(int(n_boot), v.size))].mean(axis=1)
+    return float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))
+
+
+def k_cells(runs, task):
+    return sorted({(int(r["swap_times"]), int(r["k"])) for r in runs
+                   if r["task"] == task and r["stage"] == "kswap" and r.get("k") is not None and r.get("swap_times")})
+
+
+def n_blind_baseline(runs, task, n, k):
+    """N 阶段 swap_times=n、第 k 次交换对目标有影响（blind_k≠目标）的有效局里，拿到 blind_k 物体的数 / 局数。"""
+    hit = tot = 0
+    for r in runs:
+        if r["task"] != task or r["stage"] != "n" or r["status"] != "ok" or int(r["rf"]["swap_times"] or 0) != n:
+            continue
+        bk = r["labels"]["blind_k"].get(k)
+        if bk is None or bk == r["rf"]["target_index"]:
+            continue
+        tot += 1
+        hit += int(r.get("picked") is not None and r["picked"] == bk)
+    return hit, tot
+
+
+def k_summary(runs, task, n, k):
+    out = {"n": n, "k": k, "groups": {}, "invalid": 0, "excluded": 0, "runs": 0}
+    mine = [r for r in runs if r["task"] == task and r["stage"] == "kswap" and r.get("k") == k
+            and int(r.get("swap_times") or 0) == n]
+    out["runs"] = len(mine)
+    out["invalid"] = sum(1 for r in mine if r["status"] not in ("ok", "excluded"))
+    out["excluded"] = sum(1 for r in mine if r["status"] == "excluded")
+    for group in F.K_GROUPS:
+        ok = [r for r in mine if r["group"] == group and r["status"] == "ok"]
+        cats = {c: sum(1 for r in ok if r["category_k"] == c) for c in K_CATS}
+        out["groups"][group] = {"n": len(ok), "cats": cats,
+                                "correct_ci": bootstrap_ci([r["category_k"] == "correct" for r in ok]),
+                                "blind_ci": bootstrap_ci([r["category_k"] == "swap_blind_k" for r in ok])}
+    recv = {r["key"]: r for r in mine if r["status"] == "ok"}
+    out["recv"] = len(recv)
+    out["k_matters"] = sum(1 for r in recv.values() if r["blind_k"] is not None and r["blind_k"] != r["rf"]["target_index"])
+    out["n_blind"] = n_blind_baseline(runs, task, n, k)
+    return out
+
+
+def _ci(ci):
+    return "na" if ci is None else f"[{ci[0]:.2f},{ci[1]:.2f}]"
+
+
+def k_line(model, task, s):
+    parts = []
+    for group in F.K_GROUPS:
+        g = s["groups"][group]
+        parts.append(f"{group}=" + ",".join(f"{c}:{g['cats'][c]}/{g['n']}" for c in K_CATS))
+        parts.append(f"{group}_correct_ci={_ci(g['correct_ci'])} {group}_blind_ci={_ci(g['blind_ci'])}")
+    verdict = "PASS" if s["invalid"] == 0 else "FAIL"
+    return (f"FP_SWAP_K={verdict} model={model} task={task} n={s['n']} k={s['k']} runs={s['runs']} "
+            f"invalid={s['invalid']} excluded={s['excluded']} " + " ".join(parts)
+            + f" N_blind={s['n_blind'][0]}/{s['n_blind'][1]} k_matters={s['k_matters']}/{s['recv']}")
+
+
 def collect(root):
     plan = read_json(Path(root) / "plan.json")
     pool, pool_by_key = F.load_pool(Path(root).parent)
@@ -344,9 +424,15 @@ def readout_model(root, out=None):
     for task in F.TASKS:
         summaries[task] = task_summary(runs, task)
         lines.append(swap_line(model, task, summaries[task], gates.get(task)))
+    k_summaries = {}
+    for task in F.TASKS:
+        for n, k in k_cells(runs, task):
+            s = k_summary(runs, task, n, k)
+            k_summaries.setdefault(task, {})[f"n{n}k{k}"] = s
+            lines.append(k_line(model, task, s))
     out = Path(out) if out else root / "readout"
     out.mkdir(parents=True, exist_ok=True)
-    payload = {"model": model, "lines": lines, "summaries": summaries, "details": extra,
+    payload = {"model": model, "lines": lines, "summaries": summaries, "k_summaries": k_summaries, "details": extra,
                "runs": [_strip(r) for r in runs]}
     (out / "readout.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=str) + "\n")
     write_md(out / "readout.md", f"第一次拿起交换读数（{model}）", lines, summaries)
