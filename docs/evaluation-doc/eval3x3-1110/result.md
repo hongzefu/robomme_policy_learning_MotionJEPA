@@ -128,3 +128,9 @@
 ## 协议变更（2026-11-10 美东）：停在最后 checkpoint × 3 seed
 
 用户决定不再补 3 checkpoint × 3 seed（原话：「给出方案把我们也全部改成三个run 就不用跑九次了。」「先按照现在的这个五个模型跑三次的这个现状，呃，你你直接归档就就可以了。这个其他情况下都不需要这个，呃，就就不跑三个 checkpoint 了。」）。队列于 FS1024 70000 seed 7 运行中停止（`eval_queue.py --stop`：`STOP_DONE sent=97 remaining=[]`），70000 seed 7 未完成、不计入。五个模型最后 checkpoint × 3 seed 的逐局结果集中在 `final-ckpt-3seed/`，汇总见其 `README.md`。
+
+## 恢复（2026-11-10 美东 18:03）：继续跑完 3 checkpoint × 3 seed
+
+用户更正上一节的决定：RoboMME 官方协议是「Results are averaged over the last three checkpoints and three random seeds (nine runs total)」，仍需跑完 9 次。用户原话：「我搞错了  robomme官方Results are averaged over the last three checkpoints and three random seeds (nine runs total) 你还是要跑完的 给出恢复方案 并且给出eval完成的时间节点」「同意开始」。
+
+恢复方式：在同一执行副本（`f0149d8`）重启 `ev3-trigger`（`scripts/evaluation/eval3x3_1110_trigger.sh`）。冒烟阶段只重跑此前因端口冲突（`OSError: [Errno 98] Address already in use`）失败的 noxyz-60000、nostate-70000、nostate-60000，其余 8 个缓存 PASS；正式队列跳过已完成的 4 项，fs1024-70000-seed7 从已完成的 407/800 局续跑。上一节「协议变更」保留作历史记录；`final-ckpt-3seed/` 即 9 次中最后 checkpoint 的 3 次，汇总时复用。
