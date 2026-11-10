@@ -13,6 +13,16 @@ from scripts.interpret import rollout_offline
 from scripts.interpret import run_local as local
 
 TERMINAL_STEPS = 35
+SWAP_TASKS = ("ButtonUnmaskSwap", "VideoUnmaskSwap")
+TASK_NAMES = {
+    "VideoUnmaskSwap": ["static", "pick up the container that hides the red cube", "put down the container",
+                        "pick up the container that hides the green cube"],
+    "ButtonUnmaskSwap": ["press the first button", "press the second button",
+                         "pick up the container that hides the red cube", "put down the container"],
+    # swap_times=2：示范的拿起、放下、static ×3、NO RECORD 之后才是第一次正式拿起，下标 6。
+    "VideoRepick": ["pick up the cube", "drop the cube on the table", "static", "static", "static", "NO RECORD",
+                    "pick up the correct cube for the first time", "put it down", "press the button to finish"],
+}
 
 
 class Client:
@@ -42,13 +52,28 @@ def actor(*xyz):
     return SimpleNamespace(pose=SimpleNamespace(p=np.asarray([xyz], dtype=np.float32)))
 
 
-def make_unwrapped():
+def make_unwrapped(task="ButtonUnmaskSwap"):
+    if task == "VideoRepick":
+        return make_cube_unwrapped()
     bins = [actor(0.1, 0.0, 0.05), actor(0.2, 0.0, 0.05), actor(0.3, 0.0, 0.05)]
     # 第一目标不是 spawned_bins 的第 0 个，才能测出下标确实按对象身份取。
     return SimpleNamespace(elapsed_steps=None, agent=SimpleNamespace(tcp=actor(0.0, 0.0, 0.3)), spawned_bins=bins,
                            selected_bins=[bins[2], bins[0], bins[1]], swap_times=2, pick_times=1,
                            swap_schedule=[(bins[0], bins[1], 64, 114), (bins[1], bins[2], 114, 164)],
-                           color_names=["red", "green", "blue"])
+                           color_names=["red", "green", "blue"], task_list=[{"name": n} for n in TASK_NAMES.get(task, [])],
+                           successflag=np.asarray([False]), failureflag=np.asarray([False]))
+
+
+def make_cube_unwrapped():
+    """VideoRepick 假环境：没有 spawned_bins／selected_bins／pick_times／color_names；夹住与否看 grasped。"""
+    cubes = [actor(0.1, 0.1, 0.02), actor(0.2, 0.1, 0.02), actor(0.3, 0.1, 0.02)]
+    u = SimpleNamespace(elapsed_steps=None, spawned_cubes=cubes, target_cube_1=cubes[1], swap_times=2, num_repeats=2,
+                        swap_schedule=[(cubes[1], cubes[0], 400, 450), (cubes[2], None, 450, 500)],
+                        task_list=[{"name": n} for n in TASK_NAMES["VideoRepick"]],
+                        successflag=np.asarray([False]), failureflag=np.asarray([False]), grasped=[])
+    u.agent = SimpleNamespace(tcp=actor(0.0, 0.0, 0.3),
+                              is_grasping=lambda obj: np.asarray([any(obj is g for g in u.grasped)]))
+    return u
 
 
 def install_sim(monkeypatch):
@@ -80,14 +105,14 @@ def make_runner(task="ButtonUnmaskSwap"):
     result = runner.TraceRunner.__new__(runner.TraceRunner)
     result.env_id, result.episode_id = task, 8
     result.env_seed, result.difficulty = 105, "easy"
-    result.env = SimpleNamespace(unwrapped=make_unwrapped())
+    result.env = SimpleNamespace(unwrapped=make_unwrapped(task))
     return result
 
 
-def run_episode(tmp_path, monkeypatch, task="ButtonUnmaskSwap", nonce="nonce"):
-    install_sim(monkeypatch)
+def run_episode(tmp_path, monkeypatch, task="ButtonUnmaskSwap", nonce="nonce", args=None, sim=None):
+    (sim or install_sim)(monkeypatch)
     env = make_runner(task)
-    evaluator = runner.TraceEvaluator(runner.official.Args(), tmp_path)
+    evaluator = runner.TraceEvaluator(args or runner.official.Args(), tmp_path)
     client = Client()
     outcome = evaluator.eval_each_episode(env, tmp_path / "videos", client, nonce)
     directory = tmp_path / "traces" / nonce
@@ -96,7 +121,7 @@ def run_episode(tmp_path, monkeypatch, task="ButtonUnmaskSwap", nonce="nonce"):
     return env, evaluator, client, outcome, rows, receipt
 
 
-@pytest.mark.parametrize("task", runner.TASKS)
+@pytest.mark.parametrize("task", SWAP_TASKS)
 def test_trace_rows_and_receipt(tmp_path, monkeypatch, task):
     _, evaluator, _, outcome, rows, receipt = run_episode(tmp_path, monkeypatch, task)
     assert outcome == "fail" and evaluator.actions_executed == len(rows) == TERMINAL_STEPS
@@ -132,6 +157,9 @@ def test_trace_rows_and_receipt(tmp_path, monkeypatch, task):
     assert receipt["outcome"] == "fail" and receipt["task_success"] == 0 and receipt["actions_executed"] == TERMINAL_STEPS
     assert receipt["initial_env_step"] == 7 and receipt["video_exec0_frame_index"] == 3
     assert receipt["video_path"].endswith(f"{task}_ep8_fail.mp4")
+    # 开关关闭时 Swap 任务不写任何扩展字段（行字段集合已在上面钉死）。
+    assert not {"target_index", "swap_schedule", "first_pick", "truncated_first_pick", "stop_after_first_pick",
+                "first_pick_subgoal_index", "num_repeats"} & set(receipt)
 
 
 def test_actions_and_payloads_match_official_loop(tmp_path, monkeypatch):
@@ -323,3 +351,256 @@ def test_collect_without_stopcube_keeps_rollout_count(tmp_path):
                                                   "episode_id": 8}])[0]
     assert row["npz"] == 1 == row["infers"] and row["terminal"]
     assert list((tmp_path / "run" / "accepted").glob("*.terminal.json"))
+
+
+# ---------------- 三任务化与拿起即停 ----------------
+
+def install_plan_sim(plan, terminal=TERMINAL_STEPS):
+    """plan(u, n) 在第 n 步（从 1 起）物理推进后改写物体位姿、子目标与判定标志。"""
+    def install(monkeypatch):
+        def initial(self):
+            self.env.actions = []
+            self.env.unwrapped.elapsed_steps = 7
+            self.env.unwrapped.timestep = 0
+            state = np.arange(8, dtype=np.float32)
+            images = [np.full((256, 256, 3), index, dtype=np.uint8) for index in range(4)]
+            return {"images": images, "wrist_images": images, "states": [state.copy() for _ in images],
+                    "task_goal": "goal"}
+
+        def step(self, action):
+            u = self.env.unwrapped
+            self.env.actions.append(np.asarray(action).copy())
+            u.elapsed_steps += 1
+            plan(u, len(self.env.actions))
+            image = np.full((256, 256, 3), u.elapsed_steps % 256, dtype=np.uint8)
+            state = np.asarray(action, dtype=np.float32).copy()
+            return (image, image, state), len(self.env.actions) == terminal, "fail"
+
+        monkeypatch.setattr(runner.EnvRunner, "get_init_obs", initial)
+        monkeypatch.setattr(runner.EnvRunner, "step", step)
+        monkeypatch.setattr(runner.official, "RolloutRecorder", Recorder)
+    return install
+
+
+def lift(obj, z):
+    obj.pose.p = np.asarray([[obj.pose.p[0, 0], obj.pose.p[0, 1], z]], dtype=np.float32)
+
+
+STOP = runner.Args(stop_after_first_pick=True)
+
+
+@pytest.mark.parametrize("task, objects, target, subgoal", [("ButtonUnmaskSwap", "spawned_bins", 2, 2),
+                                                             ("VideoUnmaskSwap", "spawned_bins", 2, 1),
+                                                             ("VideoRepick", "spawned_cubes", 1, 6)])
+def test_objects_and_target_by_task(task, objects, target, subgoal):
+    u = make_unwrapped(task)
+    assert runner.objects_of(u, task) == getattr(u, objects)
+    assert runner.first_target_bin_index(u, task) == target
+    expected = [np.asarray(a.pose.p).reshape(-1).tolist() for a in getattr(u, objects)]
+    assert runner.snapshot(SimpleNamespace(unwrapped=u), task)["bins"] == expected
+    assert runner.first_pick_subgoal_index(u, task) == subgoal
+
+
+def test_cube_target_missing_is_rejected():
+    u = make_cube_unwrapped()
+    u.target_cube_1 = actor(0, 0, 0)
+    with pytest.raises(runner.official.ContractError, match="target_cube_1"):
+        runner.first_target_bin_index(u, "VideoRepick")
+
+
+def test_first_pick_subgoal_index_checked_for_swap_tasks():
+    u = make_unwrapped("ButtonUnmaskSwap")
+    u.task_list = [{"name": "press the first button"}, {"name": "pick up the container that hides x"}]
+    with pytest.raises(runner.official.ContractError, match="第一次拿起"):
+        runner.first_pick_subgoal_index(u, "ButtonUnmaskSwap")
+
+
+def test_swap_schedule_maps_actors_to_indices():
+    assert runner.swap_schedule_of(make_cube_unwrapped(), "VideoRepick") == [[1, 0, 400, 450], [2, None, 450, 500]]
+    bins = make_unwrapped()
+    assert runner.swap_schedule_of(bins, "ButtonUnmaskSwap") == [[0, 1, 64, 114], [1, 2, 114, 164]]
+    bins.swap_schedule = None
+    assert runner.swap_schedule_of(bins, "ButtonUnmaskSwap") == []
+
+
+def test_videorepick_without_switch_runs_to_end_with_objects(tmp_path, monkeypatch):
+    _, _, _, outcome, rows, receipt = run_episode(tmp_path, monkeypatch, "VideoRepick",
+                                                  sim=install_plan_sim(lambda u, n: None))
+    assert outcome == "fail" and len(rows) == TERMINAL_STEPS
+    assert all(row["objects"] == row["bins_after"] and len(row["objects"]) == 3 for row in rows)
+    assert rows[0]["objects"][1] == pytest.approx([0.2, 0.1, 0.02])
+    assert "first_pick" not in receipt and receipt["stop_after_first_pick"] is False
+    assert receipt["target_index"] == 1 == receipt["first_target_bin_index"]
+    assert receipt["swap_schedule"] == [[1, 0, 400, 450], [2, None, 450, 500]]
+    assert receipt["pick_times"] is None and receipt["color_names"] is None and receipt["num_repeats"] == 2
+    assert receipt["swap_end"] == 500 and receipt["first_pick_subgoal_index"] == 6
+
+
+def test_bin_stop_uses_container_threshold(tmp_path, monkeypatch):
+    def plan(u, n):
+        u.timestep = 2 if n >= 3 else 0
+        lift(u.spawned_bins[2], {5: 0.15, 6: 0.151}.get(n, 0.05))  # 恰好 0.15 不算，超过才算
+        if n >= 6:
+            u.timestep = 3  # 拿对时同一步 evaluate 里子目标已前进
+    _, evaluator, _, outcome, rows, receipt = run_episode(tmp_path, monkeypatch, "ButtonUnmaskSwap", args=STOP,
+                                                          sim=install_plan_sim(plan))
+    assert outcome == "success" and len(rows) == 6 == evaluator.actions_executed
+    pick = receipt["first_pick"]
+    assert pick == {"index": 2, "env_step": 13, "action_index": 5, "is_target": True, "subgoal_index_at_pick": 2,
+                    "subgoal_index_after_pick": 3, "successflag": False, "failureflag": False, "outcome": "success"}
+    assert rows[-1]["first_pick"] == pick and all("first_pick" not in row for row in rows[:-1])
+    assert all("objects" in row for row in rows)
+    assert receipt["truncated_first_pick"] is True and receipt["outcome"] == "success" and receipt["task_success"] == 1
+    assert receipt["first_pick_subgoal_index"] == 2 and receipt["target_index"] == 2
+    assert receipt["stop_after_first_pick"] is True
+
+
+def test_bin_stop_wrong_container_is_fail(tmp_path, monkeypatch):
+    def plan(u, n):
+        u.timestep = 1
+        if n == 4:
+            lift(u.spawned_bins[0], 0.2)
+            u.failureflag = np.asarray([True])
+    _, _, _, outcome, rows, receipt = run_episode(tmp_path, monkeypatch, "VideoUnmaskSwap", args=STOP,
+                                                  sim=install_plan_sim(plan))
+    assert outcome == "fail" and len(rows) == 4
+    assert receipt["first_pick"]["index"] == 0 and receipt["first_pick"]["is_target"] is False
+    assert receipt["first_pick"]["failureflag"] is True and receipt["truncated_first_pick"] is True
+
+
+def test_button_pick_before_buttons_is_fail(tmp_path, monkeypatch):
+    def plan(u, n):
+        u.timestep = 1  # 第二个按钮还没按
+        if n == 2:
+            lift(u.spawned_bins[2], 0.3)
+    _, _, _, outcome, _, receipt = run_episode(tmp_path, monkeypatch, "ButtonUnmaskSwap", args=STOP,
+                                               sim=install_plan_sim(plan))
+    assert outcome == "fail" and receipt["first_pick"]["is_target"] is True
+    assert receipt["first_pick"]["subgoal_index_at_pick"] == 1
+
+
+def test_cube_stop_needs_grasp(tmp_path, monkeypatch):
+    def plan(u, n):
+        u.timestep = 6
+        if n >= 3:
+            lift(u.spawned_cubes[0], 0.08)  # 抬高但没夹住：不算拿起
+        if n >= 5:
+            lift(u.spawned_cubes[1], 0.06)
+            u.grasped = [u.spawned_cubes[1]]
+            u.timestep = 7
+    _, _, _, outcome, rows, receipt = run_episode(tmp_path, monkeypatch, "VideoRepick", args=STOP,
+                                                  sim=install_plan_sim(plan))
+    assert outcome == "success" and len(rows) == 5
+    assert receipt["first_pick"]["index"] == 1 and receipt["first_pick"]["subgoal_index_at_pick"] == 6
+    assert receipt["first_pick"]["subgoal_index_after_pick"] == 7
+
+
+def test_cube_grasped_but_low_is_not_pick():
+    u = make_cube_unwrapped()
+    u.grasped = [u.spawned_cubes[0]]
+    lift(u.spawned_cubes[0], 0.05)
+    assert runner.picked_index(u, "VideoRepick") is None
+    lift(u.spawned_cubes[0], 0.0501)
+    assert runner.picked_index(u, "VideoRepick") == 0
+
+
+def test_stop_switch_without_pick_runs_to_end(tmp_path, monkeypatch):
+    _, _, _, outcome, rows, receipt = run_episode(tmp_path, monkeypatch, "VideoUnmaskSwap", args=STOP,
+                                                  sim=install_plan_sim(lambda u, n: None))
+    assert outcome == "fail" and len(rows) == TERMINAL_STEPS
+    assert receipt["first_pick"] is None and receipt["truncated_first_pick"] is False
+
+
+def test_button_swap_schedule_reread_at_finish(tmp_path, monkeypatch):
+    def plan(u, n):
+        u.timestep = 2
+        if n == 3:
+            # 执行中交换窗开始，第二个物体才确定，元组被重建。
+            u.swap_schedule = [(u.spawned_bins[0], u.spawned_bins[2], 64, 114)]
+        if n == 5:
+            lift(u.spawned_bins[1], 0.2)
+    install_plan_sim(plan)(monkeypatch)
+    env = make_runner("ButtonUnmaskSwap")
+    env.env.unwrapped.swap_schedule = [(env.env.unwrapped.spawned_bins[0], None, 64, 114)]
+    evaluator = runner.TraceEvaluator(STOP, tmp_path)
+    assert evaluator.eval_each_episode(env, tmp_path / "videos", Client(), "n2") == "fail"
+    receipt = json.loads((tmp_path / "traces/n2/meta/hold_receipt.json").read_text())
+    assert receipt["swap_schedule"] == [[0, 2, 64, 114]] and receipt["swap_end"] == 114
+
+
+def test_truncated_terminal_record_is_marked(tmp_path):
+    seen = []
+    wrapped = runner.write_record_marking_truncation(lambda path, record: seen.append(record))
+    runner.TRUNCATED_NONCES.add("cut")
+    wrapped(tmp_path / "a", {"record_type": "terminal", "episode_nonce": "cut", "outcome": "fail"})
+    wrapped(tmp_path / "b", {"record_type": "terminal", "episode_nonce": "full", "outcome": "fail"})
+    wrapped(tmp_path / "c", {"record_type": "started", "episode_nonce": "cut"})
+    assert seen == [{"record_type": "terminal", "episode_nonce": "cut", "outcome": "fail", "truncated_first_pick": True},
+                    {"record_type": "terminal", "episode_nonce": "full", "outcome": "fail"},
+                    {"record_type": "started", "episode_nonce": "cut"}]
+
+
+def test_truncation_reaches_terminal_record(tmp_path, monkeypatch):
+    """截断局经官方 write_record 写 terminal 时带上标记；未截断局不带。"""
+    def plan(u, n):
+        u.timestep = 1
+        if n == 2:
+            lift(u.spawned_bins[2], 0.3)
+    _, _, _, outcome, _, _ = run_episode(tmp_path, monkeypatch, "VideoUnmaskSwap", nonce="cutnonce", args=STOP,
+                                         sim=install_plan_sim(plan))
+    assert outcome == "success"
+    write = runner.write_record_marking_truncation(runner.official.write_record)
+    write(tmp_path / "x.terminal.json", {"record_type": "terminal", "episode_nonce": "cutnonce", "outcome": outcome})
+    assert json.loads((tmp_path / "x.terminal.json").read_text())["truncated_first_pick"] is True
+
+
+@pytest.mark.parametrize("stop", [False, True])
+def test_evaluate_installs_and_restores_write_record(tmp_path, monkeypatch, stop):
+    seen = {}
+
+    def official(args, runner_factory):
+        seen["write"] = runner.official.write_record
+        return 0
+
+    monkeypatch.setattr(runner.official, "evaluate", official)
+    previous = runner.official.write_record
+    base = grant(tmp_path, "VideoRepick")
+    args = runner.Args(episode_manifest=base.episode_manifest, chunk=base.chunk,
+                       run_identity_sha256=base.run_identity_sha256, stop_after_first_pick=stop)
+    assert runner.evaluate(args) == 0
+    assert (seen["write"] is previous) is (not stop)
+    assert runner.official.write_record is previous
+
+
+def test_cli_flag_parses():
+    tyro = pytest.importorskip("tyro")
+    assert tyro.cli(runner.Args, args=["--stop-after-first-pick"]).stop_after_first_pick is True
+    assert tyro.cli(runner.Args, args=[]).stop_after_first_pick is False
+
+
+def test_spec_stop_after_first_pick(tmp_path):
+    spec = load(tmp_path, base_spec(tmp_path, bin_trace=True, stop_after_first_pick=True))
+    assert spec["stop_after_first_pick"] is True
+    with pytest.raises(SystemExit, match="stop_after_first_pick 只许"):
+        load(tmp_path, base_spec(tmp_path, stop_after_first_pick=True))
+    with pytest.raises(SystemExit, match="stop_after_first_pick 只许"):
+        load(tmp_path, base_spec(tmp_path, bin_trace=False, stop_after_first_pick=True))
+    with pytest.raises(SystemExit, match="stop_after_first_pick 必须为 bool"):
+        load(tmp_path, base_spec(tmp_path, bin_trace=True, stop_after_first_pick="true"))
+    assert load(tmp_path, base_spec(tmp_path, stop_after_first_pick=False))["stop_after_first_pick"] is False
+
+
+def test_spec_bin_trace_accepts_videorepick(tmp_path):
+    assert load(tmp_path, base_spec(tmp_path, tasks=("VideoRepick",), bin_trace=True))["bin_trace"] is True
+
+
+def test_client_command_and_identity_with_stop(tmp_path):
+    spec, arguments = base_spec(tmp_path, bin_trace=True), client_arguments(tmp_path)
+    plain = local.build_client_command(spec, *arguments)
+    assert local.build_client_command(dict(spec, stop_after_first_pick=False), *arguments) == plain
+    with_stop = local.build_client_command(dict(spec, stop_after_first_pick=True), *arguments)
+    assert with_stop == plain + ["--stop-after-first-pick"]
+    manifest = {"sha256": "b" * 64}
+    identity = local.run_identity(spec, manifest)
+    assert local.run_identity(dict(spec, stop_after_first_pick=False), manifest) == identity
+    assert local.run_identity(dict(spec, stop_after_first_pick=True), manifest) != identity
