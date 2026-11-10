@@ -42,6 +42,14 @@ motion 内容替换（S8；只换 motion 编码内容，motion token 个数、�
   各种替换都先照常调用原 motion client（sidecar 侧调用序列与计时与主线一致），再丢弃其输出换成替换值；
   可与 key 遮挡 / 头遮挡用 + 组合。替换时每份 infer npz 另附 n_motion_replaced（本局截至本次推理累计替换窗数，int64）；
   episode.json 的 motion_content 记 mode、donor、n_windows、n_replaced 与逐窗 replace_log [start, donor_start]。
+示范帧 token 替换（F 组反向对照，计划 1109-subgoal-position-swap-all-lengths-plan.html 第一部分四节）：
+  frame_swap_exact:<DIR> 只配 --swap-map（逐局供体，不接受 --swap-donor）；供体 = DIR/<供体 task>_ep<id>.npz，
+                         键 frame_ids int (n,)（全域帧号）、images uint8 (n, v, h, w, 3)（与 obs["images"] 每帧同形状；
+                         单视角可存 (n, h, w, 3)）。接收局帧号 ∈ frame_ids 的图像在送入帧记忆（SigLIP 编码）前换成供体图像；
+                         FrameSampMemory.add_buffer 在帧编码之后、_encode_ready_windows 之前，由包装把原始帧缓冲 _raw_frames
+                         中这些帧写回接收局原图，motion 编码因此仍用原帧。可与 motion_* 用 + 组合；同属不存注意力的替换实验。
+                         episode.json 的 frame_content 记 mode、donor、donor_path、n_donor_frames、n_replaced、
+                         replace_log（被换帧号列表）与 n_motion_restored（写回原图给 motion 的帧数）。
 --record-motion <DIR>：原样返回原编码，同时把本局每个窗口 (start_frame, emb) 写 DIR/<episode_nonce>.npz
   （start_frames int32 (n,)、embs f32 (n, dim)、counts int32 (n,)、mode；swap 时另有 donor_start_frames、donor）；
   另存 call_start_frames int32 (c,)、call_embs f32 (c, dim)、call_seq int64 (c,)，按调用顺序保留重复起点的全部原编码；
@@ -108,10 +116,10 @@ def _pad_times(times, budget: int) -> np.ndarray:
 def parse_ablate(name) -> dict:
     """--ablate 字符串 → {"name", "masks": frozenset(MASK_KINDS 子集), "heads": ((layer, head), ...),
     "motion": None | {"kind": "zero"} | {"kind": "swap", "dir": <供体目录>} | {"kind": "swap_exact", "dir": <供体目录>}
-    | {"kind": "shift"}}；非法即 ValueError。"""
+    | {"kind": "shift"}, "frame": None | {"kind": "swap_exact", "dir": <供体目录>}}；非法即 ValueError。"""
     import re
     text = (name or "none").strip()
-    masks, heads, motion = set(), set(), None
+    masks, heads, motion, frame = set(), set(), None, None
     if text != "none":
         for part in text.split("+"):
             part = part.strip()
@@ -134,6 +142,13 @@ def parse_ablate(name) -> dict:
                     if not donor_dir:
                         raise ValueError(f"--ablate {text!r}: motion_swap: 后须给供体目录")
                     motion = {"kind": "swap", "dir": donor_dir}
+            elif part.startswith("frame_swap_exact:"):
+                if frame is not None:
+                    raise ValueError(f"--ablate {text!r}: frame_swap_exact 只能出现一次")
+                donor_dir = part[len("frame_swap_exact:"):].strip()
+                if not donor_dir:
+                    raise ValueError(f"--ablate {text!r}: frame_swap_exact: 后须给供体目录")
+                frame = {"kind": "swap_exact", "dir": donor_dir}
             elif part.startswith("heads:"):
                 items = [x.strip() for x in part[len("heads:"):].split(",") if x.strip()]
                 if not items:
@@ -148,8 +163,9 @@ def parse_ablate(name) -> dict:
                     heads.add((layer, head))
             else:
                 raise ValueError(f"--ablate {text!r}: 未知项 {part!r}（可选 none / {' / '.join(MASK_KINDS)} / "
-                                 f"heads:L<i>H<j>,... / motion_zero / motion_swap:<DIR> / motion_swap_exact:<DIR> / motion_shift）")
-    return {"name": text, "masks": frozenset(masks), "heads": tuple(sorted(heads)), "motion": motion}
+                                 f"heads:L<i>H<j>,... / motion_zero / motion_swap:<DIR> / motion_swap_exact:<DIR> / motion_shift / "
+                                 f"frame_swap_exact:<DIR>）")
+    return {"name": text, "masks": frozenset(masks), "heads": tuple(sorted(heads)), "motion": motion, "frame": frame}
 
 
 def replaces_motion(ablate: dict) -> bool:
@@ -158,13 +174,20 @@ def replaces_motion(ablate: dict) -> bool:
     return motion is not None and motion["kind"] in ("swap", "swap_exact", "shift")
 
 
+def replaces_frames(ablate: dict) -> bool:
+    """parse_ablate 结果是否含示范帧 token 替换（frame_swap_exact，同属只看轨迹的替换实验）。"""
+    return ablate.get("frame") is not None
+
+
 def resolve_save_attn(ablate: dict, save_attn: bool | None = None, *, save_prefix: bool = False) -> bool:
     """本次运行是否写 infer_<seq>.npz；save_attn 为 None 表示未显式指定。"""
-    if replaces_motion(ablate) and save_attn is True:
-        raise SystemExit(f"错误: --ablate {ablate['name']} 是 motion 替换实验，不存注意力，不能显式要求 save_attn")
-    saved = save_attn is not False and not replaces_motion(ablate)
+    replacing = replaces_motion(ablate) or replaces_frames(ablate)
+    if replacing and save_attn is True:
+        kind = "motion" if replaces_motion(ablate) else "帧 token"
+        raise SystemExit(f"错误: --ablate {ablate['name']} 是 {kind} 替换实验，不存注意力，不能显式要求 save_attn")
+    saved = save_attn is not False and not replacing
     if save_prefix and not saved:
-        raise SystemExit("错误: save_prefix 需要存注意力，与不存注意力（save_attn=false 或 motion 替换实验）互斥")
+        raise SystemExit("错误: save_prefix 需要存注意力，与不存注意力（save_attn=false 或 motion / 帧 token 替换实验）互斥")
     return saved
 
 
@@ -386,6 +409,34 @@ def load_donor(donor_dir, donor_episode) -> dict:
     if starts.size == 0 or embs.ndim != 2 or embs.shape[0] != starts.size:
         raise SystemExit(f"错误: 供体文件 {path} 无窗口或 start_frames / embs 不对齐")
     return {"name": f"{task}:{ep}", "path": str(path), "start_frames": starts, "embs": embs}
+
+
+def load_frame_donor(donor_dir, donor_episode) -> dict:
+    """读帧 token 供体 DIR/<task>_ep<id>.npz（键 frame_ids int (n,)、images uint8 (n, v, h, w, 3)；
+    单视角也可存 (n, h, w, 3)，载入时补视角轴）→ {"name", "path", "frame_ids", "images", "index"}；
+    缺文件、缺键、形状或类型不符、帧号重复或为负即 SystemExit。"""
+    task, ep = parse_episode(donor_episode)
+    path = Path(donor_dir) / record_name(task, ep)
+    if not path.is_file():
+        raise SystemExit(f"错误: frame_swap_exact 供体文件不存在: {path}")
+    with np.load(path) as z:
+        if "frame_ids" not in z.files or "images" not in z.files:
+            raise SystemExit(f"错误: 帧供体文件 {path} 须含键 frame_ids、images，得到 {sorted(z.files)}")
+        frame_ids = np.asarray(z["frame_ids"])
+        images = np.asarray(z["images"])
+    if frame_ids.ndim != 1 or frame_ids.size == 0 or not np.issubdtype(frame_ids.dtype, np.integer):
+        raise SystemExit(f"错误: 帧供体文件 {path} 的 frame_ids 须为非空一维整数数组")
+    if images.dtype != np.uint8:
+        raise SystemExit(f"错误: 帧供体文件 {path} 的 images 须为 uint8，得到 {images.dtype}")
+    if images.ndim == 4:
+        images = images[:, None]
+    if images.ndim != 5 or images.shape[-1] != 3 or images.shape[0] != frame_ids.size:
+        raise SystemExit(f"错误: 帧供体文件 {path} 的 images 形状 {images.shape} 应为 (n, v, h, w, 3) 且 n=len(frame_ids)")
+    ids = [int(x) for x in frame_ids]
+    if len(set(ids)) != len(ids) or min(ids) < 0:
+        raise SystemExit(f"错误: 帧供体文件 {path} 的 frame_ids 有重复或负数")
+    return {"name": f"{task}:{ep}", "path": str(path), "frame_ids": np.asarray(ids, np.int64), "images": images,
+            "index": {f: i for i, f in enumerate(ids)}}
 
 
 def memory_key_mask(masks, mem_order, frame_times, *, budget: int, tokens_per_frame: int, valid=None,
@@ -695,7 +746,11 @@ class AttnRecorder:
                              "需要 motion 模型，本模型无 motion token（基线）")
         if swap_donor is not None and swap_map:
             raise SystemExit("错误: --swap-donor 与 --swap-map 互斥")
-        if (motion is not None and motion["kind"] in ("swap", "swap_exact")) != (swap_donor is not None or bool(swap_map)):
+        frame = self.ablate["frame"]
+        if frame is not None and (swap_donor is not None or not swap_map):
+            raise SystemExit("错误: --ablate frame_swap_exact:<DIR> 只配 --swap-map（逐局供体），不接受 --swap-donor")
+        motion_swaps = motion is not None and motion["kind"] in ("swap", "swap_exact")
+        if motion_swaps != (swap_donor is not None or bool(swap_map)) and not (frame is not None and not motion_swaps):
             raise SystemExit("错误: --ablate motion_swap:<DIR> 或 motion_swap_exact:<DIR> 与 --swap-donor task:ep"
                              "（或 --swap-map）必须同时给出")
         self.record_motion = Path(record_motion) if record_motion is not None else None
@@ -704,6 +759,12 @@ class AttnRecorder:
         self.swap_map = dict(swap_map) if swap_map else None
         self._donor_cache: dict[str, dict] = {}
         self.motion_client: MotionContentClient | None = None
+        # 示范帧 token 替换（frame_swap_exact）：本局供体、逐局替换帧号、本批待还原给 motion 的原图
+        self._frame_donor_cache: dict[str, dict] = {}
+        self.frame_donor: dict | None = None
+        self.frame_log: list[int] = []
+        self.frame_motion_restored = 0
+        self._frame_restore: dict[int, np.ndarray] | None = None
         self.ep_seq = 0
         self.ep_dir: Path | None = None
         self.episode: dict = {}
@@ -761,7 +822,8 @@ class AttnRecorder:
               f"swap_map={len(self.swap_map) if self.swap_map else 0} record_motion={self.record_motion}", flush=True)
 
     def episode_donor(self, rpc) -> tuple[str | None, dict | None]:
-        """--swap-map 时按 reset eval_rpc 的 episode_key 确定本局供体；否则 (None, None)。"""
+        """--swap-map 时按 reset eval_rpc 的 episode_key 确定本局供体；否则 (None, None)。
+        motion 供体只在 motion_swap / motion_swap_exact 时载入（只换帧 token 时返回的供体只含名字）。"""
         if self.swap_map is None:
             return None, None
         key = rpc.get("episode_key") if isinstance(rpc, dict) else None
@@ -772,9 +834,46 @@ class AttnRecorder:
         donor_key = self.swap_map.get(key)
         if donor_key is None:
             raise RuntimeError(f"--swap-map 没有局 {key}")
+        motion = self.ablate["motion"]
+        if motion is None or motion["kind"] not in ("swap", "swap_exact"):
+            return key, {"name": donor_key}
         if donor_key not in self._donor_cache:
-            self._donor_cache[donor_key] = load_donor(self.ablate["motion"]["dir"], donor_key)
+            self._donor_cache[donor_key] = load_donor(motion["dir"], donor_key)
         return key, self._donor_cache[donor_key]
+
+    def _load_episode_frame_donor(self, donor_name: str) -> dict:
+        if donor_name not in self._frame_donor_cache:
+            self._frame_donor_cache[donor_name] = load_frame_donor(self.ablate["frame"]["dir"], donor_name)
+        return self._frame_donor_cache[donor_name]
+
+    def frame_summary(self) -> dict:
+        donor = self.frame_donor or {}
+        return {"mode": "swap_exact", "donor": donor.get("name"), "donor_path": donor.get("path"),
+                "n_donor_frames": int(len(donor.get("frame_ids", ()))), "n_replaced": len(self.frame_log),
+                "replace_log": list(self.frame_log), "n_motion_restored": int(self.frame_motion_restored)}
+
+    def _swap_frames(self, obs: dict, before: int) -> dict:
+        """把本批中帧号在供体 frame_ids 里的示范图像换成供体图像（只换送入帧记忆的那份），
+        原图暂存在 _frame_restore，由 _encode_ready_windows 包装在 motion 编码前写回原始帧缓冲。"""
+        images = np.asarray(obs["images"])
+        index = self.frame_donor["index"]
+        hits = [(i, before + 1 + i) for i in range(len(images)) if (before + 1 + i) in index]
+        if not hits:
+            return obs
+        swapped = images.copy()
+        restore = {}
+        for i, step in hits:
+            donor_image = self.frame_donor["images"][index[step]]
+            if donor_image.shape != images[i].shape or donor_image.dtype != images.dtype:
+                raise RuntimeError(f"帧供体第 {step} 帧 {donor_image.shape} {donor_image.dtype} 与示范帧 "
+                                   f"{images[i].shape} {images.dtype} 不符")
+            swapped[i] = donor_image
+            restore[step] = images[i]
+        self._frame_restore = restore
+        self.frame_log.extend(step for _, step in hits)
+        out = dict(obs)
+        out["images"] = swapped
+        return out
 
     def _frame_times(self) -> np.ndarray:
         frames = self.policy.mem_buffer.get_frame_sampling_indices(int(self.policy.step_idx), self.budget,
@@ -805,6 +904,8 @@ class AttnRecorder:
         mem_buffer = self.policy.mem_buffer
         if not self.motion_enabled or mem_buffer is None:
             return
+        if self.ablate["frame"] is not None:
+            self._hook_frame_restore(mem_buffer)
         original = mem_buffer._prepare_motion
 
         def prepare_motion(step_idx):
@@ -813,6 +914,28 @@ class AttnRecorder:
             return result
 
         mem_buffer._prepare_motion = prepare_motion
+
+    def _hook_frame_restore(self, mem_buffer) -> None:
+        """FrameSampMemory.add_buffer 先把本批原始帧写入 _raw_frames、再做帧编码、最后 _encode_ready_windows 编 motion；
+        在最后一步之前把被换帧的原始帧写回接收局原图，motion 编码因此仍用原帧。"""
+        if not hasattr(mem_buffer, "_encode_ready_windows") or not hasattr(mem_buffer, "_raw_frames"):
+            raise RuntimeError("frame_swap_exact 需要 mem_buffer 提供 _encode_ready_windows 与 _raw_frames（motion 路分叉点）")
+        original = mem_buffer._encode_ready_windows
+
+        def encode_ready_windows(*args, **kwargs):
+            restore = self._frame_restore
+            if restore:
+                raw = mem_buffer._raw_frames
+                missing = [step for step in restore if step not in raw]
+                if missing:
+                    raise RuntimeError(f"frame_swap_exact: 原始帧缓冲缺本批帧 {missing[:4]}，无法还原 motion 输入")
+                for step, image in restore.items():
+                    raw[step] = np.ascontiguousarray(np.asarray(image)[0])   # 与 add_buffer 同取第 0 视角
+                self.frame_motion_restored += len(restore)
+                self._frame_restore = None
+            return original(*args, **kwargs)
+
+        mem_buffer._encode_ready_windows = encode_ready_windows
 
     # ―― 遮蔽的 policy 方法 ――
     def reset(self) -> None:
@@ -825,6 +948,9 @@ class AttnRecorder:
             nonce = f"local-{uuid.uuid4().hex}"
         # 先定供体再建目录：映射缺局时 reset 直接失败，不留半截局目录。
         episode_key, episode_donor = self.episode_donor(rpc)
+        if self.ablate["frame"] is not None:
+            self.frame_donor = self._load_episode_frame_donor(episode_donor["name"])
+            self.frame_log, self.frame_motion_restored, self._frame_restore = [], 0, None
         self.ep_dir = self.attn_out / str(nonce)
         self.ep_dir.mkdir(parents=True, exist_ok=False)
         self.infer_seq = 0
@@ -846,12 +972,20 @@ class AttnRecorder:
             self.episode.update(episode_key=episode_key, swap_donor=episode_donor["name"])
         if self.motion_client is not None:
             self.episode["motion_content"] = self.motion_client.summary()
+        if self.ablate["frame"] is not None:
+            self.episode["frame_content"] = self.frame_summary()
         _write_json(self.ep_dir / "episode.json", self.episode)
         print(f"ATTN_EPISODE_BEGIN nonce={nonce} ep_seq={self.ep_seq} dir={self.ep_dir}", flush=True)
 
     def add_buffer(self, obs: dict) -> None:
         before = int(self.policy.step_idx)
-        self._orig_add(obs)
+        if self.frame_donor is not None:
+            try:
+                self._orig_add(self._swap_frames(obs, before))
+            finally:
+                self._frame_restore = None
+        else:
+            self._orig_add(obs)
         if self.motion_client is not None:
             self.motion_client.flush()
         if self.save_top_frames > 0:
@@ -874,6 +1008,8 @@ class AttnRecorder:
         if self.motion_client is not None:
             self.motion_client.flush()
             self.episode["motion_content"] = self.motion_client.summary()
+        if self.ablate["frame"] is not None:
+            self.episode["frame_content"] = self.frame_summary()
         self.episode.update(infers=self.infer_seq, prompt=self.episode.get("prompt") or _as_str(obs.get("prompt")))
         _write_json(self.ep_dir / "episode.json", self.episode)
         return outputs
@@ -1094,7 +1230,7 @@ def _make_args_class():
         # 不写 infer_<seq>.npz；motion_swap / motion_swap_exact / motion_shift 不需要此参数，一律不写
         no_save_attn: bool = False
         # 因果遮挡 / motion 内容替换：none | mask_motion | mask_vis | heads:L3H0,L16H0 | motion_zero |
-        # motion_swap:<供体目录> | motion_swap_exact:<供体目录> | motion_shift，可用 + 组合；默认 none
+        # motion_swap:<供体目录> | motion_swap_exact:<供体目录> | motion_shift | frame_swap_exact:<帧供体目录>（须配 --swap-map），可用 + 组合；默认 none
         ablate: str = "none"
         # 记录每局每个 motion 窗口的原编码到 <目录>/<episode_nonce>.npz（run_local 收尾改名 <task>_ep<id>.npz）
         record_motion: Path | None = None
