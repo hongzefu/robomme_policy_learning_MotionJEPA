@@ -18,7 +18,9 @@ Oracle 另用 query_interval=4（节奏诊断可16）、query_record=10；校准
 query_batch_size 可显式指定1、2、5、10，缺省实际批量10；该批量进入身份，不做自动回退。
 rollout_record（bool，只允许与 stopcube_mode=normal、bin_trace=true 或 subgoal_trace=true 同用）：开启时服务端加 --rollout-record，
 走原采样路径，每次推理写 rollout_<seq>.npz；开启时并入身份，逐局 npz 计数改数 rollout_*.npz；缺键时身份与命令不变。
-bin_trace（bool，与 stopcube_mode 互斥，清单只能含 ButtonUnmaskSwap、VideoUnmaskSwap）：开启时改用 bin_trace_runner 客户端写逐步轨迹，
+bin_trace（bool，与 stopcube_mode 互斥，清单只能含 ButtonUnmaskSwap、VideoUnmaskSwap、VideoRepick）：开启时改用 bin_trace_runner
+客户端写逐步轨迹，并入身份；缺键或为假时身份与命令不变。
+stop_after_first_pick（bool，只许与 bin_trace=true 同用）：开启时客户端加 --stop-after-first-pick，第一次有物体被拿起即结束该局，
 并入身份；缺键或为假时身份与命令不变。
 subgoal_trace（bool，与 stopcube_mode、bin_trace 互斥，清单只能含 PatternLock、RouteStick）：开启时改用 subgoal_trace_runner 客户端
 写逐步轨迹，并入身份；缺键或为假时身份与命令不变。
@@ -94,7 +96,7 @@ XLA_FLAGS = "--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0"
 REQUIRED_KEYS = ("repo", "policy_python", "sim_python", "stage2_python", "checkpoint", "policy_config", "model_kind",
                  "cuda", "attn_out", "run_root", "manifest", "xla_mem_fraction")
 # 与 bin_trace_runner.TASKS 同值（测试盯住）；驱动端不导入客户端模块，它依赖仿真侧环境。
-BIN_TRACE_TASKS = ("ButtonUnmaskSwap", "VideoUnmaskSwap")
+BIN_TRACE_TASKS = ("ButtonUnmaskSwap", "VideoUnmaskSwap", "VideoRepick")
 # 与 subgoal_trace_runner.TASKS 同值（测试盯住），不导入的理由同上。
 SUBGOAL_TRACE_TASKS = ("PatternLock", "RouteStick")
 # 与 movecube_force_runner.FORCE_KS 同值（测试盯住），不导入的理由同上。
@@ -176,6 +178,11 @@ def load_spec(path):
             others = sorted({e["task_name"] for e in read_json(spec["manifest"])["episodes"]} - set(BIN_TRACE_TASKS))
             if others:
                 raise SystemExit(f"spec: bin_trace 的清单只能含 {BIN_TRACE_TASKS}，得到 {others}")
+    if "stop_after_first_pick" in spec:
+        if type(spec["stop_after_first_pick"]) is not bool:
+            raise SystemExit("spec: stop_after_first_pick 必须为 bool")
+        if spec["stop_after_first_pick"] and not spec.get("bin_trace"):
+            raise SystemExit("spec: stop_after_first_pick 只许与 bin_trace=true 同用")
     if "subgoal_trace" in spec:
         if type(spec["subgoal_trace"]) is not bool:
             raise SystemExit("spec: subgoal_trace 必须为 bool")
@@ -274,6 +281,8 @@ def run_identity(spec, manifest):
         ident["rollout_record"] = True
     if spec.get("bin_trace"):
         ident["bin_trace"] = True
+    if spec.get("stop_after_first_pick"):
+        ident["stop_after_first_pick"] = True
     if spec.get("subgoal_trace"):
         ident["subgoal_trace"] = True
     if spec.get("save_attn") is False:
@@ -425,6 +434,8 @@ def build_client_command(spec, grant_path, output, nonce, port, drain_file):
         command += ["--profile", "plfull", "--plfull-metadata-dir", str(spec["plfull_metadata_dir"])]
     if spec.get("bin_trace"):
         command[1] = str(Path(spec["repo"]) / "scripts/interpret/bin_trace_runner.py")
+        if spec.get("stop_after_first_pick"):
+            command += ["--stop-after-first-pick"]
     if spec.get("subgoal_trace"):
         command[1] = str(Path(spec["repo"]) / "scripts/interpret/subgoal_trace_runner.py")
     if spec.get("movecube_force"):
