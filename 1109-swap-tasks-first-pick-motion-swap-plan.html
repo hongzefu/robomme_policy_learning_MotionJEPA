@@ -35,14 +35,14 @@ pre{background:#f6f6f6;padding:8px;overflow-x:auto;font-size:13px}
 <tr><th>任务</th><th>交换在哪</th><th>第一次拿起</th><th>难度（本轮只用 easy、medium）</th><th>官方成功率 MotionMem / Wan</th></tr>
 <tr><td>VideoUnmaskSwap</td><td>示范视频里，绝对步 [64,114)、[114,164)…，每次 50 步</td><td>拿起藏着指定颜色方块的容器（子目标 1）</td><td>easy 3 容器、交换 1–2 次；medium 4 容器、1–2 次</td><td>37.33 / 26.00</td></tr>
 <tr><td>ButtonUnmaskSwap</td><td>没有示范段；执行中按绝对步 [64,…) 自动交换（不等按钮）</td><td>先按两个按钮，再拿容器（子目标 2）</td><td>同上</td><td>27.33 / 19.33</td></tr>
-<tr><td>VideoRepick</td><td>示范视频里：先拿起目标方块再放下，静止后交换，起点随局变化</td><td>四个同色方块里拿起正确的那个（第一次）</td><td>easy 交换 1–2 次；medium 2–3 次（用户指定 easy、medium）</td><td>22.67 / 16.67</td></tr>
+<tr><td>VideoRepick</td><td>示范视频里：先拿起目标方块再放下，静止后交换，起点随局变化</td><td>3 个同色方块里拿起正确的那个（第一次）</td><td>easy 交换 1–2 次；medium 2–3 次（用户指定 easy、medium）</td><td>22.67 / 16.67</td></tr>
 </table>
 <p>官方分数为三 seed × 50 局均值；MotionMem 是 GreatLakes 评测，Wan 是 AWS A100 评测，平台不同，只作背景。</p>
 
 <h2>二、已定口径</h2>
 <ol>
 <li><b>K1 三个任务</b>：用户原话「video and mask swap 和 button and mask swap」「video repick 任务它也是有 swap 的，你也要查，它是 easy 和 medium 两个任务」。</li>
-<li><b>K2 只看第一次拿起</b>：用户原话「都只测第一次第一次拿起来」。读数只看第一次有物体被抬起（高度超过官方阈值，容器 0.15 m，方块按 <code>is_obj_pickup</code> 同阈值）时抬的是哪个物体；<b>第一次拿起后立即结束该局</b>（见第四节），不再跑后续子目标。</li>
+<li><b>K2 只看第一次拿起</b>：用户原话「都只测第一次第一次拿起来」。读数只看第一次有物体被抬起（高度超过官方阈值，容器 0.15 m，方块按 <code>is_obj_pickup</code>：z&gt;0.05 且被夹爪抓住）时抬的是哪个物体；<b>第一次拿起后立即结束该局</b>（见第四节），不再跑后续子目标。</li>
 <li><b>K3 测什么</b>：用户原话「我们要测的是不同的 swap 对它这个模型有影响」。理解为：对「交换段」motion 窗口施加不同的替换（置零、随机、自身静止段、同类交换、异类交换），看第一次拿起是否改变。</li>
 <li><b>K4 难度</b>：VideoRepick 只用 easy、medium（用户指定）；另两个任务主代理决定也只用 easy、medium（hard 有 4 容器、2–3 次交换且必拿两次，原样成功率更低，接收局会太少）。</li>
 <li><b>K5 两个模型</b>：MotionMem（orig100 concat 1×1024）与 Frozen Wan pooling，配置与上两轮相同（<code>stage2_pool4_concat</code> / <code>wan_fixedpool1024</code>，<code>mme_vla_suite_orig16_b128_60k</code>）。</li>
@@ -50,7 +50,7 @@ pre{background:#f6f6f6;padding:8px;overflow-x:auto;font-size:13px}
 </ol>
 
 <h2>三、机制：交换段窗口与替换怎么对齐</h2>
-<p><b>motion 窗口</b>：33 帧、步长 32，起点按全局帧号 <code>f</code> 计（<code>framesamp_memory._encode_window</code>）。示范段只编完整窗（<code>f+32 ≤ es−1</code>），执行段在线编。替换走已有的 <code>motion_swap_exact</code>：服务端按起点帧精确匹配供体 npz 里的起点，命中即换、记入 <code>replace_log</code>（<code>serve_policy_attn.MotionContentClient</code>）。</p>
+<p><b>motion 窗口</b>：33 帧、步长 32，起点按全局帧号 <code>f</code> 计（<code>framesamp_memory._encode_window</code>）。示范段起点 <code>s=0,32,…</code> 只要 <code>s+16 ≤ es−1</code> 就编（两模型配置 <code>demo_min_real_frames: 17</code>、<code>demo_tail_pad: repeat_last</code>，尾窗不足 33 帧用第 es−1 帧补齐），执行段起点 <code>es+32u</code> 在 33 帧到齐后在线编（与 <code>visible_motion_frames</code> 同式；开工审查 F1 修正）。替换走已有的 <code>motion_swap_exact</code>：服务端按起点帧精确匹配供体 npz 里的起点，命中即换、记入 <code>replace_log</code>（<code>serve_policy_attn.MotionContentClient</code>）。</p>
 <p><b>交换段窗口 W(局)</b>：与该局交换区间 [第一次交换开始, 最后一次交换结束) 有重叠的全部窗口。VideoUnmaskSwap、VideoRepick 取示范窗，ButtonUnmaskSwap 取执行窗（它没有示范段，<code>es=0</code>）。</p>
 <p><b>供体对齐</b>：前两轮示范结构固定，可以直接按同起点替换。这一轮 VideoRepick 的交换起点随局变化，所以统一改为<b>按交换段内的顺序对齐</b>：接收局 W 的第 k 个窗换成供体 W 的第 k 个窗的编码。prep 为每个（接收局，供体）对单独写一份供体 npz，把起点改写成接收局的起点，服务端代码不用改。供体交换窗比接收局少时，用供体交换后的第一个窗补齐，补了几个记入 pairs。</p>
 <p class="warn">⚠ 陷阱：VideoUnmaskSwap 的示范长度随局变化。若供体 npz 带全部窗，接收局执行段的起点可能和供体某个起点碰巧相等，造成跨段替换。所以供体 npz 只放 W 里的窗，并用 <code>SWAP_SCOPE</code> 核对 <code>replace_log</code> 的起点集合正好等于接收局的 W。</p>
@@ -108,7 +108,7 @@ pre{background:#f6f6f6;padding:8px;overflow-x:auto;font-size:13px}
 <h2>八、步骤</h2>
 <table>
 <tr><th>阶段</th><th>内容</th><th>判据</th></tr>
-<tr><td>S0</td><td>登记状态机（如用户同意）；派计划审查子代理</td><td><code>PLAN_CONSISTENCY_REVIEW</code></td></tr>
+<tr><td>S0</td><td>登记状态机（已登记，<code>9a4b7ea</code>）；派计划审查子代理（裁决见第二部分〇′）</td><td><code>PLAN_CONSISTENCY_REVIEW</code></td></tr>
 <tr><td>S1</td><td>FP-W1、FP-W2 两个写入子代理并行写代码；合并前后审查</td><td>两次 <code>PRE_MERGE_REVIEW=PASS</code>，合并后短测通过</td></tr>
 <tr><td>S2</td><td>扫描局池、建 pairs、生成 spec；两模型各 1 局冒烟（每任务 1 局）</td><td><code>FP_SCAN</code>、<code>FP_POOL</code>，冒烟 <code>EXIT_CODE=0</code></td></tr>
 <tr><td>S3</td><td>MotionMem 与 Wan 的 N（360 局/模型）</td><td><code>FP_REPLAY</code>、<code>FIRST_PICK_LABEL</code></td></tr>
@@ -129,13 +129,26 @@ pre{background:#f6f6f6;padding:8px;overflow-x:auto;font-size:13px}
 <li><b>R3</b> GPU 0 上他人进程不动；tmux 会话前缀 <code>fps-</code>，只按精确名清理。</li>
 <li><b>R4</b> 运行在钉死 commit 的分离工作树 <code>v1-store/worktrees/fp-swap-run</code> 执行，env.sh 起跑前核对 HEAD；产物 <code>v1-store/evaluation/fp-swap-1110/</code>，日志 <code>v1-store/logs/fp-swap-1110/</code>。</li>
 <li><b>R5</b> env.sh 不得覆盖调用方变量 <code>O</code>（上一轮踩坑：路径拼成 <code>motion/motion</code>）；prep 命令一律传绝对路径。</li>
-<li><b>R6</b> 新 env_seed 区间：VideoUnmaskSwap 2000000 起、ButtonUnmaskSwap 2100000 起、VideoRepick 2200000 起，步长 100；与三份 metadata 的 seed（train 5000–16900、test 550000/570000 起、val 1050000/1070000 起）不交，VideoRepick 的区间由 W2 读 metadata 核对。</li>
+<li><b>R6</b> 新 env_seed 区间：VideoUnmaskSwap 2000000 起、ButtonUnmaskSwap 2100000 起、VideoRepick 2200000 起，步长 100；与三份 metadata 的 seed 不交（VideoUnmaskSwap train 5000–14900、test 550000 起、val 1050000 起；ButtonUnmaskSwap 7000–16900、570000、1070000；VideoRepick 9000–18900、590000、1090000，开工审查已实测）。</li>
 </ol>
 
+<h2>〇′、开工审查裁决（PLAN_CONSISTENCY_REVIEW=FAIL base=e9d3666 findings=12 blocking=4）</h2>
+<p>用户开工令「同意开工并登记」；按用户一贯指示「尽可能自己做 不要阻塞」由主代理裁决，四条 blocking 都是实现口径补全，不改范围、组别与规模。以下各条覆盖正文中与之冲突的写法。</p>
+<ol>
+<li><b>F1 窗口规则</b>：示范起点 <code>s+16 ≤ es−1</code>（尾窗补帧），执行起点 <code>es+32u</code>、33 帧到齐才编。帧 k = 第 k 步之后的观测（帧 0 为 reset）。交换在 <code>elapsed_steps==start</code> 那一步开始动，交换帧区间取 <code>[start+1, end+1]</code>。<b>W</b> = 真实帧范围 <code>[f, min(f+32, 真实末帧)]</code> 与交换帧区间有交集的起点（示范窗真实末帧为 es−1）。<b>S0</b> 用 W 之前最后一个起点（真实帧范围全在 start 及以前）。冒烟加 <code>FP_FRAMEMAP=PASS</code>：Video 类核对 es−1 ≥ 最后交换 end 且差 ≤ 40；Button 核对 trace 的 <code>env_step</code> 与视频帧号相等。</li>
+<li><b>F2 供体键</b>：所有组都用合成供体键，一个模型一个供体目录 <code>&lt;M&gt;/donors_fp/</code>：<code>ep = 10000000 + recv_id×100 + slot</code>，slot：A1=1、A2=2、B1=3、B2=4、S0=5、Z=6、Rnd=7、Zall=8；<code>swap_map</code> 为 <code>&lt;task&gt;:&lt;recv&gt;=&lt;task&gt;:&lt;合成 ep&gt;</code>。<code>DONOR_DISTINCT</code> 在改写起点之前的源编码上算。</li>
+<li><b>F3 资格</b>：N 阶段每局记录「W 最后一个窗的末帧」。ButtonUnmaskSwap 的接收局与供体都要求第一次拿起步 ≥ 该末帧（W 全部已编码）；Video 类示范窗在 reset 时一次编完，自动满足。不满足的局剔出接收局、供体与 <code>FP_REPLAY</code> 比对集，计数写进 pool.json 与结果。</li>
+<li><b>F4 标签</b>：W1 在拿起时刻记录环境 <code>u.timestep</code>（当前子目标下标）、<code>successflag</code>、<code>failureflag</code>。截断终局 outcome：拿起时当前子目标是第一次拿起且拿的是目标 → success，否则 fail，另带 <code>truncated_first_pick=true</code>。<code>FIRST_PICK_LABEL</code> 只在「拿起时当前子目标就是第一次拿起」的局上比 <code>is_target</code> 与环境判定（拿错 → <code>failureflag</code>）；ButtonUnmaskSwap 先于按钮拿起的局单独计数，不作接收局。接收局 = <code>first_pick.is_target</code> 为真、拿起时子目标已轮到、且满足 F3。</li>
+<li><b>F5/F7/F8/F10</b>：已在正文直接改（方块 3 个；seed 区间按任务写；方块判据 z&gt;0.05 且抓取；trace 现有字段名；S0 已登记）。trace 侧方块拿起同样按「z&gt;0.05 且 <code>agent.is_grasping</code>」判。</li>
+<li><b>F6</b>：W1 锚点加 <code>get_init_obs</code>：VideoRepick 没有 <code>pick_times</code>、<code>color_names</code>、<code>selected_bins</code>，按任务取（VideoRepick 用 <code>num_repeats</code>、目标 <code>target_cube_1</code>）；<code>first_target_bin_index</code> 保留，trace 新增的 <code>target_index</code> 与它同值，测试钉住。</li>
+<li><b>F9</b>：见 F1。VideoRepick 的 S0 窗含交换前的静止段，更早的窗含示范里的拿起放下动作，结果里注明。</li>
+<li><b>F11 Zall</b>：Zall 供体 npz 起点覆盖到官方 <code>max_steps</code> 能到的最大窗；校验改为 <code>n_replaced == 本局编码窗总数</code>。</li>
+<li><b>F12</b>：<code>stop_after_first_pick</code> 并入 run 身份摘要。扫描每任务 300 个 seed（难度按 seed 序号交替 easy/medium 写进自建 metadata），6 个 CPU 进程并行，估计 30–60 分钟，计入总耗时（约 11–12 小时）。</li>
+</ol>
 <h2>一、逐文件改动</h2>
 <table>
 <tr><th>文件</th><th>锚点</th><th>改什么</th><th>关闭态 / 开启态</th></tr>
-<tr><td><code>scripts/interpret/bin_trace_runner.py</code></td><td><code>TASKS</code>、<code>snapshot</code>、<code>first_target_bin_index</code>、<code>TraceRunner.step</code>、receipt</td><td>TASKS 加 VideoRepick；物体列表按任务取（<code>spawned_bins</code> / <code>spawned_cubes</code>），目标按任务取（<code>selected_bins[0]</code> / <code>target_cube_1</code>）；receipt 加 <code>swap_times</code>、<code>swap_schedule</code>（每次交换的两个物体下标、起止步，读环境属性 <code>swap_pair{i}_idx1/2</code> 与 <code>swap_schedule</code>，在交换结束后补写）；每步 <code>objects</code> 字段；新增可选 <code>stop_after_first_pick</code>：第一次有物体超阈值后写 <code>first_pick</code>（物体下标、步数、与目标是否同一）并结束该局，终局 outcome 照官方格式、另加 <code>truncated_first_pick=true</code></td><td>不开 <code>stop_after_first_pick</code> 时与现在逐字节同行为（旧字段 <code>bins</code> 保留）</td></tr>
+<tr><td><code>scripts/interpret/bin_trace_runner.py</code></td><td><code>TASKS</code>、<code>snapshot</code>、<code>first_target_bin_index</code>、<code>TraceRunner.step</code>、receipt</td><td>TASKS 加 VideoRepick；物体列表按任务取（<code>spawned_bins</code> / <code>spawned_cubes</code>），目标按任务取（<code>selected_bins[0]</code> / <code>target_cube_1</code>）；receipt 加 <code>swap_times</code>、<code>swap_schedule</code>（每次交换的两个物体下标、起止步，读环境属性 <code>swap_pair{i}_idx1/2</code> 与 <code>swap_schedule</code>，在交换结束后补写）；每步 <code>objects</code> 字段；新增可选 <code>stop_after_first_pick</code>：第一次有物体超阈值后写 <code>first_pick</code>（物体下标、步数、与目标是否同一）并结束该局，终局 outcome 照官方格式、另加 <code>truncated_first_pick=true</code></td><td>不开 <code>stop_after_first_pick</code> 时与现在逐字节同行为（现有 trace 行字段 <code>bins_before</code>、<code>bins_after</code> 与 receipt 的 <code>swap_times</code>、<code>swap_end</code> 保留）</td></tr>
 <tr><td><code>scripts/interpret/run_local.py</code></td><td><code>BIN_TRACE_TASKS</code>、spec 校验</td><td>加 VideoRepick；spec 新键 <code>stop_after_first_pick</code>（bool，只许与 <code>bin_trace</code> 同用），透传到客户端命令行</td><td>缺省 false</td></tr>
 <tr><td><code>scripts/interpret/test_bin_trace_runner.py</code>（改）</td><td>—</td><td>假环境覆盖三任务、拿起即停、旧字段不变</td><td>—</td></tr>
 <tr><td><code>scripts/interpret/fp_swap_prep.py</code>（新）</td><td>子命令 <code>scan</code> / <code>pool</code> / <code>specs</code> / <code>donors</code></td><td>复用 <code>pl_full_prep</code> 的 Builder、pack、round_robin、latest_terminal、_savez_atomic；scan 在 official-sim 解释器里建环境（plfull 口径自建 metadata 指定难度），记 n、moved、交换对；pool 分层取局写 metadata、manifest、pool.json；specs 生成 smoke/n/multieq/swap/seeds 阶段与 env.sh、launch_stage.sh；donors 按第一部分第三节生成每对供体 npz（起点改写、只含 W）、zero、random、self-static、zall，读回校验</td><td>—</td></tr>
@@ -156,7 +169,7 @@ pre{background:#f6f6f6;padding:8px;overflow-x:auto;font-size:13px}
 
 <h2>四、runbook</h2>
 <pre>O=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/fp-swap-1110
-python -m scripts.interpret.fp_swap_prep scan  --out $O --task &lt;t&gt; --seed0 &lt;R6&gt; --count 600   # official-sim 解释器
+python -m scripts.interpret.fp_swap_prep scan  --out $O --task &lt;t&gt; --seed0 &lt;R6&gt; --count 300   # official-sim 解释器
 python -m scripts.interpret.fp_swap_prep pool  --out $O --per-task 120
 python -m scripts.interpret.fp_swap_prep specs --out $O/motion --model motion --commit &lt;sha&gt; --run-tree &lt;fp-swap-run&gt;
 python -m scripts.interpret.fp_swap_prep specs --out $O/wan --model wan --commit &lt;sha&gt; --run-tree &lt;fp-swap-run&gt; \
@@ -181,7 +194,6 @@ python -m scripts.interpret.analysis.fp_swap_readout --root $O --intersect motio
 <h2>六、盲区诚实清单</h2>
 <ul>
 <li>未运行环境核实：ButtonUnmaskSwap 每个 env.step 是否恰好录一帧（W 的帧号依赖它），冒烟阶段用 trace 的 <code>env_step</code> 与视频帧号核对。</li>
-<li>VideoRepick 方块拿起阈值未读源码核对（W1 文本核对 <code>is_obj_pickup</code>）。</li>
 <li>新局只覆盖 easy、medium，不与官方分数直接比。</li>
 <li>第一次选对率是估计值，来自 1105 实验（test 清单、seed 42）。</li>
 </ul>
