@@ -876,6 +876,13 @@ def smoke_episodes(pool_by_key):
     return [pool_by_key[episode_key(t, 0)] for t in TASKS if episode_key(t, 0) in pool_by_key]
 
 
+def smoke_w(e):
+    """smoke 第 1 步 Z 的 W_1（all 版）：由扫描的段与 es 算，与 cmd_donors_smoke 写的起点一致。"""
+    if not e.get("segments") or e.get("es") is None:
+        return None
+    return window_sets(tuple(e["segments"][0]), e["es"])[0]
+
+
 def build_stage_specs(b, pool_by_key, gl_first=None):
     out = b.out
     smoke = out / "smoke"
@@ -888,7 +895,7 @@ def build_stage_specs(b, pool_by_key, gl_first=None):
                     episode_key(e["task_name"], synthetic_ep(e["episode_id"], 1, "Z")) for e in eps},
           record_dir=smoke / "record",
           rows=[n_row(e, group="Z", j=1, slot=slot_of(1, "Z"), donor=synthetic_ep(e["episode_id"], 1, "Z"),
-                      variant="all") for e in eps])
+                      variant="all", w_starts=smoke_w(e)) for e in eps])
     if gl_first:
         b.add("glsmoke-n", "glsmoke", gl_first, eps, record=out / "glsmoke" / "record",
               record_dir=out / "glsmoke" / "record", rows=[n_row(e) for e in eps])
@@ -930,6 +937,9 @@ def cmd_specs(args):
         gl_extra = json.loads(args.gl_extra) if args.gl_extra else None
         models["gl"] = gl_model(model, roots["aspen"], roots["gl"], args.gl_checkpoint, args.gl_target_contract,
                                 gl_extra)
+        if not args.gl_target_contract and not Path(models["gl"]["target_contract"]).exists():
+            raise SystemExit(f"GL contract 按改根推出的路径不存在：{models['gl']['target_contract']}；"
+                             "请先把 contract 同步到 GL store 同一相对路径，或用 --gl-target-contract 指定")
     pool, pool_by_key = load_pool(out.parent)
     plan_path = out / "plan.json"
     if plan_path.exists() and not args.overwrite:
@@ -1166,10 +1176,15 @@ def aligned_rows(recv_W, donor_W, donor_rec, donor_es):
     return np.stack([donor_rec[s] for s in srcs]).astype(np.float32), pad, srcs, None
 
 
+def recv_usable(v):
+    """可作接收局：N 状态 ok、有录制 npz、终局不是 error。"""
+    return v["status"] == "ok" and bool(v.get("record")) and v.get("outcome") != "error"
+
+
 def recv_positions(infos, task, variant="all"):
-    """可干预的 (接收局键, j)：N 走到第 j 步起点（前 j−1 步完成），W_j 非空且全在录制里。"""
+    """可干预的 (接收局键, j)：接收局可用（recv_usable），N 走到第 j 步起点（前 j−1 步完成），W_j 非空。"""
     out = []
-    for key in sorted((k for k, v in infos.items() if v["task"] == task and v["status"] == "ok"),
+    for key in sorted((k for k, v in infos.items() if v["task"] == task and recv_usable(v)),
                       key=lambda k: split_key(k)[1]):
         v = infos[key]
         Ws = v["W_all"] if variant == "all" else v["W_core"]
@@ -1322,8 +1337,10 @@ def recv_line(task, infos, positions):
         by_m.setdefault(m, {}).setdefault(j, 0)
         by_m[m][j] += 1
     txt = " ".join(f"m{m}:" + ",".join(f"j{j}={n}" for j, n in sorted(js.items())) for m, js in sorted(by_m.items()))
+    no_rec = sum(1 for v in ok if not v.get("record"))
+    err = sum(1 for v in ok if v.get("outcome") == "error")
     return (f"SP_RECV task={task} eps={len(mine)} ok={len(ok)} success={sum(1 for v in ok if v['outcome'] == 'success')} "
-            f"positions={len(positions)} {txt}")
+            f"no_record={no_rec} error_outcome={err} positions={len(positions)} {txt}")
 
 
 # ---------------------------------------------------------------- donors：阶段 spec
@@ -1419,7 +1436,7 @@ def cmd_donors_smoke(out):
             problems.append(f"{e['task_name']}:{e['episode_id']}:missing_record_or_scan")
             continue
         dim = next(iter(rec.values())).shape[0]
-        W = window_sets(tuple(e["segments"][0]), e["es"])[0]
+        W = smoke_w(e)
         path = out / "smoke" / DONOR_DIR / record_name(e["task_name"], synthetic_ep(e["episode_id"], 1, "Z"))
         P._savez_atomic(path, start_frames=np.asarray(W, np.int32), embs=np.zeros((len(W), dim), np.float32),
                         counts=np.ones(len(W), np.int32))

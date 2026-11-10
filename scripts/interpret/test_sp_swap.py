@@ -295,9 +295,44 @@ def built(tmp_path, monkeypatch):
     model_dir = O / "motion"
     rc = S.main(["specs", "--out", str(model_dir), "--model", "motion", "--commit", COMMIT,
                  "--gl-jobs", "2", "--gl-release", "/gl/release/abc", "--gl-checkpoint", "/gl/ckpt/59999",
-                 "--log-dir", str(tmp_path / "logs")])
+                 "--gl-target-contract", "/gl/contract.json", "--log-dir", str(tmp_path / "logs")])
     assert rc == 0
     return O, model_dir
+
+
+def test_specs_gl_contract_missing_exits(built, tmp_path):
+    O, _ = built
+    with pytest.raises(SystemExit, match="GL contract"):
+        S.main(["specs", "--out", str(O / "motion"), "--model", "motion", "--commit", COMMIT, "--gl-jobs", "1",
+                "--gl-release", "/gl/release/abc", "--gl-checkpoint", "/gl/ckpt", "--gl-store", str(tmp_path / "nogl")])
+
+
+def test_smoke_z_rows_have_w_starts(built):
+    O, model_dir = built
+    pool, by_key = S.load_pool(O)
+    plan = json.loads((model_dir / "plan.json").read_text())
+    rows = [r for r in plan["runs"] if r["spec"] == "smoke-z"]
+    assert len(rows) == 2
+    for r in rows:
+        e = by_key[S.episode_key(r["task"], r["ep"])]
+        want = S.window_sets(tuple(e["segments"][0]), e["es"])[0]
+        assert r["w_starts"] == want and want
+        mc = {"mode": "swap_exact", "donor": S.episode_key(r["task"], r["donor"]),
+              "replace_log": [[x, x] for x in want], "n_replaced": len(want)}
+        assert R.scope_check(dict(r, motion_content=mc)) == (True, True)
+        assert R.scope_check(dict(r, w_starts=None, motion_content=mc))[0] is False
+    assert "smoke" in R.SCOPE_STAGES
+
+
+def test_recv_positions_filters_no_record_and_error():
+    base = {"task": "PatternLock", "status": "ok", "m": 2, "completed": 2, "W_all": [[0], [32]], "W_core": [[0], [32]]}
+    infos = {"PatternLock:0": dict(base, key="PatternLock:0", ep=0, record="/x.npz", outcome="success"),
+             "PatternLock:1": dict(base, key="PatternLock:1", ep=1, record=None, outcome="success"),
+             "PatternLock:2": dict(base, key="PatternLock:2", ep=2, record="/y.npz", outcome="error")}
+    pos = S.recv_positions(infos, "PatternLock")
+    assert pos == [("PatternLock:0", 1), ("PatternLock:0", 2)]
+    line = S.recv_line("PatternLock", infos, pos)
+    assert "no_record=1" in line and "error_outcome=1" in line and "positions=2" in line
 
 
 def test_pool_and_specs(built):
