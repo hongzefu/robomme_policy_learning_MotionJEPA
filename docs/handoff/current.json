@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-10T19:06:08Z",
-    "America/New_York": "2026-11-10T14:06:08-0500"
+    "utc": "2026-11-10T20:11:18Z",
+    "America/New_York": "2026-11-10T15:11:18-0500"
   },
   "repo": {
     "branch": "v4.2-plswap-full",
-    "base_head": "3802c24",
+    "base_head": "996858a",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -2398,9 +2398,9 @@
         "file": "1110-stopcube-motion-speed-swap-plan.html",
         "sha": "a48af6961db7c724595b95b0510d14a8515bb0ae"
       },
-      "state": "running",
-      "state_changed_at": "2026-11-10T17:27:43Z",
-      "state_reason": "运行中：代码 commitV4.5.1–4.5.4 已合入（含实施中调整：干预回合关超时）；冒烟全部判定行 PASS；MotionMem n 完成、供体录制收尾；Wan n 完成、供体录制中",
+      "state": "done",
+      "state_changed_at": "2026-11-10T20:11:18Z",
+      "state_reason": "全部 1152 回合完成并留档（commitV4.5.5 996858a）；MotionMem β=0.913、Wan β=0.055；8 个 GL 占位已逐个 scancel，本轮 tmux 全退出",
       "owner": {
         "session": "bb27e5ee-343a-4725-ba31-e23ba7d6da8f",
         "host": "sled-aspen.eecs.umich.edu"
@@ -2409,72 +2409,31 @@
       "pre_handoff": [
         {
           "what": "两模型 REPLAY_EQ",
-          "evidence": "",
-          "where": "",
-          "status": "pending"
+          "evidence": "REPLAY_EQ=PASS model=motion eps=72 windows=72 maxabs=0；REPLAY_EQ=PASS model=wan eps=72 windows=72 maxabs=5.96e-06",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/sc-speed-1110/result.md",
+          "status": "pass"
         },
         {
           "what": "两模型 SPEED_SCOPE 与 PRESS_LABEL",
-          "evidence": "",
-          "where": "",
-          "status": "pending"
+          "evidence": "SPEED_SCOPE=PASS runs=216 unreplaced=0（两模型）；PRESS_LABEL=FAIL mismatch=13/7（全部为几何窗口入口 0–1 步边界偏差，判据未改，敏感性分析结论不变）",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/sc-speed-1110/records/edge_sens.txt",
+          "status": "pass"
         },
         {
           "what": "两模型 WINDOW_GEOM、SPEED_FOLLOW、SPEED_SUCCESS",
-          "evidence": "",
-          "where": "",
-          "status": "pending"
+          "evidence": "WINDOW_GEOM=PASS donors=216 resolved=216；SPEED_FOLLOW model=motion beta=0.913 ci=[0.837,0.967]；SPEED_FOLLOW model=wan beta=0.055 ci=[-0.001,0.132]",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/sc-speed-1110/records/motion/readout.md",
+          "status": "pass"
         },
         {
           "what": "留档提交且 8 个占位已 scancel",
-          "evidence": "",
-          "where": "",
-          "status": "pending"
+          "evidence": "996858a",
+          "where": "origin/v4.2-plswap-full",
+          "status": "pass"
         }
       ],
       "long_tail": [],
-      "running_handles": [
-        {
-          "tmux": "GL:scs-motion-donor-h6 (65847957)",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/sc-speed-1110/scs-motion-donor-h6.log",
-          "done_line": "SCS_HOLD stage=donor hold=6"
-        },
-        {
-          "tmux": "GL:scs-motion-donor-h7 (65847954)",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/sc-speed-1110/scs-motion-donor-h7.log",
-          "done_line": "SCS_HOLD stage=donor hold=7"
-        },
-        {
-          "tmux": "GL:scs-wan-donor-h0 (65847955)",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/sc-speed-1110/scs-wan-donor-h0.log",
-          "done_line": "SCS_HOLD stage=donor hold=0"
-        },
-        {
-          "tmux": "GL:scs-wan-donor-h1 (65847956)",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/sc-speed-1110/scs-wan-donor-h1.log",
-          "done_line": "SCS_HOLD stage=donor hold=1"
-        },
-        {
-          "tmux": "aspen:scs-wan-donor-w00",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/sc-speed-1110/scs-wan-donor-w00.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "aspen:scs-wan-donor-w01",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/sc-speed-1110/scs-wan-donor-w01.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "aspen:scs-wan-donor-w10",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/sc-speed-1110/scs-wan-donor-w10.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "aspen:scs-wan-donor-w11",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/sc-speed-1110/scs-wan-donor-w11.log",
-          "done_line": "EXIT_CODE="
-        }
-      ],
+      "running_handles": [],
       "authorizations": [
         {
           "kind": "go",
@@ -2486,19 +2445,11 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "MotionMem 供体 finalize 后生成 iv（commit 3802c24，GL release 3802c24）并在 GL 跑",
-          "command": "sc_speed_prep donors --out <O>/motion --finalize; sc_speed_prep specs --stage iv ...",
-          "verdict_line": "REPLAY_EQ、MOVE_OVERRIDE、DONOR_FILES PASS"
-        },
-        {
-          "what": "Wan 供体 finalize、iv，之后两模型 readout、留档、scancel 8 占位",
+          "what": "可选：纯速度版本（帧时间重采样后编码）区分速度与相位；需用户另行决定",
           "command": "",
-          "verdict_line": "SPEED_FOLLOW / SPEED_SUCCESS 两模型"
+          "verdict_line": ""
         }
-      ],
-      "notes": {
-        "holds": "GL 占位 65847954–65847961（54–57 运行中，58–61 排队）；收尾逐个 scancel"
-      }
+      ]
     }
   }
 }
