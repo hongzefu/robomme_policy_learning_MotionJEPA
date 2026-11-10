@@ -61,6 +61,7 @@ th{background:var(--code)}
 <tr><td>K8</td><td>按下即停（stop_after_press），只读第一次按下的步号与官方成功。</td><td>省算力</td></tr>
 <tr><td>K9</td><td>资源为 GL 8 个占位（1×A40、4 CPU、64G、48h），每个占位只起一个 srun 作业步、内含两条通道（错开 45 秒）；aspen 2 卡共 4 个 worker。</td><td>sp-swap-1110 ⑦ 的经验</td></tr>
 <tr><td>K10</td><td>改 M′ 会同时改变方块在同一时刻的位置（相位），所以这不是「纯速度」。结论写成「换成另一周期的方块运动 token」，不写成「只改了速度」。</td><td>§3.3 局限</td></tr>
+<tr><td>K11</td><td><b>「新速度下能否成功」判断条件（用户 11-10 追加）</b>：每个 R 回合除报真实官方成功外，另判「按新速度 M′ 算是否成功」。判据是按下步落在 W(M′,N) 内。W(M′,N) 是同一场景、方块单程 M′、不按按钮时，方块第 N 次经过目标且满足官方水平距离 ≤ 3×方块半边长的步区间，并要求在官方区间 [M′(N−1), M′N] 内。各回合按 §3.4 分成四类。</td><td>用户原话「你最好还要给我把这个判断条件写出来，就是如果在一个新的速度下，能不能做到 success」；§3.4</td></tr>
 </table>
 
 <h2>3. 机制</h2>
@@ -88,6 +89,29 @@ th{background:var(--code)}
 <li>在 M′=M 时，回放必须重现 N 回合的 token，否则 R_same 混进了回放误差。闸门是 <code>REPLAY_EQ</code>：比较 T_h 之前的窗口与 N 回合 <code>--record-motion</code> 的编码。</li>
 <li>回放之所以能用，是因为方块是运动学驱动的，不和机械臂发生碰撞。录制前用 <code>MOVE_OVERRIDE</code> 核对：环境里方块的实际位置要与 <code>cube_position(t,M′)</code> 吻合。</li>
 </ul>
+
+<h3>3.4 成功判断条件：真实速度成功与新速度成功</h3>
+<p><b>官方成功</b>（<code>StopCube.py::evaluate</code> 与 <code>subgoal_evaluate_func.py::is_obj_stopped_onto</code>）同时要求两点：①按下那一刻，方块与目标的水平距离 ≤ <code>3 × cube_half_size</code>；②停住的步号落在 <code>[M(N−1), M·N]</code>，也就是第 N 次经过所在的那半个周期。两条合起来，等价于按下步落在第 N 次经过的几何窗口 <code>W(M,N)=[target_visit_in, target_visit_out]</code> 内。1105 已核过这个等价关系，几何窗口与官方判定逐局一致。</p>
+<p><b>窗口怎么得到</b>：沿用 <code>scripts/interpret/stopcube_windows.py::geometry_window</code>。它读取不按按钮的完整逐步轨迹（每步的方块和目标位置），取 <code>[M(N−1), M·N]</code> 内满足距离判据的连续整数步。供体录制回合恰好是「同场景、方块单程 M′、悬停不按」的完整轨迹，因此：</p>
+<ul>
+<li><code>W(M′,N)</code> 直接用 M′ 供体录制的轨迹算；</li>
+<li><code>W(M,N)</code> 用 M′=M 那一份录制的轨迹算。</li>
+</ul>
+<p>两个窗口都是实测出来的，不靠公式；公式 <code>T=M·N−M/2</code> 只作交叉检查。</p>
+<p><b>每个 R 回合分四类</b>（p 为第一次按下的步号）：</p>
+<table>
+<tr><th>类别</th><th>条件</th><th>含义</th></tr>
+<tr><td>真实速度成功</td><td>p ∈ W(M,N)（即官方 success=1）</td><td>没被 token 带偏，照真实画面按对了</td></tr>
+<tr><td><b>新速度成功</b></td><td>p ∈ W(M′,N)</td><td>假如方块真按 M′ 运动，这一下会被官方判成功，也就是完全按 token 的速度数对了次数</td></tr>
+<tr><td>都不成功</td><td>按了，但不在两个窗口内（再细分偏早、夹在两窗口之间、偏晚）</td><td>被扰动，但没有对准任何一种速度</td></tr>
+<tr><td>未按</td><td>到官方步数上限也没按</td><td>—</td></tr>
+</table>
+<ul>
+<li><b>窗口重叠</b>：如果 W(M,N) 与 W(M′,N) 有交集，该局在这一对 M′ 下记为「不可区分」，不进新速度成功的分子和分母，单独计数。按 Δ* ≥ 30 步预计不会重叠，仍逐局检查。</li>
+<li><b>基线</b>：原样 N 回合「碰巧」落在 W(M′,N) 内的比例。主报告取差值「R 的新速度成功率 − N 的碰巧率」，配对计算，用接收局重采样得 95% 区间。</li>
+<li><b>R_same</b>：这一组里 W(M′,N)=W(M,N)，新速度成功与真实成功是同一回事。它作对照，用来看换录制版 token 后成功率是否保持。</li>
+</ul>
+<p>判定行写成 <code>SPEED_SUCCESS model=&lt;m&gt; group=&lt;fast|slow|all&gt; new_speed=&lt;k&gt;/&lt;n&gt; base=&lt;k&gt;/&lt;n&gt; diff=&lt;d&gt; ci=[..] true_speed=&lt;k&gt;/&lt;n&gt; neither=&lt;k&gt; nopress=&lt;k&gt; overlap=&lt;k&gt;</code>，另按 (M→M′) 和 N 分格列表。</p>
 
 <h3>3.3 能说明什么、不能说明什么</h3>
 <ul>
@@ -118,6 +142,8 @@ th{background:var(--code)}
 <tr><td><code>PRESS_LABEL=PASS model=&lt;m&gt; runs=&lt;n&gt; mismatch=0</code></td><td>用按下步落在窗口内与否推出的成功，与官方成功逐局比对</td><td>按下步读数可靠</td></tr>
 <tr><td><code>SEED_PRESS model=&lt;m&gt; pairs=72 mad=&lt;步&gt;</code></td><td>N 与 S 的按下步差</td><td>自然抖动的量级（报告项，不设阈值）</td></tr>
 <tr><td><code>SPEED_FOLLOW model=&lt;m&gt; beta=&lt;b&gt; ci=[..] same_delta=&lt;d&gt; ci=[..] n=&lt;n&gt;</code></td><td>K5 主读数</td><td>回答用户的问题（报告项，不设阈值）</td></tr>
+<tr><td><code>WINDOW_GEOM=PASS model=&lt;m&gt; donors=216 resolved=&lt;n&gt; formula_dev_max=&lt;步&gt;</code></td><td>每份供体录制都用 <code>geometry_window</code> 解出 W(M′,N)，并与 <code>T(M′,N)</code> 交叉检查；同时用 N 回合的官方成功核对 W(M,N)</td><td>新速度成功的窗口是实测的，可信</td></tr>
+<tr><td><code>SPEED_SUCCESS …</code>（§3.4）</td><td>K11 四类分布与新速度成功率减基线</td><td>回答「新速度下能不能成功」（报告项，不设阈值）</td></tr>
 </table>
 
 <h2>6. 步骤</h2>
@@ -164,7 +190,7 @@ th{background:var(--code)}
 <h3>1.1 <code>scripts/interpret/stopcube_runner.py</code>（SC-W1）</h3>
 <ul>
 <li><code>normal</code> 模式新增可选逐步动作日志 <code>actions.npz</code>，键为 <code>env_steps</code>（int）、<code>actions</code>（[T,8]）、<code>env_seed</code>，同时记录子目标切换步。关闭时输出逐位不变。</li>
-<li>新模式 <code>speed_donor</code>，配置为 <code>{"schema_version":1,"episodes":{"StopCube:&lt;ep&gt;":{"move_interval":M′,"action_table":&lt;路径&gt;,"t_hold":T_h}}}</code>。流程：reset → 校验 env_seed → 改写 move_interval → 逐步按表送动作 → 从 T_h 起复用 <code>hold_extended</code> 的固定关节逻辑悬停到官方上限 → 回执记录 <code>move_interval_applied</code>、<code>t_hold</code>、<code>button_trigger_step</code>（必须为 null）。</li>
+<li>新模式 <code>speed_donor</code>，配置为 <code>{"schema_version":1,"episodes":{"StopCube:&lt;ep&gt;":{"move_interval":M′,"action_table":&lt;路径&gt;,"t_hold":T_h}}}</code>。流程：reset → 校验 env_seed → 改写 move_interval → 逐步按表送动作 → 从 T_h 起复用 <code>hold_extended</code> 的固定关节逻辑悬停到官方上限 → 回执记录 <code>move_interval_applied</code>、<code>t_hold</code>、<code>button_trigger_step</code>（必须为 null）。逐步轨迹格式与 <code>normal</code> 的轨迹相同（含 <code>cube_position_*</code>、<code>target_position_*</code>、<code>button_pressed_*</code>），供 <code>geometry_window</code> 计算 W(M′,N)。</li>
 <li>自定种子：沿用 bin_trace_runner／plfull 的 metadata 机制，局号上限为 120。</li>
 <li><code>stop_after_press</code>：<code>button_trigger_step</code> 非空就结束回合。</li>
 </ul>
@@ -181,6 +207,7 @@ th{background:var(--code)}
 <h3>1.4 <code>scripts/interpret/analysis/sc_speed_readout.py</code>（SC-W2，新）</h3>
 <ul>
 <li>读取各回合回执，计算 press、成功、Δ、Δ*、β（带截距的 OLS，同时报过原点的版本）、按 (M→M′) 格的均值、按下率，接收局 bootstrap 2000 次，写 <code>readout.md/json</code> 和全部判定行。</li>
+<li>K11：调用 <code>stopcube_windows.geometry_window</code>，用供体录制轨迹解出 W(M′,N) 与 W(M,N)。每个 R 回合分为真实速度成功、新速度成功、都不（偏早、夹中、偏晚）、未按、窗口重叠不可区分，计算新速度成功率减 N 碰巧率的配对差和 bootstrap 区间，输出 <code>WINDOW_GEOM</code> 与 <code>SPEED_SUCCESS</code>。</li>
 </ul>
 <h3>1.5 <code>scripts/interpret/test_sc_speed.py</code>（SC-W2，新）</h3>
 <ul><li>覆盖 Δ* 表、池均衡、供体键唯一、回放表与 env_steps 对齐、读数合成样例（β=1 与 β=0 两种）、判定行格式。</li></ul>
