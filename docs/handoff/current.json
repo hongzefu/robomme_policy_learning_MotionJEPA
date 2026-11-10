@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-10T11:10:00Z",
-    "America/New_York": "2026-11-10T06:10:00-0500"
+    "utc": "2026-11-10T17:27:43Z",
+    "America/New_York": "2026-11-10T12:27:43-0500"
   },
   "repo": {
     "branch": "v4.2-plswap-full",
-    "base_head": "238f40c",
+    "base_head": "a48af69",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -2390,6 +2390,64 @@
           "what": "用户读 result.md 并裁决",
           "command": "读 docs/evaluation-doc/sp-swap-1110/result.md",
           "verdict_line": "—"
+        }
+      ]
+    },
+    "sc-speed-1110": {
+      "plan": {
+        "file": "1110-stopcube-motion-speed-swap-plan.html",
+        "sha": "a48af6961db7c724595b95b0510d14a8515bb0ae"
+      },
+      "state": "running",
+      "state_changed_at": "2026-11-10T17:27:43Z",
+      "state_reason": "用户开工令后开工：开工审查、SC-W1/W2 写代码、GL 8 占位提交",
+      "owner": {
+        "session": "bb27e5ee-343a-4725-ba31-e23ba7d6da8f",
+        "host": "sled-aspen.eecs.umich.edu"
+      },
+      "depends_on": [],
+      "pre_handoff": [
+        {
+          "what": "两模型 REPLAY_EQ",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        },
+        {
+          "what": "两模型 SPEED_SCOPE 与 PRESS_LABEL",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        },
+        {
+          "what": "两模型 WINDOW_GEOM、SPEED_FOLLOW、SPEED_SUCCESS",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        },
+        {
+          "what": "留档提交且 8 个占位已 scancel",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-11-10",
+          "quote": "好的开始吧，你你最好还要给我把这个判断条件写出来，就是如果在一个新的速度下，能不能做到 success / 不用再来找我了直接开始吧",
+          "scope": "1110-stopcube-motion-speed-swap-plan.html 全部步骤（含 K11），GL 8 个单卡占位"
+        }
+      ],
+      "pending_decisions": [],
+      "next_steps": [
+        {
+          "what": "开工审查后派 SC-W1/W2",
+          "command": "",
+          "verdict_line": "PRE_MERGE_REVIEW=PASS"
         }
       ]
     }
