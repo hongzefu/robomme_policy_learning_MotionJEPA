@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-10T05:20:00Z",
-    "America/New_York": "2026-11-10T00:20:00-0500"
+    "utc": "2026-11-10T05:50:00Z",
+    "America/New_York": "2026-11-10T00:50:00-0500"
   },
   "repo": {
     "branch": "v4.2-plswap-full",
-    "base_head": "ac6ff45",
+    "base_head": "14debb7",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -2333,7 +2333,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-11-10T05:20:00Z",
-      "state_reason": "开工令；已提交 GL 占位 8 个",
+      "state_reason": "代码全部合入（commitV4.4.1–4.4.4，14debb7）；GL release 14debb7；冒烟通过；N 阶段运行中",
       "owner": {
         "session": "bb27e5ee-343a-4725-ba31-e23ba7d6da8f",
         "host": "sled-aspen.eecs.umich.edu"
@@ -2362,8 +2362,18 @@
       "long_tail": [],
       "running_handles": [
         {
+          "tmux": "GL 登录节点 sps-chain-n-g{0..5}{a,b}（12 条）",
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/sp-swap-1110/sps-chain-n-<w>.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "aspen sps-chain-aspen-n-w{01,10,11}（w00 待起）",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/sp-swap-1110/sps-chain-aspen-n-<w>.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
           "tmux": "",
-          "log": "GL JobID 65812859-65812866 (sps-hold-1..8)",
+          "log": "GL JobID 65812859–65812866（sps-hold-1..8；7、8 排队）",
           "done_line": "scancel"
         }
       ],
@@ -2373,14 +2383,20 @@
           "date": "2026-11-10",
           "quote": "开工呢哦，有问题尽可能在十五分钟内问我，之后就尽可能自己做。",
           "scope": "计划 ac6ff45 全部步骤，含 8 个 GL 单卡占位"
+        },
+        {
+          "kind": "scope",
+          "date": "2026-11-10",
+          "quote": "我现在要睡觉了，之后有问题都留待我裁决，尽可能不要停，一路跑到明天早上八点",
+          "scope": "夜间自主推进，问题留待裁决"
         }
       ],
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "写代码并准备 GL",
-          "command": "见计划第二部分",
-          "verdict_line": "PRE_MERGE_REVIEW / GL_RELEASE / VLA_SYNC"
+          "what": "N 完成后 donors → swap/cross/seeds（sp）、donors --by-k → kswap/kseeds（fp）",
+          "command": "sp_swap_prep donors --out <O>/<M>；fp_swap_prep donors --out <FPO>/<M> --by-k",
+          "verdict_line": "SP_SEGMENT/SP_RECV/DONOR_DISTINCT"
         }
       ]
     }
