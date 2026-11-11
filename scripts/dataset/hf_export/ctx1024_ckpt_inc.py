@@ -4,7 +4,8 @@
 bucket 内对象沿用既有 VLA 导出的 ``<step>/<checkpoint 内相对路径>``，下载后即标准 step 目录。
 重启安全：每份传完写 ``$STORE/exports/<run>-inc/logs/uploaded/<step>.done``，已完成的不再传。
 
-用法：ctx1024_ckpt_inc.py --run <run> --bucket <id> [--dry-run]
+用法：ctx1024_ckpt_inc.py --run <run> --bucket <id> [--steps 2500 4999] [--dry-run]
+--steps 缺省为 fs1024 80k 的 10000…70000、79999。
 """
 from __future__ import annotations
 
@@ -105,12 +106,13 @@ def main() -> int:
     parser.add_argument("--run", required=True)
     parser.add_argument("--bucket", required=True)
     parser.add_argument("--store", type=Path, default=STORE)
+    parser.add_argument("--steps", type=int, nargs="+", default=STEPS, help="要上传的 step，缺省 10000…70000、79999")
     parser.add_argument("--dry-run", action="store_true", help="只列已提交 step 的文件，不读凭据、不联网")
     args = parser.parse_args()
     run_dir = args.store / "train-runs/mme_vla_suite" / args.run
 
     if args.dry_run:
-        for step in STEPS:
+        for step in args.steps:
             if not committed(run_dir / str(step)):
                 print(f"DRYRUN_NOT_COMMITTED step={step}")
                 continue
@@ -132,7 +134,7 @@ def main() -> int:
         print(f"INC_START run={args.run} bucket={args.bucket}", flush=True)
 
         sizes: dict[str, int] = {}
-        pending = list(STEPS)
+        pending = list(args.steps)
         while pending:
             for step in list(pending):
                 marker = markers / f"{step}.done"
@@ -157,7 +159,7 @@ def main() -> int:
         print(f"UPLOAD_FAIL step={step} {exc}", flush=True)
         return 1
     status = "PASS" if mismatches == 0 else "FAIL"
-    print(f"HF_VERIFY={status} bucket={args.bucket} steps={len(STEPS)} mismatches={mismatches}", flush=True)
+    print(f"HF_VERIFY={status} bucket={args.bucket} steps={len(args.steps)} mismatches={mismatches}", flush=True)
     return 0 if mismatches == 0 else 1
 
 
