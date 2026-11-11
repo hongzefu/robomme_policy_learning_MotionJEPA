@@ -66,4 +66,10 @@
 ## 七、下一步（未授权，仅建议）
 
 - 如需判断续训本身的作用：在同一评测器上评一次官方原版 79999（三 seed 约 3 h）。
-- 本地 ckpt 2500/4999（22G）与官方 zip（11.6G）+ 解压目录（11G）均保留在 `/scratch`（实例存储，stop 即丢）；是否上传 HF bucket 待用户决定。
+- 本地 ckpt 2500/4999（22G）与官方 zip（11.6G）+ 解压目录（11G）均保留在 `/scratch`（实例存储，stop 即丢）。
+
+## 八、HF 备份（用户 11-10 美东：「上传」）
+
+- 公开 bucket `HongzeFu/robomme-vla-orig100-ctx-framesamp512-official79999-cont5k-b64-v1`，对象为 `<step>/<ckpt 内相对路径>`（2500、4999，共 41 个文件），下载后即标准 step 目录。
+- 工具 `scripts/dataset/hf_export/ctx1024_ckpt_inc.py --steps 2500 4999`（commitV12.5 新增 `--steps`）；逐文件上传后匿名回读核 sha256 与字节数，最后核远端文件集合。本机无集群，校验在本机做。
+- 判定行：`HF_VERIFY=PASS bucket=HongzeFu/robomme-vla-orig100-ctx-framesamp512-official79999-cont5k-b64-v1 steps=2 mismatches=0`，`EXIT_CODE=0`；日志 `v1-store/logs/orig100-ctx-framesamp512-official79999-cont5k-b64-inc.log`，逐文件 sha256 记录在 `v1-store/exports/orig100-ctx-framesamp512-official79999-cont5k-b64-inc/logs/uploaded/{2500,4999}.done`。
