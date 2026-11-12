@@ -2454,11 +2454,11 @@
     "gl-4task400-ctx-50k": {
       "plan": {
         "file": "1111-gl-4task400-ctx512-1024-b128-50k-plan.html",
-        "sha": "a805014"
+        "sha": "d654df8"
       },
       "state": "running",
       "state_changed_at": "2026-11-12T04:49:24Z",
-      "state_reason": "r2 获开工令；P0 两份 4×A40 占位已提交排队；r2 修订部分开工审查进行中，审查通过后进入 P1（GL CPU job 下载）与 P2（worktree 子代理）。",
+      "state_reason": "r3 获自主执行授权；P0 占位排队中；进入 P1 下载与 P2 子代理。",
       "owner": {
         "session": "Claude Code 会话（sled-aspen，本仓库主检出）",
         "host": "sled-aspen"
@@ -2517,6 +2517,12 @@
           "date": "2026-11-11",
           "quote": "批准改 train.py 支持续跑；可以按 NA；放行（写 turbo）；全部同意（其余修订，含 GL standard CPU job 下载）",
           "scope": "r1 开工审查 5 条 blocking 裁决"
+        },
+        {
+          "kind": "go",
+          "date": "2026-11-12",
+          "quote": "之后有问题尽可能不要来问我了，我要睡觉了，尽可能你自己来解决。然后有问题可以 pending 来问问我。……我需要明天早上八点前你尽可能自主决策，尽可能把它跑起来。要是遇到了问题，你一定要记住早上起来要问我，不能静默地过去了",
+          "scope": "r3 计划全部步骤，自主执行至美东 2026-11-12 08:00，问题记入 pending_decisions 早上汇报"
         }
       ],
       "pending_decisions": [],
