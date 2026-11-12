@@ -195,6 +195,9 @@ class FrameSampDataset(Dataset):
             self._motion_pos_dim = int(mcfg.pos_dim)
             self._motion_tokens = wr.motion_token_budget(mcfg)          # token 数 T = budget × tokens_per_window
             self._motion_dim = int(mcfg.dim)
+            if self._motion_raw9:
+                # S5-L1：TransformedDataset.__getitems__ 据此在共享内存里整批预分配 motion_emb、逐样本 getitem_into 直接填
+                self.raw9_motion_shape = (self._motion_tokens, self._motion_dim)
             # 零截断契约的预检：每 episode 的最大合法起点数 ≤ 预算，超过即报 episode 身份（禁止静默裁剪）
             for e in self._motion_entries:
                 mx = ms.max_visible_count(e)
@@ -306,13 +309,17 @@ class FrameSampDataset(Dataset):
         times = pad_times(frames, B)
         return out_emb, out_pos, mask, times
 
-    def _fill_motion_raw9(self, entry, step: int, mstore, store, frames_arr: np.ndarray):
+    def _fill_motion_raw9(self, entry, step: int, mstore, store, frames_arr: np.ndarray, out_emb=None):
         """wan_raw9 运动路（计划 1112 §3.2、§1.0 C-B / C-τ；L0 预分配实现）。
 
         k 个可见窗 → 表行 (k,9,16,32,32) 由 ``mstore.rows_into`` 直接写进预分配的 (T,16384) 数组前 k·9 行
         （不经 ``rows()`` 副本与 concat）；每 token 时刻 τ_j = min(f+4j, last_real)，demo 窗 last_real = es−1、
         exec 窗 last_real = f+32；pos 取帧路 pos 表 τ 行第 0 行前 pos_dim 维；右填充到 T；mem_order 按 (τ, 类型) 交错。
         返回 (motion_emb (T,16384) f32, motion_pos (T,pos_dim) f32, motion_mask (T,) bool, mem_order (512+T,) int32)。
+
+        S5-L1：给 ``out_emb``（调用方预分配的 (T,16384) f32、C 连续、可写槽位，例如整批共享内存缓冲的第 i 行）时
+        motion_emb 直接写进它（前 k·9 行由 rows_into 写表行、其余行显式写 0），不再另分配 47 MB 数组；
+        字节与 out_emb=None 时的 np.zeros + rows_into 逐位相同。
         """
         rows_m, f_m = ms.visible_motion_rows(entry, step)
         k = int(len(rows_m))
@@ -322,7 +329,14 @@ class FrameSampDataset(Dataset):
         tpw = wr.RAW9_TOKENS_PER_WINDOW
         T = self._motion_tokens
         n = k * tpw
-        out_emb = np.zeros((T, self._motion_dim), dtype=np.float32)
+        if out_emb is None:
+            out_emb = np.zeros((T, self._motion_dim), dtype=np.float32)
+        else:
+            if (out_emb.shape != (T, self._motion_dim) or out_emb.dtype != np.float32
+                    or not out_emb.flags["C_CONTIGUOUS"] or not out_emb.flags["WRITEABLE"]):
+                raise ValueError(f"out_emb 须为 C 连续可写 {(T, self._motion_dim)} float32，得到 "
+                                 f"{out_emb.shape} {out_emb.dtype} flags={out_emb.flags}")
+            out_emb[n:] = 0                              # 尾部 padding 显式清零（不依赖缓冲初值）
         out_pos = np.zeros((T, self._motion_pos_dim), dtype=np.float32)
         mask = np.zeros(T, dtype=np.bool_)
         if k:
@@ -341,6 +355,15 @@ class FrameSampDataset(Dataset):
         return out_emb, out_pos, mask, memory_order(ftimes, self._tokens_per_frame, mtimes)
 
     def __getitem__(self, idx):
+        return self._getitem(idx, None)
+
+    def getitem_into(self, idx, motion_emb_out: np.ndarray):
+        """S5-L1：同 ``__getitem__``，但 raw9 的 motion_emb 直接写进调用方给的 (T,16384) f32 槽位并以它交付。"""
+        if not self._motion_raw9:
+            raise ValueError("getitem_into 只用于 wan_raw9 配置")
+        return self._getitem(idx, motion_emb_out)
+
+    def _getitem(self, idx, motion_emb_out):
         idx = int(idx)
         if not 0 <= idx < len(self._epis_of):
             raise IndexError(f"样本 idx 越界: {idx} ∉ [0, {len(self._epis_of)})")
@@ -383,7 +406,8 @@ class FrameSampDataset(Dataset):
             # wan_raw9：k 窗 → (k·9,16384)，τ 逐 token，右填充到 budget·9（_fill_motion_raw9）
             mstore = self._ensure_motion_store()
             (data["motion_emb"], data["motion_pos"], data["motion_mask"],
-             data["mem_order"]) = self._fill_motion_raw9(self._motion_entries[g], step, mstore, store, frames_arr)
+             data["mem_order"]) = self._fill_motion_raw9(self._motion_entries[g], step, mstore, store, frames_arr,
+                                                        out_emb=motion_emb_out)
         elif self._motion_enabled:
             # ①′ 起点集合（段内绝对网格、前视 33 帧、尾端 ≤ 当前帧；三侧同式 visible_motion_rows）
             entry = self._motion_entries[g]
