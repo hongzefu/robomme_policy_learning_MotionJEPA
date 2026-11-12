@@ -32,3 +32,10 @@ srun --jobid=65943151 --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmod
 - 产物：ckpt `<GL_REPO>/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m16x8x8-ctx-b128-50k-gl/{5000,…,50000}` 与 `resume/`（完整状态，只留最新 1 份，单份约 45 GiB）；日志 `<GL_REPO>/v1-store/logs/v2-1600ep-m16x8x8-ctx-b128-50k-gl.log`；指标 `<GL_REPO>/v1-store/train-records/v2-1600ep-m16x8x8-ctx-b128-50k-gl/attempt01/metrics.jsonl`。
 - 盯盘：`EXIT_CODE=`、`Step [0-9]+000:`、`RESOURCE_EXHAUSTED`、`Traceback`、`nan`、`Killed`、`=FAIL`。
 - tmux 会话清单（aspen）：`g4c-train-1024`（正式）、`g4c-smoke-1024`/`g4c-v4`（冒烟）。
+
+## 实际起跑（2026-11-12 美东）
+
+- 占位 65943151 于 06:41 在 gl1514 开始运行（4×A40）。
+- V7 冒烟 `g4c-smoke-1024-11120641`（20 步，全局 128 = 每卡 16 × 累积 2）：未 OOM，第 17→19 步每步约 13.5 s，`resume/` 保存成功（`RESUME_SAVE step=20 leaves=177`），`EXIT_CODE=0`；`SMOKE_GL=PASS tag=1024 micro=16 k=2 s_per_step=13.5 est_total_h=187.5 hold_left_h=335.7 nonfinite=0`。
+- 正式训练 06:57:09 起跑（aspen tmux `g4c-train-1024`），前置 `CLEAN_HEAD=PASS sha=af56267c7dae53415ed526d902d3f829c60ce076`、`DATA_LINEAGE=NA encoder=none motion_enabled=false vla_input_pin=655e64b4…`、`PAIRED_RUNS_SAME_LIB=PASS`、`PRECHECK=PASS resume=0`。
+- Step 0 loss 0.4507，Step 100 loss 0.1985。

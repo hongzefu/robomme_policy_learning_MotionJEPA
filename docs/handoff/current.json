@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-12T10:52:04Z",
-    "america_new_york": "2026-11-12T05:52:04-05:00"
+    "utc": "2026-11-12T12:27:04Z",
+    "america_new_york": "2026-11-12T07:27:04-05:00"
   },
   "repo": {
     "branch": "v4.2-plswap-full",
@@ -2457,8 +2457,8 @@
         "sha": "d654df8"
       },
       "state": "running",
-      "state_changed_at": "2026-11-12T10:52:04Z",
-      "state_reason": "ctx512 正式训练 05:29:50 美东起跑（占位 65943150/gl1513，9.5 s/步，估 131 h）；V4 GRAD_ACCUM_BEHAVIOR=PASS、V7 SMOKE_GL=PASS（512）；ctx1024 占位 65943151 仍 PENDING。",
+      "state_changed_at": "2026-11-12T12:27:04Z",
+      "state_reason": "两条正式训练都在跑：ctx512 05:29:50 起（65943150/gl1513，9.5 s/步，估 131 h）；ctx1024 06:57:09 起（65943151/gl1514，13.5 s/步，估 188 h）。",
       "owner": {
         "session": "Claude Code 会话（sled-aspen，本仓库主检出）",
         "host": "sled-aspen"
@@ -2494,9 +2494,11 @@
           "done_line": "EXIT_CODE=0"
         },
         {
+          "tmux": "g4c-train-1024",
           "jobid": "65943151",
-          "name": "g4c-hold-1024",
-          "state": "PENDING"
+          "node": "gl1514",
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/v2-1600ep-m16x8x8-ctx-b128-50k-gl.log",
+          "done_line": "EXIT_CODE=0"
         }
       ],
       "authorizations": [
@@ -2529,18 +2531,14 @@
         "早上汇报：实施中调整 A1（梯度累积 scan→展开循环）、A2（V4 挪到 GL 冒烟前、闸门后移）、A3（V10 改 ref-shard 迷你库、K=1）均经对抗验证 PASS，需告知用户",
         "早上汇报：本机保存点极慢（旧代码 EMA 一次 1044 s），resume/ 单份 45.4 GiB；GL 上每个保存点耗时待实测，可能每 5000 步多数分钟",
         "早上汇报：梯度累积固有多一份梯度显存（4 卡约 3.4GB/卡）；A40 上每卡 16 是否装得下待 V7 实测，OOM 时按计划改 8×4",
-        "计划外旧事项：gl-abl-encoders-train 仍写 running，但占位 65209321/65209330 已于 2026-11-09 CANCELLED+，结果未核，交用户处理"
+        "计划外旧事项：gl-abl-encoders-train 仍写 running，但占位 65209321/65209330 已于 2026-11-09 CANCELLED+，结果未核，交用户处理",
+        "冒烟与诊断产物待用户决定是否删除：turbo v1-store/train-runs/*/g4c-smoke-512-11120516、g4c-smoke-1024-11120641（各含 EMA ckpt 与约 45 GiB resume/）、v1-store/diagnostics/g4c-v4；本机 /data v1-store/diagnostics/g4c-local（157G）与 g4c-v10-store"
       ],
       "next_steps": [
         {
-          "what": "ctx1024 占位排到后跑 20 步冒烟（V7），通过则正式起跑",
-          "command": "run_in_hold_4task_ctx.sh RUN_NAME=g4c-smoke-1024-<MMDDHHMM> MAX_STEPS=20 → RUN_NAME=v2-1600ep-m16x8x8-ctx-b128-50k-gl MAX_STEPS=50001",
-          "verdict_line": "SMOKE_GL=PASS tag=1024 …；est_total_h ≤ 0.9×hold_left_h"
-        },
-        {
-          "what": "每 5000 步核 finite/进度/余量",
-          "command": "Monitor 盯两份日志",
-          "verdict_line": "TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10"
+          "what": "每 5000 步核 finite/进度/余量；训练完成后写 result.md、scancel 两份占位",
+          "command": "Monitor 两份日志",
+          "verdict_line": "TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10；EXIT_CODE=0"
         }
       ]
     }
