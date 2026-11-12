@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-12T16:24:47Z",
-    "america_new_york": "2026-11-12T11:24:47-05:00"
+    "utc": "2026-11-12T16:32:04Z",
+    "america_new_york": "2026-11-12T11:32:04-05:00"
   },
   "repo": {
     "branch": "v15-4task-modul-wanraw9-s32-50k",
-    "base_head": "8c504c5"
+    "base_head": "cd5df94"
   },
   "freeze": {
     "active": false,
@@ -156,15 +156,23 @@
     "4task-wanraw9s32-train": {
       "plan": {
         "file": "1112-4task-modul-wanraw9-s32-50k-plan.html",
-        "sha": null
+        "sha": "127072a"
       },
-      "state": "planned",
-      "state_changed_at": "2026-11-12T16:24:47Z",
+      "state": "running",
+      "state_changed_at": "2026-11-12T16:32:04Z",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiUiaeANT2oNBsirsQv",
         "host": "ip-10-242-11-177"
       },
-      "long_tail": [],
+      "long_tail": [
+        {
+          "what": "ckpt 增量上传 HF",
+          "tmux": "r9-ckptup",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/r9-ckptup.log",
+          "done_line": "HF_VERIFY=PASS ckpts=10",
+          "status": "pending"
+        }
+      ],
       "running_handles": [],
       "authorizations": [
         {
@@ -172,12 +180,36 @@
           "date": "2026-11-12",
           "quote": "登记",
           "scope": "登记进状态机"
+        },
+        {
+          "kind": "go",
+          "date": "2026-11-12",
+          "quote": "开工",
+          "scope": "计划 1112-4task-modul-wanraw9-s32-50k-plan.html @127072a 全部步骤"
+        },
+        {
+          "kind": "go",
+          "date": "2026-11-12",
+          "quote": "同意开工，按照推荐开工，你可以直接开始了。不用再找我",
+          "scope": "开工前审查 F3/F6/F7 按推荐处理；其余 FAIL 如实记录照常推进（P-LINEAGE FAIL、硬停②③、训练崩溃除外）"
         }
       ],
       "pending_decisions": [],
-      "state_reason": "计划已合入 8c504c5（PRE_MERGE_REVIEW=PASS），等开工令",
+      "state_reason": "开工令已到；RB-A1 审查 FAIL(9/3) 用户裁决按推荐，计划修订与 S1–S4 并行",
       "depends_on": [],
       "pre_handoff": [
+        {
+          "what": "RB-A2 GUARD_FIX",
+          "evidence": "GUARD_FIX=PASS commit=cd5df9454bf54bed036e315b07dd67ebd53ab879",
+          "where": "origin/v15-4task-modul-wanraw9-s32-50k",
+          "status": "pass"
+        },
+        {
+          "what": "S1–S4 POST_MERGE_REVIEW=PASS ×4",
+          "evidence": null,
+          "where": null,
+          "status": "pending"
+        },
         {
           "what": "RB-A1 PLAN_CONSISTENCY_REVIEW",
           "evidence": null,
@@ -226,7 +258,7 @@
     "4task-wanraw9s32-eval": {
       "plan": {
         "file": "1112-4task-modul-wanraw9-s32-50k-plan.html",
-        "sha": null
+        "sha": "127072a"
       },
       "state": "planned",
       "state_changed_at": "2026-11-12T16:24:47Z",
@@ -242,6 +274,18 @@
           "date": "2026-11-12",
           "quote": "登记",
           "scope": "登记进状态机"
+        },
+        {
+          "kind": "go",
+          "date": "2026-11-12",
+          "quote": "开工",
+          "scope": "计划 1112-4task-modul-wanraw9-s32-50k-plan.html @127072a 全部步骤"
+        },
+        {
+          "kind": "go",
+          "date": "2026-11-12",
+          "quote": "同意开工，按照推荐开工，你可以直接开始了。不用再找我",
+          "scope": "开工前审查 F3/F6/F7 按推荐处理；其余 FAIL 如实记录照常推进（P-LINEAGE FAIL、硬停②③、训练崩溃除外）"
         }
       ],
       "pending_decisions": [],
@@ -257,7 +301,7 @@
           "status": "pending"
         },
         {
-          "what": "闸 G9 UPLOAD_READBACK=PASS / HF_VERIFY=PASS ckpts=10",
+          "what": "闸 G9 UPLOAD_READBACK=PASS",
           "evidence": null,
           "where": null,
           "status": "pending"
