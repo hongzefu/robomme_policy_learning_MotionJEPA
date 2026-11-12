@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wan 原始九 latent 计划</title>
+<style>
+:root{--bg:#ffffff;--fg:#1f2328;--muted:#59636e;--line:#d0d7de;--card:#f6f8fa;--acc:#bc4c00;--ok:#1a7f37;--warn:#9a6700;--code:#eff1f3}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0d1117;--fg:#e6edf3;--muted:#9198a1;--line:#30363d;--card:#161b22;--acc:#f0883e;--ok:#3fb950;--warn:#d29922;--code:#1f242c}}
+:root[data-theme="dark"]{--bg:#0d1117;--fg:#e6edf3;--muted:#9198a1;--line:#30363d;--card:#161b22;--acc:#f0883e;--ok:#3fb950;--warn:#d29922;--code:#1f242c}
+body{background:var(--bg);color:var(--fg);font-family:"Noto Sans CJK SC","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.65;margin:0;padding:0 16px}
+main{max-width:1080px;margin:24px auto 64px}
+h1{border-bottom:2px solid var(--line);padding-bottom:6px;margin-top:32px}
+h2{margin-top:36px;border-left:4px solid var(--acc);padding-left:10px}
+h3{margin-top:24px}
+code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9em;background:var(--code);border-radius:4px}
+code{padding:1px 4px;overflow-wrap:anywhere}
+pre{padding:10px 12px;overflow-x:auto;line-height:1.45}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:.93em;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:5px 8px;vertical-align:top;text-align:left}
+th{background:var(--card)}
+.box{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px 14px;margin:12px 0}
+.warn{border-left:4px solid var(--warn)}
+.ok{border-left:4px solid var(--ok)}
+.muted{color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+<h1>4task modulation：Wan 原始 9 latent 逐个投影 + stride 32，50k 训练 + 本机 692 局评估</h1>
+<p class="muted">计划日期 2026-11-12（美东）。分支 <code>v15-4task-modul-wanraw9-s32-50k</code>，基线 <code>v11-4task-modul-wantp768-50k@c55a6bc</code>。状态：<b>planned，等开工令</b>。</p>
+
+<div class="box ok">
+<b>一句话</b>：把上次「Wan raw latent 零参数池化成 1 个 768 维 token / 窗、stride 16」换成「每窗 9 个 latent 都保留、每个 latent 展平 16384 维后经同一个可学习线性投影成 1 个 1024 维记忆 token、stride 32」，其余（4task 原库 1600ep、8×8 帧路、modulation、B128、8 卡、50001 步、seed 7 的 692 局评估）全部不变；训完自动接评估，与 43.06%（298/692）直接对比。
+</div>
+
+<h2>1 背景与对照</h2>
+<table>
+<tr><th>run</th><th>motion 读出</th><th>stride</th><th>692 局</th><th>备注</th></tr>
+<tr><td>v11 wantp768（本计划基线）</td><td>丢 latent 0，后 8 个时间均值 → adaptive 6×8 → 768 维，1 token/窗，0 参数池化</td><td>16</td><td><b>298/692 = 43.06%</b></td><td>0.966 s/步，50k 13.5 h；评估 3 h 07 min</td></tr>
+<tr><td>上次 512+motion encoder</td><td>MotionJEPA encoder</td><td>16</td><td>54.62%（@50k）</td><td>跨环境参考，不作同口径对比</td></tr>
+<tr><td><b>本计划 wanraw9-s32</b></td><td>9 个 raw latent 各 16384 维，共享 Linear → 9 token/窗</td><td>32</td><td>待测</td><td>—</td></tr>
+</table>
+
+<h2>2 已裁决（2026-11-12 用户「1234 都按照你说的」）</h2>
+<table>
+<tr><th>#</th><th>事项</th><th>裁决</th></tr>
+<tr><td>D1</td><td>投影形式</td><td>9 个 latent <b>共用一个</b> <code>Linear(16384+768 → 1024)</code>（约 17.6M 参数）；不做 9 套独立权重（约 158M，易过拟合）</td></tr>
+<tr><td>D2</td><td>latent 0</td><td><b>保留</b>，每窗 9 token（latent 0 只编码起点帧、与上一窗 latent 8 有冗余，接受）</td></tr>
+<tr><td>D3</td><td>双变量</td><td>「不池化」与「stride 32」同时改变，接受混淆，本计划不补 stride 16 单变量对照</td></tr>
+<tr><td>D4</td><td>时效</td><td>窗口需 33 帧全见才可用，stride 32 下最新 motion token 最多比 stride 16 晚 16 帧出现，接受</td></tr>
+<tr><td>D5</td><td>流程</td><td>训完直接评（692 局、seed 7、同一 BinFill 前缀库 <code>demo-prefix/binfill-3b4de03a0b46</code>）</td></tr>
+<tr><td>D6</td><td>数据瓶颈</td><td>若成瓶颈，按 §6 的修复阶梯修；只有需要改变数值语义（bf16）时才停下问用户</td></tr>
+</table>
+
+<h2>3 「投影」是什么</h2>
+<div class="box">
+<p>Wan VAE 对一个 33 帧窗输出 raw latent <code>Z</code>，形状 <code>(9,16,32,32)</code> = (时间, 通道, 高, 宽)。latent 0 只编码第 1 帧，latent k（k=1..8）编码第 4k−3 … 4k 帧（窗内偏移）。</p>
+<p>对每个 k：把 <code>Z[k]</code>（16×32×32）按 C→H→W 展平成 16384 维向量 <code>x_k</code>；该 latent 的时刻 <code>τ_k</code> 取时间码 <code>pos(τ_k)</code>（256 维，帧路同一张 3D posemb 表前 256 维）经已有的 <code>motion_pos_proj</code>（256→768）+ silu 得 <code>p_k</code>；然后</p>
+<pre>token_k = W · concat(x_k, p_k) + b        W: 1024 × (16384+768)，b: 1024
+</pre>
+<p>9 个 k、所有窗口、所有样本<b>共用同一个 W</b>，W 随 VLA 一起从头训练（属于 <code>mem_encoder</code> 参数）。每个 latent 独立变成 1 个 1024 维记忆 token，进入 modulation 的记忆序列被 action expert 交叉注意。</p>
+<p>和上次的关系：上次的「时间均值 + 6×8 平均池化」本身就是一个<b>固定</b>的线性映射（16384×8 → 768，权重是 1/8·1/24 的常数），再接一层 <code>Linear(768+768→1024)</code>。这次把固定池化换成可学习的 W，并且不再把 8 个时刻平均掉——网络自己决定空间、通道上看哪里、每个时刻各自一个 token。</p>
+</div>
+
+<h2>4 数据：直接复用本机已有 latent，不重跑 Wan</h2>
+<ul>
+<li>本机 <code>v1-store/datasets/4task-v2-1600ep-604f16da/wan-latents</code>：71316 窗、40G，stride 16、网格原点 <code>segment_start</code>、33 帧前视窗、demo 段 <code>demo_min_real_frames=17</code> + <code>repeat_last</code> 尾补。</li>
+<li>stride 32 的起点 0,32,64… 恰为 stride 16 网格的偶数 m（demo、exec 两段各自从段起点起算）。新表 = 旧 latent 的 m 为偶数的行，约 3.57 万窗 × 9 × 16384 × 4 B ≈ <b>20.5 GB</b>（fp32，原值不变）。</li>
+<li>合法性规则不变、只换步长：demo 段 <code>s+16 ≤ es−1</code>；exec 段 <code>u+32 ≤ t−es</code>。<code>motion_store.GRID_STRIDE</code> 从常量改为由表 meta / yaml 读入并互校（16 与 32 两种表都能加载，旧 run 不受影响）。</li>
+<li><b>budget</b>：stride 16 时最大合法起点数 ≤160；stride 32 下两段各自向上取整，合计可能到 81。导出时在全量 index 上实测 <code>max_visible_count</code>：≤80 → <code>budget=80</code>（720 token）；否则 <code>budget=96</code>（864 token）。按零截断契约，不裁剪。</li>
+<li>导出脚本 <code>scripts/dataset/export_wan_raw9_s32.py</code>：仿 <code>export_wan_pool768.py</code>，段级多进程；行 = <code>(9,16,32,32)</code> fp32 原字节；写 <code>motion_index.json</code>（grid_stride=32）与 <code>store_meta.json</code>（encoder_kind=<code>wan_raw9</code>，readout=<code>wan_raw9_flat16384_s32_v1</code>，parameter_count=0，源 latent 成员摘要）。</li>
+<li>校验脚本 <code>scripts/dataset/verify_wan_raw9_s32.py</code>：不复用导出代码，独立从 tar 成员重读第 2m 窗与表第 m 行逐字节相等。判定行 <code>RAW9_TABLE=PASS rows=… demo=… exec=… budget_max=… mismatch=0</code>。</li>
+</ul>
+
+<h2>5 模型与训练侧改动</h2>
+<table>
+<tr><th>文件</th><th>改动</th></tr>
+<tr><td><code>src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-8frame-8x8-wanraw9s32.yaml</code></td><td>由 wantp768.yaml 复制：<code>motion.dim: 16384</code>、<code>tokens_per_window: 9</code>、<code>stride: 32</code>、<code>budget: 80|96</code>（§4 实测定）、<code>store_path: …/motion-wan-raw9-s32</code>、<code>encoder_kind: wan_raw9</code>、<code>readout: wan_raw9_flat16384_s32_v1</code></td></tr>
+<tr><td><code>src/mme_vla_suite/models/representation/percep_mem.py</code></td><td><code>motion_encoder_static</code> 输入维 = <code>dim + pos_hidden</code> = 17152（代码已是这个式子，只需 yaml 改 dim）；形状检查改为 <code>(b, budget·9, 16384)</code>。缺 <code>tokens_per_window</code> 时默认 1，旧 yaml 逐字不变</td></tr>
+<tr><td><code>src/mme_vla_suite/datastore/motion_store.py</code></td><td>① 步长参数化；② 行形状由 meta 给出；③ <b>整表 <code>np.fromfile</code> 改为只读 <code>np.memmap</code></b>（20G × 8 worker 整读不可接受，memmap 走共享页缓存）</td></tr>
+<tr><td><code>src/mme_vla_suite/training/framesamp_dataset.py</code></td><td>motion 取数：k 窗 → <code>(k·9, 16384)</code>；每 token 时刻 <code>τ = f + 4·j</code>（j=0..8），demo 尾补窗 τ 截到段末真实帧；<code>motion_pos</code> 取 <code>pos_rows(τ)[:,0,:256]</code>；右填充到 <code>budget·9</code>；<code>mem_order</code> 按 (τ, 类型) 交错，规则同旧版</td></tr>
+<tr><td><code>scripts/training/run_4task_wanraw9s32_50k.sh</code></td><td>复制 v11 runner，只换 yaml / 表路径 / run 名；超参全部不变（B128、8 卡、fsdp 4、50001 步、keep 5000、seed 不变）；保留 15 s GPU 采样</td></tr>
+</table>
+<p class="muted">记忆序列：512 帧 token + 720（或 864）motion token。投影计算每步约 4.6 TFLOP（fwd+bwd，全局），8 张 A100 上为毫秒级；交叉注意 key 数从 672 增到 1232，action expert 查询只有约 50 个，增量可忽略。</p>
+
+<h2>6 数据管线：瓶颈判定与修复阶梯</h2>
+<div class="box warn">
+<p><b>为什么有风险</b>：每步全局 batch 的 motion 张量为 128 × 720 × 16384 × 4 B ≈ <b>6.0 GB</b>（budget 96 时 7.2 GB），上次只有 63 MB（约 100 倍）。上次 GPU 平均利用率 97.7%，是计算受限；这次如果 worker 组 batch、跨进程传输、拷到 GPU 跟不上，就会拖慢每一步。</p>
+</div>
+<p><b>判定</b>：20 步冒烟 + 300 步测速（各段去掉前 20 步编译），记 <code>s/步</code>、GPU 利用率、dataloader 等待时间（在 train loop 里计时 <code>next(iter)</code>）。</p>
+<table>
+<tr><th>级</th><th>触发</th><th>修复</th><th>数值语义</th></tr>
+<tr><td>L0（默认实现）</td><td>—</td><td>memmap 共享页缓存（开训前 <code>vmtouch</code>/顺序读一遍预热 20 G）；worker 直接写进预分配的 padded 数组，不做中间 concat</td><td>不变</td></tr>
+<tr><td>L1</td><td>测速 &gt; 1.2 s/步 且 dataloader 等待占比 &gt; 10%</td><td>worker 8 → 24（本机 96 vCPU）、prefetch 加深；collate 用共享内存 / pinned buffer，避免 pickle 拷贝</td><td>不变</td></tr>
+<tr><td>L2</td><td>L1 后仍超</td><td><b>表驻留 GPU + 索引 gather</b>：dataloader 只传 <code>(b, budget)</code> int32 窗口行号与 mask；表以 fp32 放到每卡显存，<code>jit</code> 内 <code>jnp.take</code> 取行，主机传输从 6 GB/步降到几百 KB/步。需先关 XLA 预分配实测模型峰值显存，确认每卡剩余 ≥ 22 GB</td><td>不变（同一 fp32 原值）</td></tr>
+<tr><td>L3</td><td>L2 显存不够</td><td>表以 bf16 驻留 GPU（10 GB）或 8 卡分片 + all-gather</td><td><b>bf16 会改变输入精度 → 停下问用户</b>；分片不改语义可直接做</td></tr>
+</table>
+<p>每级改动都要过 <b>G-dl 等价闸</b>：同一批 idx，新旧路径给模型的 <code>motion_emb/motion_pos/motion_mask/mem_order</code> 逐字节相等（L2 比较 gather 后的设备张量），判定行 <code>DL_EQUIV=PASS samples=256 mismatch=0</code>。</p>
+
+<h2>7 评估侧（训完自动接）</h2>
+<ul>
+<li><code>scripts/dataset/wan/motion_sidecar.py</code>：新增 <code>--encoder-kind wan_raw9</code>，VAE 之后不池化，直接返回 <code>(9,16,32,32)</code> fp32（576 KB/窗）；握手回 encoder_kind / readout。VAE 调用参数（33 帧一次、B=1、fp32、关 TF32）不变。</li>
+<li>评估代码在 <code>scripts/training/legacy-eval/mme_vla_suite/policies/</code> 里另有一份（<code>motion_client.py</code>、<code>policy_config.py</code> 及在线 motion 缓冲），同步改：窗口步长 32、每窗 9 token、时刻 τ=f+4j、形状 16384；budget 超限沿用 <code>MMEVLA_MOTION_OVERFLOW=resample</code>。</li>
+<li><b>G4 在线对拍</b>：<code>scripts/training/g0/compare_online_raw9.py</code>（仿 <code>compare_online_pool768.py</code>）抽 64 窗（含 8 个尾补窗），sidecar 输出与离线表逐字节相等，判定行 <code>ONLINE_RAW9=PASS windows=64 padded=8 bitexact=64</code>。</li>
+<li><b>G5 训练/推理观测一致</b>：沿用 <code>compare_train_infer_obs.py</code>，对同一 episode 同一时刻，训练 dataset 与在线策略构造的 motion 输入逐字节一致。</li>
+<li>692 局：seed 7、单次、本机 4 片、每卡 2 片（与 v11 相同）；9 局预标 + 新 error 重跑一次的规则沿用。输出逐局 CSV、汇总 <code>LOCAL692=… succ/692</code>。</li>
+</ul>
+
+<h2>8 闸门与执行顺序</h2>
+<table>
+<tr><th>闸</th><th>内容</th><th>判定行</th></tr>
+<tr><td>G0</td><td>规则同步（该分支继承 ba52d79 旧规则文件，先跑 <code>repo_guard fix</code>）；DATA_LINEAGE：帧库、motion 表、latent 源同一 manifest sha</td><td><code>DATA_LINEAGE=PASS</code></td></tr>
+<tr><td>G1</td><td>导出 + 独立校验新表，budget 实测</td><td><code>RAW9_TABLE=PASS</code></td></tr>
+<tr><td>G2</td><td>单测：步长参数化后 stride 16 旧表加载、v11 yaml 构造的参数叶数 / 形状与 c55a6bc 完全一致（回归）</td><td><code>pytest … passed</code></td></tr>
+<tr><td>G3</td><td>dataset 等价：新 dataset 取出的 motion 行 = 旧 latent 第 2m 窗原值；τ、pos、mask、mem_order 抽查</td><td><code>DL_EQUIV=PASS</code></td></tr>
+<tr><td>G4/G5</td><td>在线对拍、训推一致（§7）</td><td><code>ONLINE_RAW9=PASS</code></td></tr>
+<tr><td>G6</td><td>20 步冒烟 + 300 步测速，checkpoint 存读；按 §6 判定是否升级修复</td><td><code>SMOKE=PASS s_per_step=…</code></td></tr>
+<tr><td>G7</td><td>正式 50001 步（detached tmux，Monitor 盯 <code>EXIT_CODE=</code>/Traceback/nan）；checkpoint 每 5000 步，最后一份 50000 真实加载</td><td><code>CKPT_LOAD=PASS step=50000</code></td></tr>
+<tr><td>G8</td><td>训练 EXIT_CODE=0 后同一链脚本自动起 692 局评估</td><td><code>LOCAL692=…/692</code></td></tr>
+<tr><td>G9</td><td>ckpt + 评估逐局 CSV 上传 HF bucket（名自定，如 <code>HongzeFu/robomme-4task-modul-wanraw9-s32-50k-v1</code>），读回校验；handoff closed</td><td><code>UPLOAD_READBACK=PASS</code></td></tr>
+</table>
+<p>训练异常（nan、loss 爆、步速掉到 &gt; 2 s/步持续 30 min）→ 停下报用户，不自行改参数。</p>
+
+<h2>9 运行中记录项</h2>
+<ul>
+<li>每 100 步：总 loss、<code>motion_encoder_static</code> 的 kernel 范数与梯度范数、帧路投影梯度范数（看 motion 路是否在学 / 是否压过帧路）。</li>
+<li>每 100 步：<code>s/步</code>、dataloader 等待时间；15 s GPU 利用率采样。</li>
+<li>每个 ckpt：motion token 的激活均值 / 方差（固定 64 个样本），检查 raw latent 未做 z-score 时是否出现尺度失衡。</li>
+</ul>
+
+<h2>10 时间估计</h2>
+<table>
+<tr><th>阶段</th><th>估计</th></tr>
+<tr><td>代码 + 导出 / 校验 + G2–G5</td><td>约 3–4 h</td></tr>
+<tr><td>G6 冒烟测速（+ 需要时 L1/L2 修复）</td><td>0.5 h；若需 L2 另加约 2–3 h</td></tr>
+<tr><td>G7 训练 50k</td><td>管线跟得上：<b>约 14–15.5 h</b>（1.0–1.1 s/步）；修复后同档；未修复的最差情况 21–28 h</td></tr>
+<tr><td>G8 692 局评估</td><td>约 2.5–3 h（VAE 调用减半）</td></tr>
+<tr><td><b>合计</b></td><td><b>约 20–23 h</b>（含 L2 修复的上限）</td></tr>
+</table>
+
+<h2>11 子代理分配表</h2>
+<table>
+<tr><th>编号</th><th>职责</th><th>model</th><th>写集 / 说明</th></tr>
+<tr><td>S1</td><td>导出 + 校验脚本</td><td>opus（worktree）</td><td><code>scripts/dataset/export_wan_raw9_s32.py</code>、<code>verify_wan_raw9_s32.py</code></td></tr>
+<tr><td>S2</td><td>store / dataset / 模型 / yaml + 单测</td><td>opus（worktree）</td><td><code>motion_store.py</code>、<code>framesamp_dataset.py</code>、<code>percep_mem.py</code>、新 yaml、tests</td></tr>
+<tr><td>S3</td><td>评估侧</td><td>opus（worktree）</td><td><code>motion_sidecar.py</code>、<code>legacy-eval/…/policies/*</code>、<code>compare_online_raw9.py</code></td></tr>
+<tr><td>S4</td><td>runner 与训完接评估的链脚本</td><td>opus（worktree）</td><td><code>run_4task_wanraw9s32_50k.sh</code>、链脚本</td></tr>
+<tr><td>R1</td><td>合并前 / 后审查</td><td>sonnet（只读）</td><td>钉 REVIEW_BASE / TIP，输出 <code>PRE_MERGE_REVIEW</code> / <code>POST_MERGE_REVIEW</code></td></tr>
+<tr><td>X1</td><td>导出、冒烟、正式训练、评估起跑</td><td>opus（主检出，不改代码）</td><td>只启动、验证起跑、交回 tmux 名</td></tr>
+</table>
+<p class="muted">S1–S3 并行，S4 依赖 S2 的 yaml 名；L2 修复若触发由主会话另派 opus 修复代理，经 G-dl 等价闸 + 审查后再续。</p>
+
+<h2>12 风险</h2>
+<ul>
+<li>raw latent 未归一化，16384 维直接进线性层：初始 token 尺度可能偏大。沿用旧 <code>kernel_init</code>，先看 §9 的激活统计；不预先加 LayerNorm / z-score（保持「零额外处理」口径）。</li>
+<li>17.6M 新参数 vs 4task × 400 数据：可能过拟合，观察 loss 曲线与 25k / 50k 差异（本计划只评 50k）。</li>
+<li>结论混淆（D3）：结果变化无法单独归因到「不池化」或「stride 32」。</li>
+</ul>
+</main>
+</body>
+</html>
