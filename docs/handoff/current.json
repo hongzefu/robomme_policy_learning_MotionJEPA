@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-12T04:49:24Z",
-    "america_new_york": "2026-11-11T23:49:24-05:00"
+    "utc": "2026-11-12T08:57:18Z",
+    "america_new_york": "2026-11-12T03:57:18-05:00"
   },
   "repo": {
     "branch": "v4.2-plswap-full",
-    "base_head": "a805014",
+    "base_head": "af56267",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -2457,8 +2457,8 @@
         "sha": "d654df8"
       },
       "state": "running",
-      "state_changed_at": "2026-11-12T04:49:24Z",
-      "state_reason": "r3 获自主执行授权；P0 占位排队中；进入 P1 下载与 P2 子代理。",
+      "state_changed_at": "2026-11-12T08:57:18Z",
+      "state_reason": "Beta af56267（commitV4.6.5Beta）已打并部署到 <GL_REPO>（detached、工作区干净）；训练库落 turbo TURBO_LIB=PASS；本机闸门 V1/V2/V3/V5/V10 PASS；等两份占位排到后跑 V4（GL）→ V7 冒烟 → 正式起跑。",
       "owner": {
         "session": "Claude Code 会话（sled-aspen，本仓库主检出）",
         "host": "sled-aspen"
@@ -2490,13 +2490,15 @@
           "jobid": "65943150",
           "name": "g4c-hold-512",
           "spec": "spgpu 4xA40 16cpu 128G 192h",
-          "state": "PENDING"
+          "state": "PENDING",
+          "est_start": "2026-11-12T06:40:56（Slurm 估计，美东）"
         },
         {
           "jobid": "65943151",
           "name": "g4c-hold-1024",
           "spec": "spgpu 4xA40 16cpu 128G 336h",
-          "state": "PENDING"
+          "state": "PENDING",
+          "est_start": "同上"
         }
       ],
       "authorizations": [
@@ -2525,12 +2527,27 @@
           "scope": "r3 计划全部步骤，自主执行至美东 2026-11-12 08:00，问题记入 pending_decisions 早上汇报"
         }
       ],
-      "pending_decisions": [],
+      "pending_decisions": [
+        "早上汇报：实施中调整 A1（梯度累积 scan→展开循环）、A2（V4 挪到 GL 冒烟前、闸门后移）、A3（V10 改 ref-shard 迷你库、K=1）均经对抗验证 PASS，需告知用户",
+        "早上汇报：本机保存点极慢（旧代码 EMA 一次 1044 s），resume/ 单份 45.4 GiB；GL 上每个保存点耗时待实测，可能每 5000 步多数分钟",
+        "早上汇报：梯度累积固有多一份梯度显存（4 卡约 3.4GB/卡）；A40 上每卡 16 是否装得下待 V7 实测，OOM 时按计划改 8×4",
+        "计划外旧事项：gl-abl-encoders-train 仍写 running，但占位 65209321/65209330 已于 2026-11-09 CANCELLED+，结果未核，交用户处理"
+      ],
       "next_steps": [
         {
-          "what": "r2 修订部分审查通过后提交 GL CPU 下载 job 并派 S2/S1 worktree 子代理",
-          "command": "见计划第二部分 runbook P1",
-          "verdict_line": "TURBO_LIB=PASS；PRE_MERGE_REVIEW=PASS"
+          "what": "占位排到后在 ctx512 占位跑 V4（K=1 对 K=2，全局 64）",
+          "command": "srun --jobid=65943150 --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=shared /usr/bin/env bash <GL_REPO>/v1-store/jobs/g4c-v4.sh 1；再 … g4c-v4.sh 2",
+          "verdict_line": "GRAD_ACCUM_BEHAVIOR=PASS steps=20 mean_loss_rel=<5% nonfinite=0"
+        },
+        {
+          "what": "两份占位各跑 20 步冒烟（V7）",
+          "command": "run_in_hold_4task_ctx.sh MAX_STEPS=20 RUN_NAME=g4c-smoke-<512|1024>-<MMDDHHMM>",
+          "verdict_line": "SMOKE_GL=PASS …"
+        },
+        {
+          "what": "正式起跑两条 50k",
+          "command": "见 docs/training-doc/<run>/launch.md",
+          "verdict_line": "step100 正常"
         }
       ]
     }
