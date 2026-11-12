@@ -121,7 +121,7 @@ updates = tx.update(grads, ...)          # 每个优化步只更新一次
 <tr><td>V1</td><td>K=1 不改旧行为</td><td>本机 2×A6000 读 turbo 上的库（<span class="new">P1 完成后</span>），同 seed、global 4，旧 HEAD 与新代码各跑 3 步</td><td>K=1 走原路径，必须逐位相等</td><td><code>GRAD_ACCUM_IDENTITY=PASS steps=3 max_abs_diff=0</code></td></tr>
 <tr><td>V2</td><td>累积数学正确</td><td>单测：确定性玩具 loss，K=1 对 K=2/4 的 grads</td><td>mean 的线性性</td><td><code>GRAD_ACCUM_LINEAR=PASS ks=2,4 max_rel=&lt;1e-6</code></td></tr>
 <tr><td>V3</td><td>micro 切分覆盖与均分</td><td>单测：记录每 micro 的样本 idx 与设备</td><td>每样本恰好进一个 micro，每卡均分</td><td><code>MICRO_SPLIT=PASS k=2 per_device=16 dup=0 miss=0</code></td></tr>
-<tr><td>V4</td><td>真实训练行为一致</td><td>本机读 turbo 库（P1 完成后）：K=1（每卡 2）对 K=2（每卡 1），各 20 步</td><td>噪声不同不能逐位，均值 loss 相对差 &lt; 5%、无 nan</td><td><code>GRAD_ACCUM_BEHAVIOR=PASS steps=20 mean_loss_rel=&lt;x&gt; nonfinite=0</code></td></tr>
+<tr><td>V4</td><td>真实训练行为一致</td><td><span class="new">（实施中调整，见第二部分「九」）GL ctx512 占位内、V7 之前：K=1 全局 64（每卡 16）对 K=2 全局 64（每卡 8），各 20 步；FAIL 即停，不进 V7</span></td><td>噪声不同不能逐位，均值 loss 相对差 &lt; 5%、无 nan</td><td><code>GRAD_ACCUM_BEHAVIOR=PASS steps=20 mean_loss_rel=&lt;x&gt; nonfinite=0</code></td></tr>
 <tr><td>V5</td><td>1024 yaml 与守卫</td><td>单测</td><td>只扩了一个形状</td><td><code>CTX1024_GUARD=PASS</code></td></tr>
 <tr><td>V6</td><td>turbo 库完整</td><td>CPU job 内子集 <code>sha256sum -c</code> + pkl 计数</td><td>与 2026-09-20 导出逐字节同源</td><td><code>TURBO_LIB=PASS files=&lt;n&gt; mismatches=0 pkl=605611</code></td></tr>
 <tr><td>V7</td><td>A40 冒烟（两 run 各一次）</td><td><code>MAX_STEPS=20</code>，显存峰值、步 10～20 墙钟均值</td><td>装得下、可估 walltime</td><td class="new"><code>SMOKE_GL=PASS tag=&lt;512|1024&gt; micro=&lt;n&gt; k=&lt;k&gt; peak_mib=&lt;n&gt; s_per_step=&lt;x&gt; est_total_h=&lt;h&gt; hold_left_h=&lt;h&gt; nonfinite=0</code></td></tr>
@@ -242,7 +242,7 @@ updates = tx.update(grads, ...)          # 每个优化步只更新一次
 </table>
 
 <h2>四 闸门总表</h2>
-<p>V1–V5、V10（<code>RESUME_STATE</code>）全 PASS 才打 Beta；V6 PASS 才能 P2b 与冒烟；V7 两条 PASS 才正式起跑（余量不足按 §2.5 同时补占位）；V8 任一缺失即停。</p>
+<p><span class="new">V1–V3、V5、V10（<code>RESUME_STATE</code>）全 PASS 才打 Beta；V4 后移到 GL 冒烟 V7 之前，用 Beta 锚点代码跑，FAIL 即停、不进 V7、不起正式训练；若因 V4 失败需改代码，该 Beta 作废，修复后重打新 Beta（旧 Beta 保留不 amend）。</span>V6 PASS 才能 P2b 与冒烟；V7 两条 PASS 才正式起跑（余量不足按 §2.5 同时补占位）；V8 任一缺失即停。</p>
 
 <h2>五 runbook</h2>
 <pre>
@@ -298,6 +298,15 @@ tail -n +1 -F &lt;log&gt; | stdbuf -oL tr '\r' '\n' | grep --line-buffered -E "E
 <li>续跑后的样本顺序与不中断时不同（用户口径「只要求不重复样本」），续跑前后两段的样本分布只在统计上等价。</li>
 <li>modulation 对照 1024 @50k 是否取自 80k run 的第 50000 步，以 V11.89 记录为准，未再核 ckpt。</li>
 </ul>
+
+<h2 class="new">九 实施中调整（2026-11-12 美东，用户已授权自主执行）</h2>
+<table class="new">
+<tr><th>#</th><th>旧 → 新</th><th>理由与证据</th><th>对抗验证</th></tr>
+<tr><td>A1</td><td>梯度累积 <code>lax.scan</code> → Python 展开循环（S5，<code>commitV4.6.4</code>）</td><td>本机 2×A6000 FSDP2 全局 4，K=2 scan 版 OOM（alloc 18,070,794,112 B，XLA 临时 38.85GiB）；展开后临时降到 34.46GiB</td><td><code>ADJUST_REVIEW=PASS scale=same findings=3</code></td></tr>
+<tr><td>A2</td><td>V4 从「本机、Beta 前」→「GL 占位内、V7 前，全局 64」</td><td>展开后仍 OOM（alloc 13,953,249,848 B）；buffer-assignment（<code>v1-store/diagnostics/g4c-local/xla-dump-k2</code>，allocation 395）显示是累加器 + 第二个 micro 的 f32 梯度同时存活，每卡约一份额外梯度（2 卡 ~6.7GB），本机 K=1 已用约 44GB/卡，K=2 放不下；GL 4 卡额外份额 ~3.4GB/卡，推算可容纳（待实测）。阈值不变，属闸门后移</td><td><code>ADJUST_REVIEW=PASS scale=same findings=3</code></td></tr>
+<tr><td>A3</td><td>V10 由「K=2、40 样本」→「K=1、全局 4、ref-shard 1 个 episode 迷你库（291 样本）」</td><td>40 样本子集无法从四任务库构造（库未带 source/features）；K=2 本机放不下（A2）；续跑与累积互不相关。迷你库由 <code>scripts/dataset/pack_framesamp_store.py</code> 打包，<code>VERIFY_PACK=PASS scanned=291 mismatches=0</code></td><td>随 A2 一并说明</td></tr>
+</table>
+<p class="new">另记：本机保存点很慢（旧代码存一次 EMA 也要 1044 s，11.5 MiB/s），新增 <code>resume/</code> 单份 45.4 GiB，本机约 15 min；GL 上保存耗时待正式训练实测。</p>
 
 <h2>八 留档与 commit 纪律</h2>
 <p>子代理 <code>sub/G4C-Sx: </code>；合并提交 <code>commitV4.6.x</code>；起跑前 <code>commitV4.6.nBeta</code> 且 <code>git status --short</code> 为空；完成后同号 <code>commitV4.6.n</code> 回写结论。两 run 各建 <code>docs/training-doc/&lt;run&gt;/</code>；状态变化以 <code>handoff:</code> 小提交记录。</p>
