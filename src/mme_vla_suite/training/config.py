@@ -311,10 +311,11 @@ class RoboMMEDataConfig(DataConfigFactory):
                         "static_mask": "static_mask", # (b, l)
                         # motion memory（0901-motion-memory-plan.md 2.7）：未登记的键会被 RepackTransform 静默丢弃；
                         # 关闭态四键为 None 透传（pytree 空节点，n_keys 仍 12）
-                        "motion_emb": "motion_emb",   # (b, motion.budget, 768) f32
-                        "motion_pos": "motion_pos",   # (b, motion.budget, 256) f32
-                        "motion_mask": "motion_mask", # (b, motion.budget) bool
-                        "mem_order": "mem_order",     # (b, 512 + motion.budget) int32 交错次序表
+                        # T = motion.budget（窗数）× motion.tokens_per_window（缺省 1；wan_raw9 为 9）
+                        "motion_emb": "motion_emb",   # (b, T, motion.dim) f32；motion.dim 为 768 或 16384
+                        "motion_pos": "motion_pos",   # (b, T, 256) f32
+                        "motion_mask": "motion_mask", # (b, T) bool
+                        "mem_order": "mem_order",     # (b, 512 + T) int32 交错次序表
                     }
                 )
             ]

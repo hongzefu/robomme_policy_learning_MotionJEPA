@@ -1,0 +1,43 @@
+# modulation 8×8 开启 motion，motion 来源是 Wan raw latent 不池化：每窗 9 个 latent 各自 C→H→W 展平成 16384 维，
+# 共用一个 motion_encoder_static Linear(16384+768 → 1024) 投影成 9 个记忆 token；窗步长 32（计划 1112-4task-modul-wanraw9-s32-50k-plan.html §3.1 / §3.2）。
+# 由 perceptual-framesamp-modul-8frame-8x8-wantp768.yaml 复制，只改 motion 节的 dim / budget / stride / store_path / encoder_kind / readout，
+# 加 tokens_per_window；其余键与 wantp768.yaml 逐键逐值相同。
+budget: 512
+num_views: 1
+token_per_image: 64
+streaming_obs_horizon: 16
+pool_type: mean
+use_pos_emb: true
+use_state_emb: false
+memory_feature:
+  img:
+    net: identity
+    input_dim: 2048
+  pos:
+    input_dim: 768
+    hidden_dim: 768
+  state:
+    input_dim: 8
+    hidden_dim: 512
+integration_type: modulation
+memory_token_dim: 1024
+representation_type: perceptual
+perceptual_memory:
+  type: frame_sampling
+motion:
+  enabled: true
+  dim: 16384                # 单个 latent (16,32,32) C→H→W 展平后的维数
+  tokens_per_window: 9      # 每窗 token 数；token 总长 = budget × tokens_per_window = 720（唯一换算处 wan_raw9.motion_token_budget）
+  budget: 80                # 窗数（不是 token 数），写死；stride 32 下全量 index 实测最大可见窗数 71。模型语义参数，训练、评估与在线侧必须一致；超限直接报错。
+  demo_min_real_frames: 17
+  demo_tail_pad: repeat_last
+  stride: 32
+  window_frames: 33
+  window_direction: forward
+  grid_origin: segment_start
+  store_path: v1-store/datasets/4task-v2-1600ep-604f16da/motion-wan-raw9-s32
+  encoder_kind: wan_raw9
+  readout: wan_raw9_flat16384_s32_v1
+  pos_dim: 256
+  frame_size: 256
+  online_gpu: 4             # 只供在线 sidecar 使用，训练不读取。

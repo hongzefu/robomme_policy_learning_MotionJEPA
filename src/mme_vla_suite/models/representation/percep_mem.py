@@ -5,6 +5,7 @@ import jax.numpy as jnp
 import openpi.shared.array_typing as at
 from mme_vla_suite.models.representation.mem_encoder import FeatureEncoder
 from mme_vla_suite.models.representation.utils import kernel_init
+from mme_vla_suite.shared.wan_raw9 import motion_token_budget
 
 
 class PerceptualMemory(nnx.Module):
@@ -32,14 +33,17 @@ class PerceptualMemory(nnx.Module):
         mcfg = getattr(config, "motion", None)                        # 旧 yaml 缺整节 → None
         self.motion_enabled = bool(mcfg is not None and mcfg.get("enabled", False))
         if self.motion_enabled:
-            self.motion_budget = int(mcfg.budget)
+            self.motion_budget = int(mcfg.budget)                      # 窗数（C-B 契约：motion.budget 恒为窗数）
+            # token 序列长度 = budget × tokens_per_window；旧 yaml 无 tokens_per_window 时等于 budget（计划 1112 §1.0 C-B）
+            self.motion_tokens = motion_token_budget(mcfg)
             self.motion_dim = int(mcfg.dim)
             self.motion_pos_dim = int(mcfg.pos_dim)
             pos_hidden = int(self.config.memory_feature.pos.hidden_dim)
             # 新参数名不得含 img（freeze filter PathRegex(".*img.*") 会误冻结 + 强转 bf16）；路径含 mem_encoder 即入 memory_params
             self.motion_pos_proj = nnx.Linear(                        # 256 → 768，W 256×768 + b 768
                 self.motion_pos_dim, pos_hidden, rngs=rngs, dtype=dtype, kernel_init=kernel_init)
-            self.motion_encoder_static = nnx.Linear(                  # 1536 → memory_token_dim；modulation 为 1024，context 为 2048
+            # (motion.dim + 768) → memory_token_dim：wantp768 为 1536→1024；wan_raw9 为 17152→1024（9 个 latent 共用这一个 W）
+            self.motion_encoder_static = nnx.Linear(
                 self.motion_dim + pos_hidden, int(self.config.memory_token_dim),
                 rngs=rngs, dtype=dtype, kernel_init=kernel_init)
 
@@ -64,16 +68,16 @@ class PerceptualMemory(nnx.Module):
 
         # ── 运动路：motion_pos → motion_pos_proj → silu，与 motion_emb 在最后一维 concat → motion_encoder_static ──
         # padding 行不做特殊处理（motion_emb 该位为 0），屏蔽完全交给 input_mask——与帧路对 padding 帧的处理逐字同构。
-        # 返回 (b, 帧路 budget + motion.budget, memory_token_dim)；重排统一由 HistoryPi0.embed_memory 完成。
+        # 返回 (b, 帧路 budget + motion_tokens, memory_token_dim)；重排统一由 HistoryPi0.embed_memory 完成。
         if motion_emb is None or motion_pos is None or motion_mask is None:
             raise ValueError("motion.enabled=true 但 motion_emb / motion_pos / motion_mask 有 None（observation 缺键）")
         b = static_image_emb.shape[0]
-        if tuple(motion_emb.shape) != (b, self.motion_budget, self.motion_dim):
-            raise ValueError(f"motion_emb 形制 {tuple(motion_emb.shape)} != {(b, self.motion_budget, self.motion_dim)}")
-        if tuple(motion_pos.shape) != (b, self.motion_budget, self.motion_pos_dim):
-            raise ValueError(f"motion_pos 形制 {tuple(motion_pos.shape)} != {(b, self.motion_budget, self.motion_pos_dim)}")
-        if tuple(motion_mask.shape) != (b, self.motion_budget):
-            raise ValueError(f"motion_mask 形制 {tuple(motion_mask.shape)} != {(b, self.motion_budget)}")
+        if tuple(motion_emb.shape) != (b, self.motion_tokens, self.motion_dim):
+            raise ValueError(f"motion_emb 形制 {tuple(motion_emb.shape)} != {(b, self.motion_tokens, self.motion_dim)}")
+        if tuple(motion_pos.shape) != (b, self.motion_tokens, self.motion_pos_dim):
+            raise ValueError(f"motion_pos 形制 {tuple(motion_pos.shape)} != {(b, self.motion_tokens, self.motion_pos_dim)}")
+        if tuple(motion_mask.shape) != (b, self.motion_tokens):
+            raise ValueError(f"motion_mask 形制 {tuple(motion_mask.shape)} != {(b, self.motion_tokens)}")
         pos_h = nnx.silu(self.motion_pos_proj(motion_pos))
         motion_tokens = self.motion_encoder_static(jnp.concatenate([motion_emb, pos_h], axis=-1))
         return jnp.concatenate([hidden_states, motion_tokens], axis=1), None, None
