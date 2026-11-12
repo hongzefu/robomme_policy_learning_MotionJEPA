@@ -370,7 +370,7 @@ def _raw9_diag_enabled(config) -> bool:
 def _motion_diag_info(model, grads) -> dict:
     """三键：motion_encoder_static kernel 范数（更新后参数）、同路径梯度范数、帧路 feature_encoder 梯度范数。"""
     mem = model.mem_encoder
-    if not mem.motion_enabled:
+    if not mem.motion_enabled or not hasattr(grads, "mem_encoder"):      # 与 mem_enc_norm 同款保护
         return {}
     g = grads.mem_encoder
     return {
