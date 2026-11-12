@@ -9,6 +9,9 @@
 - 只依赖 numpy 与标准库。
 - 池化 kind（`encoder_kind="wan_fixedpool768"`）：argv 加 `--encoder-kind`，不传 encoder 参数；握手比 encoder_kind / readout /
   pool_source_sha256 与 vae 段，不比 encoder 段。未传 `encoder_kind` 时启动参数与握手比对逐字不变。
+- raw9 kind（`encoder_kind="wan_raw9"`，计划 1112-4task-modul-wanraw9-s32-50k-plan.html 第二部分 1.1 第 17 行）：argv 同池化 kind；
+  握手比 encoder_kind / readout / raw9_source_sha256 与 vae 段；`__call__` 收 589,824 B（`P.RAW9_RESPONSE_BYTES`）→
+  (9,16,32,32) f32 → `wan_raw9.flatten_raw9` → 返回 (9,16384) f32 副本（每窗 9 个 token）。
 - 跨硬件放行：`MMEVLA_MOTION_PROV_RELAX=gpu_name,compute_cap,sm_count` 时这三个硬件键不等只记 WARN（见 `check_provenance`）。
 """
 
@@ -45,6 +48,8 @@ PROV_SAME_ENC = ("checkpoint", "checkpoint_sha256", "checkpoint_epoch", "arch", 
 # 不加载 encoder。握手只比 vae 段、池化源码 sha256 与 readout，不比 encoder 字段。值与 shared/wan_pool768.py 的
 # POOL768_ENCODER_KIND 相同（这里写字面量，避免本模块在客户端侧多一层导入）。
 POOL_ENCODER_KINDS = ("wan_fixedpool768",)
+# 不池化 kind（计划 1112 第二部分 1.1 第 17 行）：值与 shared/wan_raw9.py 的 RAW9_ENCODER_KIND 相同；kind 白名单 = 两者并集。
+RAW9_ENCODER_KINDS = ("wan_raw9",)
 
 
 class MotionEncoderClient:
@@ -52,20 +57,24 @@ class MotionEncoderClient:
                  expected_ckpt_sha256: str | None = None, store_provenance: dict | None = None, stub: bool = False,
                  v1_store: str | pathlib.Path | None = None, handshake_timeout: float = P.HANDSHAKE_TIMEOUT_S,
                  source_run: str | None = None, encoder_kind: str | None = None, readout: str | None = None,
-                 expected_pool_sha256: str | None = None):
+                 expected_pool_sha256: str | None = None, expected_raw9_sha256: str | None = None):
         self._lock = threading.Lock()
         self.stub = bool(stub)
         # encoder_kind=None：旧 encoder 路径，启动参数与握手比对逐字不变；池化 kind 不接受 encoder 侧参数
         if encoder_kind is not None:
-            if encoder_kind not in POOL_ENCODER_KINDS:
+            if encoder_kind not in POOL_ENCODER_KINDS + RAW9_ENCODER_KINDS:
                 raise ValueError(f"未知 motion encoder_kind: {encoder_kind!r}")
             if source_run is not None or encoder_run_dir is not None or expected_ckpt_sha256 is not None:
                 raise ValueError("池化 kind 不使用 source_run / encoder_run_dir / expected_ckpt_sha256")
-            if not readout or not expected_pool_sha256:
+            if encoder_kind in RAW9_ENCODER_KINDS:
+                if not readout or not expected_raw9_sha256:
+                    raise ValueError("raw9 kind 必须给出 readout 与 expected_raw9_sha256")
+            elif not readout or not expected_pool_sha256:
                 raise ValueError("池化 kind 必须给出 readout 与 expected_pool_sha256")
         self.encoder_kind = encoder_kind
         self.readout = readout
         self.expected_pool_sha256 = expected_pool_sha256
+        self.expected_raw9_sha256 = expected_raw9_sha256
         # v1-store 根：显式参数 > MMEVLA_V1_STORE（worktree 开发时指到主树）> 仓库内 v1-store
         v1 = pathlib.Path(v1_store or os.environ.get("MMEVLA_V1_STORE") or (_REPO_ROOT / "v1-store"))
         if source_run is not None:
@@ -128,10 +137,12 @@ class MotionEncoderClient:
         self.total_s = 0.0
 
     def check_pool_handshake(self) -> None:
-        """池化 kind 的握手比对：sidecar 上报的 encoder_kind / readout / pool_source_sha256 与 run 快照逐值相等。"""
+        """池化 / raw9 kind 的握手比对：sidecar 上报的 encoder_kind / readout / 源码 sha256 与 run 快照逐值相等
+        （池化 kind 比 pool_source_sha256，raw9 kind 比 raw9_source_sha256）。"""
         diffs = []
-        for key, want in (("encoder_kind", self.encoder_kind), ("readout", self.readout),
-                          ("pool_source_sha256", self.expected_pool_sha256)):
+        sha_item = (("raw9_source_sha256", self.expected_raw9_sha256) if self.encoder_kind in RAW9_ENCODER_KINDS
+                    else ("pool_source_sha256", self.expected_pool_sha256))
+        for key, want in (("encoder_kind", self.encoder_kind), ("readout", self.readout), sha_item):
             got = self.provenance.get(key)
             if got != want:
                 diffs.append(f"{key}: sidecar={got!r} 期望={want!r}")
@@ -176,9 +187,15 @@ class MotionEncoderClient:
             deadline = time.monotonic() + P.REQUEST_TIMEOUT_S
             t0 = time.perf_counter()
             P.send_all(self._sock, P.encode_request(start_frame, payload))
-            raw = P.recv_response(self._sock, deadline)
+            raw9 = getattr(self, "encoder_kind", None) in RAW9_ENCODER_KINDS
+            raw = P.recv_response(self._sock, deadline, P.RAW9_RESPONSE_BYTES) if raw9 else P.recv_response(self._sock, deadline)
             self.total_s += time.perf_counter() - t0
             self.n_calls += 1
+        if raw9:
+            # 589,824 B → (9,16,32,32) f32 副本 → C→H→W 展平为 (9,16384)（零拷贝视图，不改字节）
+            from mme_vla_suite.shared import wan_raw9
+            z = np.frombuffer(raw, dtype=np.float32).reshape(wan_raw9.RAW9_INPUT_SHAPE).copy()
+            return wan_raw9.flatten_raw9(z)
         return np.frombuffer(raw, dtype=np.float32).copy()
 
     def close(self) -> None:

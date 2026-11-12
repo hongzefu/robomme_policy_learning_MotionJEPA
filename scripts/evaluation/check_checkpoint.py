@@ -33,6 +33,18 @@ WANTP768_YAML = 'src/mme_vla_suite/models/config/robomme/perceptual-framesamp-mo
 # 按 resolved_sha256_of_yaml 口径独立复算得出，与 S2 预算值逐位一致（2026-11-08）；正式 run 与冒烟 run 共用。
 WANTP768_RESOLVED_SHA256 = '4e70e93373d5b20061a4067c911021100375d2bc28cff276acaf7559b2441910'
 
+# 1112 计划（1112-4task-modul-wanraw9-s32-50k-plan.html 第二部分 1.1 第 15 行）的不池化 run：kind / readout 与
+# shared/wan_raw9.py 的 RAW9_ENCODER_KIND / RAW9_READOUT 同值，同样写字面量不 import。
+WANRAW9_KIND = 'wan_raw9'
+WANRAW9_READOUT = 'wan_raw9_flat16384_s32_v1'
+WANRAW9_YAML = 'src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-8frame-8x8-wanraw9s32.yaml'
+# 按 resolved_sha256_of_yaml 口径对定稿 YAML（budget: 80 写死）预算；正式 run 与四条冒烟 run 共用。
+# 预算时 S2 YAML 尚未合入：以 wantp768.yaml 为底，按计划 1.1 第 7 行改 dim 16384 / budget 80 / stride 32 /
+# store_path …/motion-wan-raw9-s32 / encoder_kind wan_raw9 / readout wan_raw9_flat16384_s32_v1，tokens_per_window: 9
+# 紧跟在 dim 之后（OmegaConf.to_yaml 保留键序，位置不同 sha 即不同）。
+# S2 YAML 合入后（v15 73289a3）已以 `check_checkpoint.py --resolved-sha256 <WANRAW9_YAML>` 复算，逐位一致。
+WANRAW9_RESOLVED_SHA256 = '819a001c58b00d4a4110835b913ac1fb58238fb71d272eaa33a429f6dcb53062'
+
 
 def resolved_sha256_of_yaml(yaml_path) -> str:
     """与 scripts/training/train.py::init_history_config 写 history_config.resolved.yaml 同口径：
@@ -53,6 +65,20 @@ def assert_motion(cfg, run, prov):
         assert str(cfg.motion.source_run) == run['motion_source_run'], cfg.motion.source_run
         assert int(cfg.motion.stride) == 16 and int(cfg.motion.window_frames) == 33 and int(cfg.motion.frame_size) == 256
         print(f'BUDGET_CONSISTENT=PASS budget={int(cfg.motion.budget)} source_run={cfg.motion.source_run}', flush=True)
+        return
+    if kind == WANRAW9_KIND:
+        # 不池化分支（1112 计划 1.1 第 15 行）：窗步长 32、每窗 9 个 16384 维 token；prov 须带 raw9 源码 sha256、无 encoder
+        assert cfg.motion.get('encoder_kind') == kind, cfg.motion.get('encoder_kind')
+        assert cfg.motion.get('readout') == run['readout'], cfg.motion.get('readout')
+        assert int(cfg.motion.stride) == 32 and int(cfg.motion.window_frames) == 33 and int(cfg.motion.frame_size) == 256
+        assert int(cfg.motion.dim) == 16384, cfg.motion.dim
+        assert int(cfg.motion.get('tokens_per_window', 1)) == 9, cfg.motion.get('tokens_per_window')
+        assert prov.get('encoder_kind') == kind and prov.get('readout') == run['readout'], \
+            (prov.get('encoder_kind'), prov.get('readout'))
+        assert prov.get('encoder') is None and prov.get('vae') is not None and prov.get('raw9_source_sha256'), \
+            (prov.get('encoder'), prov.get('vae'), prov.get('raw9_source_sha256'))
+        print(f'BUDGET_CONSISTENT=PASS budget={int(cfg.motion.budget)} motion_kind={kind} readout={run["readout"]} '
+              f'tokens_per_window=9 raw9_source_sha256={str(prov["raw9_source_sha256"])[:16]}', flush=True)
         return
     # 池化分支（1108 计划 1.1 第 6 行）：不要求 motion_source_run，改核快照与 motion_provenance.json 的 kind / readout
     assert kind == WANTP768_KIND, kind
@@ -136,6 +162,45 @@ RUNS = {
         resolved_sha256=WANTP768_RESOLVED_SHA256,
         norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
         motion_budget=160, motion_kind=WANTP768_KIND, readout=WANTP768_READOUT,
+    ),
+    # ── 1112 计划（1112-4task-modul-wanraw9-s32-50k-plan.html 第二部分 1.1 第 15 行）：Wan raw latent 不池化，
+    # 每窗 9 个 16384 维 token、窗步长 32、motion.budget = 80 窗；同一 4task-v2-1600ep 库，norm_stats 与 v11 同一份。
+    # 正式 run 只评 @50000；冒烟 run（runner --smoke20，num_train_steps=20，最后一份 ckpt 为 19）供 G6b 走一次真实评估入口，
+    # 未触发 L 级用 r9-smoke20，触发 S5-L<k> 则为 r9-smoke20-l<k>，跑完即删。
+    # 正式 run（bucket HongzeFu/robomme-4task-modul-wanraw9-s32-50k-v1）
+    'v2-1600ep-m8x8-modul-wanraw9s32-b128-50k': dict(
+        steps=('50000',), motion=True, config='mme_vla_suite_b128_80k', budget=512,
+        resolved_sha256=WANRAW9_RESOLVED_SHA256,
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+        motion_budget=80, motion_kind=WANRAW9_KIND, readout=WANRAW9_READOUT,
+    ),
+    # 冒烟 run r9-smoke20
+    'r9-smoke20': dict(
+        steps=('19',), motion=True, config='mme_vla_suite_b128_80k', budget=512,
+        resolved_sha256=WANRAW9_RESOLVED_SHA256,
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+        motion_budget=80, motion_kind=WANRAW9_KIND, readout=WANRAW9_READOUT,
+    ),
+    # 冒烟 run r9-smoke20-l1
+    'r9-smoke20-l1': dict(
+        steps=('19',), motion=True, config='mme_vla_suite_b128_80k', budget=512,
+        resolved_sha256=WANRAW9_RESOLVED_SHA256,
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+        motion_budget=80, motion_kind=WANRAW9_KIND, readout=WANRAW9_READOUT,
+    ),
+    # 冒烟 run r9-smoke20-l2
+    'r9-smoke20-l2': dict(
+        steps=('19',), motion=True, config='mme_vla_suite_b128_80k', budget=512,
+        resolved_sha256=WANRAW9_RESOLVED_SHA256,
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+        motion_budget=80, motion_kind=WANRAW9_KIND, readout=WANRAW9_READOUT,
+    ),
+    # 冒烟 run r9-smoke20-l3
+    'r9-smoke20-l3': dict(
+        steps=('19',), motion=True, config='mme_vla_suite_b128_80k', budget=512,
+        resolved_sha256=WANRAW9_RESOLVED_SHA256,
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+        motion_budget=80, motion_kind=WANRAW9_KIND, readout=WANRAW9_READOUT,
     ),
 }
 

@@ -62,6 +62,8 @@ class MME_VLA_Policy:
                                                      "window_direction", "grid_origin")}
             self._motion_cfg.update(demo_min_real_frames=mcfg.get("demo_min_real_frames", 33),
                                     demo_tail_pad=mcfg.get("demo_tail_pad", "none"))
+            # 每窗 token 数（计划 1112 第二部分 1.1 第 21 行）：wan_raw9 为 9，旧 YAML 缺省 1；下游只在 >1 时读取
+            self._motion_cfg["tokens_per_window"] = int(mcfg.get("tokens_per_window", 1))
             # 超预算口径只能走环境变量：评测侧 motion 配置来自 checkpoint 桶里的 history_config.resolved.yaml，
             # 其 sha256 被 check_checkpoint.py::RUNS 与 motion_provenance.json 三方钉死，改任何一份都到不了评测路径或直接炸闸。
             # 优先级 = 环境变量 > resolved 快照可选键 > "raise"（默认，与补 demo 之前一字不差）。

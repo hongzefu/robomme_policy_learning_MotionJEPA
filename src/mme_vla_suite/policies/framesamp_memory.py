@@ -23,6 +23,15 @@ import mem_buffer（建库域留有冻结副本 `dataset_builder/mem_buffer.py`�
   存 `_history_feats_motion[f]`（键 = 全域起点帧号）；编完一窗后删除 `< next_grid_start` 的原始帧；
 - `_prepare_motion(step_idx)`：按训练侧同一公式取全部合法起点（>budget 立即报错、不裁剪），右填充 + mask，
   `motion_pos = pos_emb[f, 0, :pos_dim]`（与训练侧 `store.pos_rows` 同表同切片），并返回每行全域时刻（padding 记哨兵）供交错排序。
+
+── 每窗多 token（计划 1112-4task-modul-wanraw9-s32-50k-plan.html 第二部分 1.1 第 20 行，`motion_cfg["tokens_per_window"]` > 1，
+即 wan_raw9：每窗 9 个 16384 维 token，窗步长 32 由 `motion_cfg["stride"]` 驱动）──
+- `_encode_window` 期望 `motion_enc_fn` 返回 (tpw, dim)；
+- `_prepare_motion` 的窗级取点与 `resample` 降采样不变（按 budget 个**窗**，9 个 token 整体保留或整体丢弃），之后展开为 token：
+  长度 T = `wan_raw9.motion_token_budget(motion_cfg)`（= budget × tpw），`emb[i*tpw + j] = 窗 i 的第 j 个 token`，
+  `τ_j = wan_raw9.token_times(f, es−1 if f < es else f+32)`（C-τ，与训练侧 FrameSampDataset 同一函数同一 last_real 规则），
+  `pos[i*tpw + j] = pos_emb[τ_j, 0, :pos_dim]`，mask 前 k·tpw 位，`times = pad_times(τ 展平, T)`。
+- tpw == 1（旧 YAML 缺省）时走原语句，返回形状 (budget,·) 逐字不变。
 """
 
 import math
@@ -88,6 +97,12 @@ class FrameSampMemory:
             self.motion_frame_size = int(motion_cfg["frame_size"])
             self.motion_pos_dim = int(motion_cfg["pos_dim"])
             self.motion_dim = int(motion_cfg["dim"])
+            self.motion_tpw = int(motion_cfg.get("tokens_per_window", 1))
+            if self.motion_tpw > 1:
+                from mme_vla_suite.shared import wan_raw9
+                self._raw9 = wan_raw9
+                self.motion_tokens = int(wan_raw9.motion_token_budget(_AttrDict(budget=self.motion_budget,
+                                                                                tokens_per_window=self.motion_tpw)))
             has_min = "demo_min_real_frames" in motion_cfg
             has_pad = "demo_tail_pad" in motion_cfg
             if has_min != has_pad:
@@ -232,8 +247,9 @@ class FrameSampMemory:
         tok = np.asarray(self.motion_enc(window, f) if _accepts_start(self.motion_enc) else self.motion_enc(window), dtype=np.float32)
         self.motion_encode_s += time.perf_counter() - t0
         self.motion_encode_calls += 1
-        if tok.shape != (self.motion_dim,):
-            raise RuntimeError(f"motion_enc_fn 返回形制 {tok.shape} != ({self.motion_dim},)")
+        want = (self.motion_dim,) if self.motion_tpw == 1 else (self.motion_tpw, self.motion_dim)
+        if tok.shape != want:
+            raise RuntimeError(f"motion_enc_fn 返回形制 {tok.shape} != {want}")
         if f in self._history_feats_motion:
             raise RuntimeError(f"起点 {f} 已编过")
         self._history_feats_motion[f] = tok
@@ -304,6 +320,8 @@ class FrameSampMemory:
             print(f"MOTION_DOWNSAMPLE step={step_idx} es={es} k={k} k_demo={len(demo)} k_exec={len(exec_)} "
                   f"kept_demo={keep_demo} kept_exec={keep_exec} budget={B}", flush=True)
             k = len(frames)
+        if self.motion_tpw > 1:
+            return self._expand_motion_tokens(frames)
         emb = np.zeros((B, self.motion_dim), np.float32)
         pos = np.zeros((B, self.motion_pos_dim), np.float32)
         for i, f in enumerate(frames):
@@ -314,6 +332,25 @@ class FrameSampMemory:
         mask = np.zeros(B, np.bool_)
         mask[:k] = True
         return emb, pos, mask, pad_times(frames, B)
+
+    def _expand_motion_tokens(self, frames: list[int]):
+        """每窗 tpw 个 token 的装配（tpw > 1）：窗序 → j 序展开，右填充到 T = motion_token_budget。"""
+        tpw, T, es = self.motion_tpw, self.motion_tokens, self.exec_start_idx
+        emb = np.zeros((T, self.motion_dim), np.float32)
+        pos = np.zeros((T, self.motion_pos_dim), np.float32)
+        taus = []
+        for i, f in enumerate(frames):
+            if f not in self._history_feats_motion:
+                raise RuntimeError(f"起点 {f} 应已编码但缓冲中没有（增量编码落后）")
+            tau = np.asarray(self._raw9.token_times(f, es - 1 if f < es else f + 32), dtype=np.int64)
+            emb[i * tpw:(i + 1) * tpw] = self._history_feats_motion[f]
+            pos[i * tpw:(i + 1) * tpw] = self.pos_emb[tau, 0, : self.motion_pos_dim]
+            taus.append(tau)
+        n = len(frames) * tpw
+        mask = np.zeros(T, np.bool_)
+        mask[:n] = True
+        flat = np.concatenate(taus) if taus else np.zeros(0, np.int64)
+        return emb, pos, mask, pad_times(flat, T)
 
     # ―― 以下装配路径与旧 MemoryBuffer 的 frame_sampling 支路逐字同式 ――
 
@@ -394,6 +431,12 @@ def _motion_quota(k_demo: int, k_exec: int, budget: int) -> tuple[int, int]:
             f"_motion_quota 配额非法：k_demo={k_demo} k_exec={k_exec} budget={budget} "
             f"→ keep_demo={keep_demo} keep_exec={keep_exec}")
     return keep_demo, keep_exec
+
+
+class _AttrDict(dict):
+    """同时支持 ``cfg.budget`` 与 ``cfg.get(...)``，供 ``wan_raw9.motion_token_budget`` 在在线侧读普通 dict。"""
+
+    __getattr__ = dict.__getitem__
 
 
 def _accepts_start(fn) -> bool:
