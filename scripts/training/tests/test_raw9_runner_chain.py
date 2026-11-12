@@ -14,6 +14,7 @@
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import pathlib
 import re
@@ -80,6 +81,8 @@ def test_runner_dry_train_args_vs_v11(flags, run_name, steps):
     else:
         assert re.search(r"^DIAG_SWITCH TRAIN_TIMING_STEPS=300 TRAIN_RECORD_DIR=\S+ follower=STEP_TIME\+DIAG gpu_sample_s=15 ", out, re.M)
     assert "motion-wan-raw9-s32" in out
+    yaml = REPO / "src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-8frame-8x8-wanraw9s32.yaml"
+    assert f"HC_SHA={hashlib.sha256(yaml.read_bytes()).hexdigest()} " in out
 
 
 def test_runner_rejects_bad_mode_and_names():

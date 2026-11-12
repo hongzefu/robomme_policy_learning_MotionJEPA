@@ -64,9 +64,9 @@ esac
 [[ "$RUN" =~ ^[A-Za-z0-9._-]+$ ]] || { printf 'run 名非法：%s\n' "$RUN" >&2; exit 2; }
 CONFIG=mme_vla_suite_b128_80k
 HC=perceptual-framesamp-modul-8frame-8x8-wanraw9s32.yaml
-# 定稿 YAML 文件字节 sha256。占位：YAML 由 S2 并行写，S2 合并后 rebase 时按真实文件算好写死（主会话复核）；
-# 占位期间 preflight 的 --history-config-sha256 必然 FAIL，冒烟 / 测速 / 正式起不来（--g0-only 不用它）。
-HC_SHA=PENDING_S2_YAML_SHA256
+# 定稿 YAML（src/mme_vla_suite/models/config/robomme/<HC>）的文件字节 sha256，S2 合并后在 73289a3 上实测写死；
+# 由 preflight 的 --history-config-sha256 核对，单测 test_raw9_runner_chain.py 也与现文件比对。
+HC_SHA=21f8db0ef58179f5a6440bccb3a564117f70b91f2185c637034efa3acf7397c0
 NORM_SHA=856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173
 MANIFEST_ID=4cd5a170b0ed9718922bfd7c9287e80b3681a0ea7489dfdb07ddeb3a53dbb918   # load_manifest 重算的 canonical identity（不是文件字节摘要）
 LATENTS_META_SHA=c92643178e71dc0bbe7a406770d5ca84c800bb902785118bb3dd62c42efa6eff   # wan-latents/metadata.json，新表 provenance.latent_root.metadata_sha256
