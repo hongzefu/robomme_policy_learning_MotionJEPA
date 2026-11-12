@@ -43,6 +43,7 @@ from mme_vla_suite.datastore import (
     run_full_checks,
 )
 from mme_vla_suite.datastore import motion_store as ms
+from mme_vla_suite.shared import wan_raw9 as wr
 from mme_vla_suite.shared.sampling import MEM_ORDER_SENTINEL, even_sampling_indices, memory_order, pad_times
 
 logger = logging.getLogger(__name__)
@@ -103,14 +104,23 @@ class FrameSampDataset(Dataset):
         # ── motion memory（0901-motion-memory-plan.md 2.1 / 2.6）：关闭态只判 enabled、不判子键（旧 yaml 缺整节照跑）──
         mcfg = getattr(hc, "motion", None)
         self._motion_enabled = bool(mcfg is not None and mcfg.get("enabled", False))
-        if self._motion_enabled:
+        # wan_raw9 分支（计划 1112 §3.2）：每窗 9 个 token、行形状 (9,16,32,32)、步长由表 meta 给出；
+        # 旧两 kind（未写 encoder_kind / wan_fixedpool768）走下面原语句，逐字不变
+        self._motion_raw9 = bool(self._motion_enabled and mcfg.get("encoder_kind", None) == wr.RAW9_ENCODER_KIND)
+        if self._motion_raw9:
+            _req(int(mcfg.dim) == wr.RAW9_TOKEN_DIM, f"motion.dim={mcfg.dim} != {wr.RAW9_TOKEN_DIM}（wan_raw9）")
+            _req(int(mcfg.get("tokens_per_window", 1)) == wr.RAW9_TOKENS_PER_WINDOW,
+                 f"motion.tokens_per_window={mcfg.get('tokens_per_window', 1)} != {wr.RAW9_TOKENS_PER_WINDOW}（wan_raw9）")
+        if self._motion_enabled and not self._motion_raw9:
             _req(int(mcfg.dim) == ms.MOTION_ROW_SHAPE[0], f"motion.dim={mcfg.dim} != {ms.MOTION_ROW_SHAPE[0]}")
+        if self._motion_enabled:
             _req(int(mcfg.budget) >= 16 and int(mcfg.budget) % 16 == 0,
                  f"motion.budget={mcfg.budget} 必须为至少 16 的 16 倍数")
             _req(int(mcfg.pos_dim) == int(hc.memory_feature.pos.input_dim) // 3,
                  f"motion.pos_dim={mcfg.pos_dim} != pos.input_dim // 3 = {int(hc.memory_feature.pos.input_dim) // 3}")
             _req(int(mcfg.stride) >= 1, f"motion.stride={mcfg.stride} < 1")
-            _req(int(mcfg.stride) == ms.GRID_STRIDE, f"motion.stride={mcfg.stride} != motion store GRID_STRIDE {ms.GRID_STRIDE}")
+            if not self._motion_raw9:   # raw9 的步长闸在 MotionMeta.load 之后对表 meta 比（见下方 motion store 段）
+                _req(int(mcfg.stride) == ms.GRID_STRIDE, f"motion.stride={mcfg.stride} != motion store GRID_STRIDE {ms.GRID_STRIDE}")
             _req(int(mcfg.window_frames) == ms.WINDOW_FRAMES, f"motion.window_frames={mcfg.window_frames} != {ms.WINDOW_FRAMES}")
             _req(str(mcfg.window_direction) == ms.WINDOW_DIRECTION, f"motion.window_direction={mcfg.window_direction!r}")
             _req(str(mcfg.grid_origin) == ms.GRID_ORIGIN, f"motion.grid_origin={mcfg.grid_origin!r}")
@@ -161,6 +171,13 @@ class FrameSampDataset(Dataset):
         if self._motion_enabled:
             self._motion_root = pathlib.Path(motion_root)
             self._motion_meta = ms.MotionMeta.load(self._motion_root)
+            if self._motion_raw9:
+                # 步长与行形状以表 meta 为准（S1：LayoutSpec.grid_stride / row_shape），与 yaml 互校
+                got_spec = self._motion_meta.spec
+                _req(int(mcfg.stride) == int(got_spec.grid_stride),
+                     f"motion.stride={mcfg.stride} != motion 表 grid_stride {got_spec.grid_stride}")
+                _req(tuple(got_spec.row_shape) == wr.RAW9_INPUT_SHAPE,
+                     f"motion 表 row_shape={tuple(got_spec.row_shape)} != {wr.RAW9_INPUT_SHAPE}（wan_raw9）")
             has_min, has_pad = "demo_min_real_frames" in mcfg, "demo_tail_pad" in mcfg
             _req(has_min == has_pad, "demo_min_real_frames 与 demo_tail_pad 必须同时提供或同时缺省")
             got_min = mcfg.get("demo_min_real_frames", 33)
@@ -174,8 +191,10 @@ class FrameSampDataset(Dataset):
             if num_eps is not None:
                 raise ValueError("motion memory 不支持 subset 迷你库（motion_index 覆盖全清单）")
             self._motion_entries = self._motion_meta.entries
-            self._motion_budget = int(mcfg.budget)
+            self._motion_budget = int(mcfg.budget)                      # 窗数（C-B 契约）
             self._motion_pos_dim = int(mcfg.pos_dim)
+            self._motion_tokens = wr.motion_token_budget(mcfg)          # token 数 T = budget × tokens_per_window
+            self._motion_dim = int(mcfg.dim)
             # 零截断契约的预检：每 episode 的最大合法起点数 ≤ 预算，超过即报 episode 身份（禁止静默裁剪）
             for e in self._motion_entries:
                 mx = ms.max_visible_count(e)
@@ -287,6 +306,40 @@ class FrameSampDataset(Dataset):
         times = pad_times(frames, B)
         return out_emb, out_pos, mask, times
 
+    def _fill_motion_raw9(self, entry, step: int, mstore, store, frames_arr: np.ndarray):
+        """wan_raw9 运动路（计划 1112 §3.2、§1.0 C-B / C-τ；L0 预分配实现）。
+
+        k 个可见窗 → 表行 (k,9,16,32,32) 由 ``mstore.rows_into`` 直接写进预分配的 (T,16384) 数组前 k·9 行
+        （不经 ``rows()`` 副本与 concat）；每 token 时刻 τ_j = min(f+4j, last_real)，demo 窗 last_real = es−1、
+        exec 窗 last_real = f+32；pos 取帧路 pos 表 τ 行第 0 行前 pos_dim 维；右填充到 T；mem_order 按 (τ, 类型) 交错。
+        返回 (motion_emb (T,16384) f32, motion_pos (T,pos_dim) f32, motion_mask (T,) bool, mem_order (512+T,) int32)。
+        """
+        rows_m, f_m = ms.visible_motion_rows(entry, step)
+        k = int(len(rows_m))
+        if k > self._motion_budget:     # 零截断契约按窗计（__init__ 已按全量 index 预检，此处是防御性 overflow 闸）
+            raise ValueError(
+                f"g={entry.g} t={step} 合法 motion 窗数 {k} > motion.budget {self._motion_budget}（零截断契约被破坏）")
+        tpw = wr.RAW9_TOKENS_PER_WINDOW
+        T = self._motion_tokens
+        n = k * tpw
+        out_emb = np.zeros((T, self._motion_dim), dtype=np.float32)
+        out_pos = np.zeros((T, self._motion_pos_dim), dtype=np.float32)
+        mask = np.zeros(T, dtype=np.bool_)
+        if k:
+            # out_emb[:n] 是 C 连续前缀，reshape 得到视图，rows_into 原地写入
+            mstore.rows_into(rows_m, out_emb[:n].reshape((k,) + tuple(wr.RAW9_INPUT_SHAPE)))
+            es = int(entry.exec_start_idx)
+            tau = np.concatenate([
+                wr.token_times(int(f), es - 1 if int(f) < es else int(f) + ms.WINDOW_FRAMES - 1) for f in f_m
+            ]).astype(np.int64)
+            out_pos[:n] = store.pos_rows(tau)[:, 0, : self._motion_pos_dim]
+            mask[:n] = True
+        else:
+            tau = np.zeros((0,), dtype=np.int64)
+        mtimes = pad_times(tau, T)
+        ftimes = pad_times(frames_arr, self._max_frames)
+        return out_emb, out_pos, mask, memory_order(ftimes, self._tokens_per_frame, mtimes)
+
     def __getitem__(self, idx):
         idx = int(idx)
         if not 0 <= idx < len(self._epis_of):
@@ -326,7 +379,12 @@ class FrameSampDataset(Dataset):
             np.repeat(stt, self._tokens_per_frame, axis=0))
         data["static_mask"] = np.repeat(mask, self._tokens_per_frame)
 
-        if self._motion_enabled:
+        if self._motion_raw9:
+            # wan_raw9：k 窗 → (k·9,16384)，τ 逐 token，右填充到 budget·9（_fill_motion_raw9）
+            mstore = self._ensure_motion_store()
+            (data["motion_emb"], data["motion_pos"], data["motion_mask"],
+             data["mem_order"]) = self._fill_motion_raw9(self._motion_entries[g], step, mstore, store, frames_arr)
+        elif self._motion_enabled:
             # ①′ 起点集合（段内绝对网格、前视 33 帧、尾端 ≤ 当前帧；三侧同式 visible_motion_rows）
             entry = self._motion_entries[g]
             rows_m, f_m = ms.visible_motion_rows(entry, step)

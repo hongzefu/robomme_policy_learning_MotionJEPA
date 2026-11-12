@@ -23,6 +23,7 @@ from mme_vla_suite.models.integration.history_observation import (
 )
 from mme_vla_suite.models.integration import history_gemma as _gemma
 from mme_vla_suite.models.config.utils import get_history_config
+from mme_vla_suite.shared.wan_raw9 import motion_token_budget
 
 
 logger = logging.getLogger("history-pi0")
@@ -81,11 +82,13 @@ def _motion_specs(history_config, batch_size: int) -> dict:
     if not _motion_enabled(history_config):
         return {}
     m = history_config.motion
+    # token 长度 T = motion.budget（窗数）× tokens_per_window，统一由 motion_token_budget 计算；旧 yaml 下 T == budget
+    T = motion_token_budget(m)
     return {
-        "motion_emb": jax.ShapeDtypeStruct([batch_size, int(m.budget), int(m.dim)], jnp.float32),
-        "motion_pos": jax.ShapeDtypeStruct([batch_size, int(m.budget), int(m.pos_dim)], jnp.float32),
-        "motion_mask": jax.ShapeDtypeStruct([batch_size, int(m.budget)], jnp.bool_),
-        "mem_order": jax.ShapeDtypeStruct([batch_size, int(history_config.budget) + int(m.budget)], jnp.int32),
+        "motion_emb": jax.ShapeDtypeStruct([batch_size, T, int(m.dim)], jnp.float32),
+        "motion_pos": jax.ShapeDtypeStruct([batch_size, T, int(m.pos_dim)], jnp.float32),
+        "motion_mask": jax.ShapeDtypeStruct([batch_size, T], jnp.bool_),
+        "mem_order": jax.ShapeDtypeStruct([batch_size, int(history_config.budget) + T], jnp.int32),
     }
 
 
@@ -335,13 +338,13 @@ class HistoryPi0(BaseModel):
             na_mask = [False] * tokens.shape[1]
             return tokens, input_mask, ar_mask, na_mask
 
-        # 开启态：并列序 (b, 帧路 budget + motion.budget, memory_token_dim)，按 mem_order 重排 token 与 mask。
+        # 开启态：并列序 (b, 帧路 budget + motion_tokens, memory_token_dim)，按 mem_order 重排 token 与 mask。
         # 非 None 闸：HistAugObservation.from_dict 缺键静默为 None，jaxtyping 在跨 jit 的 pytree 解包上被 disable，不能指望它兜底
         if obs.motion_emb is None or obs.motion_pos is None or obs.motion_mask is None or obs.mem_order is None:
             raise ValueError("motion.enabled=true 但 observation 缺 motion_emb / motion_pos / motion_mask / mem_order")
-        budget = int(self.mem_encoder.motion_budget)
-        if obs.motion_emb.shape[1] != budget:
-            raise ValueError(f"motion_emb.shape[1]={obs.motion_emb.shape[1]} != motion.budget {budget}")
+        n_tok = int(self.mem_encoder.motion_tokens)                 # = budget × tokens_per_window（旧 yaml 同 budget）
+        if obs.motion_emb.shape[1] != n_tok:
+            raise ValueError(f"motion_emb.shape[1]={obs.motion_emb.shape[1]} != motion token 数 {n_tok}")
         input_mask = jnp.concatenate([obs.static_mask, obs.motion_mask], axis=1)
         # 形状闸：长度写错时 take_along_axis 不报错，会静默把记忆段截成 mem_order 的长度；越界与非置换的守卫在 dataloader 侧
         if not (obs.mem_order.shape[1] == tokens.shape[1] == input_mask.shape[1]):
