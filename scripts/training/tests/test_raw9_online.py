@@ -6,8 +6,9 @@
 - 握手：kind / readout / raw9_source_sha256 任一不符即拒；构造参数缺 readout / expected_raw9_sha256 即拒；
 - pool768 分支回归：stub 握手、(768,) 响应、``pool_encode`` 输出与改动前同式；协议缺省长度仍 3,072 B；
 - policy_config：raw9 快照按 raw9_source_sha256 构造客户端，缺该键即拒；
-- 在线缓冲 ``FrameSampMemory``：合成 episode 上每个决策时刻的 motion 四键（含 resample 超预算）与按计划 C-τ 独立写的
-  训练侧参考实现（窗步长 32、每窗 9 token、τ_j = min(f+4j, last_real)、pos 取 pos_emb[τ,0,:256]、右填充到 budget×9）逐字节相等；
+- 在线缓冲 ``FrameSampMemory``：合成 episode 上每个决策时刻的 motion 四键与 S2 ``FrameSampDataset._fill_motion_raw9``
+  （真 raw9 index 条目 + rows_into 表）逐字节相等（emb / pos / mask / mem_order）；超预算 resample 情形与按计划 C-τ 独立写的
+  参考实现（窗步长 32、每窗 9 token、τ_j = min(f+4j, last_real)、pos 取 pos_emb[τ,0,:256]、右填充到 budget×9）逐字节相等；
   tokens_per_window 缺省时旧路径形状不变；
 - ``compare_online_raw9.py``：小夹具 exec 窗走 pkl / demo 补帧窗走 H5 的分派、帧摘要取源 latent 第 2m' 行；
   map 缺失、h5_sha256 不符、input_frames_sha256 不符各自 FAIL，表行改 1 ulp 时 bitexact 少 1；
@@ -15,9 +16,9 @@
 - ``check_checkpoint.py``：RUNS 五条登记、raw9 ``assert_motion`` 分支、``WANRAW9_RESOLVED_SHA256`` 与定稿 YAML 复算一致；
 - ``compare_train_infer_obs.py``：``--motion-subdir`` 默认 motion。
 
-S1 的 ``src/mme_vla_suite/shared/wan_raw9.py`` 存在时用真模块，否则用按计划 1.1 第 1 行接口写的最小参考桩（只验证 S3 的接线）；
-S1 的 ``LAYOUT_RAW9`` 存在时 G4 夹具的 index 条目由 ``ms.build_index_entries`` 生成并与独立推算互校；
-S2 的 ``…-8x8-wanraw9s32.yaml`` 存在时 resolved sha 对它复算，否则对按计划 1.1 第 7 行构造的同内容 YAML 复算。
+S1、S2 已合入（v15 73289a3）：全部用真模块 ``mme_vla_suite.shared.wan_raw9``、真 ``motion_store`` raw9 布局与
+S2 定稿 YAML ``…-8x8-wanraw9s32.yaml``；在线缓冲直接与 S2 的 ``FrameSampDataset._fill_motion_raw9`` 同一 (episode, t) 逐字节比，
+超预算 resample 情形训练侧按零截断契约 raise，只能与按 C-τ 写的参考实现比。
 运行：``uv run --no-sync python scripts/training/tests/test_raw9_online.py``，末行 ``S3_EVAL_UNIT=PASS|FAIL``。
 """
 
@@ -54,30 +55,6 @@ WANTP768_YAML = YAML_DIR / "perceptual-framesamp-modul-8frame-8x8-wantp768.yaml"
 KIND, READOUT = "wan_raw9", "wan_raw9_flat16384_s32_v1"
 SHAPE = (9, 16, 32, 32)
 
-_STUB_RAW9_SRC = '''"""测试用最小参考桩：按计划 1112 第二部分 1.1 第 1 行接口写（S1 合并后由真模块替代）。"""
-import hashlib, pathlib
-import numpy as np
-RAW9_ENCODER_KIND = "wan_raw9"
-RAW9_READOUT = "wan_raw9_flat16384_s32_v1"
-RAW9_INPUT_SHAPE = (9, 16, 32, 32)
-RAW9_TOKEN_DIM = 16384
-RAW9_TOKENS_PER_WINDOW = 9
-RAW9_STRIDE = 32
-RAW9_ROW_BYTES = 589824
-RAW9_PARAMETER_COUNT = 0
-def flatten_raw9(z):
-    if not isinstance(z, np.ndarray) or z.dtype != np.dtype(np.float32) or z.shape != RAW9_INPUT_SHAPE:
-        raise ValueError("flatten_raw9 输入须为 float32 (9,16,32,32)")
-    if not z.flags.c_contiguous or not np.isfinite(z).all():
-        raise ValueError("flatten_raw9 输入须 C 连续且全有限")
-    return z.reshape(RAW9_TOKENS_PER_WINDOW, RAW9_TOKEN_DIM)
-def token_times(f, seg_last_real):
-    return np.minimum(int(f) + 4 * np.arange(RAW9_TOKENS_PER_WINDOW, dtype=np.int64), int(seg_last_real)).astype(np.int64)
-def motion_token_budget(mcfg):
-    return int(mcfg.budget) * int(mcfg.get("tokens_per_window", 1))
-def source_sha256():
-    return hashlib.sha256(pathlib.Path(__file__).read_bytes()).hexdigest()
-'''
 
 
 def _load(path: pathlib.Path, name: str):
@@ -95,23 +72,10 @@ def test_imports_point_to_worktree():
 
 
 @pytest.fixture(scope="session")
-def raw9_path(tmp_path_factory) -> pathlib.Path:
-    if RAW9_PATH.is_file():
-        return RAW9_PATH
-    p = tmp_path_factory.mktemp("raw9stub") / "wan_raw9.py"
-    p.write_text(_STUB_RAW9_SRC)
-    return p
-
-
-@pytest.fixture(scope="session")
-def R(raw9_path):
-    """wan_raw9 模块；S1 未合入时把参考桩注入为 mme_vla_suite.shared.wan_raw9，供客户端 / 在线缓冲 / G4 脚本 import。"""
-    import mme_vla_suite.shared as shared
-    if raw9_path == RAW9_PATH:
-        from mme_vla_suite.shared import wan_raw9 as mod
-        return mod
-    mod = _load(raw9_path, "mme_vla_suite.shared.wan_raw9")
-    shared.wan_raw9 = mod
+def R():
+    """S1 真模块（sidecar 按 _RAW9_PATH 按文件加载同一份）。"""
+    from mme_vla_suite.shared import wan_raw9 as mod
+    assert pathlib.Path(mod.__file__).resolve() == RAW9_PATH
     return mod
 
 
@@ -181,16 +145,16 @@ def _bare_client(**kw):
     return c
 
 
-def test_sidecar_stub_raw9_end_to_end_through_client(R, raw9_path, monkeypatch):
+def test_sidecar_stub_raw9_end_to_end_through_client(R, monkeypatch):
     """stub 档整条在线链：sidecar 握手 → 589,824 B 响应 → 客户端展平为 (9,16384)。"""
     from mme_vla_suite.policies import motion_protocol as P
     sc = _load(SIDECAR_PATH, "motion_sidecar_raw9_e2e")
-    monkeypatch.setattr(sc, "_RAW9_PATH", raw9_path)
+    assert sc._RAW9_PATH == RAW9_PATH
     parent, t, rc = _run_stub_sidecar(sc, monkeypatch, KIND)
     try:
         info = P.recv_handshake(parent, time.monotonic() + 30)
         assert info["stub"] is True and info["encoder_kind"] == KIND and info["readout"] == READOUT
-        assert info["raw9_source_sha256"] == hashlib.sha256(raw9_path.read_bytes()).hexdigest()
+        assert info["raw9_source_sha256"] == hashlib.sha256(RAW9_PATH.read_bytes()).hexdigest() == R.source_sha256()
         assert info["encoder"] is None and info["protocol_sha256"] == P.protocol_sha256()
         c = _bare_client(encoder_kind=KIND, readout=READOUT, expected_raw9_sha256=R.source_sha256(), provenance=info,
                          _sock=parent, _proc=types.SimpleNamespace(poll=lambda: None, returncode=None))
@@ -298,7 +262,9 @@ def _raw9_mcfg():
     m = OmegaConf.to_container(OmegaConf.load(WANTP768_YAML).motion)
     m.update(dim=16384, budget=80, stride=32, encoder_kind=KIND, readout=READOUT, tokens_per_window=9,
              store_path="v1-store/datasets/4task-v2-1600ep-604f16da/motion-wan-raw9-s32")
-    return OmegaConf.create(m)
+    real = OmegaConf.load(RAW9_YAML).motion
+    assert OmegaConf.to_container(real) == m          # 与 S2 定稿 YAML 的 motion 节逐键逐值相同
+    return real
 
 
 def test_policy_config_builds_raw9_client(tmp_path, monkeypatch):
@@ -424,6 +390,63 @@ def test_online_buffer_matches_train_reference(R, es, nt, budget, overflow):
         assert mem.motion_downsample_steps == 0
 
 
+class _TableStore:
+    """内存版 raw9 表，接口同 S1 ``MotionStore.rows_into``。"""
+
+    def __init__(self, table: np.ndarray):
+        self._t = table
+
+    def rows_into(self, rows, out) -> None:
+        out[...] = self._t[np.asarray(rows, dtype=np.int64)]
+
+
+class _PosStore:
+    def __init__(self, pos: np.ndarray):
+        self._pos = pos
+
+    def pos_rows(self, frames) -> np.ndarray:
+        return self._pos[np.asarray(frames, dtype=np.int64)]
+
+
+@pytest.mark.parametrize("es,nt", [(90, 300), (100, 260), (10, 200), (50, 150)])
+def test_online_buffer_matches_s2_dataset(R, es, nt):
+    """同一 (episode, t)：在线 FrameSampMemory 的四键 == S2 FrameSampDataset._fill_motion_raw9 的四键（逐字节）。
+    训练侧 index 条目由 S1 ``build_index_entries(LAYOUT_RAW9)`` 生成，表第 r 行 = 起点 f 的合成 latent；
+    pos 两侧用同一张 pos 表（训练 store.pos_rows 与在线 pos_emb 同表是 v11 既有结论，这里只验 S3 的取行与展开）。"""
+    from omegaconf import OmegaConf
+    from mme_vla_suite.datastore import motion_store as ms
+    from mme_vla_suite.training.framesamp_dataset import FrameSampDataset
+    from mme_vla_suite.shared.sampling import even_sampling_indices, memory_order, pad_times
+    budget, tpf, max_frames = 80, 4, 8
+    eps = [{"global_episode_idx": 0, "h5_file": "record_dataset_BinFill.h5", "raw_ep_idx": 0,
+            "num_timesteps": nt, "exec_start_idx": es}]
+    entry = ms.build_index_entries({"episodes": eps}, ms.LAYOUT_SPECS[ms.LAYOUT_RAW9])[0]
+    rows_all, f_all = ms.visible_motion_rows(entry, nt - 1)
+    table = np.zeros((entry.demo.num_grid + entry.exec.num_grid,) + SHAPE, np.float32)
+    for r, f in zip(rows_all.tolist(), f_all.tolist()):
+        table[r] = _latent_of_start(f)
+    ds = FrameSampDataset.__new__(FrameSampDataset)
+    ds._motion_budget = budget
+    ds._motion_tokens = R.motion_token_budget(OmegaConf.load(RAW9_YAML).motion)
+    ds._motion_dim, ds._motion_pos_dim = 16384, POS_DIM
+    ds._max_frames, ds._tokens_per_frame = max_frames, tpf
+    mem = _make_mem(R, budget, 9)
+    assert ds._motion_tokens == mem.motion_tokens == budget * 9
+    mstore, pstore = _TableStore(table), _PosStore(mem.pos_emb)
+    n_check = 0
+    for t in _drive(mem, es, nt):
+        emb, pos, mask, times = mem._prepare_motion(t)
+        frames = np.asarray(even_sampling_indices(t, max_frames), dtype=np.int64)
+        d_emb, d_pos, d_mask, d_order = ds._fill_motion_raw9(entry, t, mstore, pstore, frames)
+        assert emb.tobytes() == d_emb.tobytes()
+        assert pos.tobytes() == d_pos.tobytes()
+        assert mask.tobytes() == d_mask.tobytes()
+        on_order = memory_order(pad_times(frames, max_frames), tpf, times)
+        assert on_order.dtype == d_order.dtype and on_order.tobytes() == d_order.tobytes()
+        n_check += 1
+    assert n_check >= 5 and mem.motion_downsample_steps == 0
+
+
 def test_online_buffer_padded_demo_window_tau_truncated(R):
     mem = _make_mem(R, 80, 9)
     *_, last = list(_drive(mem, 90, 140))
@@ -472,7 +495,7 @@ def _window(frames: list, off: int, seg_len: int) -> np.ndarray:
 
 
 def _raw9_entries(manifest: dict):
-    """stride-32 index 条目：独立推算；S1 的 LAYOUT_RAW9 已合入时与 ms.build_index_entries 互校。"""
+    """stride-32 index 条目：S1 的 ms.build_index_entries(LAYOUT_RAW9)，并与独立推算互校。"""
     from mme_vla_suite.datastore import motion_store as ms
     spec = ms.LayoutSpec(17, 33, "repeat_last")
     entries, cursor = [], 0
@@ -487,11 +510,10 @@ def _raw9_entries(manifest: dict):
         entries.append(ms.IndexEntry(g=g, h5_file=ep["h5_file"], raw_ep_idx=int(ep["raw_ep_idx"]),
                                      num_timesteps=int(ep["num_timesteps"]), exec_start_idx=int(ep["exec_start_idx"]),
                                      demo=segs["demo"], exec=segs["exec"], spec=spec))
-    if hasattr(ms, "LAYOUT_RAW9"):
-        real = ms.build_index_entries(manifest, ms.LAYOUT_SPECS[ms.LAYOUT_RAW9])
-        assert [(e.demo, e.exec) for e in real] == [(e.demo, e.exec) for e in entries]
-        return real
-    return entries
+    real = ms.build_index_entries(manifest, ms.LAYOUT_SPECS[ms.LAYOUT_RAW9])
+    assert [(e.demo, e.exec) for e in real] == [(e.demo, e.exec) for e in entries]
+    assert all(e.spec.grid_stride == 32 for e in real)
+    return real
 
 
 def _build_lib(root: pathlib.Path, R, specs, with_frames=True):
@@ -757,25 +779,13 @@ def test_check_checkpoint_runs_registered(CC):
 
 
 def _raw9_yaml_text() -> str:
-    """S2 定稿 YAML 存在即用它；否则按计划 1.1 第 7 行由 wantp768.yaml 构造同内容（tokens_per_window 紧跟 dim）。"""
-    if RAW9_YAML.is_file():
-        return RAW9_YAML.read_text(encoding="utf-8")
-    out = []
-    for line in WANTP768_YAML.read_text(encoding="utf-8").splitlines():
-        if line == "  dim: 768":
-            out += ["  dim: 16384", "  tokens_per_window: 9"]
-            continue
-        line = line.replace("  budget: 160 ", "  budget: 80 ").replace("  stride: 16", "  stride: 32")
-        line = line.replace("motion-wan-pool768", "motion-wan-raw9-s32")
-        line = line.replace("encoder_kind: wan_fixedpool768", f"encoder_kind: {KIND}")
-        line = line.replace("readout: wan_raw_timepool8_adaptive6x8_v1", f"readout: {READOUT}")
-        out.append(line)
-    return "\n".join(out) + "\n"
+    """S2 定稿 YAML。"""
+    return RAW9_YAML.read_text(encoding="utf-8")
 
 
 def test_check_checkpoint_resolved_sha_matches_yaml(CC, tmp_path):
-    p = tmp_path / "wanraw9s32.yaml"
-    p.write_text(_raw9_yaml_text(), encoding="utf-8")
+    p = RAW9_YAML
+    assert p.is_file()
     from omegaconf import OmegaConf
     m = OmegaConf.load(p).motion
     assert (int(m.dim), int(m.budget), int(m.stride), int(m.tokens_per_window), m.encoder_kind, m.readout) == \

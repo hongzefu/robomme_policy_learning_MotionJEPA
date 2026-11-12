@@ -42,7 +42,7 @@ WANRAW9_YAML = 'src/mme_vla_suite/models/config/robomme/perceptual-framesamp-mod
 # 预算时 S2 YAML 尚未合入：以 wantp768.yaml 为底，按计划 1.1 第 7 行改 dim 16384 / budget 80 / stride 32 /
 # store_path …/motion-wan-raw9-s32 / encoder_kind wan_raw9 / readout wan_raw9_flat16384_s32_v1，tokens_per_window: 9
 # 紧跟在 dim 之后（OmegaConf.to_yaml 保留键序，位置不同 sha 即不同）。
-# ⚠ S2 YAML 合入后须以 `check_checkpoint.py --resolved-sha256 <WANRAW9_YAML>` 复算核对，不符即改此值。
+# S2 YAML 合入后（v15 73289a3）已以 `check_checkpoint.py --resolved-sha256 <WANRAW9_YAML>` 复算，逐位一致。
 WANRAW9_RESOLVED_SHA256 = '819a001c58b00d4a4110835b913ac1fb58238fb71d272eaa33a429f6dcb53062'
 
 
