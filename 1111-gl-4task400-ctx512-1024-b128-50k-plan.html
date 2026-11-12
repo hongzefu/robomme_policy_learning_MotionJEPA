@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GL 四任务 context 训练计划</title>
+<style>
+:root{--fg:#1d1d1f;--bg:#fff;--mut:#666;--line:#ddd;--acc:#0b5cad;--warn:#a33;--code:#f4f4f6}
+@media (prefers-color-scheme: dark){:root{--fg:#e6e6e6;--bg:#18181a;--mut:#999;--line:#333;--acc:#6aa9ff;--warn:#ff8080;--code:#26262a}}
+body{font:15px/1.65 -apple-system,"PingFang SC","Noto Sans CJK SC",sans-serif;color:var(--fg);background:var(--bg);max-width:1080px;margin:0 auto;padding:16px}
+h1{font-size:24px;border-bottom:2px solid var(--acc);padding-bottom:4px;margin-top:40px}
+h2{font-size:19px;margin-top:28px;color:var(--acc)}
+h3{font-size:16px;margin-top:20px}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:13.5px;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:5px 8px;vertical-align:top;text-align:left}
+th{background:var(--code)}
+code,pre{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.8px;background:var(--code)}
+code{padding:0 3px;border-radius:3px}
+pre{padding:10px;overflow-x:auto;border-radius:4px;white-space:pre}
+blockquote{border-left:4px solid var(--acc);margin:10px 0;padding:6px 12px;background:var(--code)}
+.warn{color:var(--warn);font-weight:600}
+.mut{color:var(--mut)}
+</style>
+</head>
+<body>
+
+<blockquote>
+<b>GreatLakes 上训练四任务 × 400 的 context 模式（memory budget 512 / 1024，bs128，50k 步，各 4×A40）</b><br>
+权威性：本文件是该任务唯一计划；只规划不实施，开工令按 <code>AGENTS.md</code> 第 2 条（完整计划呈现后用户不改而直接认可）。<br>
+代码锚点：主检出 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code> 分支 <code>v4.2-plswap-full</code> @ <code>b35900a</code>（写计划时 HEAD）。<br>
+集群执行副本：<code>&lt;GL_REPO&gt;=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA</code>（detached HEAD，只 checkout 到 Beta 锚点，不在 turbo 侧改代码）。<br>
+commit 体例：功能 <code>commitV4.6.x</code>（接续 <code>commitV4.5.5</code>），起跑前 <code>commitV4.6.nBeta</code>；子代理 <code>sub/G4C-Sx: </code>。<br>
+外部依赖锚点：训练库 <code>4task-v2-1600ep-604f16da</code>（HF bucket <code>HongzeFu/robomme-4task-v2-1600ep-trainset-20260920-v1</code>，2026-09-20 导出时 PASS）；pi05_base 与 paligemma_tokenizer 沿用 <code>restore.sh</code> 取法。<br>
+运行环境：环境 A（sled-aspen；判据表的 GPU 行写的是 sled-vail 的卡型，aspen 为 2×RTX A6000，按全局 <code>CLAUDE.md</code> 判为 A）。
+</blockquote>
+
+<h1>第一部分（给人看）</h1>
+
+<h2>1. 要做什么与全部运行一览</h2>
+<p>你上一批四任务 × 400 的结果（BinFill / RouteStick / VideoRepick / VideoUnmaskSwap，692 局 @50k）只有 modulation：Frame 512 = 30.5%、1024 = 42.1%、2048 = 45.1%、4096 = 45.2%。这次在<b>同一份训练库</b>上补 context 模式的 512 与 1024 两档，训练口径与 modulation 对照一致（bs128、第 50000 步、同一学习率曲线），以便 context 与 modulation 直接比较。两条 run 各占一份 4×A40 占位，在 GreatLakes 上并行跑。</p>
+<pre>
+ 本机 aspen                         turbo NFS（计算节点可见）                 GreatLakes spgpu
+ ──────────                         ─────────────────────────                 ────────────────
+ 改代码（3 个 worktree 子代理）──►  &lt;GL_REPO&gt; checkout --detach Beta  ──►  占位 A：4×A40 192h  → ctx512  50k
+ tmux 拉 bucket（训练所需子集）──►  v1-store/datasets/4task-v2-...      ──►  占位 B：4×A40 336h  → ctx1024 50k
+</pre>
+<table>
+<tr><th>run_name</th><th>history yaml</th><th>TrainConfig（学习率曲线来源）</th><th>全局 batch</th><th>每卡 × 累积</th><th>步数</th><th>占位</th></tr>
+<tr><td><code>v2-1600ep-m8x8-ctx-b128-50k-gl</code></td><td><code>perceptual-framesamp-context-8frame-8x8.yaml</code>（已有）</td><td><code>mme_vla_suite_b128_60k</code>（warmup 5000，decay 60000）</td><td>128</td><td>16 × 2</td><td>50001（最后 ckpt 50000）</td><td>4×A40，192 h</td></tr>
+<tr><td><code>v2-1600ep-m16x8x8-ctx-b128-50k-gl</code></td><td><code>perceptual-framesamp-context-16frame-8x8.yaml</code>（新建）</td><td><code>mme_vla_suite_b128_80k</code>（warmup 5000，decay 80000）</td><td>128</td><td>16 × 2（OOM 则 8 × 4）</td><td>50001</td><td>4×A40，336 h</td></tr>
+</table>
+
+<h3>已定口径（用户原话逐字保留）</h3>
+<ol>
+<li>任务与规模：「我要训练的是这个四 task……context 模式下的这个呃 memory budget 五一二和一零二四，然后都是 batch size 一二八，然后都是五十 k step。」→ 见 §1 表。</li>
+<li>卡数：「然后两个都 query 四卡」→ 两份 4×A40 占位。</li>
+<li>对照：「这个是只有 modulation 的结果，就是我还要测一个 context 的模式。」→ 只训 context，modulation 不重训。</li>
+<li>显存：「对的，要用梯度累积来」→ bs128 = 每卡 16 × 累积 2（§2.1）。</li>
+<li>口径不换：问 bs64 × 100k 后「好的就保持吧」→ 维持 bs128 × 50k。</li>
+<li>学习率曲线跟随 modulation 对照（<b>待你确认</b>）：图里的 modulation @50k 取自 60k（512）与 80k（1024）run 的第 50000 步，所以 ctx512 用 decay 60000、ctx1024 用 decay 80000，都在 50000 步停（§2.3）。</li>
+<li>纯 context、<code>motion.enabled: false</code>，不涉及 motion encoder（§2.4 的 P-LINEAGE 处理）。</li>
+</ol>
+
+<h2>2. 关键机制</h2>
+
+<h3>2.1 梯度累积（新写代码，训练链路改动）</h3>
+<p><b>为什么非改不可</b>：仓库训练代码没有累积开关（<code>grep -iE "accum|microbatch"</code> 对 <code>scripts/training/train.py</code>、<code>src/mme_vla_suite/training/*.py</code> 零命中）。A100 4 卡 context 512 b128（每卡 32）实测峰值 73,005～73,019 MiB/卡（<code>docs/training-doc/ctx-stock-scaling-20260928/result.md</code>），A40 只有 48 GB；GL 4×A40 每卡 16 的 context（1101，带 motion）峰值 38,489 MiB，装得下。</p>
+<p><b>锚点</b>：<code>scripts/training/train.py::train_step</code>（当前一次 <code>nnx.value_and_grad</code> → <code>state.tx.update</code>）；<code>src/mme_vla_suite/training/config.py::TrainConfig</code> 新增字段 <code>grad_accum_steps: int = 1</code>（CLI <code>--grad-accum-steps</code>）。</p>
+<pre>
+# 伪码（train_step 内）
+B = batch_size; K = grad_accum_steps; m = B // K
+micro = tree_map(lambda x: x.reshape(m, K, *x.shape[1:]).swapaxes(0, 1), batch)   # 第 i 个 micro = 样本 i::K
+def body(acc, (i, mb)):
+    l, g = value_and_grad(loss_fn)(model, fold_in(train_rng, i), *mb)
+    return (acc[0] + l / K, tree_map(lambda a, b: a + b / K, acc[1], g)), None
+(loss, grads), _ = lax.scan(body, (0., zeros_like(grads)), (arange(K), micro))
+updates = tx.update(grads, ...)          # 每个优化步只更新一次，步数语义不变
+# K == 1 时走原代码路径，一字不改
+</pre>
+<p class="warn">⚠ 陷阱：不能直接 <code>reshape(K, m)</code>。batch 在 FSDP 数据轴上按 dim0 连续切给 4 张卡，<code>reshape(K, m)</code> 会让第 0 个 micro 只落在前 2 张卡上，另两张空转且显存不降。必须 <code>reshape(m, K).swapaxes(0,1)</code>，让每个 micro 的 64 个样本均匀分布在 4 卡（每卡 16）。</p>
+<p class="warn">⚠ 陷阱：flow-matching 的噪声 / 时间步按 rng 与 batch 形状采样，K=2 与 K=1 的噪声不同，<b>做不到逐位一致</b>。等价性按 <code>AGENTS.md</code> 第 18 条分层验收：K=1 对旧代码逐位一致；线性性在玩具 loss 上逐位验证；真实训练 K=2 对 K=1 只要求数值容差内的行为一致（§3 V2–V4）。</p>
+
+<h3>2.2 context 1024 档（新 yaml + 放宽守卫）</h3>
+<p>仓库只有 context 的 8frame（512）与 32frame（2048）yaml；<code>src/mme_vla_suite/training/framesamp_dataset.py</code> 的形状守卫只放行 legacy 形状与 <code>raw == (2048, 64, 1)</code> 的 context，1024（16 帧 × 64 token）会被拒绝。改法：</p>
+<table>
+<tr><th>文件</th><th>锚点</th><th>改什么</th><th>关闭态（不用 1024）</th><th>开启态</th></tr>
+<tr><td><code>src/mme_vla_suite/models/config/robomme/perceptual-framesamp-context-16frame-8x8.yaml</code></td><td>新文件</td><td>由 <code>-context-8frame-8x8.yaml</code> 复制，只改 <code>budget: 1024</code> 及帧数相关键；<code>integration_type: context</code>、<code>memory_token_dim: 2048</code>、<code>motion.enabled: false</code> 不变</td><td>不被引用</td><td>ctx1024 run 引用</td></tr>
+<tr><td><code>framesamp_dataset.py</code></td><td>context 形状分支（<code>ctx_shape</code> 判定）</td><td>放行集合由 {(2048,64,1)} 扩为 {(1024,64,1),(2048,64,1)}，其余条件不动</td><td>512/2048 判定结果不变</td><td>1024 放行</td></tr>
+</table>
+<p>对照：modulation 1024 用的就是 16frame-8x8（<code>perceptual-framesamp-modul-16frame-8x8.yaml</code>），新 yaml 与它只差 <code>integration_type</code> 与 <code>memory_token_dim</code> 两键，与 512 档 context/modul 的差异完全同构。</p>
+
+<h3>2.3 学习率曲线与 50k 停点</h3>
+<p>两个现有 TrainConfig 只有 decay 不同（peak_lr 5e-5、warmup 5000、decay_lr 5e-5，<code>config.py</code> 中 <code>mme_vla_suite_b128_60k</code> / <code>_80k</code>）。<code>--num-train-steps 50001</code> 只截断，不改曲线，所以第 50000 步与 modulation 对照 run 在同一步的学习率完全相同（与 V11.88 w768 的 <code>--num_train_steps=50001</code> 同法）。<code>_80k</code> 默认 fsdp8/workers16，GL 上覆盖为 <code>--fsdp-devices 4 --num-workers 8</code>；<code>_60k</code> 默认即 fsdp4/workers8。</p>
+
+<h3>2.4 数据落到 turbo（大下载，需你点头）</h3>
+<p>训练库只在 AWS <code>/scratch</code> 与 HF bucket 上有；turbo 上的 <code>4task-gl</code> 是 ButtonUnmask 那组、任务不符；本机 <code>/data</code> 只有源 H5，计算节点不可见。方案：在 aspen 上开 detached tmux，用 <code>restore.sh</code> 同一套 <code>uvx huggingface_hub[cli]==1.30.0</code> 把 bucket 中<b>训练所需子集</b>（<code>framesamp-8x8/</code>、<code>source/</code>、<code>meta/</code>、norm_stats；跳过 <code>motion</code>、<code>wan-latents</code>、<code>framesamp</code>(4×4) 与 155 GiB 对拍材料）拉到 <code>&lt;GL_REPO&gt;/v1-store/datasets/4task-v2-1600ep-604f16da</code>，再解开 <code>source/data_tars</code>（约 225 GiB）。全量是 669 GiB，子集预计 300～450 GiB，以 <code>hf sync --dry-run</code> 的列表为准；turbo 现余 11 T。</p>
+<p><b>P-LINEAGE</b>：两条 run 都是纯 context、无 motion encoder，没有「encoder 训练源」可比。起跑合同写判定行 <code>DATA_LINEAGE=NA encoder=none motion_enabled=false vla_input_pin=&lt;sha&gt;</code>，同时输出 <code>PAIRED_RUNS_SAME_LIB=PASS</code>（两 run 的库 input pin 相同）。这是对 P-LINEAGE 的显式适用说明，<b>请你确认可以按 NA 处理</b>；不确认就不起跑。</p>
+
+<h3>2.5 时长估算与占位</h3>
+<table>
+<tr><th>run</th><th>每步推算</th><th>50k 步</th><th>占位 walltime</th><th>依据</th></tr>
+<tr><td>ctx512</td><td>4.81 s × 2 ≈ 9.6 s</td><td>约 134 h（5.6 天）</td><td>192 h（余量 43%）</td><td>GL 4×A40 b64 context 512 实测 4.81 s/步（<code>v1-prod-trend-10h</code>）；累积 2 次约翻倍</td></tr>
+<tr><td>ctx1024</td><td>9.6 × 1.63 ≈ 15.7 s</td><td>约 218 h（9.1 天），区间 8～11 天</td><td>336 h（spgpu 上限 14 天，余量 54%）</td><td>A100 4 卡 512 实测 3.25 s 对 1024 内插 5.3 s（<code>docs/context-length-step-time-estimate-20261102.md</code>），比值 1.63，<b>未实测</b></td></tr>
+</table>
+<p>两份占位合计 8 卡；chaijy2 当前他人占 6 卡（4+2），合计 14 ≤ 20。规格照 1101 先例（超出 <code>greatlakes.md</code> 默认 1 卡 / 48 h，提交后补登放行记录）。实测步时显示 walltime 不够时（<code>est_total_h &gt; 0.9 × hold_left_h</code>），在同一 run 名下按 5000 步 ckpt 换新占位续跑，不改训练口径。</p>
+
+<h2>3. 验收判定行</h2>
+<table>
+<tr><th>编号</th><th>查什么</th><th>怎么查</th><th>过了说明什么</th><th>判定行</th></tr>
+<tr><td>V1</td><td>K=1 不改旧行为</td><td>本机 2×A6000，同 seed、global 4，旧 HEAD 与新代码各跑 3 步，比 loss / grad_norm / 参数摘要</td><td>K=1 走原路径，所以必须逐位相等</td><td><code>GRAD_ACCUM_IDENTITY=PASS steps=3 max_abs_diff=0</code></td></tr>
+<tr><td>V2</td><td>累积数学正确</td><td>单测：确定性玩具 loss（无随机），K=1 与 K=2/4 的 grads 比较</td><td>mean 的线性性：K 个 micro 梯度平均 = 全 batch 梯度</td><td><code>GRAD_ACCUM_LINEAR=PASS ks=2,4 max_rel=&lt;1e-6</code></td></tr>
+<tr><td>V3</td><td>micro 切分覆盖与均分</td><td>单测：记录每个 micro 的样本 idx 与所在设备</td><td>每样本恰好进一个 micro，每 micro 每卡 m/4 个</td><td><code>MICRO_SPLIT=PASS k=2 per_device=16 dup=0 miss=0</code></td></tr>
+<tr><td>V4</td><td>真实训练行为一致（第 18 条第二块）</td><td>本机 global 4：K=1（每卡 2）对 K=2（每卡 1），各 20 步</td><td>噪声不同不能逐位，只要求均值 loss 相对差 &lt; 5%、无 nan</td><td><code>GRAD_ACCUM_BEHAVIOR=PASS steps=20 mean_loss_rel=&lt;x&gt; nonfinite=0</code></td></tr>
+<tr><td>V5</td><td>1024 yaml 与守卫</td><td>单测：512/2048 判定不变、1024 放行、modulation 判定不变</td><td>只扩了一个形状</td><td><code>CTX1024_GUARD=PASS</code></td></tr>
+<tr><td>V6</td><td>turbo 库完整</td><td>子集 <code>sha256sum -c</code>（对应 <code>SHA256SUMS.pre.txt</code> 的子集行）+ 解包后 pkl 计数 605,611</td><td>与 2026-09-20 导出逐字节同源</td><td><code>TURBO_LIB=PASS files=&lt;n&gt; mismatches=0 pkl=605611</code></td></tr>
+<tr><td>V7</td><td>A40 冒烟（两 run 各一次，在各自占位内）</td><td><code>MAX_STEPS=20</code>，采显存峰值、步 10～20 墙钟均值</td><td>每卡 16 装得下、步时可估 walltime</td><td><code>SMOKE_GL=PASS tag=&lt;512|1024&gt; micro=16 k=2 peak_mib=&lt;n&gt; s_per_step=&lt;x&gt; nonfinite=0</code></td></tr>
+<tr><td>V8</td><td>起跑合同</td><td>起跑脚本前置检查</td><td>代码=Beta、库 pin 一致、P-LINEAGE 适用说明在</td><td><code>DATA_LINEAGE=NA …</code>、<code>PAIRED_RUNS_SAME_LIB=PASS</code>、<code>CLEAN_HEAD=PASS sha=&lt;Beta&gt;</code></td></tr>
+<tr><td>V9</td><td>训练完成</td><td>日志尾行与 ckpt 目录</td><td>10 份 ckpt {5000,…,50000} 齐全、全程 finite</td><td><code>TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10</code>、<code>EXIT_CODE=0</code></td></tr>
+</table>
+<p>V7 若 ctx1024 每卡 16 OOM：同占位内改每卡 8 × 累积 4（全局仍 128，语义等价，属同规模调整），再测一次；仍 OOM 停下交你。</p>
+
+<h2>4. 实施步骤</h2>
+<table>
+<tr><th>阶段</th><th>内容</th><th>判据</th></tr>
+<tr><td>P0</td><td>开工令后：派计划一致性审查（sonnet）；<b>立即提交两份占位</b>（排队与改代码并行）</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS</code>；JobID 记入 <code>current.json</code></td></tr>
+<tr><td>P1</td><td>aspen tmux 拉 bucket 子集到 turbo、校验、解包（与 P2 并行）</td><td>V6</td></tr>
+<tr><td>P2</td><td>三个 worktree 子代理并行写代码（§子代理分工），逐个审查合并</td><td>V1–V5，<code>PRE_MERGE_REVIEW</code> / <code>POST_MERGE_REVIEW=PASS</code></td></tr>
+<tr><td>P3</td><td>打 <code>commitV4.6.nBeta</code>，<code>&lt;GL_REPO&gt;</code> checkout --detach Beta，集群侧 <code>uv sync --frozen</code></td><td><code>CLEAN_HEAD=PASS</code></td></tr>
+<tr><td>P4</td><td>占位排到后各跑 20 步冒烟，按实测步时核 walltime 余量</td><td>V7</td></tr>
+<tr><td>P5</td><td>两条正式 50k 起跑，Monitor 盯日志</td><td>V8，起跑 step100 正常</td></tr>
+<tr><td>P6</td><td>训练完成：留档 result.md、回写 commit、<code>scancel</code> 自己的两份占位</td><td>V9</td></tr>
+</table>
+<p class="mut">不在本计划范围：692 局评估、ckpt 上传 HF。需要时另出计划。</p>
+
+<h2>5. 子代理分工与合并（简述）</h2>
+<p>拆三块并行，各自独立 worktree（opus）：<b>S1</b> 只碰训练步与配置（梯度累积 + 单测），<b>S2</b> 只碰 context 1024 的 yaml 与数据守卫，<b>S3</b> 只碰 GL 入口脚本（从 <code>-gl</code> 副本的 <code>run_in_hold_o16.sh</code> 改出四任务 context 版本，透传 <code>--grad-accum-steps</code>、<code>--num-train-steps</code>、<code>--fsdp-devices</code>）。合并顺序 S2 → S1 → S3（S3 依赖 S1 的 CLI 名，以接口契约先行，不等代码）。每次合并前派一个 sonnet 审 <code>BASE..TIP</code>，主会话在 worktree 复跑验收；合并后跑短测再 push。数据下载、占位、Beta、冒烟、起跑由主会话自做。</p>
+
+<h2>6. 交接顺序与状态机登记</h2>
+<ul>
+<li>任务 id：<code>gl-4task400-ctx-50k</code>。</li>
+<li>交接前必须完成：V9 两条都 PASS、两份占位已 <code>scancel</code>、<code>docs/training-doc/&lt;run&gt;/result.md</code> 已提交。</li>
+<li>长尾：无（不含上传）。</li>
+<li>上游依赖：无（库来自已 PASS 的 bucket，假设 <code>pkl=605611</code>、manifest 不变）。</li>
+<li>下游：本任务 <code>done</code> 后可开 692 局评估（另出计划）。</li>
+</ul>
+<p>是否登记进 <code>docs/handoff/current.json</code> 状态机，请你一并答复。</p>
+
+<h2>7. 计划外待你处理的旧事项</h2>
+<p><code>gl-abl-encoders-train</code> 在 <code>current.json</code> 仍是 <code>running</code>，但其两份占位 65209321 / 65209330 在 2026-11-09 已 <code>CANCELLED+</code>（各约 7 天），<code>EXIT_CODE</code> 与 16 份 ckpt 未核。本计划不动它。</p>
+
+<p class="mut">逐文件逐函数的细节、分配表、runbook 见第二部分。</p>
+
+<h1>第二部分（技术细节，供 agent 追踪）</h1>
+
+<h2>〇 前置声明与红线</h2>
+<ol>
+<li>R1 开工前只读；占位提交、下载、改代码都属计划步骤，必须先有开工令。</li>
+<li>R2 不在 turbo 执行副本改代码；<code>&lt;GL_REPO&gt;</code> 只做 <code>git fetch</code> + <code>checkout --detach &lt;Beta&gt;</code>，<code>status --porcelain</code> 必须为空。</li>
+<li>R3 数据只写 <code>&lt;GL_REPO&gt;/v1-store/datasets/4task-v2-1600ep-604f16da</code>；不碰 turbo 上现有 <code>4task-gl</code> 等目录；带输出根的命令先 <code>ls -ld</code>。</li>
+<li>R4 只 <code>scancel</code> 本计划清单内的 JobID，禁止 <code>scancel -u</code>；tmux 前缀 <code>g4c-</code>，清理只按清单逐个 <code>kill-session -t '=名'</code>。</li>
+<li>R5 不改 peak_lr / warmup / decay，不改 seed（42）；超参落点：学习率曲线沿用现有 TrainConfig，步数与卡数用 CLI 覆盖（第 10 条，已由用户口径确定）。</li>
+<li>R6 <code>GRAD_ACCUM_IDENTITY</code> 必须逐位；不放宽。V4 的 5% 是预先声明的行为层阈值。</li>
+<li>R7 P-LINEAGE：<code>DATA_LINEAGE=NA</code> 须用户确认，未确认不起跑。</li>
+</ol>
+
+<h2>一 逐文件改动清单</h2>
+<table>
+<tr><th>文件</th><th>改动</th><th>归属</th></tr>
+<tr><td><code>src/mme_vla_suite/training/config.py</code></td><td><code>TrainConfig</code> 加 <code>grad_accum_steps: int = 1</code>；校验 <code>batch_size % (grad_accum_steps * device_count) == 0</code></td><td>S1</td></tr>
+<tr><td><code>scripts/training/train.py</code></td><td><code>train_step</code>：K&gt;1 走 scan 累积分支（§2.1 伪码），K==1 原路径不动；<code>main</code> 的整除检查与启动横幅加 <code>grad_accum_steps</code>；info 新增 <code>micro_batch</code></td><td>S1</td></tr>
+<tr><td><code>scripts/training/tests/test_grad_accum.py</code>（新）</td><td>V2、V3 单测（CPU、玩具模型）</td><td>S1</td></tr>
+<tr><td><code>src/mme_vla_suite/models/config/robomme/perceptual-framesamp-context-16frame-8x8.yaml</code>（新）</td><td>§2.2</td><td>S2</td></tr>
+<tr><td><code>src/mme_vla_suite/training/framesamp_dataset.py</code></td><td>context 形状放行集合加 (1024,64,1)</td><td>S2</td></tr>
+<tr><td><code>scripts/training/tests/test_ctx1024_guard.py</code>（新）</td><td>V5</td><td>S2</td></tr>
+<tr><td><code>scripts/training/gl/hold_4task_ctx.sbatch</code>（新）</td><td>占位模板：<code>--gres=gpu:4 --gpu_cmode=shared --cpus-per-task=16 --mem=128G --wrap='sleep infinity'</code>，<code>--time</code> 由参数给</td><td>S3</td></tr>
+<tr><td><code>scripts/training/gl/run_in_hold_4task_ctx.sh</code>（新）</td><td>以 <code>-gl</code> 副本 <code>v4-gl-orig100-1031</code> 的 <code>run_in_hold_o16.sh</code> 为底：<code>DS=$REPO/v1-store/datasets/4task-v2-1600ep-604f16da</code>，<code>--dataset-path $DS/framesamp-8x8</code>，导出 <code>MMEVLA_FRAMESAMP_SOURCE/MANIFEST</code>（同 <code>_train_common.sh</code>），参数 <code>RUN_NAME CONFIG HISTORY GRAD_ACCUM MAX_STEPS TRAIN_HEAD</code>；前置 V8 三行；日志 <code>v1-store/logs/$RUN.log</code>，尾行 <code>EXIT_CODE=</code>；拒绝已存在的 run 目录</td><td>S3</td></tr>
+<tr><td><code>greatlakes.md</code>（标记外项目节）</td><td>补登两份 4 卡占位放行记录</td><td>主会话</td></tr>
+<tr><td><code>docs/training-doc/&lt;run&gt;/{launch.md,result.md,records/}</code></td><td>第 12 条两段式</td><td>主会话</td></tr>
+</table>
+
+<h2>二 训练链路逐跳表（第 18 条，改动前 / 后）</h2>
+<table>
+<tr><th>跳</th><th>改动前</th><th>改动后（K=2）</th><th>这一跳改数吗</th></tr>
+<tr><td>dataloader → host batch</td><td>[128, …]，每 worker 按 seed 取样</td><td>同左</td><td>否</td></tr>
+<tr><td>host → device（FSDP4 数据轴）</td><td>每卡 32 样本</td><td>每卡 32 样本</td><td>否</td></tr>
+<tr><td>micro 切分</td><td>无</td><td>[128] → [64,2] → swap → [2,64]，micro i = 样本 i::2，每卡每 micro 16</td><td>否（只重排）</td></tr>
+<tr><td>前向 / 反向</td><td>一次，激活按 32/卡</td><td>scan 两次，激活按 16/卡；rng = fold_in(train_rng, i)</td><td>噪声采样不同（行为层）</td></tr>
+<tr><td>梯度</td><td>mean over 128</td><td>(g0+g1)/2，fp32 累加</td><td>数学等价（V2）</td></tr>
+<tr><td>优化器</td><td>每步一次 <code>tx.update</code></td><td>同左</td><td>否</td></tr>
+</table>
+
+<h2>三 子代理分配表</h2>
+<table>
+<tr><th>编号</th><th>目标</th><th>可写集合</th><th>禁触</th><th>接口契约</th><th>合并顺序</th><th>验收（环境）</th><th>资源</th></tr>
+<tr><td>G4C-S2</td><td>ctx1024 yaml + 守卫</td><td>新 yaml、<code>framesamp_dataset.py</code>、<code>test_ctx1024_guard.py</code></td><td>其余全部；<code>.agentmetarules/</code>、规则 md</td><td>无</td><td>1</td><td>V5：<code>UV_PROJECT_ENVIRONMENT=&lt;主 .venv&gt; PYTHONPATH=&lt;wt&gt;/src uv run --no-sync python -m pytest scripts/training/tests/test_ctx1024_guard.py -q</code>（CPU）</td><td>无 GPU</td></tr>
+<tr><td>G4C-S1</td><td>梯度累积</td><td><code>config.py</code>、<code>train.py</code>、<code>test_grad_accum.py</code></td><td>同上</td><td>CLI <code>--grad-accum-steps</code>，默认 1</td><td>2</td><td>V2、V3（CPU）；V1、V4 合并后由主会话在 aspen 2×A6000 串行跑</td><td>worktree 内无 GPU</td></tr>
+<tr><td>G4C-S3</td><td>GL 入口与占位模板</td><td><code>scripts/training/gl/hold_4task_ctx.sbatch</code>、<code>run_in_hold_4task_ctx.sh</code></td><td>同上</td><td>调用 S1 的 CLI 名（契约先行）</td><td>3</td><td><code>bash -n</code> + <code>DRY_RUN=1</code> 打印完整 train.py 命令行并 grep 关键参数</td><td>无</td></tr>
+<tr><td>主会话</td><td>下载、占位、Beta、冒烟、起跑、留档、放行登记</td><td><code>greatlakes.md</code> 项目节、<code>docs/training-doc/</code>、<code>current.json</code></td><td>—</td><td>—</td><td>—</td><td>V6–V9</td><td>2 份 4×A40 占位；tmux <code>g4c-</code></td></tr>
+</table>
+
+<h2>四 闸门总表</h2>
+<p>V1–V5 全 PASS 才打 Beta；V6 PASS 才能冒烟；V7 两条 PASS 且 walltime 余量 ≥10% 才正式起跑；V8 任一缺失即停。</p>
+
+<h2>五 runbook</h2>
+<pre>
+# P0 占位（开工令后立即）
+sbatch --account=chaijy2 --partition=spgpu --nodes=1 --ntasks-per-node=1 --gres=gpu:4 --gpu_cmode=shared \
+  --cpus-per-task=16 --mem=128G --time=192:00:00 --job-name=g4c-hold-512  --wrap='sleep infinity'
+sbatch ... --time=336:00:00 --job-name=g4c-hold-1024 --wrap='sleep infinity'
+
+# P1 下载（aspen，detached tmux，脚本落 scratchpad 后执行）
+tmux new-session -d -s g4c-fetch "bash &lt;scratchpad&gt;/fetch_4task_ctx.sh"
+#   脚本：HF_HOME=&lt;GL_REPO&gt;/v1-store/cache/hf UV_LINK_MODE=copy
+#   uvx --python 3.11 --from 'huggingface_hub[cli]==1.30.0' hf sync &lt;bucket&gt; &lt;DS&gt; --include 'framesamp-8x8/**' 'source/**' 'meta/**' 'norm*' 'SHA256SUMS*'
+#   子集 sha256 校验 → 解 data_tars → norm_stats 归位到 v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da/robomme/
+
+# P3 部署
+git -C &lt;GL_REPO&gt; fetch -q origin &amp;&amp; git -C &lt;GL_REPO&gt; checkout -q --detach &lt;Beta&gt; &amp;&amp; git -C &lt;GL_REPO&gt; status --porcelain
+
+# P4/P5 起跑（经 ssh greatlakes，在 aspen 的 tmux 里挂 srun）
+srun --jobid=&lt;hold&gt; --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=shared \
+  /usr/bin/env RUN_NAME=v2-1600ep-m8x8-ctx-b128-50k-gl CONFIG=mme_vla_suite_b128_60k \
+  HISTORY=perceptual-framesamp-context-8frame-8x8.yaml GRAD_ACCUM=2 MAX_STEPS=50001 TRAIN_HEAD=&lt;Beta&gt; \
+  bash scripts/training/gl/run_in_hold_4task_ctx.sh
+#   ctx1024：CONFIG=mme_vla_suite_b128_80k HISTORY=perceptual-framesamp-context-16frame-8x8.yaml，入口追加 --fsdp-devices 4 --num-workers 8
+#   冒烟同命令 MAX_STEPS=20、RUN_NAME=g4c-smoke-&lt;512|1024&gt;-&lt;MMDDHHMM&gt;
+
+# Monitor（每份日志一个）
+tail -n +1 -F &lt;log&gt; | stdbuf -oL tr '\r' '\n' | grep --line-buffered -E "EXIT_CODE=|Step [0-9]+000:|RESOURCE_EXHAUSTED|Traceback|nan|NaN|Killed|=PASS|=FAIL"
+</pre>
+
+<h2>六 风险登记</h2>
+<table>
+<tr><th>风险</th><th>处置</th></tr>
+<tr><td>spgpu 排队久（4 卡 × 14 天）</td><td>开工即提交，排队与改代码、下载并行</td></tr>
+<tr><td>ctx1024 每卡 16 OOM</td><td>每卡 8 × 累积 4（同规模，自行继续并告知）；仍 OOM 停</td></tr>
+<tr><td>ctx1024 实测步时 &gt; 336 h</td><td>按 5000 步 ckpt 换新占位续跑（第 2 条 5 倍内，告知）</td></tr>
+<tr><td>turbo NFS 读速拖慢</td><td>冒烟记 util 均值，明显低于 90% 记「性能异常」交你，不擅改 worker 外的口径</td></tr>
+<tr><td>bf16 跨卡型（A40 对 A100 的 modulation 对照）不逐位</td><td>只比成功率，不比数值</td></tr>
+<tr><td>bucket 子集 include 模式写漏</td><td>先 <code>--dry-run</code> 列清单，对照 <code>_train_common.sh</code> 必需路径再下</td></tr>
+</table>
+
+<h2>七 盲区诚实清单</h2>
+<ul>
+<li>A40 上 context b128 累积 2 的步时与显存从未实测；ctx1024 步时连 A100 都只是内插。</li>
+<li>bucket 中训练子集的精确字节数未列（需 <code>hf</code> 列目录）。</li>
+<li><code>run_in_hold_o16.sh</code> 只在 <code>-gl</code> 副本分支 <code>v4-gl-orig100-1031</code> 上读过名字，未逐行审；S3 开工时先读。</li>
+<li>modulation 对照的 512 @50k 用的是 60k run，1024 @50k 是否为 80k run 的第 50000 步，以 V11.89 的记录为准，本计划未再核其 ckpt。</li>
+</ul>
+
+<h2>八 留档与 commit 纪律</h2>
+<p>子代理 <code>sub/G4C-Sx: </code>；合并提交 <code>commitV4.6.x</code>；起跑前 <code>commitV4.6.nBeta</code> 且 <code>git status --short</code> 为空；完成后同号 <code>commitV4.6.n</code> 回写结论。两 run 各建 <code>docs/training-doc/&lt;run&gt;/</code>（launch.md 起跑时写，result.md 完成后写，records/ 只放清洗后日志与指标）；状态变化以 <code>handoff:</code> 小提交记录。</p>
+
+</body>
+</html>
