@@ -404,6 +404,10 @@ sbatch --account=chaijy2 --partition=spgpu --nodes=1 --ntasks-per-node=1 --gres=
 
 ## 项目专属
 
+### 四任务×400 context 512/1024 b128 50k 占位与下载 job 放行（2026-11-11 美东）
+
+计划 `1111-gl-4task400-ctx512-1024-b128-50k-plan.html`（r1 获「同意，开工」，r3 获自主执行授权）。两份占位同批无依赖并行，每份 `chaijy2/spgpu`、单节点单任务、4×A40、16 CPU、128G、`gpu_cmode=shared`、`--wrap='sleep infinity'`：`g4c-hold-512` = `65943150`（192 h）、`g4c-hold-1024` = `65943151`（336 h，spgpu 上限）；超出默认 1 GPU / 48 h，先提交后登记。另有一次性例外：`g4c-fetch` = `65945136`，`standard` 分区纯 CPU（8 CPU、32G、24 h，直接 sbatch 跑完即退），用于从 HF bucket 拉训练库子集到 turbo 并校验解包——用户原话「这个 Aspen 拉 Turbo 是一个正确的选择吗？如果不是的话，你可以尝试用 Veil 来拉，或者用单独一个什么起一个 CPU 的 job？」，修订裁决「全部同意」；不外延到其他 CPU 工作负载。walltime 不足时按计划 §2.5 补同规格占位续跑，届时在此追记。
+
 ### 双消融 encoder context VLA 占位放行（2026-11-02 美东）
 
 用户批准根目录 `1101-gl-ablation-encoders-ctx-b64-80k-plan.md`，随后明确「同意修订 继续做」「不需要再确认，你可以直接开始了。」；v5 独立一致性审查通过。两份占位同批无依赖并行，每份 `chaijy2/spgpu`、单节点单任务、4×A40、16 CPU、128G、176 小时、`gpu_cmode=shared`、`--wrap='sleep infinity'`。实际作业为 `o16abl-hold-noxyz` = `65209321`、`o16abl-hold-nostate` = `65209330`，提交各一次、退出均为 0。完整回执与资源确认在 turbo 仓库 `v1-store/logs/o16abl-hold-submit-1102.log`。
