@@ -18,6 +18,11 @@
 #   （不输出 DATA_LINEAGE=PASS，由冒烟与正式 runner 内置 G0 在表存在后再核）；表存在时跑含新表一环的完整检查，
 #   末行 DATA_LINEAGE=PASS …。任一环 FAIL 即 DATA_LINEAGE=FAIL 并非零退出（P-LINEAGE，不得 WAIVE）。
 #   单测专用：R9_G0_MOTION=<路径> 只在 --g0-only 下生效，用来替换新表路径（表缺失夹具）；其他模式设了即拒绝。
+# 诊断开关 TRAIN_TIMING_PROFILE=0（所有训练模式）：step_timing.jsonl 计时行照写，但不开 jax.profiler trace——
+#   v2-1600ep-m8x8-modul-wanraw9s32-b128-50k 首跑在第 300 步 stop_trace 后继续训练时与 L1 数据管线后台线程冲突，
+#   abort（absl BadStatusOrAccess，EXIT_CODE=134）；关 profiler 不改任何训练数值。
+#   跨边界验证专用：R9_TIMING_STEPS=<正整数> 只允许与 --smoke20 同用，覆盖 TRAIN_TIMING_STEPS（如 10，验证计时
+#   结束后继续训练不崩）；正式 / 测速 / --g0-only 模式设了即拒绝。
 # 冒烟 / 测速 / 正式：起跑前内置完整 G0（含新表一环），FAIL 即退出；训练中后台 follower 把
 #   TRAIN_RECORD_DIR 下 step_timing.jsonl 逐步打印成 STEP_TIME 行、metrics.jsonl 每个 log_interval 打印成 DIAG 行（只记录不判停）；
 #   训练后：正式 / 冒烟核 checkpoint 齐全并真实加载最后一份（CKPT_LOAD=PASS、TRAIN_FINAL_RECORD=PASS 或 SMOKE20=PASS），
@@ -43,6 +48,10 @@ while [ $# -gt 0 ]; do
 done
 if [ -n "${R9_G0_MOTION:-}" ] && [ "$MODE" != g0 ]; then
   printf 'R9_G0_MOTION 只允许与 --g0-only 同用（单测夹具），拒绝在 %s 模式下替换表路径\n' "$MODE" >&2; exit 2
+fi
+if [ -n "${R9_TIMING_STEPS:-}" ]; then
+  [ "$MODE" = smoke ] || { printf 'R9_TIMING_STEPS 只允许与 --smoke20 同用（跨边界验证），拒绝在 %s 模式下覆盖计时步数\n' "$MODE" >&2; exit 2; }
+  [[ "$R9_TIMING_STEPS" =~ ^[1-9][0-9]*$ ]] || { printf 'R9_TIMING_STEPS 必须是正整数，收到 %s\n' "$R9_TIMING_STEPS" >&2; exit 2; }
 fi
 
 MAIN=/scratch/hongze/robomme_policy_learning_MotionJEPA
@@ -80,6 +89,8 @@ RUN_ROOT="$V1_STORE/train-runs/$CONFIG/$RUN"
 LOG="$V1_STORE/logs/$RUN.runner.log"     # 不用 <run>.log：tmux 外壳 tmx 已把整段输出 tee 到 logs/<tmux 名>.log，冒烟同名会撞
 REC="$V1_STORE/bench/$RUN"
 TIMING_STEPS=300                         # 诊断开关：step_timing 前 300 步（冒烟 20 步时取 min）；TRAIN_RECORD_DIR=$REC 打开 metrics 记录
+[ "$MODE" = smoke ] && [ -n "${R9_TIMING_STEPS:-}" ] && TIMING_STEPS="$R9_TIMING_STEPS"
+TIMING_PROFILE=0                         # 不开 jax.profiler（stop_trace 后继续训练会 abort，见文件头）；计时行照写
 
 TRAIN_ARGS=(
   "$CONFIG"
@@ -102,8 +113,8 @@ if [ "$DRY" = 1 ]; then
   if [ "$MODE" = g0 ]; then
     printf 'G0_ONLY=1 checks=%s\n' "$([ "$TABLE_STATE" = present ] && echo full || echo pre)"
   else
-    printf 'DIAG_SWITCH TRAIN_TIMING_STEPS=%s TRAIN_RECORD_DIR=%s follower=STEP_TIME+DIAG gpu_sample_s=15 LOG=%s\n' \
-      "$TIMING_STEPS" "$REC" "$LOG"
+    printf 'DIAG_SWITCH TRAIN_TIMING_STEPS=%s TRAIN_TIMING_PROFILE=%s TRAIN_RECORD_DIR=%s follower=STEP_TIME+DIAG gpu_sample_s=15 LOG=%s\n' \
+      "$TIMING_STEPS" "$TIMING_PROFILE" "$REC" "$LOG"
   fi
   exit 0
 fi
@@ -272,7 +283,7 @@ body() (
   test -z "$(git status --porcelain)"
   export CUDA_CACHE_PATH="$V1_STORE/cache/cuda"
   export WANDB_DATA_DIR="$V1_STORE/cache/wandb-data" XDG_DATA_HOME="$V1_STORE/cache/xdg-data"
-  export TRAIN_TIMING_STEPS="$TIMING_STEPS"
+  export TRAIN_TIMING_STEPS="$TIMING_STEPS" TRAIN_TIMING_PROFILE="$TIMING_PROFILE"
 
   unset PYTHONPATH
   export UV_CACHE_DIR="$V1_STORE/cache/uv" PYTHONUNBUFFERED=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
@@ -289,7 +300,8 @@ body() (
   printf 'RUN=%s\nMODE=%s\nTRAIN_HEAD=%s\nREPO=%s\nV1_STORE=%s\nSTEPS=%s\nSTART_UTC=%s\n' \
     "$RUN" "$MODE" "$TRAIN_HEAD" "$MAIN" "$V1_STORE" "$STEPS" "$(date -u +%FT%TZ)"
   printf 'TRAIN_ARGS='; printf ' %q' "${TRAIN_ARGS[@]}"; printf '\n'
-  printf 'DIAG_SWITCH TRAIN_TIMING_STEPS=%s TRAIN_RECORD_DIR=%s follower=STEP_TIME+DIAG gpu_sample_s=15\n' "$TIMING_STEPS" "$REC"
+  printf 'DIAG_SWITCH TRAIN_TIMING_STEPS=%s TRAIN_TIMING_PROFILE=%s TRAIN_RECORD_DIR=%s follower=STEP_TIME+DIAG gpu_sample_s=15\n' \
+    "$TIMING_STEPS" "$TIMING_PROFILE" "$REC"
 
   # 内置完整 G0（含新表一环），FAIL 即退出（set -e）
   run_g0 full

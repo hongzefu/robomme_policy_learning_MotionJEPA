@@ -37,7 +37,7 @@ FORMAL_RUN = "v2-1600ep-m8x8-modul-wanraw9s32-b128-50k"
 
 
 def run(cmd, env_extra=None, cwd=REPO, check=False):
-    env = {k: v for k, v in os.environ.items() if k not in ("R9_G0_MOTION", "CHAIN_DRY", "CHAIN_RUNNER_LOG", "POLICY", "RUN_NAME", "DRY_RUN")}
+    env = {k: v for k, v in os.environ.items() if k not in ("R9_G0_MOTION", "R9_TIMING_STEPS", "CHAIN_DRY", "CHAIN_RUNNER_LOG", "POLICY", "RUN_NAME", "DRY_RUN")}
     env.update(env_extra or {})
     p = subprocess.run(cmd, cwd=cwd, env=env, capture_output=True, text=True, timeout=120)
     if check:
@@ -79,7 +79,8 @@ def test_runner_dry_train_args_vs_v11(flags, run_name, steps):
     if flags == ["--g0-only"]:
         assert "G0_ONLY=1" in out and "DIAG_SWITCH" not in out
     else:
-        assert re.search(r"^DIAG_SWITCH TRAIN_TIMING_STEPS=300 TRAIN_RECORD_DIR=\S+ follower=STEP_TIME\+DIAG gpu_sample_s=15 ", out, re.M)
+        # 所有训练模式关 jax.profiler（TRAIN_TIMING_PROFILE=0），计时行仍是前 300 步
+        assert re.search(r"^DIAG_SWITCH TRAIN_TIMING_STEPS=300 TRAIN_TIMING_PROFILE=0 TRAIN_RECORD_DIR=\S+ follower=STEP_TIME\+DIAG gpu_sample_s=15 ", out, re.M)
     assert "motion-wan-raw9-s32" in out
     yaml = REPO / "src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-8frame-8x8-wanraw9s32.yaml"
     assert f"HC_SHA={hashlib.sha256(yaml.read_bytes()).hexdigest()} " in out
@@ -92,6 +93,20 @@ def test_runner_rejects_bad_mode_and_names():
     assert run(["bash", str(RUNNER), "X", "--bench300", "--run-name", "r9-memprobe", "--dry-run"]).returncode == 0
     p = run(["bash", str(RUNNER), "X", "--smoke20", "--dry-run"], {"R9_G0_MOTION": "/tmp/x"})
     assert p.returncode == 2 and "R9_G0_MOTION" in p.stderr
+
+
+def test_r9_timing_steps_smoke_only():
+    # R9_TIMING_STEPS 只允许与 --smoke20 同用：覆盖 TRAIN_TIMING_STEPS，profiler 仍关
+    out = run(["bash", str(RUNNER), "X", "--smoke20", "--run-name", "r9-smoke20-l2", "--dry-run"],
+              {"R9_TIMING_STEPS": "10"}, check=True).stdout
+    assert re.search(r"^DIAG_SWITCH TRAIN_TIMING_STEPS=10 TRAIN_TIMING_PROFILE=0 ", out, re.M), out
+    assert "STEPS=20 " in out
+    for flags in ([], ["--bench300"], ["--g0-only"]):
+        p = run(["bash", str(RUNNER), "X", *flags, "--dry-run"], {"R9_TIMING_STEPS": "10"})
+        assert p.returncode == 2 and "R9_TIMING_STEPS" in p.stderr, (flags, p.stdout, p.stderr)
+    for bad in ("0", "abc", "-3"):
+        p = run(["bash", str(RUNNER), "X", "--smoke20", "--dry-run"], {"R9_TIMING_STEPS": bad})
+        assert p.returncode == 2, bad
 
 
 _HAVE_MAIN_DATA = (MAIN / ".venv/bin/python").is_file() and (
