@@ -3,7 +3,7 @@
 （本文件注释中的「旧路径」均指已删除的 legacy 数据链 RoboMMEDataset +
 散 npy + MemoryBuffer——commitV4.1 删除，见 git 历史；对齐结论在删除前逐字核对固化。）
 
-共享装配路径，支持成对的 context/2048 与 modulation/1024 配置：
+共享装配路径，支持成对的 context/2048 与 modulation/1024 配置（context 帧记忆预算 512/1024/2048，见 memory_shape_allowed）：
 ① 清单查表得 (g, step)（O(1) 数组，含 exec_start_idx 换算，不读目录）；
 ② pickle.load 源库 data/{idx}.pkl（与旧路径同源同字节）＋ pkl 内身份互校
    （不符显式 raise——行号错位的最后一道闸，禁 assert，R6）；
@@ -71,6 +71,38 @@ _NONE_KEYS = (
     "motion_mask",
     "mem_order",
 )
+
+
+# context 档放行的 (budget, token_per_image, num_views)：
+# (2048,64,1) 为 1018 计划 R2 的 32 帧档；(1024,64,1) 为 1111 计划 §2.2 的 16 帧档。
+_CTX_SHAPES = frozenset({(1024, 64, 1), (2048, 64, 1)})
+
+
+def memory_shape_allowed(raw, integration_type, memory_token_dim, motion_enabled: bool) -> bool:
+    """帧记忆形制守卫的纯判定（FrameSampDataset.__init__ 调用；单测直接测本函数）。
+
+    raw = (budget, token_per_image, num_views) 原值（不先转 int）。三条分支任一成立即放行：
+    ① legacy：int 转换后 ∈ {(512,16,1),(512,64,1)}（旧档 int 转换接受条件保持不变）；
+    ② modulation：原值全为 int、∈ {(1024/2048/4096,64,1)}、无 motion；
+    ③ context：原值全为 int、∈ _CTX_SHAPES、memory_token_dim == 2048、无 motion。
+    """
+    shape = tuple(int(v) for v in raw)
+    legacy_shape = shape in {(512, 16, 1), (512, 64, 1)}
+    all_int = all(type(v) is int for v in raw)
+    new_shape = (
+        all_int
+        and tuple(raw) in {(1024, 64, 1), (2048, 64, 1), (4096, 64, 1)}
+        and str(integration_type) == "modulation"
+        and not motion_enabled
+    )
+    ctx_shape = (
+        all_int
+        and tuple(raw) in _CTX_SHAPES
+        and str(integration_type) == "context"
+        and memory_token_dim == 2048
+        and not motion_enabled
+    )
+    return bool(legacy_shape or new_shape or ctx_shape)
 
 
 def check_motion_contract(mcfg, meta: ms.MotionMeta):
@@ -150,27 +182,11 @@ class FrameSampDataset(Dataset):
         mcfg = getattr(hc, "motion", None)
         self._motion_enabled = bool(mcfg is not None and mcfg.get("enabled", False))
         raw = (hc.budget, hc.token_per_image, hc.num_views)
-        shape = (int(hc.budget), int(hc.token_per_image), int(hc.num_views))
-        legacy_shape = shape in {(512, 16, 1), (512, 64, 1)}
-        new_shape = (
-            all(type(v) is int for v in raw)
-            and raw in {(1024, 64, 1), (2048, 64, 1), (4096, 64, 1)}
-            and str(hc.integration_type) == "modulation"
-            and not self._motion_enabled
-        )
-        # context 2048 档（1018 计划 R2）：只放行 (2048,64,1)+context+memory_token_dim 2048+无 motion。
-        ctx_shape = (
-            all(type(v) is int for v in raw)
-            and raw == (2048, 64, 1)
-            and str(hc.integration_type) == "context"
-            and hc.memory_token_dim == 2048
-            and not self._motion_enabled
-        )
-        _req(legacy_shape or new_shape or ctx_shape,
+        _req(memory_shape_allowed(raw, hc.integration_type, hc.memory_token_dim, self._motion_enabled),
              f"(budget,token_per_image,num_views)={raw}（类型 {tuple(type(v).__name__ for v in raw)}）、"
              f"integration_type={hc.integration_type!r}、motion_enabled={self._motion_enabled} "
              "不在支持的 (512,16,1)/(512,64,1)、(1024/2048/4096,64,1)+modulation+无 motion "
-             "与 (2048,64,1)+context+memory_token_dim 2048+无 motion 档位中")
+             "与 (1024/2048,64,1)+context+memory_token_dim 2048+无 motion 档位中")
         _req(int(hc.memory_feature.img.input_dim) == 2048,
              f"memory_feature.img.input_dim={hc.memory_feature.img.input_dim} != 2048")
         _req(int(hc.memory_feature.pos.input_dim) == 768,
