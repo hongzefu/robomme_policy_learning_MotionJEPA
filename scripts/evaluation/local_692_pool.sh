@@ -54,7 +54,7 @@ RETRY_ROOT="$EVAL_REPO/v1-store/evaluation/$RETRY_RUN"
 export MMEVLA_MOTION_OVERFLOW=resample EXPECT_MOTION_STATS=1 EXPECT_DEMO_INJECT=1 CHUNK_EPISODES=20 \
        MMEVLA_MOTION_PROV_RELAX=gpu_name,compute_cap,sm_count EPISODE_WALL_S=2400 EVAL_TIMEOUT=14400 \
        LOCAL_GPU_SHARE=2 XLA_PYTHON_CLIENT_MEM_FRACTION=0.45 ALLOW_RESUME=1 \
-       POLICY=perceptual-framesamp-modul-8frame-8x8-wantp768 POLICY_CONFIG=mme_vla_suite_b128_80k \
+       POLICY="${POLICY:-perceptual-framesamp-modul-8frame-8x8-wantp768}" POLICY_CONFIG=mme_vla_suite_b128_80k \
        EXPECT_CKPT_ID="$CKPT_ID" DEMO_PREFIX_STORE="$STORE"
 unset ROBOMME_GPU_RASTER SAPIEN_DISABLE_RAY_TRACING
 echo "LOCAL692_START mode=$MODE dry=$DRY run=$RUN_NAME ckpt=$CKPT seed=$SEED store=$STORE $(date -u +%FT%TZ)"
