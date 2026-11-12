@@ -1,7 +1,10 @@
 from collections.abc import Iterator, Sequence
+import ctypes
 import logging
 import multiprocessing
 import os
+import queue
+import threading
 import typing
 from typing import Literal, Protocol, SupportsIndex, TypeVar
 import time
@@ -60,8 +63,42 @@ class TransformedDataset(Dataset[T_co]):
     def __getitem__(self, index: SupportsIndex) -> T_co:
         return self._transform(self._dataset[index])
 
+    def __getitems__(self, indices):
+        """torch DataLoader 的批取数钩子（_MapDatasetFetcher 优先调用它，再把返回值交给 collate_fn）。
+
+        普通数据集：逐样本 ``self[i]``，与 torch 默认 fetcher 完全相同。
+        wan_raw9（底层数据集带 ``raw9_motion_shape``，S5-L1）：整批 motion_emb (B,720,16384) f32（每批约 6 GB）
+        先在共享内存里一次分配，逐样本 ``getitem_into`` 把表行直接写进第 j 行，transforms 照常逐样本跑；
+        返回 ``_PreCollated``，``_collate_fn_shm`` 只 stack 其余键、motion_emb 直接用这块缓冲——省掉逐样本 47 MB
+        分配、np.stack 整批拷贝与送进 DataLoader 队列时再拷进共享内存这三遍 6 GB 内存流量，字节不变。
+        """
+        shape = getattr(self._dataset, "raw9_motion_shape", None)
+        if shape is None:
+            return [self[i] for i in indices]
+        tensor, buf = _shared_empty((len(indices),) + tuple(shape), np.dtype(np.float32))
+        items = []
+        for j, i in enumerate(indices):
+            item = self._transform(self._dataset.getitem_into(i, buf[j]))
+            m = item["motion_emb"]
+            if not (isinstance(m, np.ndarray) and m.dtype == buf.dtype and m.shape == buf.shape[1:]
+                    and m.__array_interface__["data"][0] == buf[j].__array_interface__["data"][0]):
+                # transforms 若换了对象（当前链路不会），按 dtype/shape 严格一致拷回槽位，否则显式报错
+                np.copyto(buf[j], m, casting="no")
+            item["motion_emb"] = None            # 占位：其余键照常 collate，motion_emb 由 _PreCollated 交付
+            items.append(item)
+        return _PreCollated(items, "motion_emb", tensor)
+
     def __len__(self) -> int:
         return len(self._dataset)
+
+
+class _PreCollated:
+    """``TransformedDataset.__getitems__`` 交给 ``_collate_fn_shm`` 的批：items（某键已置 None）+ 该键已拼好的共享 tensor。"""
+
+    def __init__(self, items, key, tensor):
+        self.items = items
+        self.key = key
+        self.tensor = tensor
 
 
 class IterableTransformedDataset(IterableDataset[T_co]):
@@ -397,6 +434,7 @@ class TorchDataLoader:
         num_workers: int = 0,
         seed: int = 0,
         framework: str = "jax",
+        prefetch_factor: int | None = None,
     ):
         """Create a PyTorch data loader.
 
@@ -412,6 +450,7 @@ class TorchDataLoader:
             num_workers: The number of worker processes to use. If zero, the data loader will
                 execute in the main process.
             seed: The seed to use for shuffling the data.
+            prefetch_factor: 每 worker 预取批数；None 时沿用 torch 默认（2），只在 num_workers > 0 时传入。
         """
         if jax.process_count() > 1:
             raise NotImplementedError("Data loading with multiple processes is not supported.")
@@ -447,13 +486,15 @@ class TorchDataLoader:
             worker_init_fn=_worker_init_fn,
             drop_last=True,
             generator=generator,
+            **({"prefetch_factor": prefetch_factor} if (prefetch_factor is not None and num_workers > 0) else {}),
         )
 
     @property
     def torch_loader(self) -> torch.utils.data.DataLoader:
         return self._data_loader
 
-    def __iter__(self):
+    def _host_batches(self):
+        """主进程侧取批：worker 队列 → numpy 视图 → 预建页表；按 epoch 循环、遇 num_batches 停（原 __iter__ 逻辑）。"""
         num_items = 0
         while True:
             data_iter = iter(self._data_loader)
@@ -466,11 +507,124 @@ class TorchDataLoader:
                 except StopIteration:
                     break  # We've exhausted the dataset. Create a new iterator and start over.
                 num_items += 1
+                _populate_tree(batch)
+                yield batch
+
+    def __iter__(self):
+        # S5-L1：取批（收 worker 的共享内存批、对新映射页预建页表 MADV_POPULATE_READ）放到后台取批线程，与训练主循环重叠；
+        # 主线程只做 make_array（H2D）。用完的主机批交给释放线程丢掉最后一个引用（6 GB 共享内存批的 munmap + 归还
+        # tmpfs 页实测约 0.6–0.8 s，原先落在主线程下一次 next() 里）。批的顺序与字节和原来完全相同。
+        releaser = _Releaser()
+        try:
+            for batch in _background(self._host_batches(), depth=1):
                 # For JAX, convert to sharded arrays; for PyTorch, return torch tensors
                 if self._sharding is not None:
-                    yield jax.tree.map(lambda x: jax.make_array_from_process_local_data(self._sharding, x), batch)
+                    out = jax.tree.map(lambda x: jax.make_array_from_process_local_data(self._sharding, x), batch)
                 else:
-                    yield jax.tree.map(torch.as_tensor, batch)
+                    out = jax.tree.map(torch.as_tensor, batch)
+                releaser.hand_over(batch)
+                del batch
+                yield out
+                del out
+        finally:
+            releaser.close()
+
+
+class _Releaser:
+    """释放线程：收到第 N 批时才丢掉第 N−1 批的引用。
+
+    主线程交出第 N 批时，第 N−1 批在主线程（循环变量、取批生成器局部变量）里的引用都已解除，所以最后一个引用
+    落在本线程，释放开销（munmap、归还共享内存页；实测不持 GIL）不再占主线程。
+    """
+
+    def __init__(self):
+        self._q: queue.SimpleQueue = queue.SimpleQueue()
+        self._t = threading.Thread(target=self._run, name="TorchDataLoader-release", daemon=True)
+        self._t.start()
+
+    def _run(self):
+        held = None
+        while True:
+            nxt = self._q.get()
+            held = nxt              # 旧 held 在本线程释放
+            del nxt
+            if held is _BG_END:
+                return
+
+    def hand_over(self, batch) -> None:
+        self._q.put(batch)
+
+    def close(self) -> None:
+        self._q.put(_BG_END)
+
+
+_BG_END = object()
+
+
+def _background(gen, depth: int):
+    """在 daemon 线程里跑生成器 ``gen``，经容量 ``depth`` 的队列按原顺序交付；异常原样在消费侧抛出。"""
+    q: queue.Queue = queue.Queue(maxsize=depth)
+    stop = threading.Event()
+
+    def put(x) -> bool:
+        while not stop.is_set():
+            try:
+                q.put(x, timeout=0.1)
+                return True
+            except queue.Full:
+                continue
+        return False
+
+    def run():
+        try:
+            for x in gen:
+                if not put(x):
+                    return
+            put(_BG_END)
+        except BaseException as e:  # noqa: BLE001 —— 交给消费侧抛出
+            put(e)
+
+    t = threading.Thread(target=run, name="TorchDataLoader-host-prefetch", daemon=True)
+    t.start()
+    try:
+        while True:
+            x = q.get()
+            if x is _BG_END:
+                return
+            if isinstance(x, BaseException):
+                raise x
+            yield x
+    finally:
+        stop.set()
+
+
+_MADV_POPULATE_READ = 22      # Linux ≥ 5.14
+_MADV_POPULATE_WRITE = 23
+_POPULATE_MIN_BYTES = 1 << 20
+_LIBC = None
+
+
+def _madvise(a: np.ndarray, advice: int) -> None:
+    """对数组所在页整段 madvise（只建页表 / 分配页，不改字节）；失败显式报错。"""
+    global _LIBC
+    if a.nbytes == 0:
+        return
+    if _LIBC is None:
+        _LIBC = ctypes.CDLL(None, use_errno=True)
+    page = os.sysconf("SC_PAGE_SIZE")
+    addr = a.__array_interface__["data"][0]
+    start = addr - addr % page
+    if _LIBC.madvise(ctypes.c_void_p(start), ctypes.c_size_t(addr + a.nbytes - start), advice) != 0:
+        err = ctypes.get_errno()
+        raise OSError(err, f"madvise({advice}) 失败: {os.strerror(err)}")
+
+
+def _populate_tree(batch) -> None:
+    """主进程对收到的批预建页表（MADV_POPULATE_READ）：worker 写好的共享内存页在本进程首次触碰时逐 4 KiB 缺页，
+    6 GB 批实测约 0.5 s；在后台取批线程里一次做掉，H2D 时不再缺页。只读、不改字节。"""
+    for x in jax.tree.leaves(batch):
+        if isinstance(x, np.ndarray) and x.nbytes >= _POPULATE_MIN_BYTES:
+            _madvise(x, _MADV_POPULATE_READ)
 
 
 def _collate_fn(items):
@@ -508,8 +662,61 @@ def _from_shared_torch(batch):
     return jax.tree.map(convert, batch, is_leaf=lambda x: x is None)
 
 
+_NP_TO_TORCH = {np.dtype(k): v for k, v in {
+    np.bool_: torch.bool, np.uint8: torch.uint8, np.int8: torch.int8, np.int16: torch.int16, np.uint16: torch.uint16,
+    np.int32: torch.int32, np.int64: torch.int64, np.float16: torch.float16, np.float32: torch.float32,
+    np.float64: torch.float64}.items()}
+
+
+def _shared_empty(shape, dtype: np.dtype):
+    """在共享内存里直接分配（torch 当前 sharing strategy 的新 storage），返回 (torch tensor, 同一内存的 numpy 视图)。
+
+    送进 DataLoader 队列时 storage 已共享，不再整块拷进共享内存。bf16 用 uint16 存、torch 侧再 view 回 bf16。
+    """
+    store_dt = np.dtype(np.uint16) if dtype == ml_dtypes.bfloat16 else np.dtype(dtype)
+    tdt = _NP_TO_TORCH[store_dt]
+    n = int(np.prod(shape, dtype=np.int64))
+    storage = torch.UntypedStorage._new_shared(max(n * store_dt.itemsize, 1))
+    t = torch.empty((0,), dtype=tdt).set_(storage, 0, tuple(shape))
+    view = t.numpy()
+    if view.nbytes >= _POPULATE_MIN_BYTES:
+        # 新 tmpfs 页逐 4 KiB 缺页分配很慢（6 GB 批实测写入 4.8 s）；先一次 MADV_POPULATE_WRITE 批量建页（2.7 s + 写 1.1 s）
+        _madvise(view, _MADV_POPULATE_WRITE)
+    if dtype == ml_dtypes.bfloat16:
+        t = t.view(torch.bfloat16)
+        view = view.view(ml_dtypes.bfloat16)
+    return t, view
+
+
+def _stack_shared(*xs):
+    """与 ``np.stack([np.asarray(x) for x in xs])`` 逐字节相同，但直接写进共享内存 storage。
+
+    只在各元素 dtype / shape 一致且 dtype 可由 torch 承载时走直写；否则回到原 np.stack + 共享化（与 S5-L1 之前同式）。
+    """
+    arrs = [np.asarray(x) for x in xs]
+    a0 = arrs[0]
+    dt = a0.dtype
+    ok = (dt == ml_dtypes.bfloat16 or dt in _NP_TO_TORCH) and a0.size > 0 and all(
+        a.dtype == dt and a.shape == a0.shape for a in arrs)
+    if not ok:
+        return _to_shared_torch(np.stack(arrs, axis=0))
+    t, view = _shared_empty((len(arrs),) + a0.shape, dt)
+    np.stack(arrs, axis=0, out=view)
+    return t
+
+
 def _collate_fn_shm(items):
-    return _to_shared_torch(_collate_fn(items))
+    """worker 侧 collate：各键直接 stack 进共享内存（S5-L1），字节与 ``_to_shared_torch(_collate_fn(items))`` 相同。
+
+    ``items`` 为 ``_PreCollated``（wan_raw9 的 ``TransformedDataset.__getitems__``）时，其 key 已是拼好的共享 tensor。
+    """
+    if isinstance(items, _PreCollated):
+        batch = jax.tree.map(_stack_shared, *items.items)
+        if batch.get(items.key, None) is not None:
+            raise RuntimeError(f"_PreCollated 键 {items.key!r} 未置空")
+        batch[items.key] = items.tensor
+        return batch
+    return jax.tree.map(_stack_shared, *items)
 
 
 def _worker_init_fn(worker_id: int) -> None:
