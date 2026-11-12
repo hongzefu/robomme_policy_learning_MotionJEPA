@@ -1,11 +1,14 @@
 from collections.abc import Iterator, Sequence
+import atexit
 import ctypes
 import logging
 import multiprocessing
 import os
 import queue
+import sys
 import threading
 import typing
+import weakref
 from typing import Literal, Protocol, SupportsIndex, TypeVar
 import time
 
@@ -493,48 +496,134 @@ class TorchDataLoader:
     def torch_loader(self) -> torch.utils.data.DataLoader:
         return self._data_loader
 
-    def _host_batches(self):
-        """主进程侧取批：worker 队列 → numpy 视图 → 预建页表；按 epoch 循环、遇 num_batches 停（原 __iter__ 逻辑）。"""
-        num_items = 0
-        while True:
-            data_iter = iter(self._data_loader)
-            while True:
-                if self._num_batches is not None and num_items >= self._num_batches:
-                    return
-                try:
-                    batch = next(data_iter)
-                    batch = _from_shared_torch(batch)
-                except StopIteration:
-                    break  # We've exhausted the dataset. Create a new iterator and start over.
-                num_items += 1
-                _populate_tree(batch)
-                yield batch
-
     def __iter__(self):
         # S5-L1：取批（收 worker 的共享内存批、对新映射页预建页表 MADV_POPULATE_READ）放到后台取批线程，与训练主循环重叠；
         # 主线程只做 make_array（H2D）。用完的主机批交给释放线程丢掉最后一个引用（6 GB 共享内存批的 munmap + 归还
         # tmpfs 页实测约 0.6–0.8 s，原先落在主线程下一次 next() 里）。批的顺序与字节和原来完全相同。
-        releaser = _Releaser()
+        # 收尾：迭代器 close()（耗尽 / 被丢弃 / 进程退出 atexit）时停两个线程、先关底层 torch 迭代器再 join，
+        # 不在解释器退出阶段留下仍在调 torch / jax 的线程。
+        return _PrefetchIter(self)
+
+
+_BG_END = object()
+_JOIN_TIMEOUT_S = 60.0
+
+
+class _PrefetchIter:
+    """``TorchDataLoader.__iter__`` 的迭代器：后台取批线程 + 主线程 make_array + 释放线程。
+
+    取批线程（_run，原 __iter__ 的 epoch 循环）：``next(torch 迭代器)`` → ``_from_shared_torch`` → 预建页表 → 容量 1 的队列。
+    ``close()``：置停止标志 → 关底层 torch 迭代器（多进程时 ``_shutdown_workers``，让阻塞在 ``next`` 里的取批线程醒来）
+    → join 取批线程 → 关并 join 释放线程。耗尽、异常、``__del__`` 与创建时登记的 atexit 都走 ``close()``。
+    """
+
+    def __init__(self, loader: "TorchDataLoader"):
+        self._loader = loader
+        self._q: queue.Queue = queue.Queue(maxsize=1)
+        self._stop = threading.Event()
+        self._torch_iter = None
+        self._closed = False
+        self._releaser = _Releaser()
+        self._thread = threading.Thread(target=self._run, name="TorchDataLoader-host-prefetch", daemon=True)
+        self._thread.start()
+        # atexit 在创建时登记（晚于 jax 后端初始化登记的清理 → LIFO 下先于它执行）；弱引用，不延长迭代器寿命
+        ref = weakref.ref(self)
+        self._atexit = lambda: (lambda it: it.close() if it is not None else None)(ref())
+        atexit.register(self._atexit)
+
+    # ── 取批线程 ──
+    def _put(self, x) -> bool:
+        while not self._stop.is_set():
+            try:
+                self._q.put(x, timeout=0.1)
+                return True
+            except queue.Full:
+                continue
+        return False
+
+    def _run(self):
+        loader = self._loader
+        num_items = 0
         try:
-            for batch in _background(self._host_batches(), depth=1):
-                # For JAX, convert to sharded arrays; for PyTorch, return torch tensors
-                if self._sharding is not None:
-                    out = jax.tree.map(lambda x: jax.make_array_from_process_local_data(self._sharding, x), batch)
-                else:
-                    out = jax.tree.map(torch.as_tensor, batch)
-                releaser.hand_over(batch)
-                del batch
-                yield out
-                del out
-        finally:
-            releaser.close()
+            while not self._stop.is_set():
+                self._torch_iter = iter(loader._data_loader)
+                while not self._stop.is_set():
+                    if loader._num_batches is not None and num_items >= loader._num_batches:
+                        self._put(_BG_END)
+                        return
+                    try:
+                        batch = next(self._torch_iter)
+                    except StopIteration:
+                        break  # We've exhausted the dataset. Create a new iterator and start over.
+                    batch = _from_shared_torch(batch)
+                    num_items += 1
+                    _populate_tree(batch)
+                    if not self._put(batch):
+                        return
+                    del batch
+        except BaseException as e:  # noqa: BLE001 —— 交给消费侧抛出；close() 引发的收尾异常不再上抛
+            if not self._stop.is_set():
+                self._put(e)
+
+    # ── 消费侧（主线程）──
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self._closed:
+            raise StopIteration
+        x = self._q.get()
+        if x is _BG_END:
+            self.close()
+            raise StopIteration
+        if isinstance(x, BaseException):
+            self.close()
+            raise x
+        sharding = self._loader._sharding
+        # For JAX, convert to sharded arrays; for PyTorch, return torch tensors
+        if sharding is not None:
+            out = jax.tree.map(lambda a: jax.make_array_from_process_local_data(sharding, a), x)
+        else:
+            out = jax.tree.map(torch.as_tensor, x)
+        self._releaser.hand_over(x)
+        del x
+        return out
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        self._stop.set()
+        ti = self._torch_iter
+        if ti is not None and hasattr(ti, "_shutdown_workers"):
+            ti._shutdown_workers()                      # 唤醒阻塞在 next(torch 迭代器) 的取批线程，并 join 全部 worker
+            dl = self._loader._data_loader
+            if getattr(dl, "_iterator", None) is ti:
+                dl._iterator = None                     # persistent_workers：下次 iter() 重建 worker，不复用已关的迭代器
+        if self._thread is not threading.current_thread():
+            self._thread.join(_JOIN_TIMEOUT_S)
+            if self._thread.is_alive():
+                logging.warning("TorchDataLoader 取批线程 %.0f s 内未退出", _JOIN_TIMEOUT_S)
+        while True:                                     # 丢掉队列里残留的批
+            try:
+                self._q.get_nowait()
+            except queue.Empty:
+                break
+        self._releaser.close()
+        atexit.unregister(self._atexit)
+
+    def __del__(self):
+        try:
+            self.close()
+        except Exception:  # noqa: BLE001 —— 析构期不抛
+            pass
 
 
 class _Releaser:
     """释放线程：收到第 N 批时才丢掉第 N−1 批的引用。
 
     主线程交出第 N 批时，第 N−1 批在主线程（循环变量、取批生成器局部变量）里的引用都已解除，所以最后一个引用
-    落在本线程，释放开销（munmap、归还共享内存页；实测不持 GIL）不再占主线程。
+    落在本线程，释放开销（munmap、归还共享内存页；实测不持 GIL）不再占主线程。``close()`` 投递结束标记并 join。
     """
 
     def __init__(self):
@@ -556,46 +645,8 @@ class _Releaser:
 
     def close(self) -> None:
         self._q.put(_BG_END)
-
-
-_BG_END = object()
-
-
-def _background(gen, depth: int):
-    """在 daemon 线程里跑生成器 ``gen``，经容量 ``depth`` 的队列按原顺序交付；异常原样在消费侧抛出。"""
-    q: queue.Queue = queue.Queue(maxsize=depth)
-    stop = threading.Event()
-
-    def put(x) -> bool:
-        while not stop.is_set():
-            try:
-                q.put(x, timeout=0.1)
-                return True
-            except queue.Full:
-                continue
-        return False
-
-    def run():
-        try:
-            for x in gen:
-                if not put(x):
-                    return
-            put(_BG_END)
-        except BaseException as e:  # noqa: BLE001 —— 交给消费侧抛出
-            put(e)
-
-    t = threading.Thread(target=run, name="TorchDataLoader-host-prefetch", daemon=True)
-    t.start()
-    try:
-        while True:
-            x = q.get()
-            if x is _BG_END:
-                return
-            if isinstance(x, BaseException):
-                raise x
-            yield x
-    finally:
-        stop.set()
+        if self._t is not threading.current_thread():
+            self._t.join(_JOIN_TIMEOUT_S)
 
 
 _MADV_POPULATE_READ = 22      # Linux ≥ 5.14
@@ -725,6 +776,19 @@ def _worker_init_fn(worker_id: int) -> None:
     # means that this approach will not work for selecting the backend.
     os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
     os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"] = "platform"
+    # S5-L1：worker 正常收尾（_shutdown_workers 发结束信号、worker 循环 return）后，解释器退出的 C 层静态析构里有
+    # 仍可 join 的 std::thread，触发 `terminate called without an active exception` → SIGABRT（BASE 代码同样复现，
+    # 原先训练退出时 worker 被 SIGTERM 直接杀掉所以看不到）。worker 循环已把结果队列 cancel_join_thread + close，
+    # 此时无待交付数据：在 worker 的 atexit 里刷完标准流后 os._exit(0)，跳过 C 层析构。
+    atexit.register(_worker_exit_now)
+
+
+def _worker_exit_now() -> None:
+    try:
+        sys.stdout.flush()
+        sys.stderr.flush()
+    finally:
+        os._exit(0)
 
 
 class RLDSDataLoader:

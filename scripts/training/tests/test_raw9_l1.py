@@ -12,7 +12,12 @@ L1 改了三处数据管线实现：
   - raw9（wanraw9s32.yaml）：主进程直调两批 + 真实 TorchDataLoader（2 worker、shuffle、同 seed）两批
     + 完整 ``TorchDataLoader.__iter__``（含新增后台取批线程与 make_array，0 worker）两批；
   - v11（wantp768.yaml）：同上（v11 不走 ②，只经 ③，仍须逐字节相等）。
-末行 ``L1_EQUIV=PASS|FAIL batches=<n> keys=<n> mismatch=<n>``。
+判定行 ``L1_EQUIV=PASS|FAIL batches=<n> keys=<n> mismatch=<n>``。
+
+退出收尾（``--part exit``）：真实子进程（raw9、真实库、4 worker）① 取 3 批后 break、迭代器留在全局（同 train.py）后
+正常 return；② ``num_batches=3`` 迭代到自然结束。断言退出码 0、输出不含 ``terminate called``、退出时（atexit）
+无 ``TorchDataLoader-*`` 线程且无存活子进程。判定行 ``L1_EXIT=PASS|FAIL cases=2 failed=<n>``。
+``--part all``（默认）两部分都跑；单部分各 ≤5 分钟。
 
 运行：
   JAX_PLATFORMS=cpu UV_PROJECT_ENVIRONMENT=/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv \\
@@ -69,7 +74,7 @@ def _data_config():
     return tc.data.create(tc.assets_dirs, tc.model), int(tc.model.action_horizon)
 
 
-def _datasets(yaml_name, motion_root, old_dl, old_fs):
+def _datasets(yaml_name, motion_root, old_dl, old_fs, new_only=False):
     import omegaconf
     from mme_vla_suite.training.framesamp_dataset import FrameSampDataset
     from openpi.training import data_loader as new_dl
@@ -78,6 +83,8 @@ def _datasets(yaml_name, motion_root, old_dl, old_fs):
     hc = omegaconf.OmegaConf.load(YAML_DIR / yaml_name)
     kw = dict(data_config=dc, history_config=hc, action_horizon=ah, motion_root=str(motion_root))
     new_raw = FrameSampDataset(str(LIB / "framesamp-8x8"), **kw)
+    if new_only:
+        return new_dl.transform_dataset(new_raw, dc), None
     old_raw = old_fs.FrameSampDataset(str(LIB / "framesamp-8x8"), **kw)
     return new_dl.transform_dataset(new_raw, dc), old_dl.transform_dataset(old_raw, dc)
 
@@ -167,7 +174,75 @@ def main() -> int:
     return 0 if ok else 1
 
 
+# ── 退出收尾（S5-L1 续改第 1 轮）：真实子进程里用真实 TorchDataLoader 迭代后正常退出解释器 ──────────────
+
+_KEEP = []          # break 用例：迭代器留在模块全局（同 train.py 的 data_iter 一直存活到解释器退出，只能靠 atexit 收尾）
+
+
+def run_exit_child(mode: str) -> int:
+    """子进程：raw9 真实库、num_workers=4、batch 2。``break``：取 3 批后 break、迭代器留在全局后正常 return；
+    ``exhaust``：num_batches=3 迭代到自然结束。atexit（先于 loader 登记 → LIFO 下最后执行）打印退出时仍活着的线程与子进程。"""
+    import atexit
+    import multiprocessing
+    import threading
+
+    def report():
+        names = sorted(t.name for t in threading.enumerate() if t is not threading.main_thread())
+        kids = multiprocessing.active_children()
+        print(f"CHILD_AT_EXIT mode={mode} threads={names} children={len(kids)}", flush=True)
+
+    atexit.register(report)
+    from openpi.training import data_loader as dl
+    new_ds, _ = _datasets(CASES[0][1], CASES[0][2], None, None, new_only=True)
+    loader = dl.TorchDataLoader(new_ds, local_batch_size=2, shuffle=True, num_workers=4, seed=3, framework="jax",
+                                num_batches=3 if mode == "exhaust" else None)
+    it = iter(loader)
+    n = 0
+    for b in it:
+        n += 1
+        assert b["motion_emb"].shape == (2, 720, 16384)
+        if mode == "break" and n == 3:
+            break
+    _KEEP.append(it)
+    print(f"CHILD_DONE mode={mode} batches={n}", flush=True)
+    return 0
+
+
+def run_exit_cases() -> tuple[int, list[str]]:
+    bad = []
+    n = 0
+    for mode in ("break", "exhaust"):
+        p = subprocess.run([sys.executable, str(pathlib.Path(__file__).resolve()), "--exit-child", mode],
+                           capture_output=True, text=True, timeout=270, env=dict(os.environ))
+        out = p.stdout + p.stderr
+        at_exit = [l for l in p.stdout.splitlines() if l.startswith("CHILD_AT_EXIT")]
+        leaked = at_exit and ("TorchDataLoader-" in at_exit[-1] or "children=0" not in at_exit[-1])
+        ok = (p.returncode == 0 and "terminate called" not in out and f"CHILD_DONE mode={mode} batches=3" in p.stdout
+              and at_exit and not leaked)
+        print(f"[exit/{mode}] rc={p.returncode} terminate_called={'terminate called' in out} "
+              f"{at_exit[-1] if at_exit else 'CHILD_AT_EXIT 缺失'}", flush=True)
+        if not ok:
+            bad.append(f"exit/{mode}: rc={p.returncode}\n" + "\n".join(out.splitlines()[-15:]))
+        n += 1
+    return n, bad
+
+
 if __name__ == "__main__":
-    rc = main()
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--part", choices=("all", "equiv", "exit"), default="all")
+    ap.add_argument("--exit-child", choices=("break", "exhaust"))
+    a = ap.parse_args()
+    if a.exit_child:
+        sys.exit(run_exit_child(a.exit_child))      # 子进程：正常退出解释器（被测场景本身，不用 os._exit）
+    rc = 0
+    if a.part in ("all", "equiv"):
+        rc |= main()
+    if a.part in ("all", "exit"):
+        n, bad = run_exit_cases()
+        for m in bad:
+            print("EXIT_FAIL", m)
+        print(f"L1_EXIT={'PASS' if not bad else 'FAIL'} cases={n} failed={len(bad)}")
+        rc |= 1 if bad else 0
     sys.stdout.flush()
-    os._exit(rc)        # 直接退出：persistent spawn worker 在解释器退出阶段偶发挂住数分钟
+    os._exit(rc)        # 父进程直接退出：只为不等 persistent worker 收尾（子进程用例才是被测的正常退出）
