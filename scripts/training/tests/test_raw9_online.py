@@ -952,6 +952,120 @@ def test_tic_main_dry_run(tmp_path, TIC, monkeypatch, capsys):
     assert "DRY_RUN episodes=2 complete=no" in out and out.count("H5_EPISODE ") == 1
 
 
+# ── compare_train_infer_obs.py：L3 / L4 的 modulation 分支（G5 第 2 轮：f_full 漏传 mem_seq 崩溃） ──────────
+
+def _tiny_hist_model(integration_type: str):
+    """最小 history 模型（f32、budget=8、无 motion），CPU 现场 init。
+
+    MemoryAttention 硬编码 width=1024 / head_dim=256，且两路 expert 须同 depth，故把 "dummy" 变体临时换成
+    gemma_300m 的单层瘦身版（width 1024、depth 1、mlp 256），只在 init 期间替换（模块持有 config 对象，之后不再查表）。
+    """
+    import dataclasses
+    import jax
+    import omegaconf
+    from mme_vla_suite.models.integration import history_gemma as HG
+    from mme_vla_suite.models.integration.history_pi0 import HistoryPi0Config
+    hc = omegaconf.OmegaConf.load(YAML_DIR / "perceptual-framesamp-modul.yaml")
+    hc.budget = 8
+    hc.integration_type = integration_type
+    tiny = dataclasses.replace(HG.get_config("gemma_300m"), depth=1, mlp_dim=256)
+    orig = HG.get_config
+    cfg = HistoryPi0Config(use_history=True, history_config=hc, dtype="float32", action_horizon=4, max_token_len=8,
+                           paligemma_variant="dummy", action_expert_variant="dummy", pi05=True)
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(HG, "get_config", lambda v: tiny if v == "dummy" else orig(v))
+        return cfg.create(jax.random.key(0))
+
+
+def _tiny_obs(mem_seed: int = 0):
+    import jax.numpy as jnp
+    from mme_vla_suite.models.integration.history_observation import HistAugObservation
+    B = 1
+    return HistAugObservation(
+        images={"base_0_rgb": jnp.zeros((B, 224, 224, 3)), "left_wrist_0_rgb": jnp.zeros((B, 224, 224, 3))},
+        image_masks={"base_0_rgb": jnp.ones((B,), bool), "left_wrist_0_rgb": jnp.ones((B,), bool)},
+        state=jnp.zeros((B, 32)), tokenized_prompt=jnp.zeros((B, 8), jnp.int32),
+        tokenized_prompt_mask=jnp.ones((B, 8), bool), token_ar_mask=None, token_loss_mask=None,
+        static_image_emb=jnp.asarray(np.random.default_rng(mem_seed).standard_normal((B, 8, 2048)), jnp.float32),
+        static_mask=jnp.ones((B, 8), bool).at[:, 6:].set(False),
+        static_pos_emb=jnp.zeros((B, 8, 768)), static_state_emb=jnp.zeros((B, 8, 8)))
+
+
+@pytest.fixture(scope="module")
+def MODUL():
+    from flax import nnx
+    import jax
+    model = _tiny_hist_model("modulation")
+    # pi05 adaRMS 门控是零初始化：新 init 时 FFN 支路（含记忆调制）贡献恒为 0，记忆改了 v_t 也不动。
+    # 把全零参数换成小随机值，让「记忆确实进入 L4」可被检出（只影响本夹具，不涉及被测代码）。
+    params = nnx.state(model, nnx.Param)
+    pure = params.to_pure_dict()
+    leaves, treedef = jax.tree.flatten(pure)
+    keys = jax.random.split(jax.random.key(7), len(leaves))
+    leaves = [0.02 * jax.random.normal(k, x.shape, x.dtype) if not np.any(np.asarray(x)) else x for k, x in zip(keys, leaves)]
+    params.replace_by_pure_dict(jax.tree.unflatten(treedef, leaves))
+    nnx.update(model, params)
+    gdef, state = nnx.split(model)
+    return model, gdef, state
+
+
+def test_tic_l4_modulation_runs_and_matches_model(TIC, MODUL):
+    """f_full / f_cached 在 modulation 下不崩，且与 history_pi0 自身的 compute_loss 主体 / sample_actions 单步同值。"""
+    import jax
+    import jax.numpy as jnp
+    import einops
+    from mme_vla_suite.models.integration.history_observation import preprocess_observation
+    from mme_vla_suite.models.integration.history_pi0 import make_attn_mask
+    model, gdef, state = MODUL
+    assert model.integration_type == "modulation"
+    f_full, f_cached = TIC.make_l4_fns(gdef, "modulation")
+    obs = _tiny_obs()
+    x_t = jax.random.normal(jax.random.key(1), (1, 4, 32))
+    ts = jnp.asarray([0.5], jnp.float32)
+    fu, ca = f_full(state, obs, x_t, ts), f_cached(state, obs, x_t, ts)
+    assert fu["v_t"].shape == ca["v_t"].shape == (1, 4, 32)
+    assert np.isfinite(np.asarray(fu["v_t"])).all() and np.isfinite(np.asarray(ca["v_t"])).all()
+    # L4 结构判据在 modulation 下仍成立：前缀不含记忆，整段 attn 左上块（带 na）与缓存前缀 attn（不带 na）逐位相同
+    P = int(fu["prefix_len"])
+    assert np.array_equal(np.asarray(fu["attn"])[:, :P, :P], np.asarray(ca["prefix_attn"]))
+    assert np.array_equal(np.asarray(fu["attn"])[:, P:, :], np.asarray(ca["full_attn"]))
+    # 参照：sample_actions modulation 分支的一步（逐行照抄 history_pi0），与 f_cached 必须逐位相同
+    o = preprocess_observation(None, obs, train=False)
+    pt, pm, par_, _ = model.embed_prefix(o)
+    _, kv = model.PaliGemma.llm([pt, None], mask=make_attn_mask(pm, par_), positions=jnp.cumsum(pm, axis=1) - 1)
+    mem_seq, mem_mask, _, _ = model.embed_memory(o)
+    st, sm, sar, _, ad = model.embed_suffix(o, x_t, ts)
+    full = jnp.concatenate([einops.repeat(pm, "b p -> b s p", s=st.shape[1]), make_attn_mask(sm, sar)], axis=-1)
+    spos = jnp.sum(pm, axis=-1)[:, None] + jnp.cumsum(sm, axis=-1) - 1
+    (_, so), _ = model.PaliGemma.llm([None, st], mask=full, positions=spos, kv_cache=kv, adarms_cond=[None, ad],
+                                     mem_seq=[None, mem_seq], mem_mask=[None, mem_mask])
+    ref = model.action_out_proj(so[:, -model.action_horizon:])
+    assert np.allclose(np.asarray(ref), np.asarray(ca["v_t"]), atol=1e-5)
+    # 记忆确实进了 L4 两路：改记忆内容，v_t 必须变
+    fu2, ca2 = f_full(state, _tiny_obs(1), x_t, ts), f_cached(state, _tiny_obs(1), x_t, ts)
+    assert not np.array_equal(np.asarray(fu["v_t"]), np.asarray(fu2["v_t"]))
+    assert not np.array_equal(np.asarray(ca["v_t"]), np.asarray(ca2["v_t"]))
+    # 前缀不含记忆：L4 整段与缓存的 v_t 数值同量级（f32 下非逐位，只要求接近）
+    assert float(np.abs(np.asarray(fu["v_t"]) - np.asarray(ca["v_t"])).max()) < 1e-3
+
+
+def test_tic_l3_modulation_prefix_excludes_memory(TIC, MODUL):
+    _, gdef, state = MODUL
+    o = TIC.make_l3_fn(gdef, "modulation", False)(state, _tiny_obs())
+    txt = int(o["txt_len"])
+    assert o["mem_tok"].shape[1] == 8 and o["tokens"].shape[1] - txt > 0
+    assert (o["tokens"].shape[1] - txt) % 2 == 0                  # 两路视图的图像 token，记忆不在前缀里
+    assert np.asarray(o["k"]).shape[2] == o["tokens"].shape[1]
+
+
+def test_tic_l4_context_path_source_unchanged():
+    """context 分支仍是旧写法（前缀 pass 带 na_mask、llm 不传 mem_seq）。"""
+    src = TIC_PATH.read_text(encoding="utf-8")
+    assert "pattn = make_attn_mask(pm, par_, pna)" in src
+    assert "(_, so), kv = m.PaliGemma.llm([pt, st], mask=attn, positions=pos, adarms_cond=[None, ad])" in src
+    assert "attn = make_attn_mask(mask, ar, na)" in src
+
+
 if __name__ == "__main__":
     class _Count:
         def __init__(self):
