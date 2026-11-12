@@ -697,7 +697,7 @@ def test_ctx2048_real_rows_and_spawn(mini_stores):
 
 @pytest.mark.parametrize("kind,change", [
     ("type", {"budget": 2048.0}), ("type", {"budget": "2048"}), ("type", {"num_views": True}),
-    ("combo", {"budget": 1024}), ("combo", {"budget": 4096}), ("combo", {"motion": {"enabled": True}}),
+    ("combo", {"budget": 4096}), ("combo", {"motion": {"enabled": True}}),
     ("combo", {"token_per_image": 16}), ("combo", {"num_views": 2}), ("combo", {"memory_token_dim": 1024}),
 ])
 def test_ctx2048_reject_type_and_combination(mini_stores, kind, change):
@@ -710,6 +710,25 @@ def test_ctx2048_reject_type_and_combination(mini_stores, kind, change):
     with pytest.raises(ValueError, match="形制断言"):
         FrameSampDataset(str(mini_stores["framesamp-8x8-v1"]), _fake_data_config(), hc, 20,
                          source_root=str(REF_SHARD), manifest_path=str(MANIFEST))
+
+
+def test_ctx2048_yaml_budget1024_accepted(mini_stores):
+    """1111 计划 §2.2：context 档放行 (1024,64,1)，原拒绝参数 ("combo", {"budget": 1024}) 移到这里改为断言放行。
+
+    mini 库的形状只约束 tokens_per_frame（=64），与 budget 无关，故 32 帧 context YAML 改 budget=1024 自洽。
+    """
+    from omegaconf import OmegaConf
+    from mme_vla_suite.models.config.utils import get_history_config
+    from mme_vla_suite.training.framesamp_dataset import FrameSampDataset
+    hc = get_history_config(CTX2048_YAML)
+    hc = OmegaConf.create({**OmegaConf.to_container(hc), "budget": 1024})
+    ds = FrameSampDataset(str(mini_stores["framesamp-8x8-v1"]), _fake_data_config(), hc, 20,
+                         source_root=str(REF_SHARD), manifest_path=str(MANIFEST))
+    try:
+        assert ds._max_frames == 16
+        assert ds[0]["static_image_emb"].shape == (1024, 2048)
+    finally:
+        ds.close()
 
 
 @pytest.mark.parametrize("budget", [512, 512.5, "512"])
