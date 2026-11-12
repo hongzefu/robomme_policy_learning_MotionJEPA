@@ -408,6 +408,9 @@ class TrainConfig:
     overwrite: bool = False
     # If true, will resume training from the last checkpoint.
     resume: bool = False
+    # 完整续跑（CLI：--resume-full）：从 <run_dir>/resume/ 还原完整 train_state
+    # （raw params、AdamW opt_state、step、EMA），manifest 关键字段须与当前 config 一致。
+    resume_full: bool = False
 
     # If true, will enable wandb logging.
     wandb_enabled: bool = True
