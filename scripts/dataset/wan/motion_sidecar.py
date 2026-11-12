@@ -16,6 +16,13 @@
 `<repo>/src/mme_vla_suite/shared/wan_pool768.py::pool_raw_wan_latent_768`（同样按文件加载）得 (1,768)，再 `reshape(768)`
 满足协议 (768,)；握手 info 另回 `encoder_kind`、`readout`、`pool_source_sha256`。`--stub` 与它同用时只在握手里带这三键，
 编码仍是 stub 约定。缺省 `--encoder-kind` 即 encoder 分支，逐字不变。
+
+`--encoder-kind wan_raw9`（计划 1112-4task-modul-wanraw9-s32-50k-plan.html 第二部分 1.1 第 19 行）：不加载 encoder、不池化；
+`W.encode_chunk` 的输出经 `.detach().float().cpu().numpy()` 得 float32 (9,16,32,32) 原值，`np.ascontiguousarray` 后
+原样回 589,824 B（`P.RAW9_RESPONSE_BYTES`），展平成 (9,16384) 由客户端 `wan_raw9.flatten_raw9` 做；VAE 调用口径
+（33 帧一次、B=1、fp32、`W.pin_numerics()` 关 TF32）与池化分支相同。握手 info 回 `encoder_kind`、`readout`、
+`raw9_source_sha256`（`<repo>/src/mme_vla_suite/shared/wan_raw9.py` 按文件加载后的 `source_sha256()`）、`raw9_path`、
+`encoder: None`。`--stub` 同用时握手带这几键，编码返回 `np.full((9,16,32,32), 起点, float32)`。
 """
 
 from __future__ import annotations
@@ -38,6 +45,8 @@ _PROTO_PATH = _REPO_ROOT / "src" / "mme_vla_suite" / "policies" / "motion_protoc
 VAE_ID = "Wan-AI/Wan2.1-T2V-1.3B-Diffusers"
 _POOL768_PATH = _REPO_ROOT / "src" / "mme_vla_suite" / "shared" / "wan_pool768.py"
 POOL_KINDS = ("wan_fixedpool768",)
+_RAW9_PATH = _REPO_ROOT / "src" / "mme_vla_suite" / "shared" / "wan_raw9.py"
+RAW9_KINDS = ("wan_raw9",)
 
 
 def _load(path: pathlib.Path, name: str):
@@ -62,6 +71,23 @@ def pool_encode(W, PL, vae, window: np.ndarray, device) -> np.ndarray:
     return PL.pool_raw_wan_latent_768(z).reshape(768)
 
 
+def raw9_info(R, kind: str) -> dict:
+    """wan_raw9 分支握手键：kind 必须与模块常量相同。"""
+    if kind != R.RAW9_ENCODER_KIND:
+        raise RuntimeError(f"--encoder-kind {kind!r} 与 raw9 模块 {R.RAW9_ENCODER_KIND!r} 不符")
+    return {"encoder_kind": R.RAW9_ENCODER_KIND, "readout": R.RAW9_READOUT,
+            "raw9_source_sha256": R.source_sha256(), "raw9_path": str(_RAW9_PATH), "encoder": None}
+
+
+def raw9_encode(W, R, vae, window: np.ndarray, device) -> np.ndarray:
+    """33 帧 → Wan raw latent（torch Tensor）→ float32 NumPy 原值 (9,16,32,32)，C 连续；不池化、不改数值。"""
+    lat = W.encode_chunk(vae, window, device)
+    z = lat.detach().float().cpu().numpy()
+    if z.shape != tuple(R.RAW9_INPUT_SHAPE) or z.dtype != np.float32:
+        raise RuntimeError(f"raw latent 形制 {z.shape} {z.dtype} != {tuple(R.RAW9_INPUT_SHAPE)} float32")
+    return np.ascontiguousarray(z)
+
+
 def log(msg: str) -> None:
     print(f"[sidecar pid={os.getpid()}] {msg}", file=sys.stderr, flush=True)
 
@@ -74,8 +100,8 @@ def main() -> int:
     ap.add_argument("--checkpoint", default="checkpoint_epoch_72.pt")
     ap.add_argument("--expected-ckpt-sha256", default="")
     ap.add_argument("--expected-vae-sha256", default="")
-    ap.add_argument("--encoder-kind", default="", choices=("",) + POOL_KINDS,
-                    help="缺省为 encoder 分支；wan_fixedpool768 为零参数池化分支（不加载 encoder）")
+    ap.add_argument("--encoder-kind", default="", choices=("",) + POOL_KINDS + RAW9_KINDS,
+                    help="缺省为 encoder 分支；wan_fixedpool768 为零参数池化分支、wan_raw9 为不池化原样回 latent 分支（均不加载 encoder）")
     args = ap.parse_args()
 
     P = _load(_PROTO_PATH, "motion_protocol")
@@ -83,10 +109,17 @@ def main() -> int:
     sock.setblocking(True)
     deadline = time.monotonic() + P.HANDSHAKE_TIMEOUT_S
     encode = None
+    raw9 = args.encoder_kind in RAW9_KINDS
+    # 服务循环的形状闸与响应长度按 kind：wan_raw9 为 (9,16,32,32) / 589,824 B，其余为 (768,) / 3,072 B
+    tok_shape, resp_bytes = (P.TOKEN_DIM,), P.RESPONSE_BYTES
     try:
         if args.stub:
             info = {"stub": True, "protocol_sha256": P.protocol_sha256(), "protocol_path": str(_PROTO_PATH), "pid": os.getpid()}
-            if args.encoder_kind:
+            if raw9:
+                R = _load(_RAW9_PATH, "wan_raw9")
+                info.update(raw9_info(R, args.encoder_kind))
+                tok_shape, resp_bytes = tuple(R.RAW9_INPUT_SHAPE), P.RAW9_RESPONSE_BYTES
+            elif args.encoder_kind:
                 info.update(pool_info(_load(_POOL768_PATH, "wan_pool768"), args.encoder_kind))
 
             def encode(start: int, window: np.ndarray) -> np.ndarray:
@@ -97,7 +130,7 @@ def main() -> int:
                             for r in range(1, P.WINDOW_FRAMES + 1))
                 if not valid:
                     raise RuntimeError(f"stub: 33 帧编号不符合连续前缀与重复末帧规则: {ids[:4]}…{ids[-2:]}")
-                return np.full(P.TOKEN_DIM, float(start), np.float32)
+                return np.full(tok_shape, float(start), np.float32)
         elif args.encoder_kind:
             import torch
             W = _load(_HERE / "wan_motion_infer.py", "wan_motion_infer")
@@ -112,22 +145,34 @@ def main() -> int:
                 raise RuntimeError("sidecar 需要 CUDA")
             device = torch.device("cuda")
             vae, vinfo = W.load_vae(VAE_ID, device, expected_state_sha256=(args.expected_vae_sha256 or W.VAE_STATE_SHA256_EXPECTED))
-            # 池化分支：不加载 encoder；VAE 之后零参数池化（pool_encode），握手回 kind / readout / 池化源码 sha256
-            PL = _load(_POOL768_PATH, "wan_pool768")
+            if raw9:
+                # wan_raw9 分支：不加载 encoder、不池化；VAE 输出原样回传，握手回 kind / readout / raw9 源码 sha256
+                R = _load(_RAW9_PATH, "wan_raw9")
+                kinfo = raw9_info(R, args.encoder_kind)
+                tok_shape, resp_bytes = tuple(R.RAW9_INPUT_SHAPE), P.RAW9_RESPONSE_BYTES
+
+                def encode(start: int, window: np.ndarray) -> np.ndarray:
+                    W.pin_numerics()
+                    return raw9_encode(W, R, vae, window, device)   # 🔒 33 帧一次喂、B=1、fp32、关 TF32，不池化
+            else:
+                # 池化分支：不加载 encoder；VAE 之后零参数池化（pool_encode），握手回 kind / readout / 池化源码 sha256
+                PL = _load(_POOL768_PATH, "wan_pool768")
+                kinfo = pool_info(PL, args.encoder_kind)
+
+                def encode(start: int, window: np.ndarray) -> np.ndarray:
+                    W.pin_numerics()
+                    return pool_encode(W, PL, vae, window, device)      # 🔒 33 帧一次喂、B=1、fp32、关 TF32，再池化
             info = {"stub": False, "protocol_sha256": P.protocol_sha256(), "protocol_path": str(_PROTO_PATH), "pid": os.getpid(),
                     "vae": vinfo, "flags": flags, "source_pin": pin,
-                    "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES"), **pool_info(PL, args.encoder_kind)}
-
-            def encode(start: int, window: np.ndarray) -> np.ndarray:
-                W.pin_numerics()
-                return pool_encode(W, PL, vae, window, device)      # 🔒 33 帧一次喂、B=1、fp32、关 TF32，再池化
+                    "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES"), **kinfo}
 
             t0 = time.perf_counter()
             encode(0, np.zeros((P.WINDOW_FRAMES, P.FRAME_SIZE, P.FRAME_SIZE, 3), np.uint8))
             torch.cuda.synchronize(device)
             info["warmup_s"] = time.perf_counter() - t0
-            log(f"VAE+池化就绪 warmup={info['warmup_s']:.2f}s vae={vinfo['vae_state_sha256'][:16]}… "
-                f"pool={info['pool_source_sha256'][:16]}…")
+            src_key = "raw9_source_sha256" if raw9 else "pool_source_sha256"
+            log(f"VAE+{'raw9' if raw9 else '池化'}就绪 warmup={info['warmup_s']:.2f}s vae={vinfo['vae_state_sha256'][:16]}… "
+                f"{'raw9' if raw9 else 'pool'}={info[src_key][:16]}…")
         else:
             import torch
             W = _load(_HERE / "wan_motion_infer.py", "wan_motion_infer")
@@ -195,9 +240,9 @@ def main() -> int:
             t0 = time.perf_counter()
             tok = encode(start, window)
             dt = time.perf_counter() - t0
-            if tok.shape != (P.TOKEN_DIM,) or tok.dtype != np.float32:
+            if tok.shape != tok_shape or tok.dtype != np.float32:
                 raise RuntimeError(f"token 形制 {tok.shape} {tok.dtype}")
-            P.send_all(sock, P.encode_response(np.ascontiguousarray(tok).tobytes()))
+            P.send_all(sock, P.encode_response(np.ascontiguousarray(tok).tobytes(), resp_bytes))
             n += 1
             if n % 50 == 1:
                 log(f"窗 #{n} 起点 {start} 耗时 {dt * 1e3:.0f} ms（累计 {time.perf_counter() - t_serve:.0f}s）")

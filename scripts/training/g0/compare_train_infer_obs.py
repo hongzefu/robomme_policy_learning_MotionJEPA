@@ -29,6 +29,12 @@ L4 判定口径（用户 2026-09-14 已裁决）：
 用法（主进程 jax 必须在 GPU 上——CPU 上 PosEmb3D 4x4 表不逐位，P5 留档记过）：
   CUDA_VISIBLE_DEVICES=4 XLA_PYTHON_CLIENT_MEM_FRACTION=0.6 UV_LINK_MODE=copy uv run --no-sync python \
     scripts/training/g0/compare_train_infer_obs.py --motion store --out v1-store/reports/tic-dev/obsmodel.json
+
+`--motion-subdir`（计划 1112-4task-modul-wanraw9-s32-50k-plan.html 第二部分 1.1 第 24 行，默认 `motion` 旧行为逐字不变）：
+运动表所在子目录，如 `motion-wan-raw9-s32`。表为 wan_raw9（快照 `motion.encoder_kind == "wan_raw9"`）时 store 档查表闭包返回
+`wan_raw9.flatten_raw9(mstore.rows([r])[0])`（(9,16384)，与在线 `_history_feats_motion[f]` 同形），sidecar 档按 raw9 kind
+构造 `MotionEncoderClient`；记忆长度闸的 motion 部分按 token 数 budget × tokens_per_window 计（与 `wan_raw9.motion_token_budget` 同式；
+旧 YAML 缺省 1，即原值）。
 """
 
 from __future__ import annotations
@@ -303,6 +309,7 @@ def main() -> int:
                     help="checkpoint 目录（含 params/ 与 assets/）")
     ap.add_argument("--train-config", default="mme_vla_suite", help="生产训练配置条目（两侧同用）")
     ap.add_argument("--store-subdir", choices=("framesamp", "framesamp-8x8"), default="framesamp")
+    ap.add_argument("--motion-subdir", default="motion", help="运动表子目录（默认 motion；wan_raw9 为 motion-wan-raw9-s32）")
     ap.add_argument("--norm-stats", type=pathlib.Path, help="训练启动时显式指定的 norm_stats 文件")
     ap.add_argument("--episodes", default=DEFAULT_EPISODES, help="逗号分隔的 <task>:<raw_ep_idx>，需覆盖 5 个 es 取值")
     ap.add_argument("--motion", choices=("store", "sidecar"), default="store",
@@ -320,7 +327,7 @@ def main() -> int:
     ckpt_dir = pathlib.Path(args.ckpt).resolve()
     run_root = ckpt_dir.parent
     noise_seeds = [int(s) for s in args.noise_seeds.split(",")]
-    os.environ["MMEVLA_MOTION_STORE"] = str(lib / "motion")     # 快照 store_path 记的是 40ep，必须显式覆盖
+    os.environ["MMEVLA_MOTION_STORE"] = str(lib / args.motion_subdir)     # 快照 store_path 记的是 40ep，必须显式覆盖
 
     import einops
     import jax
@@ -381,6 +388,14 @@ def main() -> int:
     motion_root = _motion_gates(hc, fmeta)
     mmeta = ms.MotionMeta.load(motion_root) if motion_enabled else None
     mstore = ms.MotionStore(motion_root, meta=mmeta) if motion_enabled else None
+    # wan_raw9 表行是 (9,16,32,32)，在线缓冲存的是展平后的 (9,16384)；其余 kind 行即 token，原样返回
+    raw9_kind = motion_enabled and hc.motion.get("encoder_kind", None) == "wan_raw9"
+    if raw9_kind:
+        from mme_vla_suite.shared import wan_raw9 as _wan_raw9
+
+    def _motion_row(r: int) -> np.ndarray:
+        row = mstore.rows(np.asarray([int(r)], dtype=np.int64))[0]
+        return _wan_raw9.flatten_raw9(row) if raw9_kind else row
     fstore = ds_raw._ensure_store()
     manifest = json.load(open(lib / "meta" / "episode_manifest.json", encoding="utf-8"))
     raw_dir = pathlib.Path(manifest["raw_dir"])
@@ -524,10 +539,15 @@ def main() -> int:
             raise ValueError("sidecar 模式必须显式给 --motion-gpu")
         from mme_vla_suite.policies.motion_client import MotionEncoderClient
         t0 = time.perf_counter()
-        client = MotionEncoderClient(online_gpu=args.motion_gpu,
-                                     store_provenance={"vae": mmeta.provenance.get("vae"),
-                                                       "encoder": mmeta.provenance.get("encoder")},
-                                     expected_ckpt_sha256=mmeta.provenance["encoder"]["checkpoint_sha256"])
+        if raw9_kind:
+            client = MotionEncoderClient(online_gpu=args.motion_gpu, store_provenance={"vae": mmeta.provenance.get("vae")},
+                                         encoder_kind="wan_raw9", readout=str(hc.motion.readout),
+                                         expected_raw9_sha256=mmeta.provenance["raw9_source_sha256"])
+        else:
+            client = MotionEncoderClient(online_gpu=args.motion_gpu,
+                                         store_provenance={"vae": mmeta.provenance.get("vae"),
+                                                           "encoder": mmeta.provenance.get("encoder")},
+                                         expected_ckpt_sha256=mmeta.provenance["encoder"]["checkpoint_sha256"])
         print(f"[tic] sidecar 就绪 {time.perf_counter() - t0:.1f}s gpu={args.motion_gpu} "
               f"warmup={client.provenance.get('warmup_s')}")
 
@@ -595,8 +615,7 @@ def main() -> int:
                 f2row = {}
 
             def motion_lookup(window, start_frame, _f2row=f2row):
-                return np.asarray(mstore.rows(np.asarray([_f2row[int(start_frame)]], dtype=np.int64))[0],
-                                  dtype=np.float32)
+                return np.asarray(_motion_row(_f2row[int(start_frame)]), dtype=np.float32)
 
             n_read = min(T, taus[-1] + 1)
             frames, wrists, states, task_goal = load_episode_full(raw_dir, ep["h5_file"], ep["raw_ep_idx"], T, n_read)
@@ -670,7 +689,7 @@ def main() -> int:
                             continue
                         checked_motion.add(f)
                         on = np.asarray(mems["S"]._history_feats_motion[f], np.float32)
-                        off = np.asarray(mstore.rows(np.asarray([f2row[int(f)]], np.int64))[0], np.float32)
+                        off = np.asarray(_motion_row(f2row[int(f)]), np.float32)
                         motion_sidecar_cmp[0] += 1
                         if not _bytes_equal(on, off):
                             motion_sidecar_cmp[1] += 1
@@ -756,7 +775,8 @@ def main() -> int:
                 txt_len = int(oI["txt_len"])
                 img_len = total_len - mem_len - txt_len
                 n_img = len(infer_inputs["image"])
-                want_mem = int(hc.budget) + (int(hc.motion.budget) if motion_enabled else 0)
+                want_mem = int(hc.budget) + (int(hc.motion.budget) * int(hc.motion.get("tokens_per_window", 1))
+                                             if motion_enabled else 0)
                 shape_ok = (mem_len == want_mem and txt_len == int(model.config.max_token_len)
                             and img_len > 0 and img_len % n_img == 0)
                 if not shape_ok:

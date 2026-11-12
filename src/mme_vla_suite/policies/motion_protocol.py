@@ -8,6 +8,9 @@
   请求（父 → 子）：8 字节 magic `MMEMOT01`（直接编码版本）+ uint32 length（= 8 + payload）+ int64 起点全域帧号 + payload
                  payload = 33×256×256×3 uint8 原始字节（精确 6,488,064 B）
   响应（子 → 父）：uint32 status（0 = OK）+ 768×4 字节 f32（精确 3,072 B）；status ≠ 0 时后随 uint32 length + JSON 错误
+                 `--encoder-kind wan_raw9`（计划 1112-4task-modul-wanraw9-s32-50k-plan.html 第二部分 1.1 第 18 行）：
+                 响应体改为 Wan raw latent (9,16,32,32) f32 原始字节（精确 RAW9_RESPONSE_BYTES = 589,824 B），
+                 两侧显式传长度参数；请求格式不变，缺省长度仍是 3,072 B
 发送统一 `sendall`；接收双方共用 `recv_exact(sock, n, deadline)`：按同一个 monotonic 总 deadline 循环 `recv_into` 直到恰好 n 字节，
 禁止假设一次 `recv(n)` 能收到 6.3 MB。EOF、短包、错误 magic / 版本 / status、超长 length、整次请求超过 `REQUEST_TIMEOUT_S` 均 fail-loud。
 """
@@ -27,6 +30,7 @@ FRAME_SIZE = 256
 TOKEN_DIM = 768
 PAYLOAD_BYTES = WINDOW_FRAMES * FRAME_SIZE * FRAME_SIZE * 3      # 6,488,064
 RESPONSE_BYTES = TOKEN_DIM * 4                                   # 3,072
+RAW9_RESPONSE_BYTES = 9 * 16 * 32 * 32 * 4                       # 589,824（wan_raw9：VAE 后不池化的单窗 latent）
 MAX_LENGTH = 8 + PAYLOAD_BYTES                                   # 请求 length 上限
 MAX_JSON = 1 << 20
 REQUEST_TIMEOUT_S = 60.0
@@ -110,9 +114,10 @@ def recv_request(sock: socket.socket, deadline: float) -> tuple[int, bytes] | No
     return int(start), payload
 
 
-def encode_response(token_bytes: bytes) -> bytes:
-    if len(token_bytes) != RESPONSE_BYTES:
-        raise ProtocolError(f"token {len(token_bytes)} B != {RESPONSE_BYTES}")
+def encode_response(token_bytes: bytes, n: int = RESPONSE_BYTES) -> bytes:
+    """n：响应体精确字节数；缺省 3,072 B（旧路径），wan_raw9 传 RAW9_RESPONSE_BYTES。"""
+    if len(token_bytes) != n:
+        raise ProtocolError(f"token {len(token_bytes)} B != {n}")
     return struct.pack("<I", STATUS_OK) + token_bytes
 
 
@@ -121,10 +126,11 @@ def encode_error(msg: str) -> bytes:
     return struct.pack("<I", STATUS_ERROR) + struct.pack("<I", len(raw)) + raw
 
 
-def recv_response(sock: socket.socket, deadline: float) -> bytes:
+def recv_response(sock: socket.socket, deadline: float, n: int = RESPONSE_BYTES) -> bytes:
+    """n：期望的响应体字节数，须与 sidecar 的 encode_response 同值（缺省 3,072 B）。"""
     (status,) = struct.unpack("<I", recv_exact(sock, 4, deadline))
     if status == STATUS_OK:
-        return recv_exact(sock, RESPONSE_BYTES, deadline)
+        return recv_exact(sock, n, deadline)
     if status == STATUS_ERROR:
         (n,) = struct.unpack("<I", recv_exact(sock, 4, deadline))
         if n > MAX_JSON:

@@ -67,23 +67,27 @@ def _assert_param_tree_exact(model, params) -> None:
 def _make_pool_motion_client(mcfg, run_root: pathlib.Path, motion_stub: bool):
     """池化 kind（如 wan_fixedpool768）的在线 sidecar 句柄：读 run 快照 motion.encoder_kind / readout 与
     motion_provenance.json 的 vae / encoder_kind / readout / pool_source_sha256（计划 1108 第二部分 1.1 第 7 行）。
-    不读 source_run、不要求 encoder；快照与 provenance 的 kind / readout 不一致即拒绝。"""
-    from mme_vla_suite.policies.motion_client import MotionEncoderClient
+    不读 source_run、不要求 encoder；快照与 provenance 的 kind / readout 不一致即拒绝。
+    raw9 kind（wan_raw9，计划 1112 第二部分 1.1 第 16 行）同一路径，只把必需键 pool_source_sha256 换成
+    raw9_source_sha256，并以 expected_raw9_sha256 传给客户端。"""
+    from mme_vla_suite.policies.motion_client import MotionEncoderClient, RAW9_ENCODER_KINDS
     kind, readout = str(mcfg.encoder_kind), mcfg.get("readout", None)
+    raw9 = kind in RAW9_ENCODER_KINDS
+    sha_key = "raw9_source_sha256" if raw9 else "pool_source_sha256"
     prov_path = run_root / "motion_provenance.json"
     prov = json.loads(prov_path.read_text(encoding="utf-8")) if prov_path.is_file() else {}
     if not motion_stub:
-        missing = [k for k in ("vae", "encoder_kind", "readout", "pool_source_sha256") if prov.get(k) is None]
+        missing = [k for k in ("vae", "encoder_kind", "readout", sha_key) if prov.get(k) is None]
         if missing or readout is None:
             raise ValueError(f"池化 kind run 缺 motion_provenance.json 字段 {missing} 或快照缺 motion.readout: {run_root}")
         if prov["encoder_kind"] != kind or prov["readout"] != str(readout):
             raise ValueError(f"motion_provenance.json 的 encoder_kind/readout 与 run 快照不符: {run_root}")
     online_gpu = os.environ.get("MMEVLA_MOTION_ONLINE_GPU") or mcfg.get("online_gpu", 1)
     logging.info(f"motion sidecar（{kind}）online_gpu={online_gpu!r}")
+    sha_kw = {"expected_raw9_sha256": prov.get(sha_key)} if raw9 else {"expected_pool_sha256": prov.get(sha_key)}
     return MotionEncoderClient(
         online_gpu=online_gpu, stub=motion_stub, store_provenance={"vae": prov.get("vae")},
-        encoder_kind=kind, readout=None if readout is None else str(readout),
-        expected_pool_sha256=prov.get("pool_source_sha256"))
+        encoder_kind=kind, readout=None if readout is None else str(readout), **sha_kw)
 
 
 def create_trained_policy(

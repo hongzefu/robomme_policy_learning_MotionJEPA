@@ -19,21 +19,23 @@ import imageio.v2 as imageio
 # 没有那个包；更要紧的是共用代码会让这道闸失效——服务端是 while 循环逐窗 append 的枚举实现，
 # 这里是闭式计数，两个独立实现互相复核才有意义。体例照抄
 # scripts/training/tests/eval_es_bound.py::predicted_windows。
-MOTION_STRIDE = 16
+# 窗步长：缺省 16（旧口径逐字不变）；wan_raw9 评估由链脚本传 EXPECT_MOTION_STRIDE=32（计划 1112 第二部分 1.1 第 22 行）。
+# EXPECT_MOTION_BUDGET 的单位是**窗**（不是 token），与服务端回传的 motion_budget 同义。
+MOTION_STRIDE = int(os.environ.get("EXPECT_MOTION_STRIDE", "16"))
 MOTION_WINDOW = 33          # motion.window_frames
 DEMO_MIN_REAL = 17          # motion.demo_min_real_frames
 EXEC_HORIZON = 16           # eval.py 的 obs_horizon，一次推理执行这么多步
 
 
 def k_demo_closed(es: int) -> int:
-    """demo 段窗数：合法起点 s = 16m 满足 s + (demo_min_real - 1) <= es - 1。"""
+    """demo 段窗数：合法起点 s = MOTION_STRIDE·m 满足 s + (demo_min_real - 1) <= es - 1。"""
     if es < DEMO_MIN_REAL:
         return 0
     return (es - DEMO_MIN_REAL) // MOTION_STRIDE + 1
 
 
 def k_exec_closed(t_rel: int) -> int:
-    """exec 段窗数：合法起点 u = 16m 满足 u + (window_frames - 1) <= t_rel，t_rel = step_idx - es。"""
+    """exec 段窗数：合法起点 u = MOTION_STRIDE·m 满足 u + (window_frames - 1) <= t_rel，t_rel = step_idx - es。"""
     if t_rel < MOTION_WINDOW - 1:
         return 0
     return (t_rel - (MOTION_WINDOW - 1)) // MOTION_STRIDE + 1
