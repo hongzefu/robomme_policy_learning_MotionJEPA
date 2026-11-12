@@ -57,6 +57,35 @@ def _pool_motion_gate(mcfg, mmeta, kind: str) -> None:
         raise ValueError("池化表 provenance.encoder_ckpt 必须显式为 null")
 
 
+def _raw9_motion_gate(mcfg, mmeta) -> None:
+    """raw9 直读分支（1112 计划 1.1 第 8 行）：不解析 source_run；YAML 与 store provenance 的 kind / readout 相等、
+    raw9 源码 sha256 同现行 wan_raw9.py、encoder_ckpt 为 null；YAML 几何（dim / tokens_per_window / stride）与表布局一致。"""
+    from mme_vla_suite.shared import wan_raw9 as wr
+
+    kind = mcfg.get("encoder_kind")
+    if mcfg.get("source_run") is not None:
+        raise ValueError("raw9 分支（motion.encoder_kind=wan_raw9）不得同时写 motion.source_run")
+    prov = mmeta.provenance
+    if prov.get("encoder_kind") != kind:
+        raise ValueError(f"motion.encoder_kind={kind!r} != motion store provenance.encoder_kind {prov.get('encoder_kind')!r}")
+    readout = mcfg.get("readout")
+    if readout != wr.RAW9_READOUT or prov.get("readout") != readout:
+        raise ValueError(f"motion.readout={readout!r} / store provenance.readout={prov.get('readout')!r} "
+                         f"与 {wr.RAW9_READOUT!r} 不全相等")
+    if prov.get("raw9_source_sha256") != wr.source_sha256():
+        raise ValueError("motion store provenance.raw9_source_sha256 与现行 wan_raw9.py 不符")
+    if "encoder_ckpt" not in prov or prov["encoder_ckpt"] is not None:
+        raise ValueError("raw9 表 provenance.encoder_ckpt 必须显式为 null")
+    geom = {"dim": (mcfg.get("dim"), wr.RAW9_TOKEN_DIM),
+            "tokens_per_window": (mcfg.get("tokens_per_window"), wr.RAW9_TOKENS_PER_WINDOW),
+            "stride": (mcfg.get("stride"), wr.RAW9_STRIDE)}
+    for key, (got, want) in geom.items():
+        if got is None or int(got) != want:
+            raise ValueError(f"raw9 分支 motion.{key}={got!r} != {want}")
+    if mmeta.raw.get("layout") != ms.LAYOUT_RAW9:
+        raise ValueError(f"raw9 分支的 motion store layout={mmeta.raw.get('layout')!r} != {ms.LAYOUT_RAW9!r}")
+
+
 def _motion_gates(history_config, frame_meta: StoreMeta) -> str | None:
     """motion.enabled=true 时的 fail-loud 闸：锁 / MotionMeta / verified / stride / 同源 / source_run 绑定；关闭态返回 None 且什么都不读。"""
     mcfg = getattr(history_config, "motion", None) if history_config is not None else None
@@ -69,13 +98,17 @@ def _motion_gates(history_config, frame_meta: StoreMeta) -> str | None:
     ms.require_no_pack_lock(motion_root)
     mmeta = ms.MotionMeta.load(motion_root)                # 不得拿 StoreMeta.load 解析 motion layout
     ms.require_verified(mmeta)
-    if int(mcfg.stride) != ms.GRID_STRIDE:
-        raise ValueError(f"motion.stride={mcfg.stride} != motion store GRID_STRIDE {ms.GRID_STRIDE}")
+    if int(mcfg.stride) != mmeta.spec.grid_stride:         # 步长由表布局给出（旧两布局恒为 16）
+        raise ValueError(f"motion.stride={mcfg.stride} != motion store GRID_STRIDE {mmeta.spec.grid_stride}")
     manifest = load_manifest(os.environ.get("MMEVLA_FRAMESAMP_MANIFEST") or frame_meta.manifest_path)
     ms.check_same_source(frame_meta.manifest_sha256, mmeta, manifest)
     kind = mcfg.get("encoder_kind")
     if kind is not None:
-        _pool_motion_gate(mcfg, mmeta, kind)
+        from mme_vla_suite.shared import wan_raw9 as _wr
+        if kind == _wr.RAW9_ENCODER_KIND:
+            _raw9_motion_gate(mcfg, mmeta)
+        else:
+            _pool_motion_gate(mcfg, mmeta, kind)
         logging.info("motion memory 开启（%s）：store=%s rows=%d manifest=%s…", kind, motion_root, mmeta.num_rows,
                      mmeta.manifest_sha256[:16])
         return str(motion_root)

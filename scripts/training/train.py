@@ -144,7 +144,17 @@ def init_history_config(config: _config.TrainConfig, resolved_history_config=Non
                 "motion_table_sha256": mm.table_sha256,
                 "vae": mm.provenance.get("vae"), "encoder": mm.provenance.get("encoder"),
             })
-            if mcfg.get("encoder_kind") is not None:
+            kind = mcfg.get("encoder_kind")
+            if kind == "wan_raw9":
+                # raw9 直读分支（1112 计划 1.1 第 9 行）：encoder 块写 null，另记 kind / readout / raw9 源码摘要；
+                # 不写 pool_source_sha256。
+                prov.update({
+                    "encoder": None,
+                    "encoder_kind": mm.provenance["encoder_kind"],
+                    "readout": mm.provenance["readout"],
+                    "raw9_source_sha256": mm.provenance["raw9_source_sha256"],
+                })
+            elif kind == "wan_fixedpool768":
                 # 池化分支（1108 计划 1.1 第 5 行）：encoder 块写 null，另记 kind / readout / 池化源码摘要；
                 # 三键只在此分支出现，encoder 分支与 closed run 的键集合与字节不变。
                 prov.update({
@@ -341,8 +351,33 @@ def train_step(
     }
     if config.model.use_history and hasattr(grads, "mem_encoder"):
         info["mem_enc_norm"] = optax.global_norm(grads.mem_encoder)
+    if _raw9_diag_enabled(config):
+        info.update(_motion_diag_info(model, grads))
 
     return new_state, info
+
+
+def _raw9_diag_enabled(config) -> bool:
+    """运行中记录项（1112 计划第一部分 §5、第二部分 1.2）：只在 motion.encoder_kind == "wan_raw9" 时加诊断键
+    （Python 级 if，jit 编译期常量）；motion 关闭、旧 encoder 与 v11 池化 run 的 info 键集合逐字不变。"""
+    if not getattr(config.model, "use_history", False):
+        return False
+    hc = getattr(config.model, "history_config", None)
+    mcfg = getattr(hc, "motion", None) if hc is not None and not isinstance(hc, str) else None
+    return bool(mcfg is not None and mcfg.get("enabled", False) and mcfg.get("encoder_kind") == "wan_raw9")
+
+
+def _motion_diag_info(model, grads) -> dict:
+    """三键：motion_encoder_static kernel 范数（更新后参数）、同路径梯度范数、帧路 feature_encoder 梯度范数。"""
+    mem = model.mem_encoder
+    if not mem.motion_enabled:
+        return {}
+    g = grads.mem_encoder
+    return {
+        "motion_enc_kernel_norm": optax.global_norm(nnx.state(mem.motion_encoder_static)["kernel"]),
+        "motion_enc_grad_norm": optax.global_norm(g.motion_encoder_static["kernel"]),
+        "frame_enc_grad_norm": optax.global_norm(g.feature_encoder),
+    }
 
 
 def main(config: _config.TrainConfig):

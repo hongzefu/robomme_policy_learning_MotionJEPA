@@ -5,7 +5,8 @@
 在线侧（S3）与对拍工具一律从这里 import，绝不复制；``framesamp_store.py`` 一字不动（两套索引公式不同，
 帧路按 ``row_of()`` 逐帧、运动路按段内网格，混放会互相污染）。
 
-支持历史 ``motion-768-grid16-v1`` 与 demo 补帧 ``motion-768-grid16-demopad17-v1``：
+支持历史 ``motion-768-grid16-v1``、demo 补帧 ``motion-768-grid16-demopad17-v1`` 与 raw latent 直读
+``motion-raw9-grid32-demopad17-v1``（1112 计划；行形状 (9,16,32,32)、段内网格步长 32）：
 
     <motion_root>/
     ├── meta/store_meta.json          唯一契约，两阶段写：pack→"packed"、verify→"verified"
@@ -15,11 +16,14 @@
     └── motion_token.f32.bin          (rows, 768) f32 裸字节；行序 = 清单 canonical_order 逐 episode，
                                       每 episode 先 demo 段后 exec 段，段内按网格序 0,16,32,… 升序
 
-起点钉在段内网格 ``0,16,32,…``，demo / exec 各自起算。历史布局两段均要求 33 个真实帧；
+起点钉在段内网格 ``0,S,2S,…``（S = 布局的 ``grid_stride``，旧两布局 16、raw9 布局 32），demo / exec 各自起算；
+步长与行形状一律由布局（``LayoutSpec.grid_stride`` / ``row_shape``）与表 meta 给出，模块常量
+``GRID_STRIDE`` / ``MOTION_ROW_SHAPE`` / ``MOTION_ROW_BYTES`` 只是旧两布局的取值，不改名不改值。历史布局两段均要求 33 个真实帧；
 新布局 demo 至少 17 个真实帧，不足 33 时重复本段最后一帧，exec 始终要求 33 帧。
 窗口契约随 ``IndexEntry.spec`` 与 ``MotionMeta.spec`` 传递，禁止用最新布局替代旧表契约。
 
-读取实现：1600 集新表约 219 MB，每进程整表 ``np.fromfile`` 读入，
+读取实现：旧两布局（1600 集表约 219 MB）每进程整表 ``np.fromfile`` 读入；raw9 布局（约 21.5 GB）改为
+只读 ``np.memmap(mode="r")``，各进程共享页缓存、任何路径不以可写模式打开；两种都
 仍照抄 FrameSampStore 的三条纪律——记录 ``owner_pid``、``__reduce__`` 直接 raise 禁 pickle、跨进程懒构造
 （懒构造由 FrameSampDataset 负责）。本模块不 import 任何 training/model 模块（单向依赖）。
 
@@ -76,11 +80,21 @@ SEGMENTS = ("demo", "exec")             # 行序内 episode 内的段顺序
 
 @dataclasses.dataclass(frozen=True)
 class LayoutSpec:
-    """布局自身的窗口契约；随索引一起传递，可哈希且可被 worker pickle。"""
+    """布局自身的窗口契约；随索引一起传递，可哈希且可被 worker pickle。
+
+    ``grid_stride`` / ``row_shape`` 带等于旧值的默认值（16、(768,)），旧两布局的相等性与 ``fields()`` 不变；
+    ``fields()`` 仍只返回三键（这两项由 index / store_meta 的 ``grid_stride`` 与 ``tables.row_shape`` 单独互校）。
+    """
 
     demo_min_real: int
     exec_min_real: int
     demo_tail_pad: str
+    grid_stride: int = GRID_STRIDE
+    row_shape: tuple = MOTION_ROW_SHAPE
+
+    @property
+    def row_bytes(self) -> int:
+        return int(np.prod(self.row_shape)) * np.dtype(MOTION_DTYPE).itemsize
 
     def min_real(self, segment: str) -> int:
         if segment not in SEGMENTS:
@@ -93,14 +107,18 @@ class LayoutSpec:
                 "demo_tail_pad": self.demo_tail_pad}
 
 
+LAYOUT_RAW9 = "motion-raw9-grid32-demopad17-v1"     # 1112 计划：raw latent 直读，行 (9,16,32,32)、步长 32
+RAW9_ROW_SHAPE = (9, 16, 32, 32)
+
 LAYOUT_SPECS = {
     "motion-768-grid16-v1": LayoutSpec(33, 33, "none"),
     "motion-768-grid16-demopad17-v1": LayoutSpec(17, 33, "repeat_last"),
+    LAYOUT_RAW9: LayoutSpec(17, 33, "repeat_last", grid_stride=32, row_shape=RAW9_ROW_SHAPE),
 }
 if LAYOUT not in LAYOUT_SPECS or any(
-    f"-{LAYOUT_GRID_SUFFIX}-" not in name or not name.endswith("-v1") for name in LAYOUT_SPECS
+    f"-grid{spec.grid_stride}-" not in name or not name.endswith("-v1") for name, spec in LAYOUT_SPECS.items()
 ):
-    raise RuntimeError(f"motion 布局名与 GRID_STRIDE={GRID_STRIDE} 不符")
+    raise RuntimeError(f"motion 布局名与各布局 grid_stride 不符（旧布局 GRID_STRIDE={GRID_STRIDE}）")
 
 DEMO_MIN_REAL_FRAMES = LAYOUT_SPECS[LAYOUT].demo_min_real
 EXEC_MIN_REAL_FRAMES = LAYOUT_SPECS[LAYOUT].exec_min_real
@@ -134,9 +152,9 @@ def seg_num_chunks(seg_len: int, min_real: int = 33) -> int:
     return max(0, int(seg_len) - (min_real - 1))
 
 
-def seg_num_grid(seg_len: int, min_real: int = 33) -> int:
-    """段内网格起点数 = ``len(range(0, num_chunks, GRID_STRIDE))``。"""
-    return len(range(0, seg_num_chunks(seg_len, min_real), GRID_STRIDE))
+def seg_num_grid(seg_len: int, min_real: int = 33, stride: int = GRID_STRIDE) -> int:
+    """段内网格起点数 = ``len(range(0, num_chunks, stride))``（stride 默认旧布局的 16）。"""
+    return len(range(0, seg_num_chunks(seg_len, min_real), int(stride)))
 
 
 def segment_lengths(num_timesteps: int, exec_start_idx: int) -> dict[str, int]:
@@ -148,16 +166,17 @@ def segment_lengths(num_timesteps: int, exec_start_idx: int) -> dict[str, int]:
     return {"demo": es, "exec": nt - es}
 
 
-def segment_grid_starts(seg_len: int, min_real: int = 33) -> list[int]:
-    """段内网格起点偏移列表 ``[0, 16, 32, …]``（长度 = seg_num_grid）。"""
-    return list(range(0, seg_num_chunks(seg_len, min_real), GRID_STRIDE))
+def segment_grid_starts(seg_len: int, min_real: int = 33, stride: int = GRID_STRIDE) -> list[int]:
+    """段内网格起点偏移列表 ``[0, S, 2S, …]``（长度 = seg_num_grid；S 默认旧布局的 16）。"""
+    return list(range(0, seg_num_chunks(seg_len, min_real), int(stride)))
 
 
 def visible_motion_rows(entry: "IndexEntry", t: int) -> tuple[np.ndarray, np.ndarray]:
     """给定 episode 的 index 条目与当前样本全域帧号 t，返回 (rows, frames)：
 
-    - demo 段：``s = 16m``、合法条件 ``s + spec.demo_min_real − 1 ≤ es − 1``（整段已见、与 t 无关）；
-    - exec 段：``u = 16m``、合法条件 ``u + 32 ≤ t − es``，全域起点 ``f = es + u``；
+    - demo 段：``s = S·m``、合法条件 ``s + spec.demo_min_real − 1 ≤ es − 1``（整段已见、与 t 无关）；
+    - exec 段：``u = S·m``、合法条件 ``u + 32 ≤ t − es``，全域起点 ``f = es + u``；
+    S = ``entry.spec.grid_stride``（旧两布局 16、raw9 布局 32）。
     合并后按 f 升序。rows 是 motion 表全局行号（int64），frames 是全域起点帧号（int64）。
     预算（motion.budget）上限检查不在这里做——由调用方按配置 raise，本函数只负责集合本身。
     """
@@ -166,17 +185,18 @@ def visible_motion_rows(entry: "IndexEntry", t: int) -> tuple[np.ndarray, np.nda
     if not es <= t < entry.num_timesteps:
         raise ValueError(
             f"t={t} 不在 exec 段 [{es}, {entry.num_timesteps}) 内（g={entry.g}）")
+    stride = entry.spec.grid_stride
     rows: list[int] = []
     frames: list[int] = []
     if entry.demo.row_base is not None:
         for m in range(entry.demo.num_grid):
-            s = GRID_STRIDE * m
+            s = stride * m
             if s + (entry.spec.demo_min_real - 1) <= es - 1:
                 rows.append(entry.demo.row_base + m)
                 frames.append(s)
     if entry.exec.row_base is not None:
         for m in range(entry.exec.num_grid):
-            u = GRID_STRIDE * m
+            u = stride * m
             if u + (WINDOW_FRAMES - 1) <= t - es:
                 rows.append(entry.exec.row_base + m)
                 frames.append(es + u)
@@ -265,7 +285,7 @@ def build_index_entries(manifest: dict, spec: LayoutSpec) -> list[IndexEntry]:
         for seg in SEGMENTS:
             L = lens[seg]
             min_real = spec.min_real(seg)
-            ng = seg_num_grid(L, min_real)
+            ng = seg_num_grid(L, min_real, spec.grid_stride)
             segs[seg] = SegmentInfo(row_base=(cursor if ng > 0 else None), num_grid=ng,
                                     num_chunks=seg_num_chunks(L, min_real), seg_len=L)
             cursor += ng
@@ -294,7 +314,7 @@ def index_payload(manifest: dict, entries: list[IndexEntry], *, spec: LayoutSpec
         "schema": INDEX_SCHEMA,
         "layout": layout,
         **spec.fields(),
-        "grid_stride": GRID_STRIDE,
+        "grid_stride": spec.grid_stride,
         "window_frames": WINDOW_FRAMES,
         "grid_origin": GRID_ORIGIN,
         "window_direction": WINDOW_DIRECTION,
@@ -320,7 +340,7 @@ def parse_index(raw: dict, ctx: str = "motion_index.json") -> list[IndexEntry]:
     if int(need("schema")) != INDEX_SCHEMA:
         raise ValueError(f"{ctx} schema={raw['schema']} != {INDEX_SCHEMA}")
     spec = layout_spec(raw, ctx)
-    for key, want in (("grid_stride", GRID_STRIDE), ("window_frames", WINDOW_FRAMES),
+    for key, want in (("grid_stride", spec.grid_stride), ("window_frames", WINDOW_FRAMES),
                       ("grid_origin", GRID_ORIGIN), ("window_direction", WINDOW_DIRECTION),
                       ("truncation_policy", TRUNCATION_POLICY)):
         if need(key) != want:
@@ -338,10 +358,11 @@ def parse_index(raw: dict, ctx: str = "motion_index.json") -> list[IndexEntry]:
             if int(s["seg_len"]) != L:
                 raise ValueError(f"{ctx} g={g} {seg}.seg_len={s['seg_len']} != {L}")
             min_real = spec.min_real(seg)
-            if int(s["num_chunks"]) != seg_num_chunks(L, min_real) or int(s["num_grid"]) != seg_num_grid(L, min_real):
+            ng_want = seg_num_grid(L, min_real, spec.grid_stride)
+            if int(s["num_chunks"]) != seg_num_chunks(L, min_real) or int(s["num_grid"]) != ng_want:
                 raise ValueError(
                     f"{ctx} g={g} {seg} num_chunks/num_grid={s['num_chunks']}/{s['num_grid']} "
-                    f"!= 公式 {seg_num_chunks(L, min_real)}/{seg_num_grid(L, min_real)}")
+                    f"!= 公式 {seg_num_chunks(L, min_real)}/{ng_want}")
             ng = int(s["num_grid"])
             if ng == 0:
                 if s["row_base"] is not None:
@@ -401,6 +422,30 @@ def check_pool_provenance(provenance: dict, ctx: str = "store_meta.json") -> Non
         raise ValueError(f"{ctx} 池化表 provenance.pool_source_sha256 与现行 wan_pool768.py（{want[:16]}…）不符")
 
 
+# ── raw9 表 provenance（1112 计划 1.1 第 3 行）──────────────────────────────────────
+
+
+def check_raw9_provenance(provenance: dict, ctx: str = "store_meta.json", *, layout: str | None = None) -> None:
+    """零参数 raw9 直读表的来源闸：kind / readout 等于常量、encoder_ckpt 显式 null、参数量 int 0、
+    ``raw9_source_sha256`` 等于现行 wan_raw9.py 字节摘要、布局为 ``LAYOUT_RAW9``。"""
+    from mme_vla_suite.shared import wan_raw9 as wr
+
+    if provenance.get("encoder_kind") != wr.RAW9_ENCODER_KIND:
+        raise ValueError(f"{ctx} provenance.encoder_kind={provenance.get('encoder_kind')!r} != {wr.RAW9_ENCODER_KIND!r}")
+    if provenance.get("readout") != wr.RAW9_READOUT:
+        raise ValueError(f"{ctx} raw9 表 provenance.readout={provenance.get('readout')!r} != {wr.RAW9_READOUT!r}")
+    if "encoder_ckpt" not in provenance or provenance["encoder_ckpt"] is not None:
+        raise ValueError(f"{ctx} raw9 表 provenance.encoder_ckpt 必须显式为 null")
+    count = provenance.get("parameter_count")
+    if type(count) is not int or count != wr.RAW9_PARAMETER_COUNT:
+        raise ValueError(f"{ctx} raw9 表 provenance.parameter_count={count!r} != {wr.RAW9_PARAMETER_COUNT}")
+    want = wr.source_sha256()
+    if provenance.get("raw9_source_sha256") != want:
+        raise ValueError(f"{ctx} raw9 表 provenance.raw9_source_sha256 与现行 wan_raw9.py（{want[:16]}…）不符")
+    if layout != LAYOUT_RAW9:
+        raise ValueError(f"{ctx} raw9 provenance 的表 layout={layout!r} != {LAYOUT_RAW9!r}")
+
+
 # ── MotionMeta ────────────────────────────────────────────────────────────────
 
 
@@ -419,6 +464,19 @@ class MotionMeta:
     entries: tuple[IndexEntry, ...]
     provenance: dict
     spec: LayoutSpec
+
+    # 步长与行形状只由布局派生（不入构造参数）
+    @property
+    def grid_stride(self) -> int:
+        return self.spec.grid_stride
+
+    @property
+    def row_shape(self) -> tuple:
+        return tuple(self.spec.row_shape)
+
+    @property
+    def row_bytes(self) -> int:
+        return self.spec.row_bytes
 
     @classmethod
     def load(cls, store_root: str | pathlib.Path) -> "MotionMeta":
@@ -441,7 +499,7 @@ class MotionMeta:
         spec = layout_spec(raw, str(meta_path))
         if need("byte_order") != BYTE_ORDER or need("array_order") != ARRAY_ORDER:
             raise ValueError("byte_order/array_order 与格式常量不符")
-        for key, want in (("grid_stride", GRID_STRIDE), ("window_frames", WINDOW_FRAMES),
+        for key, want in (("grid_stride", spec.grid_stride), ("window_frames", WINDOW_FRAMES),
                           ("grid_origin", GRID_ORIGIN), ("window_direction", WINDOW_DIRECTION),
                           ("truncation_policy", TRUNCATION_POLICY), ("frame_size", FRAME_SIZE)):
             if need(key) != want:
@@ -452,11 +510,11 @@ class MotionMeta:
         t = need("tables").get(MOTION_KEY)
         if t is None:
             raise ValueError(f"tables 缺 {MOTION_KEY}")
-        if tuple(t["row_shape"]) != MOTION_ROW_SHAPE or t["dtype"] != "float32" \
-                or int(t["row_bytes"]) != MOTION_ROW_BYTES or t["relpath"] != MOTION_TABLE_RELPATH:
+        if tuple(t["row_shape"]) != tuple(spec.row_shape) or t["dtype"] != "float32" \
+                or int(t["row_bytes"]) != spec.row_bytes or t["relpath"] != MOTION_TABLE_RELPATH:
             raise ValueError(f"tables[{MOTION_KEY}] 形制与格式常量不符: {t}")
         num_rows = int(need("num_rows"))
-        if int(t["num_rows"]) != num_rows or int(t["byte_count"]) != num_rows * MOTION_ROW_BYTES:
+        if int(t["num_rows"]) != num_rows or int(t["byte_count"]) != num_rows * spec.row_bytes:
             raise ValueError("tables.num_rows / byte_count 与 num_rows 不符")
 
         # motion_index.json：现场重算 sha256，不等立即拒绝（R23 / 红线：唯一身份来源）
@@ -481,7 +539,9 @@ class MotionMeta:
         provenance = need("provenance")
         if not isinstance(provenance, dict):
             raise ValueError("provenance 须为对象")
-        if "encoder_kind" in provenance:                    # 无该键 = 旧 encoder 表，走原路径不变
+        if raw["layout"] == LAYOUT_RAW9:                    # raw9 布局只认 raw9 provenance（布局与来源双向绑定）
+            check_raw9_provenance(provenance, ctx=str(meta_path), layout=raw["layout"])
+        elif "encoder_kind" in provenance:                  # 无该键 = 旧 encoder 表，走原路径不变
             check_pool_provenance(provenance, ctx=str(meta_path))
         return cls(root=root, raw=raw, status=status, num_rows=num_rows,
                    manifest_sha256=need("manifest_sha256"), manifest_path=need("manifest_path"),
@@ -501,8 +561,8 @@ def run_fast_checks(meta: MotionMeta, *, manifest_path: str | None = None) -> No
     if not table.is_file():
         raise FileNotFoundError(f"motion 表缺失: {table}")
     st = table.stat().st_size
-    if st != meta.num_rows * MOTION_ROW_BYTES:
-        raise ValueError(f"motion 表大小不符: {st} != {meta.num_rows} × {MOTION_ROW_BYTES}")
+    if st != meta.num_rows * meta.row_bytes:
+        raise ValueError(f"motion 表大小不符: {st} != {meta.num_rows} × {meta.row_bytes}")
 
 
 def run_full_checks(meta: MotionMeta) -> None:
@@ -545,11 +605,12 @@ def check_same_source(frame_manifest_sha256: str, motion_meta: MotionMeta,
     check_index_against_manifest(list(motion_meta.entries), manifest)
 
 
-# ── MotionStore（只读，整表进程内）───────────────────────────────────────────
+# ── MotionStore（只读；旧布局整表进程内，raw9 布局只读 memmap）──────────────────
 
 
 class MotionStore:
-    """整表常驻进程内的只读访问层：构造即 ``np.fromfile`` 整表读入并记录 ``_owner_pid``；
+    """只读访问层：旧两布局构造即 ``np.fromfile`` 整表读入；raw9 布局以 ``np.memmap(mode="r")`` 打开
+    （各进程共享页缓存，不以可写模式打开）。两者都记录 ``_owner_pid``，
     禁止 pickle 跨进程携带（由 FrameSampDataset 在 worker 内按 pid 懒构造）。"""
 
     def __init__(self, store_root: str | pathlib.Path, *, meta: MotionMeta | None = None,
@@ -561,11 +622,16 @@ class MotionStore:
         run_fast_checks(self._meta, manifest_path=manifest_path)
         if verify_level == "full":
             run_full_checks(self._meta)
-        table = np.fromfile(self._root / MOTION_TABLE_RELPATH, dtype=MOTION_DTYPE)
-        if table.size != self._meta.num_rows * MOTION_ROW_SHAPE[0]:
-            raise ValueError("motion 表元素数与 num_rows 不符")
-        table.shape = (self._meta.num_rows,) + MOTION_ROW_SHAPE
-        self._table = table
+        if self._meta.raw["layout"] == LAYOUT_RAW9:
+            # raw9 表约 21.5 GB：只读 memmap，不整读；大小已由 run_fast_checks 核过
+            self._table = np.memmap(self._root / MOTION_TABLE_RELPATH, dtype=MOTION_DTYPE, mode="r",
+                                    shape=(self._meta.num_rows,) + self._meta.row_shape)
+        else:
+            table = np.fromfile(self._root / MOTION_TABLE_RELPATH, dtype=MOTION_DTYPE)
+            if table.size != self._meta.num_rows * MOTION_ROW_SHAPE[0]:
+                raise ValueError("motion 表元素数与 num_rows 不符")
+            table.shape = (self._meta.num_rows,) + MOTION_ROW_SHAPE
+            self._table = table
         self._owner_pid = os.getpid()
 
     @property
@@ -594,14 +660,32 @@ class MotionStore:
             "由 FrameSampDataset 在 worker 内按 pid 懒构造")
 
     def rows(self, rows) -> np.ndarray:
-        """按全局行号取 (n, 768) f32（进程内副本切片）。"""
+        """按全局行号取 (n,)+row_shape f32 新数组（旧布局 (n,768) 进程内副本切片，raw9 布局 (n,9,16,32,32)）。"""
         r = np.asarray(rows, dtype=np.int64)
         if len(r) and (int(r.min()) < 0 or int(r.max()) >= self._meta.num_rows):
             raise IndexError(f"motion 行号越界: [{r.min()}, {r.max()}] ∉ [0, {self._meta.num_rows})")
+        if isinstance(self._table, np.memmap):
+            return np.asarray(self._table[r])           # 花式索引已是副本，去掉 memmap 子类外壳
         return self._table[r]
 
+    def rows_into(self, rows, out: np.ndarray) -> np.ndarray:
+        """按全局行号把表行逐行直接写进调用方预分配的 ``out``（形状 (k,)+row_shape、float32、可写），
+        不经中间 concat / 副本；返回 ``out``。供 FrameSampDataset 的 L0 预分配取数。"""
+        r = np.asarray(rows, dtype=np.int64)
+        want = (len(r),) + self._meta.row_shape
+        if not isinstance(out, np.ndarray) or out.shape != want or out.dtype != np.dtype(MOTION_DTYPE):
+            raise ValueError(f"rows_into: out 须为 {want} float32，得到 "
+                             f"{getattr(out, 'shape', None)} {getattr(out, 'dtype', None)}")
+        if not out.flags["WRITEABLE"]:
+            raise ValueError("rows_into: out 不可写")
+        if len(r) and (int(r.min()) < 0 or int(r.max()) >= self._meta.num_rows):
+            raise IndexError(f"motion 行号越界: [{r.min()}, {r.max()}] ∉ [0, {self._meta.num_rows})")
+        for i, ri in enumerate(r):
+            out[i] = self._table[ri]
+        return out
+
     def close(self) -> None:
-        self._table = None
+        self._table = None                              # memmap 随引用释放解除映射
 
     def __enter__(self):
         return self
