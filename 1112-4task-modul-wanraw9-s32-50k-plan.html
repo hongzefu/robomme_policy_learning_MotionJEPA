@@ -50,7 +50,7 @@ th{background:var(--card)}
 <tr><td>D3</td><td>双变量</td><td>「不池化」与「stride 32」同时改变，接受混淆，本计划不补 stride 16 单变量对照</td></tr>
 <tr><td>D4</td><td>时效</td><td>窗口需 33 帧全见才可用，stride 32 下最新 motion token 最多比 stride 16 晚 16 帧出现，接受</td></tr>
 <tr><td>D5</td><td>流程</td><td>训完直接评（692 局、seed 7、同一 BinFill 前缀库 <code>demo-prefix/binfill-3b4de03a0b46</code>）</td></tr>
-<tr><td>D6</td><td>数据瓶颈</td><td>若成瓶颈，按 §6 的修复阶梯修；只有需要改变数值语义（bf16）时才停下问用户</td></tr>
+<tr><td>D6</td><td>数据瓶颈</td><td>若成瓶颈，按 §6 的修复阶梯修；L0–L3 全部已授权，含 bf16（2026-11-12 用户「bf16我同意 没问题」），不再停下问</td></tr>
 </table>
 
 <h2>3 「投影」是什么</h2>
@@ -94,7 +94,7 @@ th{background:var(--card)}
 <tr><td>L0（默认实现）</td><td>—</td><td>memmap 共享页缓存（开训前 <code>vmtouch</code>/顺序读一遍预热 20 G）；worker 直接写进预分配的 padded 数组，不做中间 concat</td><td>不变</td></tr>
 <tr><td>L1</td><td>测速 &gt; 1.2 s/步 且 dataloader 等待占比 &gt; 10%</td><td>worker 8 → 24（本机 96 vCPU）、prefetch 加深；collate 用共享内存 / pinned buffer，避免 pickle 拷贝</td><td>不变</td></tr>
 <tr><td>L2</td><td>L1 后仍超</td><td><b>表驻留 GPU + 索引 gather</b>：dataloader 只传 <code>(b, budget)</code> int32 窗口行号与 mask；表以 fp32 放到每卡显存，<code>jit</code> 内 <code>jnp.take</code> 取行，主机传输从 6 GB/步降到几百 KB/步。需先关 XLA 预分配实测模型峰值显存，确认每卡剩余 ≥ 22 GB</td><td>不变（同一 fp32 原值）</td></tr>
-<tr><td>L3</td><td>L2 显存不够</td><td>表以 bf16 驻留 GPU（10 GB）或 8 卡分片 + all-gather</td><td><b>bf16 会改变输入精度 → 停下问用户</b>；分片不改语义可直接做</td></tr>
+<tr><td>L3</td><td>L2 显存不够</td><td>表以 bf16 驻留 GPU（10 GB）或 8 卡分片 + all-gather</td><td>bf16 改变输入精度，<b>用户已同意</b>（11-12），直接做；优先试分片（不改语义），分片不可行或更慢时用 bf16。改用 bf16 时 G-dl 等价闸改为「与 fp32 表 <code>astype(bfloat16)</code> 逐字节相等」，并在交接里记录精度变更</td></tr>
 </table>
 <p>每级改动都要过 <b>G-dl 等价闸</b>：同一批 idx，新旧路径给模型的 <code>motion_emb/motion_pos/motion_mask/mem_order</code> 逐字节相等（L2 比较 gather 后的设备张量），判定行 <code>DL_EQUIV=PASS samples=256 mismatch=0</code>。</p>
 
