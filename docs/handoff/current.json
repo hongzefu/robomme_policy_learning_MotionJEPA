@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-09T11:20:00Z",
-    "america_new_york": "2026-11-09T06:20:00-05:00"
+    "utc": "2026-11-12T16:24:47Z",
+    "america_new_york": "2026-11-12T11:24:47-05:00"
   },
   "repo": {
-    "branch": "v11-4task-modul-wantp768-50k",
-    "base_head": "dfc73df"
+    "branch": "v15-4task-modul-wanraw9-s32-50k",
+    "base_head": "8c504c5"
   },
   "freeze": {
     "active": false,
@@ -152,6 +152,124 @@
       ],
       "pending_decisions": [],
       "next_steps": []
+    },
+    "4task-wanraw9s32-train": {
+      "plan": {
+        "file": "1112-4task-modul-wanraw9-s32-50k-plan.html",
+        "sha": null
+      },
+      "state": "planned",
+      "state_changed_at": "2026-11-12T16:24:47Z",
+      "owner": {
+        "session": "https://claude.ai/code/session_01WvPQiUiaeANT2oNBsirsQv",
+        "host": "ip-10-242-11-177"
+      },
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [
+        {
+          "kind": "register",
+          "date": "2026-11-12",
+          "quote": "登记",
+          "scope": "登记进状态机"
+        }
+      ],
+      "pending_decisions": [],
+      "state_reason": "计划已合入 8c504c5（PRE_MERGE_REVIEW=PASS），等开工令",
+      "depends_on": [],
+      "pre_handoff": [
+        {
+          "what": "RB-A1 PLAN_CONSISTENCY_REVIEW",
+          "evidence": null,
+          "where": null,
+          "status": "pending"
+        },
+        {
+          "what": "闸 G0 DATA_LINEAGE=PASS",
+          "evidence": null,
+          "where": null,
+          "status": "pending"
+        },
+        {
+          "what": "闸 G1 RAW9_TABLE=PASS rows=36484 budget_max=71",
+          "evidence": null,
+          "where": null,
+          "status": "pending"
+        },
+        {
+          "what": "闸 G2–G5 单测/等价/对拍/训推一致",
+          "evidence": null,
+          "where": null,
+          "status": "pending"
+        },
+        {
+          "what": "闸 G6 SMOKE20/BENCH300 与 G6b EVAL_LOAD_SMOKE=PASS",
+          "evidence": null,
+          "where": null,
+          "status": "pending"
+        },
+        {
+          "what": "闸 G7 CKPT_LOAD=PASS step=50000",
+          "evidence": null,
+          "where": null,
+          "status": "pending"
+        }
+      ],
+      "next_steps": [
+        {
+          "what": "等用户开工令后 RB-A1",
+          "command": "派 sonnet 计划一致性审查",
+          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS"
+        }
+      ]
+    },
+    "4task-wanraw9s32-eval": {
+      "plan": {
+        "file": "1112-4task-modul-wanraw9-s32-50k-plan.html",
+        "sha": null
+      },
+      "state": "planned",
+      "state_changed_at": "2026-11-12T16:24:47Z",
+      "owner": {
+        "session": "https://claude.ai/code/session_01WvPQiUiaeANT2oNBsirsQv",
+        "host": "ip-10-242-11-177"
+      },
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [
+        {
+          "kind": "register",
+          "date": "2026-11-12",
+          "quote": "登记",
+          "scope": "登记进状态机"
+        }
+      ],
+      "pending_decisions": [],
+      "state_reason": "训练 done 后由链脚本自动接评估；等开工令",
+      "depends_on": [
+        "4task-wanraw9s32-train"
+      ],
+      "pre_handoff": [
+        {
+          "what": "闸 G8 EVAL692=…/692",
+          "evidence": null,
+          "where": null,
+          "status": "pending"
+        },
+        {
+          "what": "闸 G9 UPLOAD_READBACK=PASS / HF_VERIFY=PASS ckpts=10",
+          "evidence": null,
+          "where": null,
+          "status": "pending"
+        }
+      ],
+      "next_steps": [
+        {
+          "what": "训练闸 G7 通过后链脚本起 r9-eval",
+          "command": "scripts/training/chain_wanraw9s32_train_eval.sh",
+          "verdict_line": "EVAL692="
+        }
+      ]
     }
   }
 }
