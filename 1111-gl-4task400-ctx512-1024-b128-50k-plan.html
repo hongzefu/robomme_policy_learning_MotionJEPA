@@ -26,8 +26,8 @@ blockquote{border-left:4px solid var(--acc);margin:10px 0;padding:6px 12px;backg
 <body>
 
 <blockquote>
-<b>GreatLakes 上训练四任务 × 400 的 context 模式（memory budget 512 / 1024，bs128，50k 步，各 4×A40）</b>　<b>修订 r2</b>（开工审查 FAIL 后按用户裁决修订；黄色底为 r2 新增或改动处）<br>
-权威性：本文件是该任务唯一计划；开工令按 <code>AGENTS.md</code> 第 2 条。r1（<code>c656c13</code>）已获「同意，开工」，按规则已执行 P0 占位提交（65943150、65943151）；r2 须再次获得同意后才继续 P1 及以后。<br>
+<b>GreatLakes 上训练四任务 × 400 的 context 模式（memory budget 512 / 1024，bs128，50k 步，各 4×A40）</b>　<b>修订 r3</b>（r1、r2 两轮开工审查均 FAIL，按用户裁决修订；黄色底为 r2/r3 新增或改动处，r3 改动见 §8）<br>
+权威性：本文件是该任务唯一计划；开工令按 <code>AGENTS.md</code> 第 2 条。r1（<code>c656c13</code>）已获「同意，开工」，按规则已执行 P0 占位提交（65943150、65943151）；r2（<code>a805014</code>）获「同意，开工」后的修订部分审查 FAIL，r3 须再次获得同意后才继续 P1 及以后。<br>
 代码锚点：主检出 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code> 分支 <code>v4.2-plswap-full</code>；r1 计划提交 <code>c656c13</code>，<span class="new">子代理 BASE 取 r2 计划提交之后的 HEAD（派发时记录完整 sha）</span>。<br>
 集群执行副本：<code>&lt;GL_REPO&gt;=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA</code>（detached HEAD，只 checkout 到 Beta 锚点，不在 turbo 侧改代码）。<br>
 commit 体例：功能 <code>commitV4.6.x</code>（接续 <code>commitV4.5.5</code>），起跑前 <code>commitV4.6.nBeta</code>；子代理 <code>sub/G4C-Sx: </code>。<br>
@@ -64,6 +64,7 @@ commit 体例：功能 <code>commitV4.6.x</code>（接续 <code>commitV4.5.5</co
 <li class="new">P-LINEAGE：用户选「可以按 NA」→ 起跑合同写 <code>DATA_LINEAGE=NA encoder=none</code>（§2.4）。</li>
 <li class="new">写 turbo：用户选「放行」→ 本任务可写 <code>&lt;GL_REPO&gt;/v1-store</code> 下本任务的库、日志、ckpt，并在 <code>&lt;GL_REPO&gt;</code> checkout Beta（覆盖第 14 条「turbo 只读」的本任务例外）。</li>
 <li class="new">walltime 不够：用户选「批准改 train.py 支持续跑」→ 新增完整状态续跑（§2.6）。</li>
+<li class="new">续跑数据顺序：用户选「续跑只要求不重复样本」；V10：选「用小子集造 epoch 边界」；护栏接线：选「新开关单独放行」（r3，§2.6）。</li>
 <li class="new">下载：用户问「这个 Aspen 拉 Turbo 是一个正确的选择吗？如果不是的话，你可以尝试用 Veil 来拉，或者用单独一个什么起一个 CPU 的 job？」，并对修订 ④ 选「全部同意」→ 用 GreatLakes standard 分区 CPU job（§2.4）。</li>
 </ol>
 
@@ -110,8 +111,9 @@ updates = tx.update(grads, ...)          # 每个优化步只更新一次
 
 <h3 class="new">2.6 完整状态续跑（用户批准新增）</h3>
 <p class="new"><b>为什么</b>：现有 ckpt 只存 EMA 权重（<code>src/openpi/training/checkpoints.py::save_state</code> 里 <code>"train_state"</code> 一项被注释掉），<code>train.py::main</code> 开头因此禁用 <code>--resume</code>（原话「续跑语义有损（checkpoint 只存 EMA，丢 AdamW 动量与 warmup 计数）」）。</p>
-<p class="new"><b>改法</b>：① 每次保存时另存一份完整训练状态（raw params、AdamW <code>opt_state</code>、<code>step</code>、EMA、rng）到 <code>&lt;run&gt;/resume/</code>，只保留最新 1 份（估计数十 GB，不随 10 份 EMA ckpt 累积）；② 数据顺序：在 sampler 层按 <code>step × batch_size</code> 跳过已消费的索引（不实际读数据），保证续跑后的样本序列与不中断时相同；③ 新开关 <code>--resume-full</code>：只有 <code>resume/</code> 完整（含 manifest 与 sha）才放行，否则 fail-loud；旧的 <code>--resume</code> / <code>--overwrite</code> 护栏保持禁用；④ 入口脚本加 <code>RESUME=1</code>，此时允许 run 目录已存在，否则仍拒绝。</p>
-<p class="new warn">⚠ 续跑等价按逐位判：小规模（本机 global 4、K=2）连续跑 20 步，对比「10 步 → 保存 → 新进程 resume → 再 10 步」，第 11～20 步 loss / grad_norm 必须逐位相同（V10）。不逐位即说明有状态没存全，不放宽。</p>
+<p class="new"><b>改法</b>：① 每次保存时另存一份完整训练状态（raw params、AdamW <code>opt_state</code>、<code>step</code>、EMA、rng）到 <code>&lt;run&gt;/resume/</code>，只保留最新 1 份（估计数十 GB，不随 10 份 EMA ckpt 累积）；② 数据顺序（r3，用户选「续跑只要求不重复样本」）：全新 run 的样本序列不动（仍是原 <code>TorchDataLoader</code> 的 RandomSampler，V1 逐位成立）；续跑时由 <code>train.py</code> 把 dataloader 的 seed 换成 <code>seed + 1000003 × start_step</code> 重新打乱，不要求与不中断时同序，不改 <code>src/openpi/training/data_loader.py</code>；③ 新开关 <code>--resume-full</code>：只有 <code>resume/</code> 完整（含 manifest 与 sha）才放行，否则 fail-loud；它在内部以 <code>resume=True</code> 调 <code>checkpoints.py::initialize_checkpoint_dir</code>（放行已存在的 run 目录），但只从 <code>resume/</code> 恢复完整状态，不走已是死代码的 <code>restore_state</code>；旧的 <code>--resume</code> / <code>--overwrite</code> 照旧报错；④ 入口脚本加 <code>RESUME=1</code>，此时允许 run 目录已存在，否则仍拒绝。</p>
+<p class="new warn">⚠ V10（r3）：续跑后数据重新打乱，所以不比 loss 序列，改为逐位核状态：小子集 40 个样本、global 4、K=2（每 epoch 10 步），跑 15 步保存 → 新进程 <code>--resume-full</code> 读回，读回的 params / opt_state / ema / step / rng 与保存前逐位相同；再续跑 15 步（跨两次 epoch 边界）全程 finite、正常退出。</p>
+<p class="new"><b>续跑操作流程</b>：EMA ckpt 与 <code>resume/</code> 在同一 step 保存；主会话等到选定 step 的 <code>resume/manifest.json</code> 落盘后主动 <code>kill-session</code> 停止旧占位里的训练（不等 walltime 杀），再在新占位以 <code>RESUME=1</code> 起跑。原子改名期间 turbo 峰值为 2 份 <code>resume/</code>。</p>
 
 <h2>3. 验收判定行</h2>
 <table>
@@ -125,7 +127,7 @@ updates = tx.update(grads, ...)          # 每个优化步只更新一次
 <tr><td>V7</td><td>A40 冒烟（两 run 各一次）</td><td><code>MAX_STEPS=20</code>，显存峰值、步 10～20 墙钟均值</td><td>装得下、可估 walltime</td><td class="new"><code>SMOKE_GL=PASS tag=&lt;512|1024&gt; micro=&lt;n&gt; k=&lt;k&gt; peak_mib=&lt;n&gt; s_per_step=&lt;x&gt; est_total_h=&lt;h&gt; hold_left_h=&lt;h&gt; nonfinite=0</code></td></tr>
 <tr><td>V8</td><td>起跑合同</td><td>入口脚本前置检查</td><td>代码=Beta、库 pin 一致</td><td><code>DATA_LINEAGE=NA …</code>、<code>PAIRED_RUNS_SAME_LIB=PASS</code>、<code>CLEAN_HEAD=PASS sha=&lt;Beta&gt;</code></td></tr>
 <tr><td>V9</td><td>训练完成</td><td>日志尾行与 ckpt 目录</td><td>10 份 ckpt {5000,…,50000} 齐全、全程 finite</td><td><code>TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10</code>、<code>EXIT_CODE=0</code></td></tr>
-<tr class="new"><td>V10</td><td>续跑逐位等价</td><td>本机读 turbo 库：连续 20 步 对 10+resume+10</td><td>完整状态与数据位置都恢复了</td><td><code>RESUME_EQUIV=PASS steps=20 split=10 max_abs_diff=0</code></td></tr>
+<tr class="new"><td>V10</td><td>续跑状态逐位恢复、跨 epoch 能续</td><td>本机读 turbo 库的 40 样本子集，global 4、K=2：15 步保存 → 读回比对 → 再 15 步</td><td>完整状态存全了，跨 epoch 续跑不崩</td><td><code>RESUME_STATE=PASS step=15 leaves=&lt;n&gt; max_abs_diff=0 resumed_steps=15 epochs_crossed=2 nonfinite=0</code></td></tr>
 </table>
 <p class="new">V7 OOM 回退（两条 run 都适用）：同占位内改每卡 8 × 累积 4（全局仍 128），重测并按新步时重算 <code>est_total_h</code>；仍 OOM 停下交你。</p>
 
@@ -135,7 +137,7 @@ updates = tx.update(grads, ...)          # 每个优化步只更新一次
 <tr><td>P0</td><td>提交两份占位（<b>已完成</b>：65943150 / 65943151，美东 2026-11-11 23:41）；开工审查</td><td><code>PLAN_CONSISTENCY_REVIEW</code>（r1 FAIL，裁决后 r2）</td></tr>
 <tr><td>P1</td><td class="new">GL standard CPU job 拉子集、校验、解包（与 P2 并行）</td><td>V6</td></tr>
 <tr><td>P2</td><td>四个 worktree 子代理写代码（§5），逐个审查合并</td><td>V2、V3、V5，<code>PRE/POST_MERGE_REVIEW=PASS</code></td></tr>
-<tr><td>P2b</td><td class="new">P1 与 P2 都完成后，本机读 turbo 库串行跑真实小训练</td><td>V1、V4、V10</td></tr>
+<tr><td>P2b</td><td class="new">P1 与 P2 都完成后，本机读 turbo 库串行跑真实小训练（只触及少量样本；数据集初始化若超过 30 min，改到 vail 1 Gb/s 跑，并记录耗时）</td><td>V1、V4、V10</td></tr>
 <tr><td>P3</td><td>打 <code>commitV4.6.nBeta</code>，<code>&lt;GL_REPO&gt;</code> checkout --detach Beta，集群侧 <code>uv sync --frozen</code></td><td><code>CLEAN_HEAD=PASS</code></td></tr>
 <tr><td>P4</td><td>占位排到后各跑 20 步冒烟，按剩余时间核余量</td><td>V7</td></tr>
 <tr><td>P5</td><td>两条正式 50k 起跑，Monitor 盯日志</td><td>V8，step100 正常</td></tr>
@@ -144,7 +146,7 @@ updates = tx.update(grads, ...)          # 每个优化步只更新一次
 <p class="mut">不在本计划范围：692 局评估、ckpt 上传 HF。</p>
 
 <h2>5. 子代理分工与合并（简述）</h2>
-<p>四块，各自独立 worktree（opus）：<b>S2</b> context 1024 yaml + 守卫；<b>S1</b> 梯度累积（<code>train.py::train_step</code>、<code>config.py</code>）；<span class="new"><b>S4</b> 完整状态续跑（<code>src/openpi/training/checkpoints.py</code>、<code>src/mme_vla_suite/training/dataloader.py</code> 的 sampler 跳过、<code>train.py::main</code> 的续跑分支）——与 S1 同碰 <code>train.py</code>，所以<b>S1 合并后 S4 再从新 HEAD 派出</b>（串行，不并行写同一文件）</span>；<b>S3</b> GL 入口脚本与占位模板（底稿只读输入：<code>/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/scripts/training/gl/run_in_hold_o16.sh</code>）。合并顺序 S2 → S1 → S4 → S3（S3 按接口契约先写，等 S4 合并后再合）。每次合并前派一个 sonnet 审 <code>BASE..TIP</code>，主会话在 worktree 复跑验收；合并后跑短测再 push。数据下载、占位、Beta、真实小训练、冒烟、起跑由主会话自做。</p>
+<p>四块，各自独立 worktree（opus）：<b>S2</b> context 1024 yaml + 守卫；<b>S1</b> 梯度累积（<code>train.py::train_step</code>、<code>config.py</code>）；<span class="new"><b>S4</b> 完整状态续跑（<code>src/openpi/training/checkpoints.py</code>、<code>train.py::main</code> 的续跑分支与续跑 seed）——与 S1 同碰 <code>train.py</code>，所以<b>S1 合并后 S4 再从新 HEAD 派出</b>（串行，不并行写同一文件）</span>；<b>S3</b> GL 入口脚本与占位模板（底稿只读输入：<code>/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/scripts/training/gl/run_in_hold_o16.sh</code>）。合并顺序 S2 → S1 → S4 → S3（S3 按接口契约先写，等 S4 合并后再合）。每次合并前派一个 sonnet 审 <code>BASE..TIP</code>，主会话在 worktree 复跑验收；合并后跑短测再 push。数据下载、占位、Beta、真实小训练、冒烟、起跑由主会话自做。</p>
 
 <h2>6. 交接顺序与状态机登记</h2>
 <ul>
@@ -172,6 +174,17 @@ updates = tx.update(grads, ...)          # 每个优化步只更新一次
 <tr><td>10</td><td>余量未按剩余 walltime</td><td>§2.5 统一用 <code>hold_left_h</code></td></tr>
 </table>
 
+<p class="new"><code>PLAN_CONSISTENCY_REVIEW=FAIL base=a805014 findings=6 blocking=3</code>（r2 修订部分审查）。处置：</p>
+<table class="new">
+<tr><th>#</th><th>finding</th><th>处置</th></tr>
+<tr><td>1</td><td>sampler 跳过没有落点、可能破坏 V1（blocking）</td><td>用户裁决「续跑只要求不重复样本」→ 续跑换 seed 重新打乱，全新 run 不动，不改 <code>data_loader.py</code></td></tr>
+<tr><td>2</td><td>V10 不跨 epoch（blocking）</td><td>用户裁决「用小子集造 epoch 边界」→ 40 样本、跨 2 次边界，判定行改为 <code>RESUME_STATE</code></td></tr>
+<tr><td>3</td><td>续跑与 <code>initialize_checkpoint_dir</code> 护栏接线（blocking）</td><td>用户裁决「新开关单独放行」→ §2.6 ③</td></tr>
+<tr><td>4</td><td>P1 脚本在 Beta 前运行与 R2 冲突</td><td>R2 加例外：脚本 cp 到 <code>v1-store/jobs/</code></td></tr>
+<tr><td>5</td><td>aspen 读 turbo 慢，P2b 可行性未估</td><td>P2b 加 30 min 阈值，超时改 vail</td></tr>
+<tr><td>6</td><td>续跑触发流程缺细节</td><td>§2.6 加「续跑操作流程」</td></tr>
+</table>
+
 <p class="mut">逐文件细节、分配表、runbook 见第二部分。</p>
 
 <h1>第二部分（技术细节，供 agent 追踪）</h1>
@@ -179,11 +192,11 @@ updates = tx.update(grads, ...)          # 每个优化步只更新一次
 <h2>〇 前置声明与红线</h2>
 <ol>
 <li>R1 r2 获同意前只读（P0 占位已按 r1 开工令提交）。</li>
-<li>R2 不在 turbo 执行副本改代码；<code>&lt;GL_REPO&gt;</code> 只 <code>git fetch</code> + <code>checkout --detach &lt;Beta&gt;</code>，<code>status --porcelain</code> 为空。</li>
+<li>R2 不在 turbo 执行副本改代码；<code>&lt;GL_REPO&gt;</code> 只 <code>git fetch</code> + <code>checkout --detach &lt;Beta&gt;</code>，<code>status --porcelain</code> 为空。<span class="new">例外：P1 下载 job 在 Beta 之前运行，其脚本从主检出（已提交版本）<code>cp</code> 到 <code>&lt;GL_REPO&gt;/v1-store/jobs/</code> 执行，不改 <code>&lt;GL_REPO&gt;</code> 的 checkout。</span></li>
 <li>R3 turbo 写入只限 <code>&lt;GL_REPO&gt;/v1-store/{datasets/4task-v2-1600ep-604f16da, cache/hf*, train-assets/mme_vla_suite/4task-v2-1600ep-604f16da, logs, train-runs/&lt;本任务 run&gt;}</code>（用户放行）；不碰其他目录；带输出根命令先 <code>ls -ld</code>。</li>
 <li>R4 只 <code>scancel</code> 本任务清单 JobID（65943150、65943151、下载 job、可能的续跑占位）；tmux 前缀 <code>g4c-</code>，清理逐个 <code>kill-session -t '=名'</code>。</li>
 <li>R5 不改 peak_lr / warmup / decay / seed(42)。</li>
-<li>R6 <code>GRAD_ACCUM_IDENTITY</code>、<code>RESUME_EQUIV</code> 必须逐位；V4 的 5% 是预先声明的行为层阈值。</li>
+<li>R6 <code>GRAD_ACCUM_IDENTITY</code>、<code>RESUME_STATE</code> 必须逐位；V4 的 5% 是预先声明的行为层阈值。</li>
 <li>R7 旧 <code>--resume</code> / <code>--overwrite</code> 护栏保留，只新增 <code>--resume-full</code>。</li>
 </ol>
 
@@ -191,11 +204,10 @@ updates = tx.update(grads, ...)          # 每个优化步只更新一次
 <table>
 <tr><th>文件</th><th>改动</th><th>归属</th></tr>
 <tr><td><code>src/mme_vla_suite/training/config.py</code></td><td><code>grad_accum_steps: int = 1</code>；校验 <code>batch_size % (grad_accum_steps * device_count) == 0</code>；<span class="new"><code>resume_full: bool = False</code>（S4 追加）</span></td><td>S1，S4 追加一个字段</td></tr>
-<tr><td><code>scripts/training/train.py</code></td><td>S1：<code>train_step</code> K&gt;1 scan 分支，K==1 原路径；<code>main</code> 整除检查与横幅。<span class="new">S4：<code>main</code> 中 <code>--resume-full</code> 分支（读 <code>resume/</code>、恢复完整 train_state、把 <code>start_step</code> 传给 dataloader）与每次保存时写 <code>resume/</code></span></td><td>S1 → S4（串行）</td></tr>
+<tr><td><code>scripts/training/train.py</code></td><td>S1：<code>train_step</code> K&gt;1 scan 分支，K==1 原路径；<code>main</code> 整除检查与横幅。<span class="new">S4：<code>main</code> 中 <code>--resume-full</code> 分支（以 <code>resume=True</code> 调 <code>initialize_checkpoint_dir</code>、从 <code>resume/</code> 恢复完整 train_state、dataloader seed 换成 <code>seed + 1000003 × start_step</code>）与每次保存时写 <code>resume/</code></span></td><td>S1 → S4（串行）</td></tr>
 <tr><td><code>scripts/training/tests/test_grad_accum.py</code>（新）</td><td>V2、V3</td><td>S1</td></tr>
 <tr class="new"><td><code>src/openpi/training/checkpoints.py</code></td><td>新增 <code>save_resume_state</code> / <code>restore_resume_state</code>：完整 train_state 写 <code>&lt;run&gt;/resume/</code>（先写临时目录再原子改名，manifest 含 step 与 sha），只保留最新 1 份；不改现有 <code>save_state</code></td><td>S4</td></tr>
-<tr class="new"><td><code>src/mme_vla_suite/training/dataloader.py</code></td><td>sampler 支持 <code>start_index</code> 跳过已消费索引（只算索引，不读数据）</td><td>S4</td></tr>
-<tr class="new"><td><code>scripts/training/tests/test_resume_full.py</code>（新）</td><td>CPU 单测：resume manifest 完整性、sampler 跳过后索引序列与不中断一致</td><td>S4</td></tr>
+<tr class="new"><td><code>scripts/training/tests/test_resume_full.py</code>（新）</td><td>CPU 单测：resume manifest 完整性与原子改名、缺件时 fail-loud、旧 --resume/--overwrite 仍报错</td><td>S4</td></tr>
 <tr><td><code>src/mme_vla_suite/models/config/robomme/perceptual-framesamp-context-16frame-8x8.yaml</code>（新）</td><td>只改 <code>budget: 1024</code></td><td>S2</td></tr>
 <tr><td><code>src/mme_vla_suite/training/framesamp_dataset.py</code></td><td>context 放行集合加 (1024,64,1)</td><td>S2</td></tr>
 <tr><td><code>scripts/training/tests/test_ctx1024_guard.py</code>（新）</td><td>V5</td><td>S2</td></tr>
@@ -209,7 +221,7 @@ updates = tx.update(grads, ...)          # 每个优化步只更新一次
 <h2>二 训练链路逐跳表（第 18 条，改动前 / 后）</h2>
 <table>
 <tr><th>跳</th><th>改动前</th><th>改动后（K=2）</th><th>这一跳改数吗</th></tr>
-<tr><td>sampler → 索引序列</td><td>按 seed 从 0 开始</td><td>同左；<span class="new">续跑时从 <code>step × B</code> 处开始，序列不变</span></td><td>否</td></tr>
+<tr><td>sampler → 索引序列</td><td>按 seed 从 0 开始</td><td>同左；<span class="new">续跑时 seed 换成 <code>seed + 1000003 × start_step</code> 重新打乱</span></td><td>全新 run 否；续跑改序（用户口径）</td></tr>
 <tr><td>dataloader → host batch</td><td>[128, …]</td><td>同左</td><td>否</td></tr>
 <tr><td>host → device（FSDP4）</td><td>每卡 32</td><td>每卡 32</td><td>否</td></tr>
 <tr><td>micro 切分</td><td>无</td><td>[128] → [64,2] → swap → [2,64]，每卡每 micro 16</td><td>否（只重排）</td></tr>
@@ -224,13 +236,13 @@ updates = tx.update(grads, ...)          # 每个优化步只更新一次
 <tr><th>编号</th><th>目标</th><th>可写集合</th><th>禁触</th><th>接口契约</th><th>合并顺序</th><th>验收（环境）</th><th>资源</th></tr>
 <tr><td>G4C-S2</td><td>ctx1024 yaml + 守卫</td><td>新 yaml、<code>framesamp_dataset.py</code>、<code>test_ctx1024_guard.py</code></td><td>其余全部；<code>.agentmetarules/</code>、规则 md</td><td>无</td><td>1</td><td>V5：<code>UV_PROJECT_ENVIRONMENT=&lt;主 .venv&gt; PYTHONPATH=&lt;wt&gt;/src uv run --no-sync python -m pytest scripts/training/tests/test_ctx1024_guard.py -q</code></td><td>CPU</td></tr>
 <tr><td>G4C-S1</td><td>梯度累积</td><td><code>config.py</code>、<code>train.py</code>、<code>test_grad_accum.py</code></td><td>同上</td><td>CLI <code>--grad-accum-steps</code>，默认 1</td><td>2</td><td>V2、V3（CPU）</td><td>CPU</td></tr>
-<tr class="new"><td>G4C-S4</td><td>完整状态续跑</td><td><code>checkpoints.py</code>、<code>dataloader.py</code>、<code>train.py</code>（<code>main</code> 续跑与保存段）、<code>config.py</code>（只加 <code>resume_full</code>）、<code>test_resume_full.py</code></td><td>同上；<code>train_step</code> 不动</td><td>CLI <code>--resume-full</code>；<code>&lt;run&gt;/resume/manifest.json</code></td><td>3（从 S1 合并后的 HEAD 派出）</td><td>CPU 单测；V10 由主会话 P2b 跑</td><td>CPU</td></tr>
+<tr class="new"><td>G4C-S4</td><td>完整状态续跑</td><td><code>checkpoints.py</code>、<code>train.py</code>（<code>main</code> 续跑与保存段）、<code>config.py</code>（只加 <code>resume_full</code>）、<code>test_resume_full.py</code></td><td>同上；<code>train_step</code>、<code>src/openpi/training/data_loader.py</code> 不动</td><td>CLI <code>--resume-full</code>；<code>&lt;run&gt;/resume/manifest.json</code></td><td>3（从 S1 合并后的 HEAD 派出）</td><td>CPU 单测；V10 由主会话 P2b 跑</td><td>CPU</td></tr>
 <tr><td>G4C-S3</td><td>GL 入口与占位模板</td><td><code>scripts/training/gl/hold_4task_ctx.sbatch</code>、<code>run_in_hold_4task_ctx.sh</code></td><td>同上</td><td>调用 S1/S4 的 CLI 名（契约先行）</td><td>4</td><td><code>bash -n</code> + <code>DRY_RUN=1</code> 打印完整 train.py 命令行，grep <code>--fsdp-devices 4</code>、<code>--num-workers 8</code>、<code>--grad-accum-steps</code>、<code>--num-train-steps</code>、<code>RESUME=1</code> 时 <code>--resume-full</code></td><td>CPU</td></tr>
 <tr><td>主会话</td><td>下载 job、占位、P2b、Beta、冒烟、起跑、留档、放行登记</td><td><code>fetch_4task_trainset_cpu.sbatch</code>、<code>greatlakes.md</code> 项目节、<code>docs/training-doc/</code>、<code>current.json</code></td><td>—</td><td>—</td><td>—</td><td>V1、V4、V6–V10</td><td>2 份 4×A40 占位；1 个 standard CPU job；tmux <code>g4c-</code></td></tr>
 </table>
 
 <h2>四 闸门总表</h2>
-<p>V1–V5、V10 全 PASS 才打 Beta；V6 PASS 才能 P2b 与冒烟；V7 两条 PASS 才正式起跑（余量不足按 §2.5 同时补占位）；V8 任一缺失即停。</p>
+<p>V1–V5、V10（<code>RESUME_STATE</code>）全 PASS 才打 Beta；V6 PASS 才能 P2b 与冒烟；V7 两条 PASS 才正式起跑（余量不足按 §2.5 同时补占位）；V8 任一缺失即停。</p>
 
 <h2>五 runbook</h2>
 <pre>
@@ -283,7 +295,7 @@ tail -n +1 -F &lt;log&gt; | stdbuf -oL tr '\r' '\n' | grep --line-buffered -E "E
 <li>A40 上 context b128 累积 2 的步时与显存从未实测；ctx1024 步时连 A100 都只是内插。</li>
 <li>bucket 训练子集的精确字节数未列（本机 <code>hf buckets list -R</code> 未返回内容），由 CPU job 的 dry-run 给出。</li>
 <li>完整 train_state 单份体积未测（raw params + AdamW 两份矩估约为参数量 × 12～16 字节）。</li>
-<li>sampler 跳过的实现细节取决于 <code>dataloader.py</code> 现有 sampler 类型，S4 开工时先读。</li>
+<li>续跑后的样本顺序与不中断时不同（用户口径「只要求不重复样本」），续跑前后两段的样本分布只在统计上等价。</li>
 <li>modulation 对照 1024 @50k 是否取自 80k run 的第 50000 步，以 V11.89 记录为准，未再核 ckpt。</li>
 </ul>
 
