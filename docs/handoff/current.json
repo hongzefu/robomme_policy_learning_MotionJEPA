@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-12T08:57:18Z",
-    "america_new_york": "2026-11-12T03:57:18-05:00"
+    "utc": "2026-11-12T10:52:04Z",
+    "america_new_york": "2026-11-12T05:52:04-05:00"
   },
   "repo": {
     "branch": "v4.2-plswap-full",
@@ -2457,8 +2457,8 @@
         "sha": "d654df8"
       },
       "state": "running",
-      "state_changed_at": "2026-11-12T08:57:18Z",
-      "state_reason": "Beta af56267（commitV4.6.5Beta）已打并部署到 <GL_REPO>（detached、工作区干净）；训练库落 turbo TURBO_LIB=PASS；本机闸门 V1/V2/V3/V5/V10 PASS；等两份占位排到后跑 V4（GL）→ V7 冒烟 → 正式起跑。",
+      "state_changed_at": "2026-11-12T10:52:04Z",
+      "state_reason": "ctx512 正式训练 05:29:50 美东起跑（占位 65943150/gl1513，9.5 s/步，估 131 h）；V4 GRAD_ACCUM_BEHAVIOR=PASS、V7 SMOKE_GL=PASS（512）；ctx1024 占位 65943151 仍 PENDING。",
       "owner": {
         "session": "Claude Code 会话（sled-aspen，本仓库主检出）",
         "host": "sled-aspen"
@@ -2487,18 +2487,16 @@
       "long_tail": [],
       "running_handles": [
         {
+          "tmux": "g4c-train-512",
           "jobid": "65943150",
-          "name": "g4c-hold-512",
-          "spec": "spgpu 4xA40 16cpu 128G 192h",
-          "state": "PENDING",
-          "est_start": "2026-11-12T06:40:56（Slurm 估计，美东）"
+          "node": "gl1513",
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/v2-1600ep-m8x8-ctx-b128-50k-gl.log",
+          "done_line": "EXIT_CODE=0"
         },
         {
           "jobid": "65943151",
           "name": "g4c-hold-1024",
-          "spec": "spgpu 4xA40 16cpu 128G 336h",
-          "state": "PENDING",
-          "est_start": "同上"
+          "state": "PENDING"
         }
       ],
       "authorizations": [
@@ -2535,19 +2533,14 @@
       ],
       "next_steps": [
         {
-          "what": "占位排到后在 ctx512 占位跑 V4（K=1 对 K=2，全局 64）",
-          "command": "srun --jobid=65943150 --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=shared /usr/bin/env bash <GL_REPO>/v1-store/jobs/g4c-v4.sh 1；再 … g4c-v4.sh 2",
-          "verdict_line": "GRAD_ACCUM_BEHAVIOR=PASS steps=20 mean_loss_rel=<5% nonfinite=0"
+          "what": "ctx1024 占位排到后跑 20 步冒烟（V7），通过则正式起跑",
+          "command": "run_in_hold_4task_ctx.sh RUN_NAME=g4c-smoke-1024-<MMDDHHMM> MAX_STEPS=20 → RUN_NAME=v2-1600ep-m16x8x8-ctx-b128-50k-gl MAX_STEPS=50001",
+          "verdict_line": "SMOKE_GL=PASS tag=1024 …；est_total_h ≤ 0.9×hold_left_h"
         },
         {
-          "what": "两份占位各跑 20 步冒烟（V7）",
-          "command": "run_in_hold_4task_ctx.sh MAX_STEPS=20 RUN_NAME=g4c-smoke-<512|1024>-<MMDDHHMM>",
-          "verdict_line": "SMOKE_GL=PASS …"
-        },
-        {
-          "what": "正式起跑两条 50k",
-          "command": "见 docs/training-doc/<run>/launch.md",
-          "verdict_line": "step100 正常"
+          "what": "每 5000 步核 finite/进度/余量",
+          "command": "Monitor 盯两份日志",
+          "verdict_line": "TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10"
         }
       ]
     }

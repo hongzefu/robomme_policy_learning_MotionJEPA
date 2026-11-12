@@ -32,3 +32,11 @@ srun --jobid=65943150 --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmod
 - 产物：ckpt `<GL_REPO>/v1-store/train-runs/mme_vla_suite_b128_60k/v2-1600ep-m8x8-ctx-b128-50k-gl/{5000,…,50000}` 与 `resume/`（完整状态，只留最新 1 份，单份约 45 GiB）；日志 `<GL_REPO>/v1-store/logs/v2-1600ep-m8x8-ctx-b128-50k-gl.log`；指标 `<GL_REPO>/v1-store/train-records/v2-1600ep-m8x8-ctx-b128-50k-gl/attempt01/metrics.jsonl`。
 - 盯盘：`EXIT_CODE=`、`Step [0-9]+000:`、`RESOURCE_EXHAUSTED`、`Traceback`、`nan`、`Killed`、`=FAIL`。
 - tmux 会话清单（aspen）：`g4c-train-512`（正式）、`g4c-smoke-512`/`g4c-v4`（冒烟）。
+
+## 实际起跑（2026-11-12 美东）
+
+- 占位 65943150 于 04:53 在 gl1513 开始运行（4×A40）。
+- V4（实施中调整 A2）在本占位内、Beta `af56267` 上跑：K=1 全局 64（每卡 16）对 K=2 全局 64（每卡 8）各 20 步，平均 loss 0.45149 / 0.44971，`GRAD_ACCUM_BEHAVIOR=PASS steps=20 mean_loss_rel=0.0039 nonfinite=0`。
+- V7 冒烟 `g4c-smoke-512-11120516`（20 步，全局 128 = 每卡 16 × 累积 2）：第 11→19 步每步约 9.4 s，EMA 保存阻塞 8.68 s，`resume/` 阻塞 15.31 s、含 sha256 全程约 4 min，`EXIT_CODE=0`；`SMOKE_GL=PASS tag=512 micro=16 k=2 s_per_step=9.4 est_total_h=130.6 hold_left_h=191.5 nonfinite=0`（显存峰值因 XLA 预分配 95% 无法由 nvidia-smi 读准，只确认未 OOM）。
+- 正式训练 05:29:50 起跑（aspen tmux `g4c-train-512`），前置判定行原文：`CLEAN_HEAD=PASS sha=af56267c7dae53415ed526d902d3f829c60ce076`、`DATA_LINEAGE=NA encoder=none motion_enabled=false vla_input_pin=655e64b4fd033aea1ff79a1e5ad47f886a148592496759ed2a667fe167c57d86`、`PAIRED_RUNS_SAME_LIB=PASS pin=655e64b4…`、`PRECHECK=PASS resume=0`。
+- Step 0 loss 0.5297，Step 100 loss 0.2071；05:51 进度 100/50k、9.5 s/步、tqdm 估计剩余 131 h。
