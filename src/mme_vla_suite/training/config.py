@@ -387,6 +387,10 @@ class TrainConfig:
     seed: int = 42
     # Global batch size.
     batch_size: int = 32
+    # 梯度累积步数 K（CLI：--grad-accum-steps）。K=1 走原单步路径、语义逐位不变；
+    # K>1 时把全局 batch 按样本 i::K 切成 K 个 micro，逐个求梯度按 1/K 累加（fp32），
+    # 只做一次优化器更新与 EMA 更新。要求 batch_size % (K * 设备数) == 0。
+    grad_accum_steps: int = 1
     # Number of workers to use for the data loader. Increasing this number will speed up data loading but
     # will increase memory and CPU usage.
     num_workers: int = 2

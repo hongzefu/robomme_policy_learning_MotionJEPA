@@ -535,6 +535,58 @@ def init_train_state(
     return train_state, state_sharding
 
 
+def split_microbatches(batch, k: int):
+    """把 batch 每个叶子按样本 i::k 切成 k 个 micro，返回叶子形状 (k, B//k, ...) 的同结构树。
+
+    做法是 x.reshape(m, k, ...).swapaxes(0, 1)：第 i 个 micro 恰好是样本 i, i+k, i+2k, …。
+    不能用 x.reshape(k, m, ...)——那会让第 0 个 micro 只取前一半样本，在按 dim0 数据轴
+    切分的多卡上只落在前一半卡上；i::k 切法让每个 micro 在每张卡上各占 B/(k*设备数) 个样本。
+    """
+    def _split(x):
+        b = x.shape[0]
+        if b % k != 0:
+            raise ValueError(f"batch 维 {b} 不能被梯度累积步数 {k} 整除")
+        return x.reshape(b // k, k, *x.shape[1:]).swapaxes(0, 1)
+
+    return jax.tree.map(_split, batch)
+
+
+def accumulate_microbatch_grads(loss_and_grad_fn, micro_batches, k: int, *, micro_constrain=None, grad_constrain=None):
+    """用 jax.lax.scan（不展开）对 k 个 micro 依次求 (loss, grads)，两者都按 1/k 以 fp32 累加。
+
+    loss_and_grad_fn(i, micro) -> (loss, grads)，i 为 micro 序号（int32 标量），micro 为单个 micro 的树；
+    micro_batches 为 split_microbatches 的输出（叶子首维为 k）。
+    micro_constrain：可选，对每个 micro 施加分片约束（保持按数据轴均分）。
+    grad_constrain：可选，对累加器施加分片约束（与参数 FSDP 分片一致，避免 fp32 累加器被复制到每张卡）。
+    返回 (k 个 micro loss 的平均, 累积梯度)；累积梯度最后转回单次梯度的原 dtype。
+    """
+    first = jax.tree.map(lambda x: x[0], micro_batches)
+    if micro_constrain is not None:
+        first = micro_constrain(first)
+    _, grad_shape = jax.eval_shape(loss_and_grad_fn, jnp.int32(0), first)
+    inv_k = 1.0 / k
+
+    def _constrain(g):
+        return grad_constrain(g) if grad_constrain is not None else g
+
+    def body(carry, xs):
+        loss_acc, grad_acc = carry
+        i, micro = xs
+        if micro_constrain is not None:
+            micro = micro_constrain(micro)
+        loss, grads = loss_and_grad_fn(i, micro)
+        loss_acc = loss_acc + loss.astype(jnp.float32) * inv_k
+        grad_acc = jax.tree.map(lambda a, g: a + g.astype(jnp.float32) * inv_k, grad_acc, grads)
+        return (loss_acc, _constrain(grad_acc)), None
+
+    init_grads = _constrain(jax.tree.map(lambda s: jnp.zeros(s.shape, jnp.float32), grad_shape))
+    init = (jnp.zeros((), jnp.float32), init_grads)
+    (loss, grads), _ = jax.lax.scan(body, init, (jnp.arange(k, dtype=jnp.int32), micro_batches))
+    grads = jax.tree.map(lambda g, s: g.astype(s.dtype), grads, grad_shape)
+    return loss, grads
+
+
+
 @at.typecheck
 def train_step(
     config: _config.TrainConfig,
@@ -562,9 +614,37 @@ def train_step(
 
     # Filter out frozen params.
     diff_state = nnx.DiffState(0, config.trainable_filter)
-    loss, grads = nnx.value_and_grad(
-        loss_fn, argnums=diff_state
-    )(model, train_rng, observation, actions)
+    grad_accum_steps = int(getattr(config, "grad_accum_steps", 1))
+    if grad_accum_steps == 1:
+        # K == 1：原单步路径，一字未改（与引入梯度累积前逐位一致）。
+        loss, grads = nnx.value_and_grad(
+            loss_fn, argnums=diff_state
+        )(model, train_rng, observation, actions)
+    else:
+        # K > 1：按样本 i::K 切 micro，scan 内逐个求梯度、fp32 按 1/K 累加，只更新一次。
+        # model 在 scan 外拆成 graphdef/state，body 内 merge，避免跨 trace 层改写 nnx Variable。
+        model_graphdef, model_state = nnx.split(model)
+        mesh = sharding._MeshState.active_mesh  # noqa: SLF001
+
+        def micro_loss_and_grad(i, micro):
+            micro_model = nnx.merge(model_graphdef, model_state)
+            micro_obs, micro_actions = micro
+            return nnx.value_and_grad(loss_fn, argnums=diff_state)(
+                micro_model, jax.random.fold_in(train_rng, i), micro_obs, micro_actions
+            )
+
+        def grad_constrain(g):
+            if mesh is None:
+                return g
+            return jax.lax.with_sharding_constraint(g, sharding.fsdp_sharding(g, mesh))
+
+        loss, grads = accumulate_microbatch_grads(
+            micro_loss_and_grad,
+            split_microbatches((observation, actions), grad_accum_steps),
+            grad_accum_steps,
+            micro_constrain=sharding.activation_sharding_constraint,
+            grad_constrain=grad_constrain,
+        )
 
     params = state.params.filter(config.trainable_filter)
     updates, new_opt_state = state.tx.update(grads, state.opt_state, params)
@@ -628,9 +708,12 @@ def main(config: _config.TrainConfig):
     if not config.model.use_history:
         raise ValueError("正式训练必须启用 --model.use-history")
 
-    if config.batch_size % jax.device_count() != 0:
+    if config.grad_accum_steps < 1:
+        raise ValueError(f"梯度累积步数 --grad-accum-steps 必须 >= 1，当前为 {config.grad_accum_steps}")
+    if config.batch_size % (config.grad_accum_steps * jax.device_count()) != 0:
         raise ValueError(
-            f"Batch size {config.batch_size} must be divisible by the number of devices {jax.device_count()}."
+            f"全局 batch_size={config.batch_size} 必须能被 梯度累积步数 {config.grad_accum_steps} × "
+            f"设备数 {jax.device_count()} 整除"
         )
 
     jax.config.update(
@@ -645,6 +728,9 @@ def main(config: _config.TrainConfig):
     mesh_shape = {str(axis): int(size) for axis, size in mesh.shape.items()}
     print(f"TRAIN_MESH shape={tuple(mesh_shape.values())} devices={jax.device_count()} "
           f"fsdp_devices={config.fsdp_devices} batch_size={config.batch_size} num_workers={config.num_workers}", flush=True)
+    micro_per_device = config.batch_size // (config.grad_accum_steps * jax.device_count())
+    print(f"TRAIN_GRAD_ACCUM grad_accum_steps={config.grad_accum_steps} "
+          f"micro_batch_per_device={micro_per_device} global_batch={config.batch_size}", flush=True)
     if os.environ.get("TRAIN_RECORD_DIR"):
         runtime_path = pathlib.Path(os.environ["TRAIN_RECORD_DIR"]) / "runtime.json"
         runtime_path.parent.mkdir(parents=True, exist_ok=True)
