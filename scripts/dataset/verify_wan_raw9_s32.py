@@ -89,6 +89,15 @@ def load_members(path: pathlib.Path) -> dict[str, str]:
     return members
 
 
+_MEMBERS: dict[str, str] = {}
+
+
+def _init_worker(members: dict[str, str]) -> None:
+    """Pool initializer：成员摘要字典每个 worker 只接收一次，不随每个段任务 pickle。"""
+    global _MEMBERS
+    _MEMBERS = members
+
+
 def check_segment(job: dict) -> dict:
     """独立比对一段：源成员摘要 → 偶数 m 选取 → 表第 row_base+m' 行与源第 m 个 chunk 逐字节相等。"""
     root = pathlib.Path(job["latents_root"])
@@ -97,7 +106,7 @@ def check_segment(job: dict) -> dict:
     data = (root / f"{key}.bin").read_bytes()
     meta_bytes = (root / f"{key}.metadata.json").read_bytes()
     for name, b in ((f"{key}.bin", data), (f"{key}.metadata.json", meta_bytes)):
-        if job["members"].get(ARC_PREFIX + name) != hashlib.sha256(b).hexdigest():
+        if _MEMBERS.get(ARC_PREFIX + name) != hashlib.sha256(b).hexdigest():
             problems.append(f"{name} sha256 与成员清单不符")
     meta = json.loads(meta_bytes.decode("utf-8"))
     rows_meta = meta.get("rows") or []
@@ -185,11 +194,11 @@ def main() -> None:
     # 三、逐段逐字节比对
     jobs = [{"key": w[seg]["key"], "row_base": w[seg]["row_base"], "num_grid": w[seg]["num_grid"],
              "seg_start": w[seg]["seg_start"], "latents_root": str(latents_root),
-             "table": str(table_root / ms.MOTION_TABLE_RELPATH), "num_rows": meta.num_rows, "members": members}
+             "table": str(table_root / ms.MOTION_TABLE_RELPATH), "num_rows": meta.num_rows}
             for w in want for seg in ("demo", "exec") if w[seg]["num_grid"]]
     mismatch = 0
     padded = 0
-    with mp.Pool(args.workers) as pool:
+    with mp.Pool(args.workers, initializer=_init_worker, initargs=(members,)) as pool:
         for res in pool.imap(check_segment, jobs, chunksize=1):
             if res["problems"]:
                 index_mismatch += len(res["problems"])
