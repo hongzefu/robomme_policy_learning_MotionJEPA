@@ -692,17 +692,34 @@ def train_step(
     return new_state, info
 
 
+# 续跑时 dataloader 种子的步号乘子（大质数）：seed_effective = seed + 1000003 * start_step。
+# 续跑只要求不重复样本、不要求与不中断同序；全新 run（start_step=0）种子即 config.seed，序列与原来逐位一致。
+RESUME_SEED_STRIDE = 1000003
+
+
+def resume_effective_seed(seed: int, start_step: int) -> int:
+    return int(seed) + RESUME_SEED_STRIDE * int(start_step)
+
+
+def check_resume_flags(config) -> None:
+    """续跑相关开关的 fail-loud 护栏（早于权重加载与 JIT）。"""
+    # checkpoint 只存 EMA 权重、不存优化器状态，续跑会丢 AdamW 动量并把 warmup
+    # 从头再爬一遍，故一律禁用两个开关（沿袭 prod_train_once.py 的护栏，v5.0 迁入）。
+    # 完整续跑走 --resume-full（resume/ 存完整 train_state）。
+    if config.overwrite or config.resume:
+        raise ValueError("本入口禁用 --overwrite / --resume：续跑语义有损"
+                         "（checkpoint 只存 EMA，丢 AdamW 动量与 warmup 计数）；完整续跑请用 --resume-full")
+    if getattr(config, "resume_full", False) and config.resum_ckpt_id is not None:
+        raise ValueError("--resume-full 不得与 --resum-ckpt-id 同用：完整续跑的起点只取 resume/manifest.json 的 step")
+
+
 def main(config: _config.TrainConfig):
     init_logging()
     logging.info(f"Running on: {platform.node()}")
     logging.info(f"TrainConfig: {config}")
 
     # ── fail-loud 护栏（早于权重加载与 JIT）─────────────────────────────
-    # checkpoint 只存 EMA 权重、不存优化器状态，续跑会丢 AdamW 动量并把 warmup
-    # 从头再爬一遍，故一律禁用两个开关（沿袭 prod_train_once.py 的护栏，v5.0 迁入）。
-    if config.overwrite or config.resume:
-        raise ValueError("本入口禁用 --overwrite / --resume：续跑语义有损"
-                         "（checkpoint 只存 EMA，丢 AdamW 动量与 warmup 计数）")
+    check_resume_flags(config)
     # HistoryPi0.__init__ 的 else 分支（# safe setting）会静默训出不含记忆分支的
     # 模型且全链路零告警，这是唯一的「静默」失败模式，必须 fail-loud。
     if not config.model.use_history:
@@ -751,9 +768,22 @@ def main(config: _config.TrainConfig):
         config.checkpoint_dir,
         keep_period=config.keep_period,
         overwrite=config.overwrite,
-        resume=config.resume,
+        # --resume-full 内部以 resume=True 放行已存在的 run 目录
+        resume=config.resume or config.resume_full,
     )
-    init_wandb(config, resuming=resuming, enabled=config.wandb_enabled)
+    resume_fields = _checkpoints.resume_config_fields(config)
+    resume_manifest = None
+    data_seed = config.seed
+    if config.resume_full:
+        # 先读并校验 manifest（缺件 / sha256 / 关键字段不一致即 fail-loud），据其 step 定 dataloader 种子
+        resume_manifest = _checkpoints.read_resume_manifest(config.checkpoint_dir, expected_config=resume_fields)
+        data_seed = resume_effective_seed(config.seed, resume_manifest["step"])
+        # 完整续跑不走旧 restore_state / resum_ckpt_id 那套
+        resuming = False
+        wandb_resuming = (config.checkpoint_dir / "wandb_id.txt").exists()
+    else:
+        wandb_resuming = resuming
+    init_wandb(config, resuming=wandb_resuming, enabled=config.wandb_enabled)
     final_record_handle = None
     if os.environ.get("TRAIN_FINAL_RECORD_DIR"):
         import final_record
@@ -785,7 +815,7 @@ def main(config: _config.TrainConfig):
         action_horizon=config.model.action_horizon,
         batch_size=config.batch_size,
         num_workers=config.num_workers,
-        seed=config.seed
+        seed=data_seed,  # 全新 run 即 config.seed；--resume-full 为 seed + 1000003 * start_step
     )
     data_iter = iter(data_loader)
     batch = next(data_iter)
@@ -813,6 +843,22 @@ def main(config: _config.TrainConfig):
         config, init_rng, mesh, resume=resuming
     )
     jax.block_until_ready(train_state)
+    if config.resume_full:
+        # 以初始化得到的 shape/dtype/sharding 为目标还原完整 train_state；先释放初始化副本再读盘
+        target_state = jax.tree.map(
+            lambda x: jax.ShapeDtypeStruct(x.shape, x.dtype, sharding=x.sharding), train_state
+        )
+        del train_state
+        train_state, resume_manifest = _checkpoints.restore_resume_state(
+            config.checkpoint_dir, target_state, expected_config=resume_fields, manifest=resume_manifest
+        )
+        saved_rng = resume_manifest.get("rng")
+        if saved_rng is not None:
+            current = np.asarray(jax.random.key_data(train_rng)).astype(np.uint32).tolist()
+            if saved_rng["key_data"] != current:
+                raise ValueError(f"resume manifest 的训练 rng {saved_rng['key_data']} 与当前 seed 推出的 {current} 不一致")
+        print(f"RESUME_FULL step={int(train_state.step)} seed_effective={data_seed}", flush=True)
+        logging.info(f"RESUME_FULL step={int(train_state.step)} seed_effective={data_seed}")
     logging.info(
         f"Initialized train state:\n{training_utils.array_tree_to_info(train_state.params.filter(nnx.All(nnx.Param)))}"
     )
@@ -877,6 +923,11 @@ def main(config: _config.TrainConfig):
                             write_stage2_pre_save_reference(reference_root, config, train_state,
                                                            reference_observation, step=step)
                         _checkpoints.save_state(checkpoint_manager, train_state, data_loader, step)
+                        # 同一保存点写完整续跑状态；此刻 train_state.step == step + 1（续跑首步）
+                        _checkpoints.save_resume_state(
+                            config.checkpoint_dir, train_state, step + 1,
+                            config_fields=resume_fields, rng=train_rng,
+                        )
                         if final_record_handle is not None and step == config.num_train_steps - 1:
                             final_record.finish(final_record_handle, train_state, infos, step)
     finally:
