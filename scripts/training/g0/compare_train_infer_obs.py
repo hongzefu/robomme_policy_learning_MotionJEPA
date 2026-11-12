@@ -35,6 +35,13 @@ L4 判定口径（用户 2026-09-14 已裁决）：
 `wan_raw9.flatten_raw9(mstore.rows([r])[0])`（(9,16384)，与在线 `_history_feats_motion[f]` 同形），sidecar 档按 raw9 kind
 构造 `MotionEncoderClient`；记忆长度闸的 motion 部分按 token 数 budget × tokens_per_window 计（与 `wan_raw9.motion_token_budget` 同式；
 旧 YAML 缺省 1，即原值）。
+
+`--h5-root` / `--episode-map-dir`（闸 G5；本机无合并后的整任务 H5 时用）：经 `record_dataset_<task>_episode_map.json`
+把 (h5_file, raw_ep_idx=new_idx) 定位到单 episode H5（`<h5-root>/<member>`，顶层组 `src_group`，即合并 H5 的 `episode_<new_idx>`），
+核 timestep_count / h5_bytes / h5_sha256 后读帧；不给时合并 H5 读法不变。给 --h5-root 而不给 --episodes 时，从本机已有的单 episode H5
+按任务名轮转取 5 个互异 es（每个任务取其未占用 es 中最小者，同 (任务, es) 取 T 最长——DEFAULT_EPISODES「各 es 取 T 最长」口径），
+本机覆盖不足时按同一规则用全库清单补齐并打印缺失的 `H5_EPISODE {...}` 行（含 tar_object/member/h5_sha256/h5_bytes），非零退出。
+`--dry-run`：只打印选中 episodes、`H5_COVERAGE=` 与 `DRY_RUN episodes=<n> complete=yes|no episodes_arg=<...>`，不建 policy、不用 GPU。
 """
 
 from __future__ import annotations
@@ -74,15 +81,22 @@ MAX_STEPS = 1300              # examples/robomme/eval.py::Args.max_steps（与 e
 # ─────────────────────────── 通用小工具（派生自 compare_siglip_replay.py） ───────────────────────────
 
 
-def load_episode_full(raw_dir: pathlib.Path, h5_file: str, raw_ep_idx: int, T: int, n_read: int):
+def load_episode_full(raw_dir: pathlib.Path, h5_file: str, raw_ep_idx: int, T: int, n_read: int,
+                      single: dict | None = None):
     """读 h5 一集的前 n_read 帧（front_rgb / wrist_rgb / joint+gripper）与 setup/task_goal 原文。
 
     仍先核对整集 timestep 数与清单一致（n_read 只裁读取量，不放宽一致性校验）。
+    ``single``（给出 --h5-root 时）为 ``plan_episodes`` 已核过 h5_bytes / h5_sha256 的单 episode H5：
+    ``{"path": 绝对路径, "src_group": 顶层组名}``；该组即 merge_v2_h5.py 拷进合并 H5 的 ``episode_<new_idx>``
+    （``source.copy(src_group, target, name=f"episode_{new_idx}")``），组内结构逐项相同。不给时按合并 H5 读。
     """
     import h5py
     frames, wrists, states = [], [], []
-    with h5py.File(raw_dir / h5_file, "r") as f:
-        g = f[f"episode_{raw_ep_idx}"]
+    path, group = (raw_dir / h5_file, f"episode_{raw_ep_idx}") if single is None else (single["path"], single["src_group"])
+    with h5py.File(path, "r") as f:
+        if single is not None and list(f) != [group]:
+            raise SystemExit(f"错误: 单 episode H5 顶层组 {list(f)} != [{group!r}]: {path}")
+        g = f[group]
         ts_ids = sorted(int(k.split("_")[-1]) for k in g.keys() if k.startswith("timestep_"))
         if len(ts_ids) != T or ts_ids != list(range(T)):
             raise SystemExit(f"错误: {h5_file} episode_{raw_ep_idx} timesteps {len(ts_ids)} != 清单 {T}")
@@ -299,6 +313,177 @@ def build_points(picked: list[dict], max_points: int) -> list[dict]:
     return out
 
 
+# ─────────────────────────── 单 episode H5（--h5-root / --episode-map-dir） ───────────────────────────
+# 读法与 compare_online_raw9.py 同：map 行 new_idx == 清单 raw_ep_idx，member 相对 --h5-root，核 h5_bytes / h5_sha256。
+
+N_ES = 5                      # 需覆盖的 es 取值个数（DEFAULT_EPISODES 口径：5 个互异 es，各取 T 最长一集）
+MAP_ROW_KEYS = ("task", "difficulty", "episode", "seed", "role", "member", "h5_sha256", "h5_bytes",
+                "timestep_count", "new_idx", "src_group")
+
+
+def _task_of(h5_file: str) -> str:
+    return h5_file.removeprefix("record_dataset_").removesuffix(".h5")
+
+
+def load_map_rows(map_dir: pathlib.Path, task: str) -> dict[int, dict]:
+    """读 merge_v2_h5.py 写出的 record_dataset_<task>_episode_map.json，按 new_idx 建索引（只收 primary 行）。"""
+    path = map_dir / f"record_dataset_{task}_episode_map.json"       # 与 merge_v2_h5.py::map_path 同名
+    if not path.is_file():
+        raise SystemExit(f"错误: 找不到 episode map: {path}")
+    rows = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(rows, list):
+        raise SystemExit(f"错误: episode map 不是行列表: {path}")
+    out: dict[int, dict] = {}
+    for r in rows:
+        missing = [k for k in MAP_ROW_KEYS if k not in r]
+        if missing:
+            raise SystemExit(f"错误: episode map 行缺键 {missing}: {path}")
+        if r["role"] != "primary" or r["task"] != task:
+            continue
+        if int(r["new_idx"]) in out:
+            raise SystemExit(f"错误: episode map new_idx 重复: task={task} new_idx={r['new_idx']}")
+        out[int(r["new_idx"])] = r
+    return out
+
+
+def tar_object(row: dict) -> str:
+    """h5 bucket 里 primary episode 所在的 tar.xz 对象（与 compare_online_raw9.py::tar_object 同式）。"""
+    return f"record_dataset_{row['task']}_{row['difficulty']}.h5.tar.xz"
+
+
+def _sha256_file(path: pathlib.Path) -> str:
+    import hashlib
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(8 << 20), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
+def _local_ok(h5_root: pathlib.Path, row: dict) -> bool:
+    """本机是否有该单 episode H5（存在且字节数与 map 相等；sha256 在选定后再核）。"""
+    p = h5_root / row["member"]
+    return p.is_file() and p.stat().st_size == int(row["h5_bytes"])
+
+
+def _round_robin(cands: list[dict], n: int, taken_es: set[int]) -> list[dict]:
+    """按任务名轮转，每轮每个任务取其未占用 es 中最小的一个（同 (任务, es) 取 T 最长、再取 g 最小），直到 n 个。"""
+    best: dict[tuple[str, int], dict] = {}
+    for e in cands:
+        k = (_task_of(e["h5_file"]), int(e["exec_start_idx"]))
+        cur = best.get(k)
+        if cur is None or (int(e["num_timesteps"]), -int(e["global_episode_idx"])) > (
+                int(cur["num_timesteps"]), -int(cur["global_episode_idx"])):
+            best[k] = e
+    per_task: dict[str, list[dict]] = {}
+    for (task, es), e in sorted(best.items()):
+        per_task.setdefault(task, []).append(e)
+    out, taken = [], set(taken_es)
+    while len(out) < n:
+        progressed = False
+        for task in sorted(per_task):
+            if len(out) >= n:
+                break
+            queue = per_task[task]
+            while queue and int(queue[0]["exec_start_idx"]) in taken:
+                queue.pop(0)
+            if queue:
+                e = queue.pop(0)
+                taken.add(int(e["exec_start_idx"]))
+                out.append(e)
+                progressed = True
+        if not progressed:
+            break
+    return out
+
+
+def episodes_arg(picked: list[dict]) -> str:
+    return ",".join(f"{_task_of(e['h5_file'])}:{int(e['raw_ep_idx'])}" for e in picked)
+
+
+def plan_episodes(manifest: dict, episodes: str | None, h5_root: pathlib.Path | None,
+                  map_dir: pathlib.Path | None, verify_sha: bool = True) -> dict:
+    """定下要跑的 episodes 与各自的帧来源。
+
+    不给 h5_root：``resolve_episodes(manifest, episodes or DEFAULT_EPISODES)``，合并 H5 读法不变。
+    给 h5_root：显式 episodes 照用；否则在本机已有的单 episode H5 中按 ``_round_robin`` 选 N_ES 个互异 es，
+    不足时用全库清单按同一规则补齐，补上的即缺失项。选中项逐个核 map timestep_count、h5_bytes、h5_sha256。
+    返回 {picked, source, single: {(h5_file, raw): {"path","src_group"}}, missing: [map 行+清单字段], arg}。
+    """
+    if h5_root is None:
+        picked, source = resolve_episodes(manifest, episodes or DEFAULT_EPISODES)
+        return {"picked": picked, "source": source, "single": None, "missing": [], "arg": episodes_arg(picked)}
+    if map_dir is None:
+        raise SystemExit("错误: 给出 --h5-root 时必须同时给 --episode-map-dir")
+    tasks = sorted({_task_of(e["h5_file"]) for e in manifest["episodes"]})
+    maps = {t: load_map_rows(map_dir, t) for t in tasks}
+
+    def row_of(e: dict) -> dict:
+        r = maps[_task_of(e["h5_file"])].get(int(e["raw_ep_idx"]))
+        if r is None:
+            raise SystemExit(f"错误: episode map 缺行 task={_task_of(e['h5_file'])} new_idx={e['raw_ep_idx']}")
+        return r
+
+    if episodes:
+        picked, source = resolve_episodes(manifest, episodes)
+    else:
+        local = [e for e in manifest["episodes"]
+                 if int(e["raw_ep_idx"]) in maps[_task_of(e["h5_file"])] and _local_ok(h5_root, row_of(e))]
+        picked = _round_robin(local, N_ES, set())
+        n_local = len(picked)
+        if n_local < N_ES:
+            picked += _round_robin([e for e in manifest["episodes"] if int(e["raw_ep_idx"]) in maps[_task_of(e["h5_file"])]],
+                                   N_ES - n_local, {int(e["exec_start_idx"]) for e in picked})
+        picked = sorted(picked, key=lambda e: int(e["exec_start_idx"]))
+        source = (f"auto-h5(本机单 episode H5 {len(local)} 集，按任务轮转取 {N_ES} 个互异 es、同 es 取 T 最长；"
+                  f"本机覆盖 {n_local}/{N_ES})")
+    single: dict = {}
+    missing: list[dict] = []
+    for e in picked:
+        r = row_of(e)
+        if int(r["timestep_count"]) != int(e["num_timesteps"]):
+            raise SystemExit(f"错误: map timestep_count {r['timestep_count']} != 清单 {e['num_timesteps']}: {r['member']}")
+        if not _local_ok(h5_root, r):
+            missing.append({"task": r["task"], "raw_ep_idx": int(e["raw_ep_idx"]), "g": int(e["global_episode_idx"]),
+                            "es": int(e["exec_start_idx"]), "T": int(e["num_timesteps"]),
+                            **{k: r[k] for k in ("difficulty", "episode", "member", "h5_sha256", "h5_bytes")},
+                            "tar_object": tar_object(r)})
+            continue
+        path = h5_root / r["member"]
+        if verify_sha:
+            got = _sha256_file(path)
+            if got != r["h5_sha256"]:
+                raise SystemExit(f"错误: H5 sha256 不符: {path} {got} != {r['h5_sha256']}")
+        single[(e["h5_file"], int(e["raw_ep_idx"]))] = {"path": path, "src_group": r["src_group"], "member": r["member"]}
+    return {"picked": picked, "source": source, "single": single, "missing": missing, "arg": episodes_arg(picked)}
+
+
+def report_plan(plan: dict, raw_dir: pathlib.Path) -> bool:
+    """打印选中 episodes、缺失的 H5_EPISODE 行与齐全判定；返回是否齐全。"""
+    single = plan["single"]
+    for e in plan["picked"]:
+        key = (e["h5_file"], int(e["raw_ep_idx"]))
+        rec = {"task": _task_of(e["h5_file"]), "raw_ep_idx": key[1], "g": int(e["global_episode_idx"]),
+               "es": int(e["exec_start_idx"]), "T": int(e["num_timesteps"])}
+        if single is None:
+            rec.update(source="merged-h5", path=str(raw_dir / e["h5_file"]), present=(raw_dir / e["h5_file"]).is_file())
+        else:
+            hit = single.get(key)
+            rec.update(source="single-h5", member=hit["member"] if hit else None, present=hit is not None)
+        print("EPISODE " + json.dumps(rec, ensure_ascii=False))
+    for m in plan["missing"]:
+        print("H5_EPISODE " + json.dumps(m, ensure_ascii=False))
+    if single is None:
+        complete = all((raw_dir / e["h5_file"]).is_file() for e in plan["picked"])
+    else:
+        complete = not plan["missing"]
+    print(f"H5_COVERAGE={'COMPLETE' if complete else 'MISSING'} mode={'merged' if single is None else 'single'} "
+          f"episodes={len(plan['picked'])} es={sorted(int(e['exec_start_idx']) for e in plan['picked'])} "
+          f"missing={len(plan['missing'])} episodes_arg={plan['arg']}")
+    print(f"EPISODES_SOURCE {plan['source']}")
+    return complete
+
+
 # ─────────────────────────── 主流程 ───────────────────────────
 
 
@@ -311,7 +496,12 @@ def main() -> int:
     ap.add_argument("--store-subdir", choices=("framesamp", "framesamp-8x8"), default="framesamp")
     ap.add_argument("--motion-subdir", default="motion", help="运动表子目录（默认 motion；wan_raw9 为 motion-wan-raw9-s32）")
     ap.add_argument("--norm-stats", type=pathlib.Path, help="训练启动时显式指定的 norm_stats 文件")
-    ap.add_argument("--episodes", default=DEFAULT_EPISODES, help="逗号分隔的 <task>:<raw_ep_idx>，需覆盖 5 个 es 取值")
+    ap.add_argument("--episodes", default=None,
+                    help="逗号分隔的 <task>:<raw_ep_idx>，需覆盖 5 个 es 取值；不给时：无 --h5-root 用 DEFAULT_EPISODES，"
+                         "有 --h5-root 从本机已有单 episode H5 自动选")
+    ap.add_argument("--h5-root", default=None, help="单 episode H5 根（map 行 member 相对它）；不给则读清单 raw_dir 下的合并 H5")
+    ap.add_argument("--episode-map-dir", default=None, help="record_dataset_<task>_episode_map.json 所在目录（--h5-root 必需）")
+    ap.add_argument("--dry-run", action="store_true", help="只打印选中的 episodes 与 H5 是否齐全，不建 policy、不用 GPU")
     ap.add_argument("--motion", choices=("store", "sidecar"), default="store",
                     help="运动路来源：store=从 MotionStore 查表；sidecar=S 臂用真 MotionEncoderClient 现算")
     ap.add_argument("--motion-gpu", default=None, help="sidecar 子进程的 CUDA_VISIBLE_DEVICES（物理卡号，必须显式指定）")
@@ -328,6 +518,18 @@ def main() -> int:
     run_root = ckpt_dir.parent
     noise_seeds = [int(s) for s in args.noise_seeds.split(",")]
     os.environ["MMEVLA_MOTION_STORE"] = str(lib / args.motion_subdir)     # 快照 store_path 记的是 40ep，必须显式覆盖
+    h5_root = pathlib.Path(args.h5_root).resolve() if args.h5_root else None
+    map_dir = pathlib.Path(args.episode_map_dir).resolve() if args.episode_map_dir else None
+    manifest0 = json.load(open(lib / "meta" / "episode_manifest.json", encoding="utf-8"))
+    plan = plan_episodes(manifest0, args.episodes, h5_root, map_dir)
+    if args.dry_run or h5_root is not None:
+        complete = report_plan(plan, pathlib.Path(manifest0["raw_dir"]))
+        if args.dry_run:
+            print(f"DRY_RUN episodes={len(plan['picked'])} complete={'yes' if complete else 'no'} episodes_arg={plan['arg']}")
+            return 0 if complete else 1
+        if not complete:
+            print("错误: 单 episode H5 不齐，见上方 H5_EPISODE 行（补下后重跑）")
+            return 1
 
     import einops
     import jax
@@ -353,6 +555,9 @@ def main() -> int:
     V = Verdict()
     rec: dict = {"argv": sys.argv, "lib": str(lib), "ckpt": str(ckpt_dir), "train_config": args.train_config,
                  "motion": args.motion, "noise_seeds": noise_seeds, "max_points": args.max_points}
+    if h5_root is not None:
+        rec["h5_source"] = {"h5_root": str(h5_root), "episode_map_dir": str(map_dir), "episodes_arg": plan["arg"],
+                            "members": [v["member"] for v in plan["single"].values()]}
 
     # ── 生产口径 policy（B 臂编码器 + transforms + norm_stats 全部来自 checkpoint）──────────────────
     t0 = time.perf_counter()
@@ -410,7 +615,7 @@ def main() -> int:
           f"dtypes={sorted({str(x.dtype) for x in jax.tree.leaves(nnx.state(tokA.img))})}")
 
     # ── 决策时刻清单：脚本独立生成，随后与 FrameSampDataset 的 (g,t) 存在性逐点核对 ───────────────
-    picked, ep_source = resolve_episodes(manifest, args.episodes)
+    picked, ep_source = plan["picked"], plan["source"]
     eps = build_points(picked, args.max_points)
     n_points = sum(len(e["taus"]) for e in eps)
     entries = ds_raw._motion_entries
@@ -618,7 +823,9 @@ def main() -> int:
                 return np.asarray(_motion_row(_f2row[int(start_frame)]), dtype=np.float32)
 
             n_read = min(T, taus[-1] + 1)
-            frames, wrists, states, task_goal = load_episode_full(raw_dir, ep["h5_file"], ep["raw_ep_idx"], T, n_read)
+            frames, wrists, states, task_goal = load_episode_full(raw_dir, ep["h5_file"], ep["raw_ep_idx"], T, n_read,
+                                                                  single=None if plan["single"] is None else
+                                                                  plan["single"][(ep["h5_file"], ep["raw_ep_idx"])])
 
             def make_mem(enc, mfn):
                 policy._vision_encode = enc

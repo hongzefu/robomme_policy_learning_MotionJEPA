@@ -824,6 +824,134 @@ def test_tic_motion_subdir_default():
     assert 'str(lib / "motion")' not in src
 
 
+
+# ── compare_train_infer_obs.py：单 episode H5 读法（--h5-root / --episode-map-dir / --dry-run） ──────────
+
+@pytest.fixture(scope="module")
+def TIC():
+    return _load(TIC_PATH, "compare_train_infer_obs_under_test")
+
+
+def _write_single_h5(path: pathlib.Path, group: str, T: int, seed: int):
+    import h5py
+    rng = np.random.default_rng(seed)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with h5py.File(path, "w") as f:
+        g = f.create_group(group)
+        g.create_group("setup").create_dataset("task_goal", data=np.array([f"goal {seed}".encode()]))
+        for t in range(T):
+            o = g.create_group(f"timestep_{t}").create_group("obs")
+            o.create_dataset("front_rgb", data=rng.integers(0, 256, (256, 256, 3), dtype=np.uint8))
+            o.create_dataset("wrist_rgb", data=rng.integers(0, 256, (256, 256, 3), dtype=np.uint8))
+            o.create_dataset("joint_state", data=rng.standard_normal(7).astype(np.float32))
+            o.create_dataset("gripper_state", data=rng.standard_normal(2).astype(np.float32))
+
+
+def _tic_fixture(root: pathlib.Path, local: set[tuple[str, int]]):
+    """两个任务、6 集（es 互有重复）；local 中的 (task, new_idx) 才落单 episode H5。返回 (manifest, h5_root, map_dir)。"""
+    specs = [("TaskA", 0, 10, 4), ("TaskA", 1, 12, 4), ("TaskA", 2, 8, 6),
+             ("TaskB", 0, 9, 4), ("TaskB", 1, 7, 2), ("TaskB", 2, 11, 8)]      # (task, new_idx, T, es)
+    h5_root, map_dir = root / "raw-h5", root / "maps"
+    map_dir.mkdir(parents=True)
+    eps, maps = [], {}
+    for g, (task, idx, T, es) in enumerate(specs):
+        member = f"record_dataset_{task}_easy/hdf5_files/{task}_ep{idx + 10}_seed{g}.h5"
+        row = {"task": task, "difficulty": "easy", "episode": idx + 10, "seed": g, "role": "primary", "member": member,
+               "h5_sha256": "0" * 64, "h5_bytes": 1, "timestep_count": T, "new_idx": idx, "src_group": f"episode_{idx + 10}"}
+        if (task, idx) in local:
+            p = h5_root / member
+            _write_single_h5(p, row["src_group"], T, g)
+            row["h5_sha256"] = hashlib.sha256(p.read_bytes()).hexdigest()
+            row["h5_bytes"] = p.stat().st_size
+        maps.setdefault(task, []).append(row)
+        eps.append({"global_episode_idx": g, "h5_file": f"record_dataset_{task}.h5", "raw_ep_idx": idx,
+                    "num_timesteps": T, "exec_start_idx": es, "exec_samples": T - es, "total_sample_offset": 0})
+    for task, rows in maps.items():
+        (map_dir / f"record_dataset_{task}_episode_map.json").write_text(json.dumps(rows), encoding="utf-8")
+    return {"raw_dir": str(root / "merged"), "episodes": eps}, h5_root, map_dir
+
+
+def test_tic_single_h5_reads_same_as_merged(tmp_path, TIC):
+    import h5py
+    src = tmp_path / "single.h5"
+    _write_single_h5(src, "episode_17", 6, 3)
+    merged = tmp_path / "merged" / "record_dataset_TaskA.h5"
+    merged.parent.mkdir()
+    with h5py.File(src, "r") as s, h5py.File(merged, "w") as t:
+        s.copy("episode_17", t, name="episode_2")                   # merge_v2_h5.py::merge_task 同法
+    a = TIC.load_episode_full(merged.parent, merged.name, 2, 6, 4)
+    b = TIC.load_episode_full(None, merged.name, 2, 6, 4, single={"path": src, "src_group": "episode_17"})
+    for x, y in zip(a, b):
+        assert (np.array_equal(x, y) and x.dtype == y.dtype) if isinstance(x, np.ndarray) else x == y
+    with pytest.raises(SystemExit):
+        TIC.load_episode_full(None, merged.name, 2, 6, 4, single={"path": src, "src_group": "episode_9"})
+
+
+def test_tic_plan_merged_mode_unchanged(tmp_path, TIC):
+    manifest, _, _ = _tic_fixture(tmp_path, set())
+    plan = TIC.plan_episodes(manifest, None, None, None)
+    assert plan["single"] is None and plan["missing"] == []
+    assert (plan["picked"], plan["source"]) == TIC.resolve_episodes(manifest, TIC.DEFAULT_EPISODES)
+
+
+def test_tic_plan_auto_pick_local(tmp_path, TIC, monkeypatch):
+    monkeypatch.setattr(TIC, "N_ES", 3)
+    local = {("TaskA", 0), ("TaskA", 1), ("TaskA", 2), ("TaskB", 1), ("TaskB", 2)}
+    manifest, h5_root, map_dir = _tic_fixture(tmp_path, local)
+    plan = TIC.plan_episodes(manifest, None, h5_root, map_dir)
+    # 轮转：TaskA 最小 es=4（T 最长取 idx1），TaskB 最小未占用 es=2（idx1），TaskA 次小 es=6（idx2）
+    assert plan["arg"] == "TaskB:1,TaskA:1,TaskA:2" and plan["missing"] == []
+    assert len({e["exec_start_idx"] for e in plan["picked"]}) == 3
+    assert set(plan["single"]) == {("record_dataset_TaskB.h5", 1), ("record_dataset_TaskA.h5", 1), ("record_dataset_TaskA.h5", 2)}
+
+
+def test_tic_plan_lists_missing_h5(tmp_path, TIC, monkeypatch, capsys):
+    monkeypatch.setattr(TIC, "N_ES", 3)
+    manifest, h5_root, map_dir = _tic_fixture(tmp_path, {("TaskA", 0)})
+    plan = TIC.plan_episodes(manifest, None, h5_root, map_dir)
+    assert len(plan["picked"]) == 3 and len(plan["missing"]) == 2
+    assert not TIC.report_plan(plan, pathlib.Path(manifest["raw_dir"]))
+    out = capsys.readouterr().out
+    lines = [json.loads(l.split(" ", 1)[1]) for l in out.splitlines() if l.startswith("H5_EPISODE ")]
+    assert len(lines) == 2
+    for rec in lines:
+        assert {"task", "raw_ep_idx", "member", "h5_sha256", "h5_bytes", "tar_object"} <= set(rec)
+        assert rec["tar_object"] == f"record_dataset_{rec['task']}_easy.h5.tar.xz"
+    assert "H5_COVERAGE=MISSING" in out
+
+
+def test_tic_plan_explicit_episodes_and_sha_check(tmp_path, TIC):
+    manifest, h5_root, map_dir = _tic_fixture(tmp_path, {("TaskA", 0), ("TaskB", 2)})
+    plan = TIC.plan_episodes(manifest, "TaskA:0,TaskB:2", h5_root, map_dir)
+    assert plan["source"] == "args" and plan["missing"] == [] and len(plan["single"]) == 2
+    p = h5_root / json.loads((map_dir / "record_dataset_TaskA_episode_map.json").read_text())[0]["member"]
+    data = bytearray(p.read_bytes())
+    data[-1] ^= 0xFF                                         # 等长篡改：字节数仍对，sha256 不对
+    p.write_bytes(bytes(data))
+    with pytest.raises(SystemExit, match="sha256"):
+        TIC.plan_episodes(manifest, "TaskA:0,TaskB:2", h5_root, map_dir)
+    with pytest.raises(SystemExit, match="episode-map-dir"):
+        TIC.plan_episodes(manifest, None, h5_root, None)
+
+
+def test_tic_main_dry_run(tmp_path, TIC, monkeypatch, capsys):
+    monkeypatch.setattr(TIC, "N_ES", 2)
+    manifest, h5_root, map_dir = _tic_fixture(tmp_path, {("TaskA", 1), ("TaskB", 1)})
+    lib = tmp_path / "lib"
+    (lib / "meta").mkdir(parents=True)
+    (lib / "meta" / "episode_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.chdir(tmp_path)                              # main 会 chdir 到仓库根，测试后还原
+    base = ["x", "--lib", str(lib), "--h5-root", str(h5_root), "--episode-map-dir", str(map_dir), "--dry-run"]
+    monkeypatch.setattr(sys, "argv", base)
+    assert TIC.main() == 0
+    out = capsys.readouterr().out
+    assert "DRY_RUN episodes=2 complete=yes episodes_arg=TaskB:1,TaskA:1" in out
+    monkeypatch.setattr(sys, "argv", base + ["--episodes", "TaskA:0,TaskB:1"])
+    assert TIC.main() == 1
+    out = capsys.readouterr().out
+    assert "DRY_RUN episodes=2 complete=no" in out and out.count("H5_EPISODE ") == 1
+
+
 if __name__ == "__main__":
     class _Count:
         def __init__(self):
