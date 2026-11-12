@@ -484,6 +484,109 @@ def report_plan(plan: dict, raw_dir: pathlib.Path) -> bool:
     return complete
 
 
+# ─────────────────────────── L3 / L4 模型侧 jit 函数（按 integration_type 与 history_pi0 同构） ───────────────────────────
+# context：记忆在 embed_prefix 里，前缀 pass 用 na_mask（sample_actions 的 context 分支）——旧写法逐字不变。
+# modulation：记忆不进前缀，由 embed_memory 产出 mem_seq / mem_mask，只给 action expert（第 2 个流）：
+#   compute_loss  → llm([prefix, suffix], adarms_cond=[None, ad], mem_seq=[None, mem_seq], mem_mask=[None, mem_mask])，attn 带 na_mask；
+#   sample_actions → 前缀 pass make_attn_mask(prefix_mask, prefix_ar_mask)（不带 na）、llm([prefix, None])，
+#                    去噪步 llm([None, suffix], kv_cache, adarms_cond=[None, ad], mem_seq=[None, mem_seq], mem_mask=[None, mem_mask])。
+# 两侧（训练 obs / 推理 obs）各自走 preprocess(train=False) → embed_memory，不共享记忆张量。
+
+
+def make_l3_fn(gdef, integration_type: str, motion_enabled: bool):
+    """L3：preprocess(train=False) → embed_prefix → attn_mask / positions → 前缀 pass 取 KV；另出并列序记忆。"""
+    import jax
+    import jax.numpy as jnp
+    import flax.nnx as nnx
+    from mme_vla_suite.models.integration.history_observation import preprocess_observation
+    from mme_vla_suite.models.integration.history_pi0 import make_attn_mask
+
+    @jax.jit
+    def f_prefix(state, obs):
+        m = nnx.merge(gdef, state)
+        o = preprocess_observation(None, obs, train=False)
+        tok, mask, ar, na = m.embed_prefix(o)
+        if integration_type == "modulation":
+            attn = make_attn_mask(mask, ar)                  # sample_actions modulation 分支：前缀不带 na
+        else:
+            attn = make_attn_mask(mask, ar, na)
+        pos = jnp.cumsum(mask, axis=1) - 1
+        _, kv = m.PaliGemma.llm([tok, None], mask=attn, positions=pos)
+        par_tok, _, _ = m.mem_encoder(o.static_image_emb, o.static_pos_emb, o.static_state_emb,
+                                      motion_emb=o.motion_emb, motion_pos=o.motion_pos, motion_mask=o.motion_mask)
+        par_mask = jnp.concatenate([o.static_mask, o.motion_mask], axis=1) if motion_enabled else o.static_mask
+        mem_tok, mem_mask, _, _ = m.embed_memory(o)
+        return {"tokens": tok, "mask": mask, "ar": ar, "na": na, "attn": attn, "pos": pos,
+                "k": kv[0], "v": kv[1], "par_tok": par_tok, "par_mask": par_mask,
+                "mem_tok": mem_tok, "mem_mask": mem_mask,
+                "txt_len": jnp.int32(o.tokenized_prompt.shape[1])}
+
+    return f_prefix
+
+
+def make_l4_fns(gdef_, integration_type: str):
+    """按给定 graphdef 生成 L4 的两路 jit 函数（bf16 生产权重与 f32 诊断权重各一套）。"""
+    import einops
+    import jax
+    import jax.numpy as jnp
+    import flax.nnx as nnx
+    from mme_vla_suite.models.integration.history_observation import preprocess_observation
+    from mme_vla_suite.models.integration.history_pi0 import make_attn_mask
+    modulation = integration_type == "modulation"
+
+    @jax.jit
+    def f_full(state, obs, x_t, tstep):
+        """L4 训练路径：照抄 compute_loss 主体（prefix+suffix 一次前向）。"""
+        m = nnx.merge(gdef_, state)
+        o = preprocess_observation(None, obs, train=False)
+        pt, pm, par_, pna = m.embed_prefix(o)
+        st, sm, sar, sna, ad = m.embed_suffix(o, x_t, tstep)
+        input_mask = jnp.concatenate([pm, sm], axis=1)
+        ar_mask = jnp.concatenate([par_, sar], axis=0)
+        na_mask = jnp.concatenate([pna, sna], axis=0)
+        attn = make_attn_mask(input_mask, ar_mask, na_mask)
+        pos = jnp.cumsum(input_mask, axis=1) - 1
+        if modulation:
+            mem_seq, mem_mask, _, _ = m.embed_memory(o)
+            (_, so), kv = m.PaliGemma.llm([pt, st], mask=attn, positions=pos, adarms_cond=[None, ad],
+                                          mem_seq=[None, mem_seq], mem_mask=[None, mem_mask])
+        else:
+            (_, so), kv = m.PaliGemma.llm([pt, st], mask=attn, positions=pos, adarms_cond=[None, ad])
+        v_t = m.action_out_proj(so[:, -m.action_horizon:])
+        return {"v_t": v_t, "attn": attn, "pos": pos, "prefix_len": jnp.int32(pm.shape[1]),
+                "pmask": pm, "k": kv[0], "v": kv[1]}
+
+    @jax.jit
+    def f_cached(state, obs, x_t, tstep):
+        """L4 推理路径：照抄 sample_actions 的前缀 pass + 一次 step（不走 while_loop）。"""
+        m = nnx.merge(gdef_, state)
+        o = preprocess_observation(None, obs, train=False)
+        pt, pm, par_, pna = m.embed_prefix(o)
+        if modulation:
+            pattn = make_attn_mask(pm, par_)
+        else:
+            pattn = make_attn_mask(pm, par_, pna)
+        ppos = jnp.cumsum(pm, axis=1) - 1
+        _, kv = m.PaliGemma.llm([pt, None], mask=pattn, positions=ppos)
+        if modulation:
+            mem_seq, mem_mask, _, _ = m.embed_memory(o)
+        st, sm, sar, _, ad = m.embed_suffix(o, x_t, tstep)
+        sattn = make_attn_mask(sm, sar)
+        prefix_attn = einops.repeat(pm, "b p -> b s p", s=st.shape[1])
+        full = jnp.concatenate([prefix_attn, sattn], axis=-1)
+        spos = jnp.sum(pm, axis=-1)[:, None] + jnp.cumsum(sm, axis=-1) - 1
+        if modulation:
+            (_, so), _ = m.PaliGemma.llm([None, st], mask=full, positions=spos, kv_cache=kv, adarms_cond=[None, ad],
+                                         mem_seq=[None, mem_seq], mem_mask=[None, mem_mask])
+        else:
+            (_, so), _ = m.PaliGemma.llm([None, st], mask=full, positions=spos, kv_cache=kv, adarms_cond=[None, ad])
+        v_t = m.action_out_proj(so[:, -m.action_horizon:])
+        return {"v_t": v_t, "prefix_attn": pattn, "full_attn": full, "spos": spos,
+                "pmask": pm, "k": kv[0], "v": kv[1]}
+
+    return f_full, f_cached
+
+
 # ─────────────────────────── 主流程 ───────────────────────────
 
 
@@ -642,64 +745,11 @@ def main() -> int:
     def _obs_of(inputs_np: dict):
         return HistAugObservation.from_dict(jax.tree.map(lambda x: jnp.asarray(x)[np.newaxis, ...], inputs_np))
 
-    @jax.jit
-    def f_prefix(state, obs):
-        """L3：preprocess(train=False) → embed_prefix → attn_mask / positions → 前缀 pass 取 KV；另出并列序记忆。"""
-        m = nnx.merge(gdef, state)
-        o = preprocess_observation(None, obs, train=False)
-        tok, mask, ar, na = m.embed_prefix(o)
-        attn = make_attn_mask(mask, ar, na)
-        pos = jnp.cumsum(mask, axis=1) - 1
-        _, kv = m.PaliGemma.llm([tok, None], mask=attn, positions=pos)
-        par_tok, _, _ = m.mem_encoder(o.static_image_emb, o.static_pos_emb, o.static_state_emb,
-                                      motion_emb=o.motion_emb, motion_pos=o.motion_pos, motion_mask=o.motion_mask)
-        par_mask = jnp.concatenate([o.static_mask, o.motion_mask], axis=1) if motion_enabled else o.static_mask
-        mem_tok, mem_mask, _, _ = m.embed_memory(o)
-        return {"tokens": tok, "mask": mask, "ar": ar, "na": na, "attn": attn, "pos": pos,
-                "k": kv[0], "v": kv[1], "par_tok": par_tok, "par_mask": par_mask,
-                "mem_tok": mem_tok, "mem_mask": mem_mask,
-                "txt_len": jnp.int32(o.tokenized_prompt.shape[1])}
+    integration_type = str(model.integration_type)
+    f_prefix = make_l3_fn(gdef, integration_type, motion_enabled)
 
     def _mk_l4(gdef_):
-        """按给定 graphdef 生成 L4 的两路 jit 函数（bf16 生产权重与 f32 诊断权重各一套）。"""
-
-        @jax.jit
-        def f_full(state, obs, x_t, tstep):
-            """L4 训练路径：照抄 compute_loss 主体（prefix+suffix 一次前向）。"""
-            m = nnx.merge(gdef_, state)
-            o = preprocess_observation(None, obs, train=False)
-            pt, pm, par_, pna = m.embed_prefix(o)
-            st, sm, sar, sna, ad = m.embed_suffix(o, x_t, tstep)
-            input_mask = jnp.concatenate([pm, sm], axis=1)
-            ar_mask = jnp.concatenate([par_, sar], axis=0)
-            na_mask = jnp.concatenate([pna, sna], axis=0)
-            attn = make_attn_mask(input_mask, ar_mask, na_mask)
-            pos = jnp.cumsum(input_mask, axis=1) - 1
-            (_, so), kv = m.PaliGemma.llm([pt, st], mask=attn, positions=pos, adarms_cond=[None, ad])
-            v_t = m.action_out_proj(so[:, -m.action_horizon:])
-            return {"v_t": v_t, "attn": attn, "pos": pos, "prefix_len": jnp.int32(pm.shape[1]),
-                    "pmask": pm, "k": kv[0], "v": kv[1]}
-
-        @jax.jit
-        def f_cached(state, obs, x_t, tstep):
-            """L4 推理路径：照抄 sample_actions 的前缀 pass + 一次 step（不走 while_loop）。"""
-            m = nnx.merge(gdef_, state)
-            o = preprocess_observation(None, obs, train=False)
-            pt, pm, par_, pna = m.embed_prefix(o)
-            pattn = make_attn_mask(pm, par_, pna)
-            ppos = jnp.cumsum(pm, axis=1) - 1
-            _, kv = m.PaliGemma.llm([pt, None], mask=pattn, positions=ppos)
-            st, sm, sar, _, ad = m.embed_suffix(o, x_t, tstep)
-            sattn = make_attn_mask(sm, sar)
-            prefix_attn = einops.repeat(pm, "b p -> b s p", s=st.shape[1])
-            full = jnp.concatenate([prefix_attn, sattn], axis=-1)
-            spos = jnp.sum(pm, axis=-1)[:, None] + jnp.cumsum(sm, axis=-1) - 1
-            (_, so), _ = m.PaliGemma.llm([None, st], mask=full, positions=spos, kv_cache=kv, adarms_cond=[None, ad])
-            v_t = m.action_out_proj(so[:, -m.action_horizon:])
-            return {"v_t": v_t, "prefix_attn": pattn, "full_attn": full, "spos": spos,
-                    "pmask": pm, "k": kv[0], "v": kv[1]}
-
-        return f_full, f_cached
+        return make_l4_fns(gdef_, integration_type)
 
     f_full, f_cached = _mk_l4(gdef)
 
@@ -980,7 +1030,8 @@ def main() -> int:
                 mem_len = int(oI["mem_tok"].shape[1])
                 total_len = int(oI["tokens"].shape[1])
                 txt_len = int(oI["txt_len"])
-                img_len = total_len - mem_len - txt_len
+                # 只有 context 把记忆拼进前缀；modulation 前缀 = 图像 + 文本，记忆走 mem_seq（见 make_l3_fn 注释）
+                img_len = total_len - (mem_len if integration_type == "context" else 0) - txt_len
                 n_img = len(infer_inputs["image"])
                 want_mem = int(hc.budget) + (int(hc.motion.budget) * int(hc.motion.get("tokens_per_window", 1))
                                              if motion_enabled else 0)
@@ -991,7 +1042,8 @@ def main() -> int:
                 prefix_shape_info.update({"len": total_len, "mem": mem_len, "img": img_len, "txt": txt_len,
                                           "img_per_view": img_len // n_img if n_img else None, "views": n_img,
                                           "want_mem": want_mem})
-                for k in ("tokens", "mask", "ar", "na"):
+                # modulation 的记忆不在前缀叶里，另把 embed_memory 两返回（即 llm 的 mem_seq / mem_mask）并入同一计数
+                for k in ("tokens", "mask", "ar", "na") + (("mem_tok", "mem_mask") if integration_type == "modulation" else ()):
                     if not _bytes_equal(oT[k], oI[k]):
                         prefix_leaf_mis += 1
                 if not _bytes_equal(oT["pos"], oI["pos"]):
@@ -1254,10 +1306,10 @@ def main() -> int:
                                  f"mem={i.get('mem')} img={i.get('img')} txt={i.get('txt')} "
                                  f"img_per_view={i.get('img_per_view')} views={i.get('views')} want_mem={i.get('want_mem')}")
         V.block(prefix_leaf_mis == 0, f"PREFIX_T_VS_I={'PASS' if prefix_leaf_mis == 0 else 'FAIL'} points={n_done} "
-                                      f"leaves=4 mismatches={prefix_leaf_mis or 'none'}")
+                                      f"leaves={6 if integration_type == 'modulation' else 4} mismatches={prefix_leaf_mis or 'none'}")
         V.block(pos_mis == 0 and attn_mis == 0,
                 f"PREFIX_POSITIONS={'PASS' if pos_mis == 0 and attn_mis == 0 else 'FAIL'} positions_mismatches={pos_mis} "
-                f"attn_mask_mismatches={attn_mis} attn_mask_shape={i.get('attn_shape')} na_branch=1")
+                f"attn_mask_mismatches={attn_mis} attn_mask_shape={i.get('attn_shape')} na_branch={0 if integration_type == 'modulation' else 1}")
         ip_ok = invperm_tok_mis == 0 and invperm_mask_mis == 0 and invperm_bad == 0
         V.block(ip_ok, f"MEM_INVPERM={'PASS' if ip_ok else 'FAIL'} token_mismatches={invperm_tok_mis} "
                        f"mask_mismatches={invperm_mask_mis} perm_valid={n_done - invperm_bad}/{n_done}")
