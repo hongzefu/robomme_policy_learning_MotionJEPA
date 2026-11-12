@@ -141,7 +141,7 @@ token_k = W · concat(x_k, p_k) + b               W: 1024 × 17152，b: 1024
 <h3>3.3　训练：除 motion 读出、stride 与步数外与 v11 逐项相同</h3>
 <table>
 <tr><th>项</th><th>v11 <code>…-wantp768-b128-50k</code></th><th>本轮</th></tr>
-<tr><td>代码基线</td><td><code>c55a6bc</code> 链上的 V11 Beta</td><td><code>c55a6bc</code> 的代码（<code>1531e6d</code> 为其上的 V15 计划 commit，<code>src</code> 与 <code>scripts</code> 逐字相同）+ 本计划改动，起跑前 <code>commitV15.&lt;n&gt;Beta</code></td></tr>
+<tr><td>代码基线</td><td><code>c55a6bc</code></td><td><code>c55a6bc</code> 的代码（<code>1531e6d</code> 为其上的 V15 计划 commit，<code>src</code> 与 <code>scripts</code> 逐字相同）+ 本计划改动，起跑前 <code>commitV15.&lt;n&gt;Beta</code></td></tr>
 <tr><td>TrainConfig</td><td><code>mme_vla_suite_b128_80k</code>，runner 覆盖 <code>--num_train_steps=50001</code></td><td>同一条、同一覆盖，不改 <code>config.py</code></td></tr>
 <tr><td>batch / 卡 / FSDP / workers</td><td>128 / 8 / <code>fsdp_devices=8</code> / <code>num_workers=16</code>（<code>config.py</code> 中该条目实读）</td><td>相同（L1 才动 workers）</td></tr>
 <tr><td>学习率</td><td>warmup 5000，peak = decay = 5e-5</td><td>相同</td></tr>
@@ -230,7 +230,7 @@ token_k = W · concat(x_k, p_k) + b               W: 1024 × 17152，b: 1024
 <tr><td>D（闸 G6 冒烟测速 + 闸 G6b，需要时修复）</td><td>约 0.75 h；若需 L2 另加约 2–3 h</td></tr>
 <tr><td>E（闸 G7 训练 50k）</td><td>管线跟得上：约 14–15.5 h（1.0–1.1 s/步）；修复后同档；未修复最差 17–28 h（1.2–2.0 s/步 × 50001）</td></tr>
 <tr><td>F（闸 G8 692 局评估）</td><td>约 2.5–3 h</td></tr>
-<tr><td><b>合计</b></td><td><b>不含 L2 约 20–23 h；含 L2 约 22–26 h</b></td></tr>
+<tr><td><b>合计</b></td><td><b>不含 L2 约 21–24 h；含 L2 约 23–27 h</b></td></tr>
 </table>
 
 <h2>7　子代理分工与合并（简述）</h2>
