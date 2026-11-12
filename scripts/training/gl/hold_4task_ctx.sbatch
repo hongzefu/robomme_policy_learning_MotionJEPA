@@ -12,6 +12,8 @@
 # 规格固定为 4×A40、16 CPU、128G（每卡 4 CPU + 32G）；--time 与 --job-name 不写在本文件里，
 # 一律由提交命令行给（sbatch 命令行参数优先于脚本内 #SBATCH；本文件不设默认值，漏给 --time 会落到分区默认值，务必写上）。
 #
+# 提交前提：turbo 仓库的 v1-store/logs 必须已存在——下方 --output 指向该目录，目录不存在时 Slurm 写不了输出，
+# 运行器 run_in_hold_4task_ctx.sh 也不会代建（缺失即拒绝起跑）。
 # 提交示例（在登录节点、turbo 仓库根执行；T 按计划与 MaxTime 定）：
 #   T=7-00:00:00
 #   jid=$(sbatch --parsable --job-name=g4c-hold --time=$T scripts/training/gl/hold_4task_ctx.sbatch) \

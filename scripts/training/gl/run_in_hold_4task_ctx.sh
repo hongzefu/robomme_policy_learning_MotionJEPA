@@ -23,7 +23,10 @@
 #   c. PAIRED_RUNS_SAME_LIB=PASS pin=<LIB_PIN>：LIB_PIN == EXPECT_LIB_PIN（两条并行 run 读同一库）
 #   d. source/data、norm_stats.json 存在；RESUME=0 时 run 目录不得存在，RESUME=1 时必须存在且含 resume/manifest.json
 #
-# 日志：$V1_STORE/logs/$RUN_NAME.log；RESUME=1 时为 $RUN_NAME.attemptNN.log（NN 从 02 起取下一个未用号）；不覆盖已有日志。
+# 日志：$V1_STORE/logs/$RUN_NAME.log；RESUME=1 时为 $RUN_NAME.attemptNN.log（NN 从 02 起取下一个未用号）；不覆盖已有日志，
+#   v1-store/logs 须事先存在（运行器不建）。每次尝试设 TRAIN_RECORD_DIR=$V1_STORE/train-records/$RUN_NAME/<attempt01|attemptNN>
+#   并 mkdir -p（train.py 遇已有 metrics.jsonl 会拒绝，故按尝试分目录）。
+# 环境：source scripts/training/paths.sh（同 _train_common.sh），得到 OPENPI_DATA_HOME=$V1_STORE/models 等缓存类变量。
 # 三件套：set -o pipefail、PYTHONUNBUFFERED=1、tee；结束追加 EXIT_CODE=<rc>（显式 trap TERM/INT 转成退出码，
 # 避免被 TERM 杀掉时误写 EXIT_CODE=0）。集群侧只用仓库 .venv/bin/python 直调，不在计算节点 uv sync；禁止覆盖 HOME。
 set -euo pipefail
@@ -42,7 +45,22 @@ fail() { echo "$1" >&2; exit "${2:-2}"; }
 # 仓库根按脚本位置推出（scripts/training/gl/ 上三级）；正式运行时必须恰为 turbo 仓库。
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 [[ -f "$REPO/pyproject.toml" ]] || fail "仓库根解析失败: $REPO（缺 pyproject.toml）"
-V1_STORE="$REPO/v1-store"
+
+# srun 默认把提交侧环境带进计算节点：先显式清掉诊断遗留开关（沿用底稿与 _train_common.sh），
+# 再 source paths.sh——顺序不能反，paths.sh 会重新导出 JAX_COMPILATION_CACHE_DIR 指向 v1-store。
+unset PYTHONPATH PYTHONHOME XLA_FLAGS JAX_PLATFORMS MMEVLA_MOTION_STORE MMEVLA_FRAMESAMP_ALLOW_SUBSET \
+  MMEVLA_FRAMESAMP_VERIFY WANDB_MODE JAX_COMPILATION_CACHE_DIR MMEVLA_MOTION_OVERFLOW UV_CACHE_DIR
+for key in $(compgen -e); do
+  case "$key" in *_ALLOW_UNVERIFIED) unset "$key" ;; esac
+done
+
+# 训练域路径与缓存环境（同 _train_common.sh）：paths.sh 前缀白名单含 turbo 与 /data/hongzefu，source 时只定义变量与
+# export，不 mkdir、不访问网络；导出 OPENPI_DATA_HOME=$V1_STORE/models（pi05_base 权重在 openpi-assets/ 下）、
+# XDG_CACHE_HOME、HF_HOME、JAX_COMPILATION_CACHE_DIR、WANDB_DIR、WANDB_CACHE_DIR、WANDB_CONFIG_DIR、UV_LINK_MODE=copy；
+# 刻意不设 UV_CACHE_DIR（计算节点不跑 uv，见 paths.sh 注释），故本运行器也不设并已在上面 unset。不覆盖 HOME。
+# shellcheck source=../paths.sh
+source "$REPO/scripts/training/paths.sh"
+[[ "$V1_STORE" == "$REPO/v1-store" ]] || fail "paths.sh 解析的 V1_STORE=$V1_STORE 与运行器仓库 $REPO 不符"
 DS="$V1_STORE/datasets/$DS_NAME"
 ASSETS_DIR="$V1_STORE/train-assets/mme_vla_suite/$DS_NAME"
 
@@ -163,44 +181,56 @@ CMD=("$REPO/.venv/bin/python" scripts/training/train.py "$CONFIG"
   --num-train-steps "$MAX_STEPS"
   "${WANDB_ARGS[@]}" "${RESUME_ARGS[@]}")
 
-if [[ "$DRY_RUN" == 1 ]]; then
-  printf 'DRY_RUN_CMD='; printf '%q ' "${CMD[@]}"; printf '\n'
-  exit 0
-fi
-
-# ---- 日志名：不覆盖已有日志 ----
-LOG_DIR="$V1_STORE/logs"
+# ---- 尝试号、日志名与 TRAIN_RECORD_DIR：一律不覆盖已有产物 ----
+# 首跑 attempt01：日志 $RUN_NAME.log、记录目录 train-records/$RUN_NAME/attempt01；
+# 续跑从 02 起取第一个「日志与记录目录都不存在」的号：$RUN_NAME.attemptNN.log、train-records/$RUN_NAME/attemptNN。
+# train.py 遇 TRAIN_RECORD_DIR 下已有 metrics.jsonl 会拒绝，所以每次尝试分目录。
+LOG_DIR="$LOGS_DIR"
+RECORD_ROOT="$V1_STORE/train-records/$RUN_NAME"
 if [[ "$RESUME" == 0 ]]; then
+  ATTEMPT=attempt01
   LOG="$LOG_DIR/$RUN_NAME.log"
 else
   n=2
   while :; do
-    LOG="$(printf '%s/%s.attempt%02d.log' "$LOG_DIR" "$RUN_NAME" "$n")"
-    [[ -e "$LOG" ]] || break
+    ATTEMPT="$(printf 'attempt%02d' "$n")"
+    LOG="$LOG_DIR/$RUN_NAME.$ATTEMPT.log"
+    [[ -e "$LOG" || -e "$RECORD_ROOT/$ATTEMPT" ]] || break
     n=$((n + 1))
     [[ $n -le 99 ]] || fail "续跑尝试号已用尽（02..99）"
   done
 fi
-[[ ! -e "$LOG" ]] || fail "拒绝覆盖已有日志: $LOG"
-mkdir -p "$LOG_DIR"
+export TRAIN_RECORD_DIR="$RECORD_ROOT/$ATTEMPT"
 
-# srun 默认把提交侧环境带进计算节点：显式清掉诊断遗留开关（沿用底稿与 _train_common.sh）。
-unset PYTHONPATH PYTHONHOME XLA_FLAGS JAX_PLATFORMS MMEVLA_MOTION_STORE MMEVLA_FRAMESAMP_ALLOW_SUBSET \
-  MMEVLA_FRAMESAMP_VERIFY WANDB_MODE JAX_COMPILATION_CACHE_DIR MMEVLA_MOTION_OVERFLOW
-for key in $(compgen -e); do
-  case "$key" in *_ALLOW_UNVERIFIED) unset "$key" ;; esac
-done
-
-# 缓存类环境变量逐项指向 v1-store（禁止覆盖 HOME）。
+# 运行时环境（缓存类变量由上方 paths.sh 导出，这里只补 paths.sh 未覆盖的项；禁止覆盖 HOME）。
 export PYTHONUNBUFFERED=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
-export UV_CACHE_DIR="$V1_STORE/cache/uv"
-export XDG_CACHE_HOME="$V1_STORE/cache/xdg"
 export CUDA_CACHE_PATH="$V1_STORE/cache/cuda"
 export MMEVLA_JAX_CACHE_DIR="$V1_STORE/cache/jax/$RUN_NAME"
 export XLA_PYTHON_CLIENT_MEM_FRACTION=0.95
 # store_meta.json 里写死的是建库机绝对路径；这两条让读侧改看 turbo 实际落点。别设 MMEVLA_FRAMESAMP_VERIFY=full。
 export MMEVLA_FRAMESAMP_SOURCE="$DS/source"
 export MMEVLA_FRAMESAMP_MANIFEST="$DS/meta/episode_manifest.json"
+
+ENV_KEYS=(OPENPI_DATA_HOME TRAIN_RECORD_DIR HF_HOME XDG_CACHE_HOME JAX_COMPILATION_CACHE_DIR MMEVLA_JAX_CACHE_DIR
+  WANDB_DIR WANDB_CACHE_DIR WANDB_CONFIG_DIR UV_LINK_MODE CUDA_CACHE_PATH XLA_PYTHON_CLIENT_MEM_FRACTION
+  MMEVLA_FRAMESAMP_SOURCE MMEVLA_FRAMESAMP_MANIFEST)
+print_env() {
+  local k
+  for k in "${ENV_KEYS[@]}"; do echo "ENV $k=${!k}"; done
+  echo "ENV UV_CACHE_DIR=${UV_CACHE_DIR:-未设}"
+  echo "LOG=$LOG"
+}
+
+if [[ "$DRY_RUN" == 1 ]]; then
+  print_env
+  printf 'DRY_RUN_CMD='; printf '%q ' "${CMD[@]}"; printf '\n'
+  exit 0
+fi
+
+[[ -d "$LOG_DIR" ]] || fail "日志目录不存在: $LOG_DIR（提交前须已建好 v1-store/logs）"
+[[ ! -e "$LOG" ]] || fail "拒绝覆盖已有日志: $LOG"
+[[ ! -e "$TRAIN_RECORD_DIR" ]] || fail "拒绝复用已有记录目录: $TRAIN_RECORD_DIR"
+mkdir -p "$TRAIN_RECORD_DIR"
 
 cd "$REPO"   # history config 按相对 cwd 解析，必须从仓库根起跑
 
@@ -215,6 +245,7 @@ trap 'exit 130' INT
 body() {
   echo "RUNNER=run_in_hold_4task_ctx RUN_NAME=$RUN_NAME JOB=$SLURM_JOB_ID STEP=${SLURM_STEP_ID:-0} HOST=$HOST GPU=$GPU_NAMES×$GPU_COUNT 起始UTC=$(date -u +%FT%TZ)"
   printf '%s\n' "${VERDICTS[@]}"
+  print_env
   if [[ ${#WANDB_ARGS[@]} -gt 0 ]]; then
     echo "提示: 没有 v1-store/secrets/wandb.env，本轮关闭 wandb"
   else
