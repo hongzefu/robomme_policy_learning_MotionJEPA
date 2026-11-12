@@ -552,7 +552,12 @@ def split_microbatches(batch, k: int):
 
 
 def accumulate_microbatch_grads(loss_and_grad_fn, micro_batches, k: int, *, micro_constrain=None, grad_constrain=None):
-    """用 jax.lax.scan（不展开）对 k 个 micro 依次求 (loss, grads)，两者都按 1/k 以 fp32 累加。
+    """用 Python for 展开循环对 k 个 micro 依次求 (loss, grads)，两者都按 1/k 以 fp32 累加。
+
+    不用 jax.lax.scan 的原因：scan 循环体闭包捕获的 FSDP 分片参数会被当作循环不变量，
+    参数 all-gather 被提到 while 循环外常驻，临时峰值约为 K=1 的两倍
+    （本机 2×A6000 FSDP2、全局 batch 4、K=2 实测第一步 OOM：申请 18070794112 字节失败，
+    XLA 告警只能把显存压到 38.85GiB、降不到 18.50GiB 以下）。k 只会是 2 或 4，展开代价可接受。
 
     loss_and_grad_fn(i, micro) -> (loss, grads)，i 为 micro 序号（int32 标量），micro 为单个 micro 的树；
     micro_batches 为 split_microbatches 的输出（叶子首维为 k）。
@@ -560,30 +565,29 @@ def accumulate_microbatch_grads(loss_and_grad_fn, micro_batches, k: int, *, micr
     grad_constrain：可选，对累加器施加分片约束（与参数 FSDP 分片一致，避免 fp32 累加器被复制到每张卡）。
     返回 (k 个 micro loss 的平均, 累积梯度)；累积梯度最后转回单次梯度的原 dtype。
     """
-    first = jax.tree.map(lambda x: x[0], micro_batches)
-    if micro_constrain is not None:
-        first = micro_constrain(first)
-    _, grad_shape = jax.eval_shape(loss_and_grad_fn, jnp.int32(0), first)
     inv_k = 1.0 / k
 
     def _constrain(g):
         return grad_constrain(g) if grad_constrain is not None else g
 
-    def body(carry, xs):
-        loss_acc, grad_acc = carry
-        i, micro = xs
+    loss_acc = jnp.zeros((), jnp.float32)
+    grad_acc = None
+    grad_dtypes = None
+    for i in range(k):
+        micro = jax.tree.map(lambda x, i=i: x[i], micro_batches)
         if micro_constrain is not None:
             micro = micro_constrain(micro)
-        loss, grads = loss_and_grad_fn(i, micro)
+        loss, grads = loss_and_grad_fn(jnp.int32(i), micro)
         loss_acc = loss_acc + loss.astype(jnp.float32) * inv_k
-        grad_acc = jax.tree.map(lambda a, g: a + g.astype(jnp.float32) * inv_k, grad_acc, grads)
-        return (loss_acc, _constrain(grad_acc)), None
-
-    init_grads = _constrain(jax.tree.map(lambda s: jnp.zeros(s.shape, jnp.float32), grad_shape))
-    init = (jnp.zeros((), jnp.float32), init_grads)
-    (loss, grads), _ = jax.lax.scan(body, init, (jnp.arange(k, dtype=jnp.int32), micro_batches))
-    grads = jax.tree.map(lambda g, s: g.astype(s.dtype), grads, grad_shape)
-    return loss, grads
+        scaled = jax.tree.map(lambda g: g.astype(jnp.float32) * inv_k, grads)
+        if grad_acc is None:
+            grad_dtypes = jax.tree.map(lambda g: g.dtype, grads)
+            grad_acc = scaled
+        else:
+            grad_acc = jax.tree.map(lambda a, g: a + g, grad_acc, scaled)
+        grad_acc = _constrain(grad_acc)
+    grads = jax.tree.map(lambda g, d: g.astype(d), grad_acc, grad_dtypes)
+    return loss_acc, grads
 
 
 
@@ -621,8 +625,8 @@ def train_step(
             loss_fn, argnums=diff_state
         )(model, train_rng, observation, actions)
     else:
-        # K > 1：按样本 i::K 切 micro，scan 内逐个求梯度、fp32 按 1/K 累加，只更新一次。
-        # model 在 scan 外拆成 graphdef/state，body 内 merge，避免跨 trace 层改写 nnx Variable。
+        # K > 1：按样本 i::K 切 micro，展开循环逐个求梯度、fp32 按 1/K 累加，只更新一次。
+        # model 在循环外拆成 graphdef/state，每个 micro 内 merge，避免跨 trace 层改写 nnx Variable。
         model_graphdef, model_state = nnx.split(model)
         mesh = sharding._MeshState.active_mesh  # noqa: SLF001
 
