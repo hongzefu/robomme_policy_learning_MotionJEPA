@@ -623,11 +623,16 @@ class _Releaser:
     """释放线程：收到第 N 批时才丢掉第 N−1 批的引用。
 
     主线程交出第 N 批时，第 N−1 批在主线程（循环变量、取批生成器局部变量）里的引用都已解除，所以最后一个引用
-    落在本线程，释放开销（munmap、归还共享内存页；实测不持 GIL）不再占主线程。``close()`` 投递结束标记并 join。
+    落在本线程，释放开销（munmap、归还共享内存页）不再占主线程。``close()`` 投递结束标记并 join。
+
+    FIX-SHM：队列必须有界（容量 1）。原先用无界 ``SimpleQueue``，释放一批（6 GB：munmap + 归还 tmpfs 页，且要抢 GIL）
+    一旦慢于取批节奏，待释放的批就在队列里无限堆积、全部仍占着 /dev/shm（CPU 复现：B32×16 worker 240 批后队列积压
+    178 批、/dev/shm 涨到 325 GB；正式训练每步只慢一点点，约 7560 步撑满 561 G）。有界后释放跟不上时 ``hand_over``
+    阻塞主线程等释放线程（反压），本线程持有 + 队列内最多 2 批。
     """
 
     def __init__(self):
-        self._q: queue.SimpleQueue = queue.SimpleQueue()
+        self._q: queue.Queue = queue.Queue(maxsize=1)
         self._t = threading.Thread(target=self._run, name="TorchDataLoader-release", daemon=True)
         self._t.start()
 
