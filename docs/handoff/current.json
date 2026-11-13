@@ -208,7 +208,7 @@
         {
           "what": "S1–S4 合并（含合并前后审查）且已 push",
           "evidence": "commitV15.4 7bcd7a9、commitV15.5 b201515、commitV15.6 73289a3、commitV15.7 7307410、commitV15.8 e5d4354",
-          "where": "v15-4task-modul-wanraw9-s32-50k 历史",
+          "where": "v15-4task-modul-wanraw9-s32-50k 历史；均为 66eb506 的祖先，已在远端（ls-remote refs/heads/v15-4task-modul-wanraw9-s32-50k 指向 66eb506）",
           "status": "pass"
         },
         {
@@ -284,7 +284,7 @@
         }
       ],
       "pending_decisions": [],
-      "state_reason": "32 片（每卡 4 片）692 局评估完成：EVAL692=PASS 262/692=37.86%（v11 43.06%）；s5 首跑同卡并发启动误判后手动补跑 rc=0；评估结果以 git records 归档，未另传 bucket",
+      "state_reason": "32 片（每卡 4 片）692 局评估完成：EVAL692=PASS 262/692=37.86%（v11 43.06%）；s5 首跑同卡并发启动误判后手动补跑 rc=0；RB-G2 评估结果上传起初漏做、主会话收尾补做 UPLOAD_READBACK=PASS files=9 mismatches=0",
       "depends_on": [
         "4task-wanraw9s32-train"
       ],
@@ -296,9 +296,9 @@
           "status": "pass"
         },
         {
-          "what": "闸 G9 上传读回（ckpt 部分 HF_VERIFY；评估逐局结果改为 git records 归档，未执行 bucket eval/ 上传与 UPLOAD_READBACK）",
-          "evidence": "HF_VERIFY=PASS ckpts=10；逐局结果 docs/training-doc/local692-wanraw9s32-50k/records/merged-progress.json",
-          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/r9-ckptup.log",
+          "what": "闸 G9 上传读回（ckpt 与评估结果；评估结果 RB-G2 起初漏做、主会话 2026-11-13 收尾补做）",
+          "evidence": "HF_VERIFY=PASS ckpts=10；UPLOAD_READBACK=PASS files=9 mismatches=0",
+          "where": "hf://buckets/HongzeFu/robomme-4task-modul-wanraw9-s32-50k-v1/（ckpt 10 份；eval/local692-wanraw9s32-50k/ 9 个文件 174108 字节）",
           "status": "pass"
         }
       ],

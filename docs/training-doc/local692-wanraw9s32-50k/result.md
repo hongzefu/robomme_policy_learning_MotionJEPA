@@ -55,7 +55,7 @@ MERGE_OK shards=32 episodes=692 successes=262 errors=9
 
 1. **改为每卡 4 片（32 片）**：用户指令，`commitV15.18`（66eb506，合入 sub/EVAL32 0e63c49）把片数 / 每卡片数 / 显存占比做成可配置（默认 32 / 4 / 0.2）；`PRE_MERGE_REVIEW=PASS base=3addd7c tip=0e63c49 files=3 commits=1 findings=9 blocking=0`，合并后单测 16 passed。链脚本用占位 `r9-eval.log` 挡住自动 10 片评估（`CHAIN=STOP reason=eval_log_exists`，预期）。
 2. **s5 首跑误判退出**：同卡 4 片并发启动时，s5 的进程归属检查报「所选 GPU 上的计算进程 1242253 不属于已登记分片的进程树（根=1238170 1238170 1238221 1238281 1238367），停止起跑」，`END_UTC=2026-11-13T17:33:42Z`、`EXIT_CODE=2`、0 局（records/`s5.try1.log`）。原因判断：slot 文件里同卡另一片尚处 `pending`、还没换成 PID 的竞争窗口内，其 server 进程已出现在该 GPU 上，被当成外来进程。主会话按原流程手动补跑 s5（tmux `r9-eval32-s5`，`S5_RERUN_REGISTERED pid=1288620 2026-11-13T17:41:57Z` → `S5_RERUN_DONE rc=0 2026-11-13T18:30:45Z`），环境逐项一致；另起看守 `r9-eval32-guard`，防止其余分片先完成时驱动在缺 s5 的情况下合并，最终未触发（`GUARD_DONE s5done=1 others_done=18 stopped=0`）。驱动随后读到 `s5.rc=0`，s5 记 `SHARD_EXIT_CODE=0`、`SHARD_SCAN … verdict=ok`、`SHARD_PASS`。该竞争属待修缺陷（见 ⑪）。
-3. **计划闸 G9 的评估结果上传未执行**：计划 RB-G2 要求把逐局结果与 merge 结果传同一 bucket 的 `eval/local692-wanraw9s32-50k/` 并读回（`UPLOAD_READBACK=PASS`）；本轮未执行，逐局结果以本目录 records/ 进 git 归档替代（ckpt 部分已 `HF_VERIFY=PASS ckpts=10`）。如需补传由主会话另行处理。
+3. **计划闸 G9 的评估结果上传起初漏做、收尾补做**：计划 RB-G2 要求把逐局结果与 merge 结果传同一 bucket 的 `eval/local692-wanraw9s32-50k/` 并读回；评估结束时漏做，主会话于美东 2026-11-13 收尾时补做：`EVAL692.txt`、`preseeded-errors.json`、`retries.json` 与 `merged/` 下 `errors.json`、`log.json`、`motion_stats.json`、`progress.json`、`retry_plan.json`、`shards.json` 共 9 个文件（174,108 字节）传 `hf://buckets/HongzeFu/robomme-4task-modul-wanraw9-s32-50k-v1/eval/local692-wanraw9s32-50k/`，本机逐文件读回比 sha256（本机无集群，故本机校验）：`UPLOAD_READBACK=PASS files=9 mismatches=0`。ckpt 部分为 `HF_VERIFY=PASS ckpts=10`。
 
 ## ⑪ 结论与下一步
 
