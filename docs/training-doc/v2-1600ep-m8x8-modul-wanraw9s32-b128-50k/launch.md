@@ -10,7 +10,7 @@
 
 ## ② 版本与代码状态
 
-- 分支 `v15-4task-modul-wanraw9-s32-50k`；起跑锚点为本档案所在的 Beta 提交（`commitV15.15Beta`；第一次起跑锚点 `commitV15.13Beta` fac3502 已作废，见下）。代码锚点基线 `c55a6bc`（v11），计划 `1531e6d`→`bcb2fb2`。
+- 分支 `v15-4task-modul-wanraw9-s32-50k`；起跑锚点为本档案所在的 Beta 提交（`commitV15.17Beta`；`commitV15.13Beta` fac3502 与 `commitV15.15Beta` 7ad7890 两次起跑已作废，见下）。代码锚点基线 `c55a6bc`（v11），计划 `1531e6d`→`bcb2fb2`。
 - 合入：S1 `commitV15.4/15.5`（wan_raw9 共享模块、导出/校验、motion_store 步长与行形状参数化 + 只读 memmap、dataloader 闸、train.py 快照与诊断键）、S2 `commitV15.6`（YAML、percep_mem、framesamp_dataset raw9 取数、history_pi0 长度、DL 等价闸）、S3 `commitV15.7`（sidecar 不池化、协议、客户端、在线缓冲、check_shard、check_checkpoint RUNS、G4 对拍）、S4 `commitV15.8`（runner、链脚本、ckpt 导出）、S5-L1 `commitV15.9/15.10`（数据管线 L1 + 迭代器干净收尾）、S3-G5 `commitV15.11/15.12`（G5 单 episode H5 读法与 modulation 前向）。
 - 依赖：主 `.venv` 按本分支 `uv.lock`；sidecar 用 `v1-store/venvs/wan`。
 
@@ -65,9 +65,13 @@ AWS 8×A100-SXM4-80GB，本地 NVMe RAID `/dev/md0`；`/scratch` 余量约 2.6 T
 
 美东 2026-11-12 16:57 起跑，约 17:08 在第 299–300 步 `terminate called after throwing an instance of 'absl::lts_20230802::BadStatusOrAccess'` → `EXIT_CODE=134`，链脚本 `CHAIN=STOP reason=train_exit runner_exit=134`。前 300 步 s/步 1.0–1.2、无 nan/OOM，无 ckpt。根因判断：runner `TRAIN_TIMING_STEPS=300` 令 `scripts/training/step_timing.py::StepTiming` 前 300 步开 `jax.profiler` trace，第 300 步 `stop_trace()` 后训练继续，与 L1 数据管线后台线程冲突（v11 同设置无事；冒烟 20 步与测速 300 步即结束未覆盖）。修复 `commitV15.14`（FIX-PROF fc4a0e5）：新增 `TRAIN_TIMING_PROFILE`，raw9 runner 全模式置 0（只写计时 jsonl、不调 jax.profiler），训练数值不变。验证：`R9_TIMING_STEPS=10` 冒烟 `r9-smoke20-l2` → `STEP_TIMING_DONE steps=10 profile=0` 后继续训练，`CKPT_LOAD=PASS step=19`、`SMOKE20=PASS steps=20 save_load=PASS`、`EXIT_CODE=0`；`PRE_MERGE_REVIEW=PASS base=fac3502 tip=fc4a0e5 blocking=0`。第一次起跑产物改名留存：`v1-store/train-runs/mme_vla_suite_b128_80k/<run>.try1`、`v1-store/bench/<run>/train-try1/`、`v1-store/logs/r9-train.try1.log`、`<run>.try1.runner.log`。用户原话：「修复然后起跑，有这种问题你都要自己解决，你不能每次在这种情况下就停。」
 
+## 第二次起跑事故（commitV15.15Beta 7ad7890，已作废）
+
+美东 2026-11-12 17:42 起跑，1.1 s/步稳定跑到约第 7560 步（step 5000 ckpt 已存，`STEP_VERIFY=PASS sub=5000 files=20` 上传），约 20:06 DataLoader worker 报 `No space left on device (28)`：/dev/shm（561 G tmpfs）写满，`EXIT_CODE=1`、`CHAIN=STOP reason=train_exit`。根因：L1 `_PrefetchIter` 释放线程 `_Releaser` 队列无界（`queue.SimpleQueue`），释放稍慢于取批即无限积压用过的共享内存批（CPU 复现 240 批积压 178 批、/dev/shm 325 GB）。修复 `commitV15.16`（FIX-SHM 132d549）：队列改 `queue.Queue(maxsize=1)` 反压；`SHM_LEAK=PASS batches=240 rel_q_max=1`、`RELEASER_CHECK=PASS`；`PRE_MERGE_REVIEW=PASS base=7ad7890 tip=132d549 blocking=0`。train.py 禁用续训（ckpt 仅 params），从头重跑；产物改名为 `*.try2` 留存；导出目录重置（bucket 中 step 5000 为 try2 内容，新 run 覆盖上传并 sha256 读回校验）。新增盯盘：tmux `r9-shmmon` 每 60 s 记 `/dev/shm` 已用量与 tqdm 进度，>300 GB 打 `SHM_ALERT`。
+
 ## 本轮 tmux 会话清单（截至起跑）
 
-已结束：`r9-g0`、`r9-export`、`r9-verify`、`r9-dlequiv`、`r9-online`、`r9-h5`、`r9-regress`、`r9-smoke20`、`r9-bench300`、`r9-smoke20-l1`、`r9-bench300-l1`、`r9-g5`、`r9-g6b`、`r9-train`（第一次，134 中止）、`r9-smoke20-l2`。起跑：`r9-train`（之后链脚本起 `r9-eval`）、`r9-ckptup`。
+已结束：`r9-g0`、`r9-export`、`r9-verify`、`r9-dlequiv`、`r9-online`、`r9-h5`、`r9-regress`、`r9-smoke20`、`r9-bench300`、`r9-smoke20-l1`、`r9-bench300-l1`、`r9-g5`、`r9-g6b`、`r9-train`（第一次，134 中止）、`r9-smoke20-l2`、`r9-train`（第二次，/dev/shm 写满中止）、`r9-ckptup`（第二次）。起跑：`r9-train`（之后链脚本起 `r9-eval`）、`r9-ckptup`、`r9-shmmon`。
 
 ## 盯盘项
 
