@@ -91,6 +91,8 @@
 | [`siglip-ab-replay-40k/`](siglip-ab-replay-40k/result.md) | 39999 checkpoint 下 `_prepare_history` 八键 vs 训练表逐位重放；SigLIP f32 离线表 vs bf16 checkpoint 差异量化 | 八键 PASS；SigLIP 差异 rel_fro 0.34% |
 | [`eval-awsprod40k-b128-motion/`](eval-awsprod40k-b128-motion/result.md) | motion 组仿真评估 | 见 result.md |
 | [`eval-official-framesamp-context/`](eval-official-framesamp-context/result.md) | 官方 framesamp+context 权重仿真评估；首次记录 Vulkan 第 28 次 `make_env` 崩溃与分片 ≤27 红线 | 见 result.md |
+| [`v2-1600ep-m8x8-modul-wanraw9s32-b128-50k/`](v2-1600ep-m8x8-modul-wanraw9s32-b128-50k/result.md) | 4task 1600 集、modulation 8×8、Wan raw 9 latent 不池化 + stride 32、b128、50k（第三次起跑 3addd7c；前两次 profiler abort 与 /dev/shm 写满已修） | 完成：`TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10`，1.133 s/步、约 15h48m；`HF_VERIFY=PASS ckpts=10`（公开 bucket） |
+| [`local692-wanraw9s32-50k/`](local692-wanraw9s32-50k/result.md) | 上一行 @50000 本机 692 局评估（32 片、每卡 4 片，与 v11 43.06% 同口径） | `EVAL692=PASS` 262/692 = 37.86%（v11 43.06%；混杂两变量不归因），约 73 分钟 |
 
 ### motion 接入闸门（环境 B 复刻，40 ep 库）
 

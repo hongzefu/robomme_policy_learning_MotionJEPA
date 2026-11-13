@@ -1,0 +1,21 @@
+[warn] 跳过没有 progress.json 的目录：gpu-slots
+[warn] 跳过没有 progress.json 的目录：logs
+[warn] 跳过没有 progress.json 的目录：plans
+  MOTION_MERGED episodes=683 k_max=96 es_max=1107 downsampled_episodes=4 （分层成功率 0/4 vs 262/679，仅作描述：两组存在选择偏倚，不可当因果证据）
+MERGE_OK shards=32 episodes=692 successes=262 errors=9
+  macro_success_rate=0.3780  micro_success_rate=0.3786
+  BinFill/easy                41/ 49 = 0.837
+  BinFill/hard                 9/ 44 = 0.205
+  BinFill/medium              27/ 49 = 0.551
+  RouteStick/easy             47/ 50 = 0.940
+  RouteStick/hard             20/ 50 = 0.400
+  RouteStick/medium           45/ 50 = 0.900
+  RouteStick/xhard             2/ 50 = 0.040
+  VideoRepick/easy            12/ 50 = 0.240  errors=1
+  VideoRepick/medium          15/ 50 = 0.300  errors=3
+  VideoRepick/xhard           11/ 50 = 0.220  errors=3
+  VideoUnmaskSwap/easy        10/ 50 = 0.200
+  VideoUnmaskSwap/hard         5/ 50 = 0.100
+  VideoUnmaskSwap/medium      11/ 50 = 0.220
+  VideoUnmaskSwap/xhard        7/ 50 = 0.140  errors=2
+  补跑计划已写入 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/local692-wanraw9s32-50k/merged/retry_plan.json（9 条）
