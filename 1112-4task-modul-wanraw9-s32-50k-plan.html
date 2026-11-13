@@ -27,7 +27,7 @@ th{background:var(--card)}
 </head>
 <body>
 <main>
-<p class="muted">计划日期 2026-11-12（美东）；分支 <code>v15-4task-modul-wanraw9-s32-50k</code>；代码锚点基线 <code>1531e6d</code>，对照基线 <code>v11-4task-modul-wantp768-50k@c55a6bc</code>；状态：<b>running（2026-11-12 开工）</b>。</p>
+<p class="muted">计划日期 2026-11-12（美东）；分支 <code>v15-4task-modul-wanraw9-s32-50k</code>；代码锚点基线 <code>1531e6d</code>，对照基线 <code>v11-4task-modul-wantp768-50k@c55a6bc</code>；状态：<b>closed（2026-11-12 开工，2026-11-13 训练与评估完成；实施中调整见第二部分 §八，实施结果见 §九）</b>。</p>
 
 <h1>第一部分（给人看）</h1>
 
@@ -639,7 +639,29 @@ tmx r9-ckptup "bash scripts/dataset/hf_export/run_wanraw9s32_ckpt_export.sh"
 <p class="muted">本节在开工后按 AGENTS 第 2 条「执行中调整计划」追加：每条先过一个只读对抗验证子代理（<code>ADJUST_REVIEW=PASS|FAIL scale=&lt;same|larger&gt; findings=&lt;n&gt;</code>），再按下表记录；触及硬停清单的调整停工交用户。计划阶段为空。</p>
 <table>
 <tr><th>#</th><th>旧 → 新</th><th>理由</th><th>审查结论</th></tr>
-<tr><td colspan="4" class="muted">（暂无）</td></tr>
+<tr><td>1</td><td>闸 G5 训推一致对拍：C 阶段与 G2–G4 并行 → 挪到 RB-D3 判级后、RB-D4 前，用末级冒烟 ckpt；G5 脚本改读单 episode H5（合并整任务 H5 本机没有，<code>commitV15.11</code>）；L3/L4 前向补传 modulation 记忆（<code>commitV15.12</code>）</td><td>G5 需要可加载的 ckpt 与末级数据管线才有意义；合并 H5 不存在</td><td><code>ADJUST_REVIEW=PASS scale=same findings=2</code>；结果 <code>MOTION_S_VS_SIDECAR=PASS windows=107 mismatches=0</code> 等（launch.md ⑤）</td></tr>
+<tr><td>2</td><td>数据管线触发 L1：主进程缺页 / make_array / 释放改后台线程与共享内存直填（S5-L1，<code>commitV15.9/15.10</code>）</td><td>L0 测速 <code>BENCH300 s_per_step=1.8740 dl_wait_frac=0.5987</code> 超阈值，按计划 §3 分级修复（计划内，记录于此）</td><td>计划内分级；<code>BENCH300=PASS s_per_step=1.1467 dl_wait_frac=0.2854</code></td></tr>
+<tr><td>3</td><td>第一次起跑（<code>commitV15.13Beta</code> fac3502）第 300 步 <code>jax.profiler</code> <code>stop_trace</code> 与 L1 数据线程冲突 abort（<code>EXIT_CODE=134</code>）→ FIX-PROF：新增 <code>TRAIN_TIMING_PROFILE</code>，raw9 runner 置 0（<code>commitV15.14</code> 59acd84），从头重跑</td><td>工程故障；用户「修复然后起跑，有这种问题你都要自己解决」；train.py 不支持 resume</td><td><code>PRE_MERGE_REVIEW=PASS base=fac3502 tip=fc4a0e5 blocking=0</code>；冒烟 <code>STEP_TIMING_DONE steps=10 profile=0</code>、<code>SMOKE20=PASS</code></td></tr>
+<tr><td>4</td><td>第二次起跑（<code>commitV15.15Beta</code> 7ad7890）约第 7560 步 /dev/shm 写满（L1 <code>_Releaser</code> 无界队列，<code>No space left on device (28)</code>）→ FIX-SHM：<code>queue.Queue(maxsize=1)</code>（<code>commitV15.16</code> 8382c80），新增盯盘 tmux <code>r9-shmmon</code>，从头重跑（第三次 <code>commitV15.17Beta</code> 3addd7c）</td><td>工程故障；数值语义不变</td><td><code>SHM_LEAK=PASS batches=240 rel_q_max=1</code>；<code>PRE_MERGE_REVIEW=PASS base=7ad7890 tip=132d549 blocking=0</code>；第三次 /dev/shm 平台约 209–225 GB</td></tr>
+<tr><td>5</td><td>ckpt bucket 私有 → 公开：上传到 step 20000 时 HF 私有存储额度 403，bucket 改 <code>private=False</code> 后续传；上传脚本建 bucket 改为不带 <code>--private</code>（hf 1.30.0 <code>buckets create</code> 无 <code>--public</code> 选项，默认即公开）</td><td>用户「hugging face 上传的是公开 bucket」「我同意放行，你可以再试一下」</td><td>用户指令；<code>STEP_VERIFY=PASS</code> ×10、<code>HF_VERIFY=PASS ckpts=10</code>、<code>EXIT_CODE=0</code></td></tr>
+<tr><td>6</td><td>评估 10 片、每卡 ≤2 片、显存占比 0.45 → 32 片、每卡 4 片、0.2（<code>commitV15.18</code> 66eb506，合入 sub/EVAL32 0e63c49）；链脚本以占位 <code>r9-eval.log</code> 挡住自动 10 片评估（<code>CHAIN=STOP reason=eval_log_exists</code>，预期），手动起 tmux <code>r9-eval32</code></td><td>用户「每卡 4 个 worker），预计能压到 1.5 小时左右 这个同意」「实现每卡4worker worker现存等以后都不需要保持一致」；判据不变</td><td>用户指令；<code>PRE_MERGE_REVIEW=PASS base=3addd7c tip=0e63c49 findings=9 blocking=0</code>；合并后单测 16 passed</td></tr>
+<tr><td>7</td><td>s5 首跑被同卡并发启动的进程归属检查误判退出（<code>EXIT_CODE=2</code>，0 局）→ 主会话按原流程手动补跑 s5（tmux <code>r9-eval32-s5</code>，环境逐项一致）+ 看守 <code>r9-eval32-guard</code>（其余分片先完成则 SIGSTOP 驱动，未触发）</td><td>slot 登记 pending→pid 竞争窗口，属工程故障；不改判据</td><td><code>S5_RERUN_DONE rc=0</code>；<code>GUARD_DONE s5done=1 others_done=18 stopped=0</code>；竞争本身留作待修缺陷</td></tr>
+<tr><td>8</td><td>RB-G2 评估结果上传 bucket <code>eval/</code> 前缀起初漏做 → 主会话美东 2026-11-13 收尾时补做：EVAL692.txt、preseeded-errors.json、retries.json 与 merged/ 下 errors / log / motion_stats / progress / retry_plan / shards.json 共 9 个文件（174,108 字节）传 <code>hf://buckets/HongzeFu/robomme-4task-modul-wanraw9-s32-50k-v1/eval/local692-wanraw9s32-50k/</code>，本机逐文件读回比 sha256（本机无集群）</td><td>计划步骤补执行，口径不变</td><td><code>UPLOAD_READBACK=PASS files=9 mismatches=0</code></td></tr>
+</table>
+
+<h2>九　实施结果</h2>
+<table>
+<tr><th>项</th><th>结果</th></tr>
+<tr><td>训练（第三次起跑 <code>commitV15.17Beta</code> 3addd7c）</td><td>美东 2026-11-12 20:42 起跑，2026-11-13 12:29 存 50000，<code>END_UTC=2026-11-13T17:30:09Z</code>；平均 1.133 s/步（tqdm 1.1–1.2 s/it）；<code>CKPT_LOAD=PASS step=50000 leaves=65 resolved_sha256=819a001c58b00d4a4110835b913ac1fb58238fb71d272eaa33a429f6dcb53062</code>、<code>TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10</code>、runner <code>EXIT_CODE=0</code>；wandb <code>tgm7yn5f</code>；loss 0.0881→0.0021，grad_norm 0.9649→0.0232，无 nan / OOM</td></tr>
+<tr><td>/dev/shm</td><td>稳定约 209–225 GB 平台（峰值 225 GB，<code>SHM_ALERT</code> 0 次），训练结束回落到 1 GB</td></tr>
+<tr><td>motion token 激活方差（风险第 1 条观察项）</td><td>5000→142，10000→780，15000→1379，20000→2022，25000→2701，30000→3535，35000→4451，40000→5331，45000→6396，50000→7279；近线性增长，loss 正常，仅观察</td></tr>
+<tr><td>ckpt 上传（长尾 <code>r9-ckptup</code>）</td><td>公开 bucket <code>HongzeFu/robomme-4task-modul-wanraw9-s32-50k-v1</code>，<code>STEP_VERIFY=PASS</code> ×10、<code>HF_VERIFY=PASS ckpts=10</code>、<code>EXIT_CODE=0</code></td></tr>
+<tr><td>闸 G9 评估结果上传（RB-G2，收尾补做）</td><td>同 bucket <code>eval/local692-wanraw9s32-50k/</code>，9 个文件 174,108 字节，<code>UPLOAD_READBACK=PASS files=9 mismatches=0</code></td></tr>
+<tr><td>闸 G8 评估</td><td><code>EVAL692=PASS episodes=692 success=262 rate=0.3786 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1</code>；32 片 <code>SHARD_EXIT_CODE=0</code>、<code>SHARD_SCAN</code> 全 <code>verdict=ok</code>、<code>RETRY_INTEGRATE=PASS retried=0</code>、<code>check_shard</code> 全 <code>SHARD_PASS</code>；美东 12:30→13:43 约 73 分钟，每卡约 79 GB 无 OOM</td></tr>
+<tr><td>分任务（本次 / v11）</td><td>总体 37.86% / 43.06%；BinFill 77/142 = 54.2% / 59.2%；RouteStick 114/200 = 57.0% / 69.0%；VideoRepick 38/150 = 25.3% / 25.3%；VideoUnmaskSwap 33/200 = 16.5% / 19.0%</td></tr>
+<tr><td>解读（描述）</td><td>差距主要在 RouteStick（−12 pp，hard / xhard −14 / −22 pp）与 BinFill（−5 pp）；本轮同时改了「不池化」与「stride 16→32」（D3 用户接受混杂），无法归因</td></tr>
+<tr><td>留档</td><td><code>docs/training-doc/v2-1600ep-m8x8-modul-wanraw9s32-b128-50k/</code>（launch / result / records）、<code>docs/training-doc/local692-wanraw9s32-50k/</code>（launch / result / records）；状态机两任务 closed</td></tr>
+<tr><td>下一步（非授权建议）</td><td>修 slot 登记竞争（<code>run_slot</code> pending→pid 窗口导致同卡并发启动误判）；可选：raw latent 归一化，或拆分 pool 与 stride 两变量的对照</td></tr>
 </table>
 </main>
 </body>

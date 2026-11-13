@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-12T16:32:04Z",
-    "america_new_york": "2026-11-12T11:32:04-05:00"
+    "utc": "2026-11-13T18:50:56Z",
+    "america_new_york": "2026-11-13T13:50:56-05:00"
   },
   "repo": {
     "branch": "v15-4task-modul-wanraw9-s32-50k",
-    "base_head": "cd5df94"
+    "base_head": "66eb506"
   },
   "freeze": {
     "active": false,
@@ -158,19 +158,20 @@
         "file": "1112-4task-modul-wanraw9-s32-50k-plan.html",
         "sha": "127072a"
       },
-      "state": "running",
-      "state_changed_at": "2026-11-12T16:32:04Z",
+      "state": "closed",
+      "state_changed_at": "2026-11-13T18:50:56Z",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiUiaeANT2oNBsirsQv",
         "host": "ip-10-242-11-177"
       },
       "long_tail": [
         {
-          "what": "ckpt 增量上传 HF",
+          "what": "ckpt 增量上传 HF（公开 bucket HongzeFu/robomme-4task-modul-wanraw9-s32-50k-v1）",
           "tmux": "r9-ckptup",
           "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/r9-ckptup.log",
           "done_line": "HF_VERIFY=PASS ckpts=10",
-          "status": "pending"
+          "status": "done",
+          "evidence": "HF_VERIFY=PASS ckpts=10；EXIT_CODE=0（step 5000–15000 的 STEP_VERIFY=PASS 在 r9-ckptup.quota403.log，20000–50000 在 r9-ckptup.log）"
         }
       ],
       "running_handles": [],
@@ -195,7 +196,7 @@
         }
       ],
       "pending_decisions": [],
-      "state_reason": "开工令已到；RB-A1 审查 FAIL(9/3) 用户裁决按推荐，计划修订与 S1–S4 并行",
+      "state_reason": "第三次起跑（commitV15.17Beta 3addd7c）50k 完成：TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10、runner EXIT_CODE=0；长尾 r9-ckptup HF_VERIFY=PASS ckpts=10（公开 bucket）；前两次起跑（fac3502 profiler abort、7ad7890 /dev/shm 写满）已修复作废",
       "depends_on": [],
       "pre_handoff": [
         {
@@ -205,63 +206,57 @@
           "status": "pass"
         },
         {
-          "what": "S1–S4 POST_MERGE_REVIEW=PASS ×4",
-          "evidence": null,
-          "where": null,
-          "status": "pending"
+          "what": "S1–S4 合并（含合并前后审查）且已 push",
+          "evidence": "commitV15.4 7bcd7a9、commitV15.5 b201515、commitV15.6 73289a3、commitV15.7 7307410、commitV15.8 e5d4354",
+          "where": "v15-4task-modul-wanraw9-s32-50k 历史；均为 66eb506 的祖先，已在远端（ls-remote refs/heads/v15-4task-modul-wanraw9-s32-50k 指向 66eb506）",
+          "status": "pass"
         },
         {
           "what": "RB-A1 PLAN_CONSISTENCY_REVIEW",
-          "evidence": null,
-          "where": null,
-          "status": "pending"
+          "evidence": "PLAN_CONSISTENCY_REVIEW=FAIL base=127072a findings=9 blocking=3（用户裁决「同意开工，按照推荐开工」，计划 bcb2fb2 修订落实）",
+          "where": "commitV15.3 bcb2fb2 commit body",
+          "status": "pass"
         },
         {
           "what": "闸 G0 DATA_LINEAGE=PASS",
-          "evidence": null,
-          "where": null,
-          "status": "pending"
+          "evidence": "DATA_LINEAGE=PASS encoder=wanvae-9980d252+raw9s32 encoder_source_pin=41f4ca551eecc336d687cded57db17e208ae86bb40dc9f04c9b0a7722985193f vla_input_pin=41f4ca551eecc336d687cded57db17e208ae86bb40dc9f04c9b0a7722985193f files=4 mismatches=0",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/r9-train.log",
+          "status": "pass"
         },
         {
           "what": "闸 G1 RAW9_TABLE=PASS rows=36484 budget_max=71",
-          "evidence": null,
-          "where": null,
-          "status": "pending"
+          "evidence": "RAW9_TABLE=PASS rows=36484 demo=18367 exec=18117 budget_max=71 mismatch=0",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/r9-verify.log",
+          "status": "pass"
         },
         {
           "what": "闸 G2–G5 单测/等价/对拍/训推一致",
-          "evidence": null,
-          "where": null,
-          "status": "pending"
+          "evidence": "pytest 112 passed + V11_REGRESS=PASS samples=256 mismatch=0；DL_EQUIV=PASS samples=256 mismatch=0；ONLINE_RAW9=PASS windows=64 padded=8 bitexact=64；MOTION_S_VS_SIDECAR=PASS windows=107 mismatches=0、MEM_S_VS_TRAINSET=PASS points=114、OBS_T_VS_I=PASS points=114",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/r9-regress.log、r9-dlequiv.log、r9-online.log、r9-g5.log",
+          "status": "pass"
         },
         {
           "what": "闸 G6 SMOKE20/BENCH300 与 G6b EVAL_LOAD_SMOKE=PASS",
-          "evidence": null,
-          "where": null,
-          "status": "pending"
+          "evidence": "SMOKE20=PASS steps=20 save_load=PASS；BENCH300=PASS steps=300 s_per_step=1.1467 dl_wait_frac=0.2854 gpu_util_mean=94.44；EVAL_LOAD_SMOKE=PASS episodes=1 handshake=PASS share2=PASS peak_mem_gb=78.3",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/r9-smoke20-l1.log、r9-bench300-l1.log、r9-g6b.log",
+          "status": "pass"
         },
         {
           "what": "闸 G7 CKPT_LOAD=PASS step=50000",
-          "evidence": null,
-          "where": null,
-          "status": "pending"
+          "evidence": "CKPT_LOAD=PASS step=50000 leaves=65 resolved_sha256=819a001c58b00d4a4110835b913ac1fb58238fb71d272eaa33a429f6dcb53062；TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10；EXIT_CODE=0",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/r9-train.log",
+          "status": "pass"
         }
       ],
-      "next_steps": [
-        {
-          "what": "等用户开工令后 RB-A1",
-          "command": "派 sonnet 计划一致性审查",
-          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS"
-        }
-      ]
+      "next_steps": []
     },
     "4task-wanraw9s32-eval": {
       "plan": {
         "file": "1112-4task-modul-wanraw9-s32-50k-plan.html",
         "sha": "127072a"
       },
-      "state": "planned",
-      "state_changed_at": "2026-11-12T16:24:47Z",
+      "state": "closed",
+      "state_changed_at": "2026-11-13T18:50:56Z",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiUiaeANT2oNBsirsQv",
         "host": "ip-10-242-11-177"
@@ -289,29 +284,34 @@
         }
       ],
       "pending_decisions": [],
-      "state_reason": "训练 done 后由链脚本自动接评估；等开工令",
+      "state_reason": "32 片（每卡 4 片）692 局评估完成：EVAL692=PASS 262/692=37.86%（v11 43.06%）；s5 首跑同卡并发启动误判后手动补跑 rc=0；RB-G2 评估结果上传起初漏做、主会话收尾补做 UPLOAD_READBACK=PASS files=9 mismatches=0",
       "depends_on": [
         "4task-wanraw9s32-train"
       ],
       "pre_handoff": [
         {
-          "what": "闸 G8 EVAL692=…/692",
-          "evidence": null,
-          "where": null,
-          "status": "pending"
+          "what": "闸 G8 EVAL692",
+          "evidence": "EVAL692=PASS episodes=692 success=262 rate=0.3786 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/local692-wanraw9s32-50k/EVAL692.txt",
+          "status": "pass"
         },
         {
-          "what": "闸 G9 UPLOAD_READBACK=PASS",
-          "evidence": null,
-          "where": null,
-          "status": "pending"
+          "what": "闸 G9 上传读回（ckpt 与评估结果；评估结果 RB-G2 起初漏做、主会话 2026-11-13 收尾补做）",
+          "evidence": "HF_VERIFY=PASS ckpts=10；UPLOAD_READBACK=PASS files=9 mismatches=0",
+          "where": "hf://buckets/HongzeFu/robomme-4task-modul-wanraw9-s32-50k-v1/（ckpt 10 份；eval/local692-wanraw9s32-50k/ 9 个文件 174108 字节）",
+          "status": "pass"
         }
       ],
       "next_steps": [
         {
-          "what": "训练闸 G7 通过后链脚本起 r9-eval",
-          "command": "scripts/training/chain_wanraw9s32_train_eval.sh",
-          "verdict_line": "EVAL692="
+          "what": "（非授权建议）修 slot 登记竞争：local_692_pool.sh run_slot 的 pending→pid 窗口导致同卡并发启动时 run_shard.sh 进程归属检查误判退出",
+          "command": "另立计划；修 scripts/evaluation/local_692_pool.sh run_slot / run_shard.sh 归属检查",
+          "verdict_line": "同卡 4 片并发启动 32/32 SHARD_EXIT_CODE=0、无「不属于已登记分片的进程树」"
+        },
+        {
+          "what": "（非授权建议，可选）raw latent 归一化，或拆分「不池化」与「stride 16→32」两变量的对照",
+          "command": "另立计划，需用户开工令",
+          "verdict_line": "EVAL692=PASS"
         }
       ]
     }

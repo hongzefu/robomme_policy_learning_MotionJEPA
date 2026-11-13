@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # driver：把训练 run v2-1600ep-m8x8-modul-wanraw9s32-b128-50k 的 10 份 orbax checkpoint（step 5000…50000）
-# 逐份上传到 HF **private** bucket HongzeFu/robomme-4task-modul-wanraw9-s32-50k-v1，并在本机读回逐文件 sha256 对照
+# 逐份上传到 HF **公开** bucket HongzeFu/robomme-4task-modul-wanraw9-s32-50k-v1，并在本机读回逐文件 sha256 对照
 # （1112-4task-modul-wanraw9-s32-50k-plan.html 第二部分 1.2 导出行、runbook RB-E3 的 tmux r9-ckptup；本机无集群，读回校验在本机做）。
 # 由 run_wantp768_ckpt_export.sh（v11）复制，只换 RUN_NAME、BUCKET_ID 与 TRAIN_LOG 默认值（链脚本所在 tmux r9-train 的日志）。
 #
@@ -10,7 +10,7 @@
 #   1. **不等 50k、每份存完即传**：按 step 5000…50000 依次等该份 ckpt 落盘完成——orbax 先写
 #      <step>.orbax-checkpoint-tmp-* 再改名为 <step>，改名后 <step>/_CHECKPOINT_METADATA 存在、且同号 tmp 目录已消失，
 #      才算落盘完成——随即 stage（硬链接）+ 上传该 step 目录 + 本机读回该 step + sha256 对照，一份一份推进；
-#   2. **建 bucket（--private）+ 空库断言**沿用 run_modul60k_ckpt_export.sh 的做法（uploaded.marker 区分续传）；
+#   2. **建公开 bucket（不带 --private）+ 空库断言**沿用 run_modul60k_ckpt_export.sh 的做法（uploaded.marker 区分续传）；
 #   3. 按 step 目录分批上传（每份约 12 GB，落在 run_modul60k 实测会过的批量级）；
 #   4. NPROC=48（沿用 v11 P7：哈希并行 32–48）；
 #   5. run 根下的平文件与非 step 目录（history_config.*、motion_provenance.json 等）在 10 份都校验完后最后上传并读回校验。
@@ -117,8 +117,10 @@ who="$(hf auth whoami 2>&1 | tr '\n' ' ' | tr -s ' ')"
 echo "  whoami: $who"
 case "$who" in *HongzeFu*) : ;; *) echo "错误: 身份不是 HongzeFu（$who）"; exit 1 ;; esac
 echo "HF_WHOAMI=HongzeFu"
-# **必须带 --private**：不带即公开。已存在则 create 非零退出，由下面的空库断言兜底
-if hf buckets create "$BUCKET_ID" --private 2>&1 | tee "$TMPD/create.log"; then
+# 建为**公开** bucket（2026-11-13 用户：「hugging face 上传的是公开 bucket」；私有存储额度不足曾报 403）。
+# hf 1.30.0 的 `buckets create` 只有 --private 开关、没有 --public 选项，不带 --private 即公开；
+# 已存在则 create 非零退出，由下面的空库断言兜底（已存在的私有 bucket 需另用 `hf buckets settings <id> --public` 改公开）
+if hf buckets create "$BUCKET_ID" 2>&1 | tee "$TMPD/create.log"; then
   echo "  bucket create 成功"
 else
   echo "  bucket create 非零退出（可能已存在），继续走空库断言"
