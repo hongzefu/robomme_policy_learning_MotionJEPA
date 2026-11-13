@@ -1,23 +1,25 @@
 #!/usr/bin/env bash
 # 本机 692 局评估驱动（1108-4task-modul-wantp768-50k-plan.html §4、§5 E1/G6b、第二部分 1.2、runbook D2/E）。
-# 把上次的 GL 外壳（gl_hold_pool.sh → gl_eval_shard.sbatch → run_shard.sh）换成本机 8 卡同时跑 10 个逻辑分片调 run_shard.sh。
+# 把上次的 GL 外壳（gl_hold_pool.sh → gl_eval_shard.sbatch → run_shard.sh）换成本机 8 卡同时跑 $SHARDS 个逻辑分片调 run_shard.sh（正式评估默认 32 片、每卡 4 片，见下方「可覆盖」）。
 #
 # 用法：
 #   local_692_pool.sh <checkpoint 绝对路径> [seed=7]          正式评估（runbook E，ckpt …/50000）
 #   local_692_pool.sh --g6b <冒烟 checkpoint 绝对路径> <seed>   G6b 评估加载冒烟（runbook D2，ckpt …/w768-smoke20/19）
 # 可覆盖：RUN_NAME（评估目录名，正式默认 local692-wantp768-50k，G6b 默认 w768-g6b）、
 #        STORE（demo 前缀库根，默认 $EVAL_REPO/v1-store/demo-prefix/binfill-3b4de03a0b46）、
-#        DRY_RUN=1（只打印计划、片→卡/端口映射与预标清单，不起任何分片、不写评估目录）
+#        DRY_RUN=1（只打印计划、片→卡/端口映射与预标清单，不起任何分片、不写评估目录）、
+#        EVAL_SHARDS（正式评估逻辑分片数，默认 32）、EVAL_PER_GPU（每卡同时片数，默认 4，即 LOCAL_GPU_SHARE）、
+#        EVAL_MEM_FRACTION（正式评估每片 XLA_PYTHON_CLIENT_MEM_FRACTION，默认 0.2）；G6b 模式不读这三个，保持原行为
 #
 # 流程（正式）：
 #   ① $STORE/E0.txt 首行必须是 DEMO_PREFIX_SRC=PASS（E0，训练前已完成），否则不起跑；
-#   ② make_shard_plan.py shards --shards 10 --demo-store $STORE 生成本次 10 片计划（PLAN_OK，C6 检查）；
+#   ② make_shard_plan.py shards --shards $SHARDS --demo-store $STORE 生成本次 $SHARDS 片计划（PLAN_OK，C6 检查）；
 #   ③ C5：从 docs/training-doc/finalckpt-nomotion59999-gl/records/preseeded-errors.json 只取去重后的 9 个
 #      (task, difficulty, episode) 身份（不复用其 by_shard），按本次计划查所属分片，写该片 progress.json 预标 "error"
 #      并 ALLOW_RESUME=1；判定行 PRESEED=PASS episodes=9 placed=9 duplicates=0，不过即不起跑；
 #   ④ C4：分片 k 用 GPU k%8；每卡一个占位文件 $EVAL_ROOT/gpu-slots/gpu<g>（同名 .lock 做 flock）：
-#      先在锁内预占卡位（含本片 <= 2，按分片计数），再后台起 run_shard.sh，把它自身的 PID 作为进程树根写入
-#      （server、sidecar 都是它的子孙），片结束在锁内释放；run_shard.sh 的 LOCAL_GPU_SHARE=2 分支只认这份登记；
+#      先在锁内预占卡位（含本片 <= $PER_GPU，按分片计数），再后台起 run_shard.sh，把它自身的 PID 作为进程树根写入
+#      （server、sidecar 都是它的子孙），片结束在锁内释放；run_shard.sh 的 LOCAL_GPU_SHARE>=2 分支只认这份登记；
 #   ⑤ wait 全部分片，逐片记 SHARD_EXIT_CODE；只含预标 error 的分片非零退出属预期；
 #   ⑥ C7：新 error（不在预标清单）只重跑该局一次：重跑写独立运行目录（结束后移入 s<k>/retry1/），
 #      首次尝试的该局视频与 progress/motion_stats/client.log 快照移入 s<k>/attempt0/ 留档、不参与验收，
@@ -41,7 +43,13 @@ SEED="${2:-7}"
 [[ "$CKPT" == /* ]] || { echo "checkpoint 必须是绝对路径：$CKPT"; exit 2; }
 [[ "$DRY" == 1 || -d "$CKPT/params" ]] || { echo "checkpoint 缺 params/：$CKPT"; exit 2; }
 CKPT_ID="$(basename "$CKPT")"
-SHARDS=10
+if [[ "$MODE" == g6b ]]; then
+    SHARDS=10; PER_GPU=2; MEM_FRACTION=0.45   # G6b 保持原行为（runbook D2），不读 EVAL_* 覆盖
+else
+    SHARDS="${EVAL_SHARDS:-32}"; PER_GPU="${EVAL_PER_GPU:-4}"; MEM_FRACTION="${EVAL_MEM_FRACTION:-0.2}"
+fi
+[[ "$SHARDS" =~ ^[1-9][0-9]*$ ]] || { echo "EVAL_SHARDS 必须是正整数：$SHARDS"; exit 2; }
+[[ "$PER_GPU" =~ ^[0-9]+$ && "$PER_GPU" -ge 2 ]] || { echo "EVAL_PER_GPU 必须是 >=2 的整数：$PER_GPU"; exit 2; }
 if [[ "$MODE" == g6b ]]; then RUN_NAME="${RUN_NAME:-w768-g6b}"; else RUN_NAME="${RUN_NAME:-local692-wantp768-50k}"; fi
 [[ "$RUN_NAME" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo "RUN_NAME 非法：$RUN_NAME"; exit 2; }
 STORE="${STORE:-$EVAL_REPO/v1-store/demo-prefix/binfill-3b4de03a0b46}"
@@ -53,7 +61,7 @@ RETRY_ROOT="$EVAL_REPO/v1-store/evaluation/$RETRY_RUN"
 # 计划 §4 F8 必要参数（与历史 GL 口径一致，gl_hold_pool.sh 同样写死 EVAL_TIMEOUT=14400）
 export MMEVLA_MOTION_OVERFLOW=resample EXPECT_MOTION_STATS=1 EXPECT_DEMO_INJECT=1 CHUNK_EPISODES=20 \
        MMEVLA_MOTION_PROV_RELAX=gpu_name,compute_cap,sm_count EPISODE_WALL_S=2400 EVAL_TIMEOUT=14400 \
-       LOCAL_GPU_SHARE=2 XLA_PYTHON_CLIENT_MEM_FRACTION=0.45 ALLOW_RESUME=1 \
+       LOCAL_GPU_SHARE="$PER_GPU" XLA_PYTHON_CLIENT_MEM_FRACTION="$MEM_FRACTION" ALLOW_RESUME=1 \
        POLICY="${POLICY:-perceptual-framesamp-modul-8frame-8x8-wantp768}" POLICY_CONFIG=mme_vla_suite_b128_80k \
        EXPECT_CKPT_ID="$CKPT_ID" DEMO_PREFIX_STORE="$STORE"
 unset ROBOMME_GPU_RASTER SAPIEN_DISABLE_RAY_TRACING
@@ -61,7 +69,8 @@ echo "LOCAL692_START mode=$MODE dry=$DRY run=$RUN_NAME ckpt=$CKPT seed=$SEED sto
 echo "EVAL_ENV MMEVLA_MOTION_OVERFLOW=$MMEVLA_MOTION_OVERFLOW EXPECT_MOTION_STATS=$EXPECT_MOTION_STATS EXPECT_DEMO_INJECT=$EXPECT_DEMO_INJECT" \
      "CHUNK_EPISODES=$CHUNK_EPISODES MMEVLA_MOTION_PROV_RELAX=$MMEVLA_MOTION_PROV_RELAX seed=$SEED max_steps=2000(run_shard.sh)" \
      "EPISODE_WALL_S=$EPISODE_WALL_S EVAL_TIMEOUT=$EVAL_TIMEOUT LOCAL_GPU_SHARE=$LOCAL_GPU_SHARE" \
-     "XLA_PYTHON_CLIENT_MEM_FRACTION=$XLA_PYTHON_CLIENT_MEM_FRACTION POLICY=$POLICY POLICY_CONFIG=$POLICY_CONFIG EXPECT_CKPT_ID=$EXPECT_CKPT_ID"
+     "XLA_PYTHON_CLIENT_MEM_FRACTION=$XLA_PYTHON_CLIENT_MEM_FRACTION POLICY=$POLICY POLICY_CONFIG=$POLICY_CONFIG EXPECT_CKPT_ID=$EXPECT_CKPT_ID" \
+     "SHARDS=$SHARDS PER_GPU=$PER_GPU MEM_FRACTION=$MEM_FRACTION"
 
 # ── 内嵌 Python（经 CLIENT_UV 运行；只用标准库）──────────────────────────────────────────
 read -r -d '' PYHELP <<'PY'
@@ -111,7 +120,7 @@ def cmd_preseed(plan_dir, src, out_root, policy, ckpt, seed, shards):
                 sys.exit(f"预标目标已存在，拒绝覆盖：{path}")
             path.write_text(json.dumps({g: {e: "error" for e in eps} for g, eps in groups.items()}, indent=2),
                             encoding="utf-8")
-        record = {"source": str(src), "note": "身份引自历史清单，按本次 10 片计划重定位，未复用其分片号",
+        record = {"source": str(src), "note": f"身份引自历史清单，按本次 {shards} 片计划重定位，未复用其分片号",
                   "keys": [f"{g}/{e}" for g, e in keys], "by_shard": by_shard, "verdict": line}
         (Path(out_root) / "preseeded-errors.json").write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n",
                                                              encoding="utf-8")
@@ -266,12 +275,12 @@ py() { "${CLIENT_UV[@]}" -c "$PYHELP" "$@"; }
 
 # ── 每卡占位（C4）：占位文件每行「<分片标识> <run_shard.sh PID|pending>」，读写都在 <文件>.lock 的 flock 下 ──
 SLOT_DIR="$EVAL_ROOT/gpu-slots"
-slot_reserve() {  # $1=gpu $2=tag：锁内读已登记数，<2 才登记（含本片 <= 2）
+slot_reserve() {  # $1=gpu $2=tag：锁内读已登记数，<PER_GPU 才登记（含本片 <= PER_GPU）
     local f="$SLOT_DIR/gpu$1"
     ( flock 9 || exit 1
       touch "$f"
       n="$(grep -c . "$f")"
-      (( n < 2 )) || { echo "SLOT_REFUSED gpu=$1 tag=$2 registered=$n"; exit 3; }
+      (( n < PER_GPU )) || { echo "SLOT_REFUSED gpu=$1 tag=$2 registered=$n"; exit 3; }
       echo "$2 pending" >> "$f" ) 9>"$f.lock"
 }
 slot_set_pid() {  # $1=gpu $2=tag $3=run_shard.sh PID
@@ -313,7 +322,7 @@ else
     mkdir -p "$PLAN_DIR" "$EVAL_ROOT/logs" "$SLOT_DIR"
 fi
 
-# ── ② 本次 10 片计划 ──
+# ── ② 本次 $SHARDS 片计划 ──
 "${CLIENT_UV[@]}" scripts/evaluation/make_shard_plan.py shards "$PLAN_DIR" --shards "$SHARDS" --demo-store "$STORE" \
     2>&1 | tee "$PLAN_DIR/make_shard_plan.log"
 PLAN_RC=${PIPESTATUS[0]}
@@ -368,14 +377,14 @@ fi
 # ── ③ C5 按身份重定位预标 ──
 if [[ "$DRY" == 1 ]]; then
     py preseed "$PLAN_DIR" "$PRESEED_SRC" - "$POLICY" "$CKPT_ID" "$SEED" "$SHARDS" || exit 2
-    echo "DRY 正式评估：10 片按 SHARD_MAP 同时起（每卡 <= 2 片，flock 占位），之后 scan → retry1 → check_shard → merge"
+    echo "DRY 正式评估：$SHARDS 片按 SHARD_MAP 同时起（每卡 <= $PER_GPU 片，flock 占位），之后 scan → retry1 → check_shard → merge"
     exit 0
 fi
 py preseed "$PLAN_DIR" "$PRESEED_SRC" "$EVAL_ROOT" "$POLICY" "$CKPT_ID" "$SEED" "$SHARDS" \
     | tee "$EVAL_ROOT/logs/preseed.log"
 [[ "${PIPESTATUS[0]}" == 0 ]] || { echo "PRESEED 不过，不起跑"; exit 2; }
 
-# ── ④⑤ 10 片同跑、收齐退出码 ──
+# ── ④⑤ $SHARDS 片同跑、收齐退出码 ──
 PIDS=()
 for ((K=0; K<SHARDS; K++)); do
     run_slot "$((K % 8))" "s$K" "$K" "$PLAN_DIR/shard$K.json" "$RUN_NAME" "$EVAL_ROOT/logs/s$K.log" "$EVAL_ROOT/logs/s$K.rc" &

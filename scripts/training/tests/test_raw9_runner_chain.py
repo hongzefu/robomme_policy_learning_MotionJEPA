@@ -8,8 +8,9 @@
      不得出现 DATA_LINEAGE=PASS；R9_G0_MOTION 在非 --g0-only 模式下被拒；（需要主检出 v1-store 数据与 .venv，缺则 skip）
   ③ 链脚本 CHAIN_DRY=1 + 三种假日志夹具（缺 CKPT_LOAD、EXIT_CODE=1、正常）：只在正常时打印 eval 命令，且含写死的
      POLICY / RUN_NAME / EXPECT_MOTION_STRIDE=32 / EXPECT_MOTION_BUDGET=80 与 …/50000 7；
-  ④ local_692_pool.sh：相对基线 e59cde3 只改了 POLICY 一行；DRY_RUN=1 POLICY=<新值> 的 EVAL_ENV 行打印新值，
-     不设 POLICY 时 EVAL_ENV 行与基线脚本逐字相同。
+  ④ local_692_pool.sh：POLICY 可覆盖一行仍在；DRY_RUN=1 POLICY=<新值> 的 EVAL_ENV 行打印新值；EVAL32 起
+     EVAL_ENV 行相对基线 e59cde3 只允许 LOCAL_GPU_SHARE / XLA 显存占比取值变化并在行尾追加 SHARDS/PER_GPU/MEM_FRACTION，
+     默认 32/4/0.2，EVAL_* 覆盖生效，G6b 模式保持 10/2/0.45 原行为。
 末尾 test_zz_verdict 打印 S4_RUNNER_UNIT=PASS（pytest -s 可见；全部用例通过才会执行到它）。
 """
 from __future__ import annotations
@@ -169,11 +170,11 @@ def test_chain_rejects_fixture_log_in_real_mode(tmp_path):
     assert p.returncode == 2 and "CHAIN=STOP reason=bad_env" in p.stdout
 
 
-def _eval_env_line(script: pathlib.Path, env_extra, tmp_path) -> str:
+def _eval_env_line(script: pathlib.Path, env_extra, tmp_path, args=("/abs/ckpt/50000", "7")) -> str:
     # STORE 指向没有 E0.txt 的临时目录：脚本在打印 EVAL_ENV 后于 E0 闸退出，不建任何目录、不跑 uv
     store = tmp_path / "store"
     store.mkdir(exist_ok=True)
-    p = run(["bash", str(script), "/abs/ckpt/50000", "7"], {"DRY_RUN": "1", "STORE": str(store), **env_extra})
+    p = run(["bash", str(script), *args], {"DRY_RUN": "1", "STORE": str(store), **env_extra})
     assert "E0_GATE=FAIL" in p.stdout, p.stdout + p.stderr
     return next(x for x in p.stdout.splitlines() if x.startswith("EVAL_ENV "))
 
@@ -181,21 +182,36 @@ def _eval_env_line(script: pathlib.Path, env_extra, tmp_path) -> str:
 def test_local692_policy_override(tmp_path):
     base_txt = run(["git", "show", f"{BASE}:scripts/evaluation/local_692_pool.sh"], check=True).stdout
     cur_txt = POOL.read_text()
-    changed = [(a, b) for a, b in zip(base_txt.splitlines(), cur_txt.splitlines()) if a != b]
-    assert len(base_txt.splitlines()) == len(cur_txt.splitlines()) and len(changed) == 1
-    assert changed[0][0].replace("POLICY=perceptual-framesamp-modul-8frame-8x8-wantp768",
-                                 'POLICY="${POLICY:-perceptual-framesamp-modul-8frame-8x8-wantp768}"') == changed[0][1]
+    # POLICY 可覆盖一行仍在（EVAL32 起该脚本另有片数／每卡片数／显存占比可配置的改动，不再要求「只改一行」）
+    assert "       POLICY=perceptual-framesamp-modul-8frame-8x8-wantp768 POLICY_CONFIG=" in base_txt
+    assert '       POLICY="${POLICY:-perceptual-framesamp-modul-8frame-8x8-wantp768}" POLICY_CONFIG=' in cur_txt
     # 基线脚本放进临时仓库骨架（同目录带 env.sh），打印出的 EVAL_ENV 不含路径，可与当前脚本逐字比
     skel = tmp_path / "skel/scripts/evaluation"
     skel.mkdir(parents=True)
     (skel / "local_692_pool.sh").write_text(base_txt)
     shutil.copy(REPO / "scripts/evaluation/env.sh", skel / "env.sh")
     base_line = _eval_env_line(skel / "local_692_pool.sh", {}, tmp_path)
-    assert _eval_env_line(POOL, {}, tmp_path) == base_line
     assert "POLICY=perceptual-framesamp-modul-8frame-8x8-wantp768 " in base_line
+    assert "LOCAL_GPU_SHARE=2 " in base_line and "XLA_PYTHON_CLIENT_MEM_FRACTION=0.45 " in base_line
+
+    def eval32(line, share, frac, shards):
+        # EVAL32：只允许 LOCAL_GPU_SHARE / XLA 显存占比两值变化，并在行尾追加 SHARDS/PER_GPU/MEM_FRACTION
+        return (line.replace("LOCAL_GPU_SHARE=2 ", f"LOCAL_GPU_SHARE={share} ")
+                    .replace("XLA_PYTHON_CLIENT_MEM_FRACTION=0.45 ", f"XLA_PYTHON_CLIENT_MEM_FRACTION={frac} ")
+                + f" SHARDS={shards} PER_GPU={share} MEM_FRACTION={frac}")
+
+    # 默认值 32 片 / 每卡 4 片 / 0.2
+    assert _eval_env_line(POOL, {}, tmp_path) == eval32(base_line, 4, "0.2", 32)
     new_line = _eval_env_line(POOL, {"POLICY": NEW_POLICY}, tmp_path)
     assert f"POLICY={NEW_POLICY} " in new_line
-    assert new_line == base_line.replace("perceptual-framesamp-modul-8frame-8x8-wantp768", NEW_POLICY)
+    assert new_line == eval32(base_line.replace("perceptual-framesamp-modul-8frame-8x8-wantp768", NEW_POLICY), 4, "0.2", 32)
+    # 三个 EVAL_* 覆盖生效；取 10/2/0.45 时回到基线取值（只多尾部三字段）
+    assert _eval_env_line(POOL, {"EVAL_SHARDS": "10", "EVAL_PER_GPU": "2", "EVAL_MEM_FRACTION": "0.45"},
+                          tmp_path) == eval32(base_line, 2, "0.45", 10)
+    # G6b 模式不读 EVAL_*，保持原行为（10 片计划、LOCAL_GPU_SHARE=2、0.45）
+    g6b_base = _eval_env_line(skel / "local_692_pool.sh", {}, tmp_path, ["--g6b", "/abs/ckpt/19", "7"])
+    assert _eval_env_line(POOL, {"EVAL_SHARDS": "32", "EVAL_PER_GPU": "4", "EVAL_MEM_FRACTION": "0.2"}, tmp_path,
+                          ["--g6b", "/abs/ckpt/19", "7"]) == g6b_base + " SHARDS=10 PER_GPU=2 MEM_FRACTION=0.45"
 
 
 def test_export_script_only_names_changed():

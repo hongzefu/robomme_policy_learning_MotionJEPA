@@ -76,14 +76,14 @@ check_local_gpu() {
         echo "LOCAL_GPU_IDLE=PASS device=$CUDA_VISIBLE_DEVICES"
         return 0
     fi
-    # LOCAL_GPU_SHARE=2（1108 计划 C4 / U5「放宽闸门同卡2片」）：归属不看命令行字符串，只认驱动
+    # LOCAL_GPU_SHARE=N>=2（1108 计划 C4 / U5「放宽闸门同卡2片」，EVAL32 起放宽为同卡 N 片）：归属不看命令行字符串，只认驱动
     # local_692_pool.sh 在 flock 下写的每卡占位文件 LOCAL_GPU_SLOT_FILE（每行「<分片标识> <run_shard.sh PID|pending>」）。
-    # 放行要同时满足：① 本片已登记、本卡已登记分片数（含本片）<= 2；② 卡上已有的每个计算进程都是某个
+    # 放行要同时满足：① 本片已登记、本卡已登记分片数（含本片）<= N；② 卡上已有的每个计算进程都是某个
     # 已登记 run_shard.sh PID（或本进程 $$）的子孙（server、sidecar 都由 run_shard.sh 派生）。否则照旧拒绝。
-    [[ "${LOCAL_GPU_SHARE}" == 2 ]] || { echo "LOCAL_GPU_SHARE 只能是 1 / 2：$LOCAL_GPU_SHARE"; return 2; }
-    [[ "$CUDA_VISIBLE_DEVICES" =~ ^[0-9]+$ ]] || { echo "LOCAL_GPU_SHARE=2 只支持单卡：$CUDA_VISIBLE_DEVICES"; return 2; }
+    [[ "${LOCAL_GPU_SHARE}" =~ ^[0-9]+$ && "${LOCAL_GPU_SHARE}" -ge 2 ]] || { echo "LOCAL_GPU_SHARE 只能是 1 或 >=2 的整数：$LOCAL_GPU_SHARE"; return 2; }
+    [[ "$CUDA_VISIBLE_DEVICES" =~ ^[0-9]+$ ]] || { echo "LOCAL_GPU_SHARE=$LOCAL_GPU_SHARE 只支持单卡：$CUDA_VISIBLE_DEVICES"; return 2; }
     local slot_file="${LOCAL_GPU_SLOT_FILE:-}" slots roots p q n_reg own=0 tag pid
-    [[ -n "$slot_file" && -f "$slot_file" ]] || { echo "LOCAL_GPU_SHARE=2 需要占位文件 LOCAL_GPU_SLOT_FILE：${slot_file:-unset}"; return 2; }
+    [[ -n "$slot_file" && -f "$slot_file" ]] || { echo "LOCAL_GPU_SHARE=$LOCAL_GPU_SHARE 需要占位文件 LOCAL_GPU_SLOT_FILE：${slot_file:-unset}"; return 2; }
     slots="$(flock -s "$slot_file.lock" cat "$slot_file")" || return 2
     n_reg=0; roots="$$"
     while read -r tag pid; do
@@ -93,7 +93,7 @@ check_local_gpu() {
         if [[ "$pid" =~ ^[0-9]+$ ]]; then roots="$roots $pid"; fi
     done <<< "$slots"
     [[ "$own" == 1 ]] || { echo "本片 $SHARD_TAG 未在占位文件登记，停止起跑：$slot_file"; return 2; }
-    (( n_reg <= 2 )) || { echo "本卡已登记 $n_reg 片 > 2，停止起跑：$slot_file"; return 2; }
+    (( n_reg <= LOCAL_GPU_SHARE )) || { echo "本卡已登记 $n_reg 片 > $LOCAL_GPU_SHARE，停止起跑：$slot_file"; return 2; }
     for p in $gpu_pids; do
         q="$p"
         while [[ -n "$q" && "$q" != 0 && "$q" != 1 && " $roots " != *" $q "* ]]; do
@@ -104,7 +104,7 @@ check_local_gpu() {
             return 2
         }
     done
-    echo "LOCAL_GPU_SHARE=PASS device=$CUDA_VISIBLE_DEVICES share=2 registered=$n_reg gpu_procs=$(wc -w <<< "$gpu_pids")"
+    echo "LOCAL_GPU_SHARE=PASS device=$CUDA_VISIBLE_DEVICES share=$LOCAL_GPU_SHARE registered=$n_reg gpu_procs=$(wc -w <<< "$gpu_pids")"
 }
 check_local_gpu
 cd "$EVAL_REPO"
