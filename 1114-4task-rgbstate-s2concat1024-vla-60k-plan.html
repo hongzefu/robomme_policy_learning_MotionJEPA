@@ -71,7 +71,7 @@ M  modulation concat 60k（8 卡，约 16–19 h）──► E1 692 局 × seed 
 <tr><td>K8</td><td>写完整方案后跑 workflow 对抗验证，不需要批准，最后交完整计划</td><td>「写完完整完整方案之后，进行一次 workflow 对抗验证，尽可能详细，不限制这个 agent 的数量，然后不需要叫我批准，直接开始 workflow，然后最后交给我一份完整的计划。」</td><td>J 节</td></tr>
 </table>
 
-<p><b>本计划先替用户取的默认值</b>（§9 待裁决表，与这里一一对应）：J1 encoder 用 <code>checkpoint_epoch_144.pt</code> 的 EMA；J2 两条都训 60k；J3 只评 <code>59999</code>，seed 7／42／0 各一次；J4 不排除 encoder 的 28 集 heldout；J5 帧记忆用 32 帧×4×4。J6（是否登记状态机）没有默认值，交付时问用户。</p>
+<p><b>本计划先替用户取的默认值</b>（§9 待裁决表，与这里一一对应）：J1 encoder 用 <code>checkpoint_epoch_144.pt</code> 的 EMA；J2 两条都训 60k；J3 只评 <code>59999</code>，seed 7／42／0 各一次；J4 不排除 encoder 的 28 集 heldout。J5（帧记忆布局，<b>推荐 8 帧×8×8</b>）和 J6（是否登记状态机）没有默认值，交付时问用户。</p>
 
 <h2>2. 为什么不重建库，以及血缘闸门怎么比</h2>
 
@@ -161,7 +161,13 @@ M  modulation concat 60k（8 卡，约 16–19 h）──► E1 692 局 × seed 
 <ul>
 <li><b>评估在线编码</b>：评估要起 stage2 在线 sidecar，把仿真里的画面在线用 Wan VAE 编码，再过同一个 encoder，读法与训练用的离线表相同。新 sidecar 环境是 <code>v1-store/venvs/wan-stage2-rgbstate</code>，16task 的旧环境不动。G4 核对在线与离线一致。</li>
 <li><b>motion 窗超预算</b>：评估最多 2000 步，单集 motion 窗可达约 98 个，超过 96。超出部分按 4task 既有口径，在 exec 段等距抽稀，demo 段全保，降级次数随 <code>MOTION_DOWNSAMPLE</code> 记录。</li>
-<li><b>对照基线</b>：v11 Wan pool768 modulation 50k 的 692 局成绩是 43.06%。但帧记忆档位、步数、motion 来源三者都不同，<b>不能归因到单一变量</b>，只作参考。</li>
+<li><b>对照基线</b>（4task 上已有的、同库 <code>4task-v2-1600ep-604f16da</code>、不带 motion 的 run，全部是每帧 8×8）：
+  <ul>
+  <li><b>modulation</b>：8 帧×8×8（512）60k run，GL 692 局 @50000 为 30.49%、@59999 为 32.95%；16 帧（1024）@79999 41.33%；32 帧×8×8（2048）@79999 45.66%；64 帧（4096）@79999 45.95%。出处：v11 分支 <code>docs/training-doc/binfilldemo-nomotion50k-gl/result.md</code>。</li>
+  <li><b>context</b>：GreatLakes 上正在训两条 50k。ctx512 <code>v2-1600ep-m8x8-ctx-b128-50k-gl</code>（8 帧×8×8，配置 <code>mme_vla_suite_b128_60k</code>，预计 11-17 约 16:30 美东训完）；ctx1024 <code>v2-1600ep-m16x8x8-ctx-b128-50k-gl</code>（16 帧×8×8，配置 <code>mme_vla_suite_b128_80k</code>，预计 11-20 约 06:30 美东训完）。两条都还没做闭环评估，引用入口是 <code>origin/v4.2-plswap-full@da29add</code> 的两份 <code>interim-1114.md</code>。这些配置的 <code>peak_lr</code> 和 <code>decay_lr</code> 都是 5e-5，warmup 之后学习率恒定，与本计划相同，所以同步数比较不受日程影响。</li>
+  <li>v11 Wan pool768 modulation 50k 的成绩是 43.06%，只作参考：帧记忆档位、步数、motion 来源三者都与本计划不同，<b>不能归因到单一变量</b>。</li>
+  <li>上面这些成绩都是 GL 评估环境出的；本计划在本机评估，两者跨环境，需在本机同口径重评后才能严格对照。</li>
+  </ul></li>
 </ul>
 
 <h2>6. 验收判定行</h2>
@@ -215,10 +221,15 @@ M  modulation concat 60k（8 卡，约 16–19 h）──► E1 692 局 × seed 
 <table>
 <tr><th>#</th><th>问题</th><th>默认</th><th>备选与影响</th></tr>
 <tr><td>J1</td><td>encoder 用哪个 ckpt</td><td><code>checkpoint_epoch_144.pt</code> 的 EMA（本计划就是训满 144 轮）</td><td>按验证 loss 最低选：1113 只在 ep1、10、…、140、144 共 16 个点验证，只能在这些点里挑。注意 16task 的 ep105 不是按 val loss 选出来的，而是 144 轮日程截断在第 105 轮后留下的最后一份</td></tr>
-<tr><td>J2</td><td>步数</td><td>两条都 60k（与 16task 同步数，约 12.7 遍数据）</td><td>50k：与 4task 历史一致（约 10.6 遍），每条省约 15% 时间；两边学习率日程相同，只有训练长度不同</td></tr>
+<tr><td>J2</td><td>步数</td><td>两条都 60k（与 16task 同步数，约 12.7 遍数据）</td><td>50k：与 4task 历史一致（约 10.6 遍），每条省约 15% 时间；两边学习率日程相同，只有训练长度不同。<b>如果 J5 选 8×8，推荐改 50k</b>：M 能与 modulation 无 motion 512 的 @50000 对照，C 能与正在训的 ctx512／ctx1024（都是 50k）在同一步数对照</td></tr>
 <tr><td>J3</td><td>评估规模</td><td>只评 <code>59999</code>，seed 7／42／0，每条约 4 h</td><td>只跑 seed 7（与 v11/v15 一致），每条约 1.2 h</td></tr>
 <tr><td>J4</td><td>VLA 训练是否排除 encoder 的 28 集 heldout</td><td>不排除（与 16task 一致）</td><td>排除：在 sampler 里按 <code>global_episode_idx</code> 过滤即可，不用重建库，但会与 16task 口径不同</td></tr>
-<tr><td><b>J5</b></td><td><b>帧记忆布局（训练语义，对抗验证提出必须问你）</b></td><td>32 帧×4×4（<code>token_per_image 16</code>，budget 512）：与 16task concat 两条完全一致，orig16 的 yaml、入口、合同可以直接复用。代价是要拉 78.3 GB 的 4×4 表，本机只能做 sha 级校验，而且 4task 上没有任何同布局基线</td><td>8 帧×8×8（<code>token_per_image 64</code>，budget 512）：与 4task v11/v15/0918 基线一致，本机已有 8×8 表、不用下载，可以直接对比 43.06%（v11，只剩 motion 来源和步数两个变量）、32.95%（无 motion）、56.36%（旧 encoder＋motion）；但要改用 8frame-8x8 版 yaml 和 run 名，launcher 检查要放行 8×8，就不能和 16task 同布局比了</td></tr>
+<tr><td><b>J5</b></td><td><b>帧记忆布局（训练语义，对抗验证提出必须问你）</b></td><td>无默认，问用户。备选：32 帧×4×4（<code>token_per_image 16</code>，budget 512），与 16task concat 两条完全一致，orig16 的 yaml、入口、合同可以直接复用。代价是要拉 78.3 GB 的 4×4 表，本机只能做 sha 级校验，而且 4task 上没有任何同布局基线</td><td><b>推荐</b>：8 帧×8×8（<code>token_per_image 64</code>，budget 512）。
+  <ul>
+  <li>与 4task 全部基线同布局：modulation 无 motion 512（@50000 30.49%、@59999 32.95%），旧 encoder＋motion 56.36%，context 无 motion 的 ctx512 正在 GL 训（50k，§5）。M、C 两条都有同库、同布局、不带 motion 的对照。</li>
+  <li>本机已有 <code>framesamp-8x8</code>，不用拉 78 GB 的 4×4。v4 线上已有 <code>perceptual-framesamp-{modul,ctx}-8frame-8x8-motion-stage2-1x1024-orig16.yaml</code> 可以当模板。</li>
+  <li>代价：run 名、bucket 名要把 <code>32x4x4</code> 改成 <code>8x8</code>，起跑合同要放行 8×8，与 16task 不再同布局。</li>
+  </ul></td></tr>
 <tr><td>J6</td><td>是否登记进 <code>docs/handoff/current.json</code> 状态机</td><td>无默认，问用户（第 27 条）</td><td>是：两个任务以 <code>planned</code> 写入（I 节）；否：人工交接</td></tr>
 </table>
 <p class="small">只有 J1–J4 在不裁决时按默认执行；J5 涉及训练语义，J6 按规则必须问，这两项都等你回答。逐文件清单、分配表、闸门、runbook、风险、盲区、留档纪律见第二部分。</p>
