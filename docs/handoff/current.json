@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-12T12:27:04Z",
-    "america_new_york": "2026-11-12T07:27:04-05:00"
+    "utc": "2026-11-14T23:04:10Z",
+    "america_new_york": "2026-11-14T18:04:10-05:00"
   },
   "repo": {
     "branch": "v4.2-plswap-full",
-    "base_head": "af56267",
+    "base_head": "8bb3fe70d2e70332c974667c0382d68d1399f597",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -2458,7 +2458,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-11-12T12:27:04Z",
-      "state_reason": "两条正式训练都在跑：ctx512 05:29:50 起（65943150/gl1513，9.5 s/步，估 131 h）；ctx1024 06:57:09 起（65943151/gl1514，13.5 s/步，估 188 h）。",
+      "state_reason": "2026-11-14 18:03 美东中途快照：ctx512 第 22800 步（9.5 s/步，估 11-17 16:30 完成），已落盘 ckpt 5000/10000/15000/20000；ctx1024 第 15400 步（13.7 s/步，估 11-20 06:30 完成），已落盘 ckpt 5000/10000/15000。两条都无报错。中间 ckpt 路径与用法见 docs/training-doc/<run>/interim-1114.md（其他 agent 引用入口）。",
       "owner": {
         "session": "Claude Code 会话（sled-aspen，本仓库主检出）",
         "host": "sled-aspen"
@@ -2528,16 +2528,13 @@
         }
       ],
       "pending_decisions": [
-        "早上汇报：实施中调整 A1（梯度累积 scan→展开循环）、A2（V4 挪到 GL 冒烟前、闸门后移）、A3（V10 改 ref-shard 迷你库、K=1）均经对抗验证 PASS，需告知用户",
-        "早上汇报：本机保存点极慢（旧代码 EMA 一次 1044 s），resume/ 单份 45.4 GiB；GL 上每个保存点耗时待实测，可能每 5000 步多数分钟",
-        "早上汇报：梯度累积固有多一份梯度显存（4 卡约 3.4GB/卡）；A40 上每卡 16 是否装得下待 V7 实测，OOM 时按计划改 8×4",
         "计划外旧事项：gl-abl-encoders-train 仍写 running，但占位 65209321/65209330 已于 2026-11-09 CANCELLED+，结果未核，交用户处理",
         "冒烟与诊断产物待用户决定是否删除：turbo v1-store/train-runs/*/g4c-smoke-512-11120516、g4c-smoke-1024-11120641（各含 EMA ckpt 与约 45 GiB resume/）、v1-store/diagnostics/g4c-v4；本机 /data v1-store/diagnostics/g4c-local（157G）与 g4c-v10-store"
       ],
       "next_steps": [
         {
-          "what": "每 5000 步核 finite/进度/余量；训练完成后写 result.md、scancel 两份占位",
-          "command": "Monitor 两份日志",
+          "what": "训练完成后核 10 份 ckpt、写 result.md、更新本文件、scancel 对应占位（512→65943150，1024→65943151）",
+          "command": "tr '\\r' '\\n' < <log> | grep EXIT_CODE=；ls <run_dir>/{5000..50000}",
           "verdict_line": "TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10；EXIT_CODE=0"
         }
       ]
