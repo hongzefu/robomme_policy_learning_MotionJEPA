@@ -70,6 +70,7 @@ LOCAL_MEMBER_PIN_SHA256 = "2cb9026fc874964941ddb8c1cf1c0425a3b8ac94d3bd8e2082779
 LOCAL_LINEAGE_SCHEMA = "data-lineage-member-pin-v1"
 BIN_SHA256_LIST_SCHEMA = "bin-sha256-list-v1"
 BIN_SHA256_LIST_NAME = "wan-latents-bin-sha256.json"      # 固定在 <--stage2-validation>/ 下
+BIN_SHA256_LIST_SNAPSHOT_PATH = "motion_evidence/wan_latents_bin_sha256.json"   # 训练根快照内的固定相对路径（write_stage2_motion_snapshot 按角色名改写）
 LOCAL_EVIDENCE_ROLES = ("G0", "G2", "G3", "SOURCE_PIN", "member_pin_lineage", "wan_latents_metadata",
                         "wan_latents_bin_sha256")
 STAGE2_SAMPLE_STRATEGY = "task64-endpoints-pad8-seed0-v1"
@@ -682,7 +683,8 @@ def _validate_stage2_local_provenance(provenance):
         require_sha256(item.get("sha256"), f"local.evidence.{label}")
     if evidence["wan_latents_metadata"]["sha256"] != provenance["latents_metadata_sha256"]:
         raise ValueError("local-built 总 metadata 证据与来源摘要不同")
-    if pathlib.PurePath(evidence["wan_latents_bin_sha256"]["path"]).name != BIN_SHA256_LIST_NAME:
+    bin_path = evidence["wan_latents_bin_sha256"]["path"]
+    if pathlib.PurePath(bin_path).name != BIN_SHA256_LIST_NAME and bin_path != BIN_SHA256_LIST_SNAPSHOT_PATH:
         raise ValueError("local-built 逐段摘要清单必须是固定文件名")
 
 
