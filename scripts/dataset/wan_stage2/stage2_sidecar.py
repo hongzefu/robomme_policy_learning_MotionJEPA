@@ -25,7 +25,13 @@ RESPONSE_BYTES = 4096
 def _load(path, name):
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    # dataclasses 在类创建时经 sys.modules[cls.__module__] 解析注解；执行前必须先登记。
+    sys.modules[name] = module
+    try:
+        spec.loader.exec_module(module)
+    except BaseException:
+        sys.modules.pop(name, None)
+        raise
     return module
 
 
