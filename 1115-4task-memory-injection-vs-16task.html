@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1115 4task memory 注入机制与 16task 逐跳对照</title>
+<style>
+:root{--bg:#fff;--fg:#1d1d1f;--muted:#5f6368;--line:#d7dbe0;--code:#f4f5f7;--accent:#1a5fb4;--warn:#9a3412;--ok:#166534}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#15171a;--fg:#e6e6e6;--muted:#a0a4aa;--line:#33373d;--code:#1f2227;--accent:#7fb2ff;--warn:#f0a36b;--ok:#7bd88f}}
+:root[data-theme="dark"]{--bg:#15171a;--fg:#e6e6e6;--muted:#a0a4aa;--line:#33373d;--code:#1f2227;--accent:#7fb2ff;--warn:#f0a36b;--ok:#7bd88f}
+body{background:var(--bg);color:var(--fg);font:15px/1.65 -apple-system,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;max-width:1100px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:1.6em;border-bottom:2px solid var(--line);padding-bottom:.3em;margin-top:2em}
+h2{font-size:1.25em;margin-top:1.8em;border-left:4px solid var(--accent);padding-left:.5em}
+h3{font-size:1.05em;margin-top:1.4em}
+table{border-collapse:collapse;width:100%;margin:.8em 0;font-size:.92em;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:6px 8px;vertical-align:top;text-align:left}
+th{background:var(--code)}
+code{background:var(--code);padding:1px 4px;border-radius:3px;font-size:.9em;word-break:break-all}
+pre{background:var(--code);padding:10px 12px;border-radius:6px;overflow-x:auto;font-size:.86em;line-height:1.5}
+pre code{background:none;padding:0}
+blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color:var(--muted)}
+.warn{color:var(--warn);font-weight:600}
+.same{color:var(--ok);font-weight:600}
+.small{font-size:.88em;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<h1 style="margin-top:.4em">4task 两条 VLA 的 memory 注入机制，与 16task concat 版逐跳对照</h1>
+
+<p class="small">2026-11-15 美东。说明文档，不是计划。代码口径：policy 仓分支 <code>sub-mem-inject</code>，基线 <code>01fe4ec</code>；路径省略前缀 <code>src/mme_vla_suite/</code>。所有形状来自读代码与 yaml，没有跑训练、没有加载模型；参数量按权重形状手算。</p>
+
+<blockquote>用户问题：「Context concat 和 Modulation concat 这两个……他们这个 memory 注入的这个机制是什么，和之前我们训的这个十六 task 是不是完全一样？就是它这个注入的每一每一步的这个尺寸是不是都完全一样的？」</blockquote>
+
+<h2>结论</h2>
+
+<p><strong>注入机制完全一样，用的是同一份代码。从「进入投影层」开始往后，每一跳的张量形状、每一层可训练参数的形状和数量，4task 与 16task 完全相同。</strong>不同的地方只在投影层之前、帧记忆那一路的「怎么切」：4task 是 8 帧、每帧 8×8＝64 个 token；16task 是 32 帧、每帧 4×4＝16 个 token。两边乘出来都是 512 个帧 token，所以后面的形状对得上。</p>
+
+<p>motion 那一路（每窗 1 个 1024 维 token、96 个窗位、stride 32）两边逐键相同。4 份 yaml 两两 diff，同一种注入方式下只差 <code>token_per_image</code> 一行（64 对 16）。</p>
+
+<p>所以答案是：<strong>尺寸一样，内容不一样</strong>。同样是 512 个帧 token，4task 的每个 token 看的画面更细（2×2 个 SigLIP patch 的均值，16task 是 4×4 个），但时间上采的帧更少（8 帧对 32 帧）。</p>
+
+<table>
+<tr><th>项</th><th>4task 本次</th><th>16task 已训</th><th>是否相同</th></tr>
+<tr><td>注入代码（modulation 交叉注意力／context 拼进序列）</td><td colspan="2">同一份 <code>history_pi0.py</code>、<code>history_gemma.py</code>、<code>percep_mem.py</code></td><td class="same">相同</td></tr>
+<tr><td>帧记忆帧数</td><td>8</td><td>32</td><td class="warn">不同</td></tr>
+<tr><td>每帧 token 数（空间网格）</td><td>64（8×8）</td><td>16（4×4）</td><td class="warn">不同</td></tr>
+<tr><td>每个帧 token 覆盖的画面</td><td>2×2 个 patch（28×28 像素）</td><td>4×4 个 patch（56×56 像素）</td><td class="warn">不同</td></tr>
+<tr><td>帧 token 的空间位置编码取值</td><td>8×8 网格坐标</td><td>4×4 网格坐标</td><td class="warn">不同（维度相同）</td></tr>
+<tr><td>帧记忆 token 总数</td><td>512</td><td>512</td><td class="same">相同</td></tr>
+<tr><td>帧路输入张量形状（image／pos／mask）</td><td colspan="2"><code>[512,2048]</code>／<code>[512,768]</code>／<code>[512]</code></td><td class="same">相同</td></tr>
+<tr><td>motion 路全部（原始 <code>[1,1024]</code>、96 窗位、补齐 <code>[96,1024]</code>、pos <code>[96,256]</code>）</td><td colspan="2">逐键相同</td><td class="same">相同</td></tr>
+<tr><td>合并后的 memory</td><td colspan="2"><code>[608, D]</code>，modulation 的 D＝1024，context 的 D＝2048</td><td class="same">相同</td></tr>
+<tr><td>可训练参数的形状与数量</td><td colspan="2">modulation 新增 90,498,560；context 新增 10,229,248（按形状手算）</td><td class="same">相同</td></tr>
+<tr><td>modulation 里 action query 的 RoPE 起始位置</td><td>608</td><td>608</td><td class="same">相同</td></tr>
+<tr><td>motion encoder（冻结，产生 1024 维向量的那个）</td><td>4task rgb-state ep144</td><td>16task stage2 ep105</td><td class="warn">不同（输出形状相同）</td></tr>
+</table>
+
+<p class="small">两点说明：4task 的两份正式 yaml 还没建，计划写的是以 <code>perceptual-framesamp-{modul,ctx}-8frame-8x8-motion-stage2-1x1024-orig16.yaml</code> 为模板、只改库路径、encoder 与 sha；本文按这两份模板核对。16task 这边 context concat 训满了 60k，modulation concat 只跑过 20 步短测（<code>docs/training-doc/orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k/result.md</code>）。</p>
+
+<h2>1. 两种注入机制</h2>
+
+<h3>1.1 modulation：memory 不进主序列，action 一侧每层单独读一次</h3>
+
+<p>608 个 memory token 投影到 1024 维后，不经过任何 Transformer 层，直接交给 action expert。action expert 的 18 层里，每层多一个交叉注意力 <code>MemoryAttention</code>：action token 做 query，memory 做 key／value。读出的向量不加到残差流上，而是经 <code>MemoryRMSNorm</code> 变成一组 scale／shift，去调制这一层 FFN 的输入。paligemma（看当前图像和语言的那一侧）完全看不到 memory。</p>
+
+<table>
+<tr><th>环节</th><th>做了什么</th><th>代码锚点</th></tr>
+<tr><td>送入</td><td><code>mem_seq=[None, mem_seq]</code>：只有 action expert 一侧收到 memory</td><td><code>models/integration/history_pi0.py::HistoryPi0.compute_loss</code>、<code>sample_actions</code></td></tr>
+<tr><td>读取</td><td>Q 来自 action token <code>[B,20,1024]</code>，K／V 来自 memory <code>[B,608,1024]</code>；4 个 Q 头、1 个 KV 头、head_dim 256（写死）</td><td><code>models/integration/history_gemma.py::MemoryAttention.__call__</code></td></tr>
+<tr><td>屏蔽</td><td>只屏蔽补位的 key（mask 为 False 的位置 logit 置 −2.38e38）；没有因果限制</td><td>同上</td></tr>
+<tr><td>调制</td><td><code>Dense(1024→2048)</code> 把读出向量拆成 scale、shift，作用在 FFN 之前；原来的 <code>pre_ffw_norm</code> 保留</td><td><code>history_gemma.py::MemoryRMSNorm.__call__</code>、<code>HistoryBlock.__call__</code></td></tr>
+<tr><td>18 层</td><td>每层各有一套参数，18 层读的是同一份 memory</td><td><code>history_gemma.py::Module.setup</code>（<code>nn.scan</code>，<code>mem_seq</code> 走 <code>nn.broadcast</code>）</td></tr>
+</table>
+
+<p><strong>RoPE 位置号</strong>：<code>MemoryAttention</code> 自己编号，key 是 <code>0..607</code>，query 是 <code>608..627</code>（<code>mem_len</code> 取含补位的总长）。主序列（当前图像、语言、action）的位置号不受 memory 影响。4task 与 16task 的 <code>mem_len</code> 都是 608，所以这里完全相同。1030 计划 §3 写的「896 对 608」是 split 与 concat 两种读法之差，不是 4task 与 16task 之差。</p>
+
+<h3>1.2 context：memory 拼在主序列最前面</h3>
+
+<p>608 个 memory token 投影到 paligemma 的宽度 2048，放在「当前图像、语言」之前组成 prefix，和它们一起过 paligemma 的 18 层。action token 在每层原有的联合注意力里读到同层的 memory。没有新增的注意力模块。</p>
+
+<table>
+<tr><th>环节</th><th>做了什么</th><th>代码锚点</th></tr>
+<tr><td>拼接</td><td>prefix ＝ memory 608 ＋ 当前图像 2×256 ＋ 语言 64 ＝ 1184 个位置，后接 action 20 个</td><td><code>history_pi0.py::HistoryPi0.embed_prefix</code>；两路相机见 <code>policies/robomme_policy.py</code>；语言长度为 <code>HistoryPi0Config.max_token_len</code> 默认 64</td></tr>
+<tr><td>谁能看谁</td><td>memory 只看 memory；当前图像不看 memory；语言和 action 能看 memory</td><td><code>history_pi0.py::make_attn_mask</code>（<code>ar_mask</code>、<code>na_mask</code>）</td></tr>
+<tr><td>推理</td><td>含 memory 的 prefix 各层 K／V 在去噪循环外算一次并缓存</td><td><code>history_pi0.py::HistoryPi0.sample_actions</code></td></tr>
+</table>
+
+<p><strong>RoPE 位置号</strong>：整条序列按有效位累加，<code>positions = cumsum(input_mask) - 1</code>（<code>compute_loss</code>）。memory 排在最前，所以后面的图像、语言、action 的位置号都被往后推，推多少等于 memory 里有效 token 的个数（补位不占号）。公式两边相同；实际数值取决于每个样本有多少有效帧 token 和 motion 窗，见第 3 节。</p>
+
+<h2>2. 逐跳尺寸表</h2>
+
+<p>省略 batch 维。两种注入方式在第 12 跳之前只差投影输出维度 D，合成一张表。</p>
+
+<table>
+<tr><th>#</th><th>跳</th><th>4task 本次</th><th>16task 已训</th><th>相同？</th><th>出处</th></tr>
+<tr><td colspan="6"><strong>帧记忆路</strong></td></tr>
+<tr><td>1</td><td>帧特征来源</td><td colspan="2">帧缩放到 224×224 → SigLIP So400m/14（冻结）→ 每帧 <code>[256,2048]</code>（16×16 个 patch）</td><td class="same">相同</td><td><code>dataset_builder/mem_buffer.py</code>；<code>policies/framesamp_memory.py</code> 注释「真实 SigLIP 输出 (t,v,256,2048)」；<code>history_pi0.py::HistoryPi0.vision_encode</code></td></tr>
+<tr><td>2</td><td>每帧空间池化（均值）</td><td>2×2 池化 → <code>[64,2048]</code></td><td>4×4 池化 → <code>[16,2048]</code></td><td class="warn">不同</td><td><code>shared/data_utils.py::pool_tokens_to_size</code>；yaml <code>token_per_image</code></td></tr>
+<tr><td>3</td><td>读哪张离线表</td><td><code>framesamp-8x8-v1</code>，行形状 <code>(64,2048)</code> bf16</td><td><code>framesamp-4x4-v1</code>，行形状 <code>(16,2048)</code> bf16</td><td class="warn">不同</td><td><code>datastore/framesamp_store.py</code> 的 <code>StoreSpec</code> 表</td></tr>
+<tr><td>4</td><td>最多取几帧</td><td>512÷64＝8</td><td>512÷16＝32</td><td class="warn">不同</td><td><code>training/framesamp_dataset.py::FrameSampDataset.__init__</code>（<code>_max_frames</code>）</td></tr>
+<tr><td>5</td><td>选帧</td><td>从第 0 帧到当前帧均匀取 8 帧</td><td>均匀取 32 帧</td><td class="warn">不同</td><td><code>shared/sampling.py::even_sampling_indices</code></td></tr>
+<tr><td>6</td><td>位置编码</td><td><code>[8,64,768]</code>：时间 256 维＋8×8 网格空间 512 维</td><td><code>[32,16,768]</code>：时间 256 维＋4×4 网格空间 512 维</td><td class="warn">取值不同，维度相同</td><td><code>shared/posemb_3d.py::PosEmb3D.__call__</code>；yaml <code>memory_feature.pos.input_dim: 768</code></td></tr>
+<tr><td>7</td><td>补齐并展平后的帧路张量</td><td colspan="2"><code>static_image_emb [512,2048]</code>、<code>static_pos_emb [512,768]</code>、<code>static_state_emb [512,8]</code>、<code>static_mask [512]</code></td><td class="same">相同</td><td><code>framesamp_dataset.py::FrameSampDataset.__getitem__</code>、<code>_pad</code></td></tr>
+<tr><td>8</td><td>帧路投影</td><td colspan="2">pos：<code>Linear(768→768)</code>＋SiLU；image 不投影；拼成 2816 维 → <code>Linear(2816→D)</code>；state 不用（<code>use_state_emb: false</code>，对应层不创建）→ <code>[512,D]</code></td><td class="same">相同</td><td><code>models/representation/mem_encoder.py::FeatureEncoder</code></td></tr>
+<tr><td colspan="6"><strong>motion 路</strong></td></tr>
+<tr><td>9</td><td>离线表每窗一行</td><td colspan="2"><code>float32[1,1024]</code>；33 帧窗、stride 32、从段起点向前</td><td class="same">相同</td><td>yaml <code>motion.source_shape</code>、<code>stride</code>、<code>window_frames</code>；<code>datastore/motion_adapter.py::motion_policy_spec</code></td></tr>
+<tr><td>10</td><td>readout 与补齐</td><td colspan="2"><code>stage2_pool4_concat_v1</code>：k 个可见窗 reshape 成 <code>[k,1024]</code>，右补零到 <code>motion_emb [96,1024]</code>；<code>motion_pos [96,256]</code>（窗起点帧的时间码）；<code>motion_mask [96]</code>。k&gt;96 直接报错，不截断</td><td class="same">相同</td><td><code>framesamp_dataset.py::__getitem__</code>、<code>_pad_motion</code>；yaml <code>motion.budget: 96</code>、<code>pos_dim: 256</code></td></tr>
+<tr><td>11</td><td>motion 路投影</td><td colspan="2">pos：<code>Linear(256→768)</code>＋SiLU；拼成 1792 维 → <code>Linear(1792→D)</code> → <code>[96,D]</code></td><td class="same">相同</td><td><code>models/representation/percep_mem.py::PerceptualMemory</code></td></tr>
+<tr><td colspan="6"><strong>合并与进入主干</strong></td></tr>
+<tr><td>12</td><td>两路拼接</td><td colspan="2"><code>[608,D]</code>；mask <code>[608]</code></td><td class="same">相同</td><td><code>percep_mem.py::PerceptualMemory.__call__</code></td></tr>
+<tr><td>13</td><td>按时间重排</td><td><code>mem_order [608]</code>；每帧 64 个 token 连成一段，窗 token 插在段与段之间</td><td><code>mem_order [608]</code>；每帧 16 个 token 连成一段</td><td class="warn">形状相同，排列粒度不同</td><td><code>shared/sampling.py::memory_order</code>；<code>history_pi0.py::HistoryPi0.embed_memory</code></td></tr>
+<tr><td>14a</td><td>modulation 进入交叉注意力（D＝1024）</td><td colspan="2">K／V 来自 <code>[608,1024]</code>，Q 来自 <code>[20,1024]</code>；读出 <code>[20,1024]</code>；18 层各读一次</td><td class="same">相同</td><td><code>history_gemma.py::MemoryAttention.__call__</code>；<code>training/config.py</code> 的 <code>action_horizon=20</code></td></tr>
+<tr><td>14b</td><td>context 进入主序列（D＝2048）</td><td colspan="2">prefix <code>[1184,2048]</code>（608＋512＋64），suffix <code>[20,1024]</code></td><td class="same">相同</td><td><code>history_pi0.py::HistoryPi0.embed_prefix</code>、<code>compute_loss</code></td></tr>
+</table>
+
+<p class="small">第 13 跳的规则两边一样：按全域帧号升序，同一时刻帧在窗之前，补位全部排到最尾。</p>
+
+<h2>3. 逐项回答「是不是每一步尺寸都完全一样」</h2>
+
+<h3>完全相同的</h3>
+<ul>
+<li><strong>投影层往后的全部张量形状</strong>（上表第 7–14 跳）。</li>
+<li><strong>motion 路从离线表到投影的每一跳</strong>（第 9–11 跳）。同一种注入方式的 4task 模板 yaml 与 16task yaml，<code>motion</code> 节逐键相同。</li>
+<li><strong>总槽数 608、<code>memory_token_dim</code></strong>（modulation 1024、context 2048）。</li>
+<li><strong>可训练参数的形状与数量</strong>，见下表。没有任何一层的形状依赖帧数或每帧网格：投影层只看最后一维（2048、768、1024、256），注意力层的权重与序列长度无关。</li>
+<li><strong>modulation 的 RoPE 编号</strong>：key <code>0..607</code>，query 从 608 起。</li>
+</ul>
+
+<table>
+<tr><th>层</th><th>权重形状</th><th>modulation（D＝1024）</th><th>context（D＝2048）</th><th>4task 与 16task</th></tr>
+<tr><td><code>pos_proj</code></td><td>768→768</td><td>590,592</td><td>590,592</td><td class="same">相同</td></tr>
+<tr><td><code>encoder_static</code></td><td>2816→D</td><td>2,884,608</td><td>5,769,216</td><td class="same">相同</td></tr>
+<tr><td><code>motion_pos_proj</code></td><td>256→768</td><td>197,376</td><td>197,376</td><td class="same">相同</td></tr>
+<tr><td><code>motion_encoder_static</code></td><td>1792→D</td><td>1,836,032</td><td>3,672,064</td><td class="same">相同</td></tr>
+<tr><td>投影小计</td><td></td><td>5,508,608</td><td>10,229,248</td><td class="same">相同</td></tr>
+<tr><td><code>mem_attn</code>（每层）</td><td>Q (4,1024,256)、KV (2,1,1024,256)、out (4,256,1024)、norm scale 1024</td><td>2,622,464</td><td>无此模块</td><td class="same">相同</td></tr>
+<tr><td><code>mem_rms_norm_ffn</code>（每层）</td><td>Dense 1024→2048</td><td>2,099,200</td><td>无此模块</td><td class="same">相同</td></tr>
+<tr><td>18 层小计</td><td></td><td>84,989,952</td><td>0</td><td class="same">相同</td></tr>
+<tr><td><strong>memory 相关新增合计</strong></td><td></td><td><strong>90,498,560</strong></td><td><strong>10,229,248</strong></td><td class="same">相同</td></tr>
+</table>
+
+<p class="small">推算依据：Linear 参数量＝输入维×输出维＋输出维；einsum 权重按形状连乘。modulation 投影小计与 18 层小计和旧文档 <code>1027-motion-memory-injection.md</code> 第 4、6.5 节一致；context 的 <code>motion_encoder_static</code> 旧文档写的是 split 读法（1024→2048），本文按 concat 读法（1792→2048）重算。<code>percep_mem.py</code> 里「1536 → memory_token_dim」的注释是旧的，按代码实际输入是 <code>motion.dim + 768</code>＝1792。</p>
+
+<h3>不同的</h3>
+<table>
+<tr><th>项</th><th>4task</th><th>16task</th><th>改变参数形状或数量吗</th></tr>
+<tr><td>帧数</td><td>8</td><td>32</td><td>不改变</td></tr>
+<tr><td>每帧网格与池化</td><td>8×8（2×2 均值）</td><td>4×4（4×4 均值）</td><td>不改变（池化无参数）</td></tr>
+<tr><td>每个帧 token 的空间范围</td><td>28×28 像素</td><td>56×56 像素</td><td>不改变</td></tr>
+<tr><td>相邻两帧的时间间隔</td><td>当前帧号÷7</td><td>当前帧号÷31</td><td>不改变</td></tr>
+<tr><td>空间位置编码取值</td><td>8×8 网格坐标</td><td>4×4 网格坐标</td><td>不改变（都是 768 维输入）</td></tr>
+<tr><td>重排后的排列粒度</td><td>64 个一段</td><td>16 个一段</td><td>不改变</td></tr>
+<tr><td>历史不足时的有效帧 token 数</td><td>当前帧号 t&lt;7 时为 64×(t+1)</td><td>t&lt;31 时为 16×(t+1)</td><td>不改变</td></tr>
+<tr><td>有效 motion 窗的个数分布</td><td>单集最多 71 窗（计划里的推算值）</td><td>训练侧最多 44 窗（1030 计划 §3）</td><td>不改变</td></tr>
+<tr><td>motion encoder 与数据集</td><td>4task rgb-state ep144；4task 库</td><td>stage2 ep105；16task 库</td><td>不改变 VLA 侧形状</td></tr>
+</table>
+
+<p>这些差异不改参数形状，但会改变「同一个位置号上放的是什么」。两处值得知道：</p>
+<ul>
+<li><strong>modulation</strong>：补位排在最尾，query 固定从 608 起，所以 query 到最后一个有效 key 的距离＝608−有效 token 数＋1。有效 token 数相同时两边一致；差别只来自每个样本的有效帧 token 数与窗数。</li>
+<li><strong>context</strong>：action 的位置号＝有效 memory 数＋当前图像与语言的有效数。同理，随每个样本的有效帧 token 与窗数变化。</li>
+</ul>
+
+<h2>4. 与 4task 既有无 motion 基线的关系</h2>
+
+<p>4task 这次的帧记忆配置与既有的无 motion 基线相同，只多了 motion 的 96 个槽：</p>
+
+<table>
+<tr><th>yaml 对比</th><th>差异</th></tr>
+<tr><td><code>perceptual-framesamp-modul-8frame-8x8.yaml</code>（modulation 512）对本次 modulation 模板</td><td>除首行注释外，只多出整个 <code>motion</code> 节；<code>budget 512</code>、<code>token_per_image 64</code>、<code>memory_token_dim 1024</code> 等帧路键逐行相同</td></tr>
+<tr><td><code>perceptual-framesamp-context-8frame-8x8.yaml</code>（context 512）对本次 context 模板</td><td>帧路键与 <code>memory_token_dim 2048</code> 逐行相同；基线的 <code>motion</code> 节是 <code>enabled: false</code>，本次是 <code>enabled: true</code> 的 stage2 concat 版</td></tr>
+</table>
+
+<p>落到模型上：memory 长度从 512 变成 608；多两层投影 <code>motion_pos_proj</code>、<code>motion_encoder_static</code>（modulation 多 2,033,408 个参数，context 多 3,869,440 个）；帧路投影和 modulation 的 18 层注入模块形状不变。motion 关闭时这两层根本不创建，也不做重排（<code>percep_mem.py::PerceptualMemory.__init__</code>、<code>history_pi0.py::HistoryPi0.embed_memory</code>）。</p>
+
+<h2>5. 未核实项</h2>
+<ul>
+<li>4task 两份正式 yaml（计划里的 <code>*-4task-rgbstate.yaml</code>）尚未创建，本文核对的是它们的模板；正式 yaml 建好后需再 diff 一次，确认只改了库路径、encoder 与 sha。</li>
+<li>4task 的 TrainConfig（计划拟新增 <code>mme_vla_suite_4task_b128_50k</code>）尚不存在；<code>action_horizon=20</code>、语言长度 64 取自现有 <code>mme_vla_suite_orig16_b128_60k</code> 与 <code>HistoryPi0Config</code> 默认值，新条目是否沿用未核实。</li>
+<li>全部参数量按形状手算，没有加载参数树统计。</li>
+<li>4task 两条基线 run 实际使用的 yaml：modulation 512 有 <code>docs/root-archive/0915-1600ep-m8x8-modul-training-plan.md</code> 为证；GL 上的 context 512 用的是哪份 yaml 未核实，本文只做了 yaml 层面的对比。</li>
+<li>16task context concat 的评估成绩（任务说明里的 37.33±0.59）在本工作树里没找到出处，本文未引用。</li>
+<li>4task「单集最多 71 窗」是计划 G 节标明的推算值，未实测。</li>
+<li>4task 新 encoder 输出的 1024 维向量与 16task encoder 的数值分布差异，本文不涉及。</li>
+<li>在线推理一侧（<code>policies/framesamp_memory.py</code>、<code>policies/policy.py</code>）只核对了池化与预算入口，没有逐行与训练侧对拍。</li>
+</ul>
+
+<h2>6. 出处索引</h2>
+<p class="small">2026-11-15 美东，子任务 MEM-doc。数据出处：下列文件的只读核对。无生成脚本。</p>
+<ul class="small">
+<li>yaml（<code>models/config/robomme/</code>）：<code>perceptual-framesamp-{modul,ctx}-8frame-8x8-motion-stage2-1x1024-orig16.yaml</code>、<code>perceptual-framesamp-{modul,ctx}-32frame-4x4-motion-stage2-1x1024-orig16.yaml</code>、<code>perceptual-framesamp-modul-8frame-8x8.yaml</code>、<code>perceptual-framesamp-context-8frame-8x8.yaml</code></li>
+<li>代码：<code>models/integration/history_pi0.py</code>、<code>models/integration/history_gemma.py</code>、<code>models/integration/utils.py::get_config</code>、<code>models/representation/percep_mem.py</code>、<code>models/representation/mem_encoder.py</code>、<code>training/framesamp_dataset.py</code>、<code>training/config.py</code>、<code>shared/sampling.py</code>、<code>shared/posemb_3d.py</code>、<code>shared/data_utils.py</code>、<code>datastore/motion_adapter.py</code>、<code>datastore/motion_store.py::visible_motion_rows</code>、<code>datastore/framesamp_store.py</code>、<code>dataset_builder/mem_buffer.py</code>、<code>policies/framesamp_memory.py</code>、<code>policies/robomme_policy.py</code></li>
+<li>旧文档：<code>1027-motion-memory-injection.md</code>、<code>1030-orig16-context-modul-nosplit-60k-plan.md</code> §3、<code>1114-4task-rgbstate-s2concat1024-vla-50k-plan.html</code> §4</li>
+</ul>
+
+</body>
+</html>
