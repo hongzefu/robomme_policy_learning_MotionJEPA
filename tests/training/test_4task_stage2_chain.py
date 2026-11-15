@@ -67,6 +67,10 @@ sys.exit(0 if ok else 1)
     write(root / "scripts/training/check_stage2_checkpoint.py", r'''import os, sys
 a = sys.argv[1:]
 assert os.environ.get("CUDA_VISIBLE_DEVICES") == "0"
+root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+assert os.environ.get("MMEVLA_V1_STORE") == root + "/v1-store"
+assert os.environ.get("OPENPI_DATA_HOME") == root + "/v1-store/models"
+assert os.environ.get("HF_HOME") == root + "/v1-store/cache/hf" and "JAX_PLATFORMS" not in os.environ
 assert a[a.index("--delivery-step") + 1] == "50000" and a[a.index("--online-gpu") + 1] == "1"
 ckpt, manifest = a[a.index("--checkpoint") + 1], a[a.index("--expected-manifest") + 1]
 assert ckpt.endswith("/stage/50000") and manifest.endswith("/stage/manifests/step-50000.json")
@@ -139,6 +143,11 @@ def test_dry_prints_four_stages_without_side_effects(tmp_path):
         assert f"up-{short}-final.log" in upload
         delivery = next(line for line in mine if "delivery_cmd=" in line)
         assert "--mode delivery --delivery-step 50000" in delivery
+        # FIX3：交付检查须显式带仓库内绝对 MMEVLA_V1_STORE／OPENPI_DATA_HOME（runtime_dependencies 硬要求）。
+        assert f" MMEVLA_V1_STORE={root}/v1-store " in delivery
+        assert f" OPENPI_DATA_HOME={root}/v1-store/models " in delivery
+        assert f" HF_HOME={root}/v1-store/cache/hf " in delivery and "-u JAX_PLATFORMS" in delivery
+        assert str(root).startswith("/")
         assert f"--checkpoint {root}/v1-store/exports/hf-ckpt-{run}/stage/50000" in delivery
         assert f"--expected-manifest {root}/v1-store/exports/hf-ckpt-{run}/stage/manifests/step-50000.json" in delivery
         assert f"--out {root}/v1-store/logs/v16-4trs-vla/delivery-{short}.json" in delivery

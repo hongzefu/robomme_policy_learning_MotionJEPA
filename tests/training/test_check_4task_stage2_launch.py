@@ -298,6 +298,10 @@ def test_core_attempt_manifest_passes_and_unregistered_name_fails(fx, tmp_path, 
 
 
 def test_default_contract_requires_backfill():
+    # encoder 训满后已回填（ece3465b…、36484 行、train_max=71）：默认合同不再含占位值，BUILD_PINS 通过。
+    contract = launch.Contract()
+    assert (contract.encoder_sha256, contract.motion_rows, contract.train_max) == (
+        "ece3465b57f9d1ddea130a631aff1d1006b2c8ba5c68a0e5e92b8215ae80b55c", 36484, 71)
     rec = launch.Recorder()
-    rec("BUILD_PINS", launch.PLACEHOLDER not in str(dataclasses.asdict(launch.Contract())))
-    assert rec.failed == ["BUILD_PINS"]
+    rec("BUILD_PINS", launch.PLACEHOLDER not in str(dataclasses.asdict(contract)))
+    assert rec.failed == []

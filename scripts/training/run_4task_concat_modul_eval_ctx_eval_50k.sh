@@ -214,7 +214,11 @@ upload_tmux_cmd() {   # short
 delivery_cmd() {   # short → argv
   local run=${RUN_OF[$1]} stage
   stage=$(stage_of "$run")
-  printf '%s\n' env CUDA_VISIBLE_DEVICES=0 "$PY" "$DELIVERY" --mode delivery --delivery-step "$DELIVERY_STEP" \
+  # check_stage2_checkpoint.runtime_dependencies 要求显式现存绝对目录 MMEVLA_V1_STORE、OPENPI_DATA_HOME，
+  # 且 HF_HUB_CACHE 等若设置须在 $MMEVLA_V1_STORE/cache/hf 下：与单条训练入口同值显式给出，清掉可能继承的越界缓存与 CPU 后端。
+  printf '%s\n' env -u JAX_PLATFORMS -u HF_HUB_CACHE -u HUGGINGFACE_HUB_CACHE -u HF_ASSETS_CACHE -u TRANSFORMERS_CACHE \
+    CUDA_VISIBLE_DEVICES=0 "MMEVLA_V1_STORE=$ROOT/v1-store" "OPENPI_DATA_HOME=$ROOT/v1-store/models" \
+    "HF_HOME=$ROOT/v1-store/cache/hf" "$PY" "$DELIVERY" --mode delivery --delivery-step "$DELIVERY_STEP" \
     --checkpoint "$stage/$DELIVERY_STEP" --expected-manifest "$stage/manifests/step-$DELIVERY_STEP.json" \
     --online-gpu 1 --out "$LOG/delivery-$1.json"
 }
