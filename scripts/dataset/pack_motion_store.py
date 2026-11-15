@@ -666,6 +666,104 @@ def load_cache_import(receipt_path, latents_root, manifest_path, raw_dir):
                 receipt_sha256=ms.sha256_file(receipt_path), receipt=receipt)
 
 
+# ══ 4task local-built-latents（1114 计划 B pack 行；A12/C06）═══════════════════════════════════
+HISTORY_REPORT_ROOT = _REPO_ROOT        # 历史报告相对仓库根解析；测试可指向合成副本
+
+
+def _stage2_project_module():
+    import importlib.util
+    name = "_pack_stage2_project"
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(name, _HERE / "stage2_project.py")
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return sys.modules[name]
+
+
+def check_latents_history(latents_root):
+    """历史绑定：总 metadata 摘要 == vae-report-summary.json 的 tested_metadata_sha256（报告文件 sha 是合同常量）。"""
+    report_path = pathlib.Path(HISTORY_REPORT_ROOT) / ms.LOCAL_HISTORY_REPORT
+    if ms.sha256_file(report_path) != ms.LOCAL_HISTORY_REPORT_SHA256:
+        raise ValueError("历史 vae-report-summary.json 的文件 sha 与合同常量不符")
+    if _load_json(report_path).get("tested_metadata_sha256") != ms.LOCAL_TESTED_METADATA_SHA256:
+        raise ValueError("历史报告的 tested_metadata_sha256 与合同常量不符")
+    total_sha = ms.sha256_file(latents_root / "metadata.json")
+    if total_sha != ms.LOCAL_TESTED_METADATA_SHA256:
+        raise ValueError(f"旧库总 metadata 摘要 {total_sha[:16]}… 与历史 tested_metadata_sha256 不符")
+    return total_sha
+
+
+def check_local_latent_chain(latents_root, keys, *, rehash, jobs=16):
+    """bin→段 metadata→总 metadata：*.bin.sha256 == 段 metadata.sha256 == 总 metadata 段 sha，字节数一致；
+    rehash 时再逐文件重算 bin 的 sha256（线程池并行）。返回 {"<key>.bin": sha}。"""
+    total = _load_json(latents_root / "metadata.json")
+    if set(total["segments"]) != set(keys):
+        raise ValueError("旧库总 metadata 的段集合与清单非零段不同")
+    listing = {}
+    for key in keys:
+        seg, lm = total["segments"][key], _load_json(latents_root / f"{key}.metadata.json")
+        side = (latents_root / f"{key}.bin.sha256").read_text(encoding="utf-8").split()
+        path = latents_root / f"{key}.bin"
+        if (not side or not (side[0] == lm.get("sha256") == seg.get("sha256"))
+                or seg.get("bytes") != lm.get("bytes") or path.stat().st_size != lm.get("bytes")):
+            raise ValueError(f"{key} 的 bin sidecar、段 metadata 与总 metadata 不符")
+        listing[f"{key}.bin"] = ms.require_sha256(side[0], f"{key}.bin.sha256")
+    if rehash:
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
+            actual = dict(zip(listing, pool.map(lambda name: ms.sha256_file(latents_root / name), listing)))
+        bad = sorted(name for name in listing if actual[name] != listing[name])
+        if bad:
+            raise ValueError(f"旧库 bin 内容与摘要不符: {bad[:5]}")
+    return listing
+
+
+def write_bin_sha256_list(validation_root, latents_root, listing):
+    """C06 固定路径清单；已存在且内容不同即拒（不覆盖）。"""
+    path = pathlib.Path(validation_root) / ms.BIN_SHA256_LIST_NAME
+    content = ms.canonical_json_bytes(dict(schema=ms.BIN_SHA256_LIST_SCHEMA, root=str(latents_root.resolve()),
+                                           files=dict(sorted(listing.items())))) + b"\n"
+    if path.exists():
+        if path.read_bytes() != content:
+            raise ValueError(f"{path} 已存在且内容不同，拒绝覆盖")
+    else:
+        atomic_write_bytes(path, content)
+    return path
+
+
+def local_vae_identity(latents_root, keys):
+    """旧库 latent 的 VAE 身份：全部段的同键身份必须唯一（不要求 restore receipt）。"""
+    infos, workers = {}, {}
+    for key in keys:
+        lm = _load_json(latents_root / f"{key}.metadata.json")
+        if not isinstance(lm.get("vae"), dict):
+            raise ValueError(f"{key} 段 metadata 缺 vae 身份")
+        identity = {k: lm["vae"].get(k) for k in SAME_KEYS_VAE}
+        infos[json.dumps(identity, sort_keys=True, default=str)] = identity
+        if isinstance(lm.get("worker"), dict):
+            workers[_worker_id(lm["worker"])] = lm["worker"]
+    if len(infos) != 1:
+        raise ValueError(f"旧库跨段 VAE 身份不唯一（{len(infos)} 种）")
+    return next(iter(infos.values())), list(workers.values())
+
+
+def load_local_built(latents_root, manifest_path, lineage_receipt, keys):
+    """pack 前置：历史绑定 + bin→段→总 metadata 链 + member-pin 血缘收据 PASS。"""
+    total_sha = check_latents_history(latents_root)
+    listing = check_local_latent_chain(latents_root, keys, rehash=False)
+    if _load_json(latents_root / "metadata.json").get("manifest_sha256") != load_manifest(manifest_path)["sha256"]:
+        raise ValueError("旧库总 metadata 与 episode 清单不同源")
+    lineage_path = pathlib.Path(lineage_receipt).resolve()
+    lineage = _load_json(lineage_path)
+    if (lineage.get("schema") != ms.LOCAL_LINEAGE_SCHEMA or lineage.get("mode") != "member-pin"
+            or lineage.get("status") != "PASS" or lineage.get("member_pin_sha256") != ms.LOCAL_MEMBER_PIN_SHA256):
+        raise ValueError("member-pin 血缘收据未 PASS 或 pin 与合同常量不符")
+    return dict(mode=ms.STAGE2_LOCAL_ORIGIN, total_metadata_sha256=total_sha, listing=listing,
+                lineage_path=str(lineage_path), lineage_sha256=ms.sha256_file(lineage_path),
+                member_pin_sha256=lineage["member_pin_sha256"])
+
+
 def gather_stage2_provenance(latents_root, tokens_root, entries, manifest, index_sha, *,
                             encoder_run_dir, raw_dir, input_manifest_path, vae_compat,
                             expected_ckpt_sha256, validation_root, source_pin_path, manifest_file_sha256):
@@ -676,8 +774,11 @@ def gather_stage2_provenance(latents_root, tokens_root, entries, manifest, index
     validate_stage2_segments(latents_root, tokens_root, entries)
     keys = [key for _, _, key, _, _ in iter_rows_in_order(entries)]
     cached = vae_compat.get("mode") == ms.STAGE2_CACHE_ORIGIN
+    local = vae_compat.get("mode") == ms.STAGE2_LOCAL_ORIGIN
     if cached:
         vae, vae_workers = vae_compat["receipt"]["vae"], []
+    elif local:
+        vae, vae_workers = local_vae_identity(latents_root, keys)
     else:
         vae, vae_workers = check_vae_group(latents_root, keys, vae_compat)
     total = _load_json(latents_root / "metadata.json")
@@ -747,7 +848,7 @@ def gather_stage2_provenance(latents_root, tokens_root, entries, manifest, index
             actual = {k: v for k, v in actual.items() if k != "run_dir"}
         if ms.canonical_json_bytes(actual) != ms.canonical_json_bytes(identity[group]):
             raise ValueError(f"stage2 export_record 的 {group} 与段身份不同")
-    if cached:
+    if cached or local:
         validate_stage2_export_files(export, tokens_root, entries)
     latent_sha = ms.sha256_file(latents_root / "metadata.json")
     online_vae = (dict(vae, vae_dtype="float32", batch=1, tf32="off", amp="off") if cached else
@@ -755,7 +856,23 @@ def gather_stage2_provenance(latents_root, tokens_root, entries, manifest, index
     online_vae.update(adapter_sha256=pin["vae_adapter_sha256"],
                       preprocess=dict(frame_size=256, input_dtype="uint8", input_layout="THWC", window_frames=33),
                       numerics=identity["numerics"])
-    if cached:
+    if local:
+        project = _stage2_project_module()
+        if project.get_project(project.project_of_source_pin(source_pin_path)).arch != identity["encoder"].get("arch"):
+            raise ValueError("SOURCE_PIN 所在运行项目与 token 的 encoder arch 不符")
+        bin_list = write_bin_sha256_list(validation_root, latents_root, vae_compat["listing"])
+        paths = {"G0": validation_root / "windows.json", "G2": validation_root / "G2.json",
+                 "G3": validation_root / "G3.json", "SOURCE_PIN": source_pin_path,
+                 "member_pin_lineage": pathlib.Path(vae_compat["lineage_path"]),
+                 "wan_latents_metadata": latents_root / "metadata.json", "wan_latents_bin_sha256": bin_list}
+        evidence = {key: dict(path=str(path.resolve()), sha256=ms.sha256_file(path)) for key, path in paths.items()}
+        compat = dict(schema="stage2-compat-v1", kind=ms.STAGE2_LOCAL_ORIGIN, online_vae=online_vae,
+                      member_pin_sha256=vae_compat["member_pin_sha256"],
+                      latents_history=dict(report_path=ms.LOCAL_HISTORY_REPORT,
+                                           report_sha256=ms.LOCAL_HISTORY_REPORT_SHA256,
+                                           tested_metadata_sha256=ms.LOCAL_TESTED_METADATA_SHA256),
+                      evidence=evidence)
+    elif cached:
         g0 = validation_root / "G0.json"
         if not g0.exists():
             g0 = validation_root / "windows.json"
@@ -780,13 +897,16 @@ def gather_stage2_provenance(latents_root, tokens_root, entries, manifest, index
                   "episode_manifest_file_sha256": manifest_file_sha256,
                   "mj_repo_commit": pin["mj_repo_commit"], "source_grid_sha256": ms.sha256_bytes(ms.canonical_json_bytes(source_grid)),
                   "latents_metadata_sha256": latent_sha, "latents_root": str(latents_root.resolve()),
-                  "tokens_root": str(tokens_root.resolve()), "raw_dir": str(raw_dir.resolve()),
+                  "tokens_root": str(tokens_root.resolve()),
+                  "raw_dir": None if raw_dir is None else str(raw_dir.resolve()),
                   "input_manifest_sha256": ms.sha256_file(input_manifest_path),
-                  "vae_compat": {k: v for k, v in vae_compat.items() if k != "receipt"},
+                  "vae_compat": {k: v for k, v in vae_compat.items() if k not in ("receipt", "listing")},
                   "workers_vae": vae_workers, "workers_encoder": workers}
     ms.validate_stage2_provenance(provenance)
     if cached:
         ms.validate_stage2_cache_evidence(provenance, {key: _load_json(path) for key, path in paths.items()})
+    if local:
+        ms.validate_stage2_local_evidence(provenance, {key: _load_json(path) for key, path in paths.items()})
     return provenance
 
 
@@ -820,6 +940,24 @@ def cmd_pack(args) -> None:
     manifest = load_manifest(args.manifest)
     stage2 = getattr(args, "layout", "legacy") == "stage2"
     cached = getattr(args, "latents_origin", None) == ms.STAGE2_CACHE_ORIGIN
+    local = getattr(args, "latents_origin", None) == ms.STAGE2_LOCAL_ORIGIN
+    raw_arg, lineage_arg = getattr(args, "raw_dir", None), getattr(args, "lineage_receipt", None)
+    if local:
+        if not stage2 or raw_arg is not None or not lineage_arg or getattr(args, "restore_receipt", None) \
+                or getattr(args, "cache_import_receipt", None):
+            raise ValueError("local-built-latents 只用于 stage2：不给 --raw-dir、必给 --lineage-receipt、不配其他收据")
+        if getattr(args, "stage2_project", None) is None:
+            raise ValueError("local-built 打包必须显式给 --stage2-project")
+    else:
+        if lineage_arg is not None:
+            raise ValueError("--lineage-receipt 只用于 local-built-latents")
+        if raw_arg is None:
+            raise ValueError("非 local-built 来源必须提供 --raw-dir")
+    if stage2 and getattr(args, "stage2_project", None) is not None:
+        # 契约①：store 尚未生成，显式值须与 --stage2-source-pin 所在项目一致。
+        owner = _stage2_project_module().project_of_source_pin(args.stage2_source_pin)
+        if owner != args.stage2_project:
+            raise ValueError(f"--stage2-project={args.stage2_project} 与 SOURCE_PIN 所在项目 {owner} 不符")
     if (cached and (not stage2 or not getattr(args, "cache_import_receipt", None)
                     or getattr(args, "restore_receipt", None))) or (getattr(args, "cache_import_receipt", None) and not cached):
         raise ValueError("缓存导入收据仅用于显式 stage2 published-cache-with-local-fill，不可混用历史收据")
@@ -828,7 +966,7 @@ def cmd_pack(args) -> None:
     if stage2 and (getattr(args, "latent_grid_subsample", None) != 2
                    or not getattr(args, "stage2_validation", None)
                    or not getattr(args, "stage2_source_pin", None)
-                   or not (getattr(args, "restore_receipt", None) or cached)):
+                   or not (getattr(args, "restore_receipt", None) or cached or local)):
         raise ValueError("stage2 必须显式提供 subsample=2、G0/G2/G3 目录、SOURCE_PIN 和恢复 receipt")
     if stage2 and args.force_break_lock:
         raise ValueError("stage2 禁止强制破锁")
@@ -836,14 +974,18 @@ def cmd_pack(args) -> None:
     totals = ms.index_totals(entries)
     tokens_root = pathlib.Path(args.tokens).resolve()
     latents_root = pathlib.Path(args.latents).resolve()
-    raw_dir = pathlib.Path(args.raw_dir).resolve()
+    raw_dir = None if local else pathlib.Path(args.raw_dir).resolve()
     encoder_run_dir = pathlib.Path(args.encoder_run_dir).resolve()
     oracle_report = (pathlib.Path(args.oracle_report) if args.oracle_report
                      else latents_root.parent / "oracle/wan-mj/vae_report.json")
-    input_manifest_path = (pathlib.Path(args.manifest).resolve().parent / "input_manifest.json" if cached else
+    input_manifest_path = (pathlib.Path(args.manifest).resolve().parent / "input_manifest.json" if (cached or local) else
                            check_raw_sources(pathlib.Path(args.manifest).resolve(), latents_root, raw_dir, oracle_report))
     vae_compat = None
-    if cached:
+    if local:
+        ms.require_sha256(args.expected_ckpt_sha256, "expected_ckpt_sha256")
+        vae_compat = load_local_built(latents_root, pathlib.Path(args.manifest).resolve(), lineage_arg,
+                                      [key for _, _, key, _, _ in iter_rows_in_order(entries)])
+    elif cached:
         ms.require_sha256(args.expected_ckpt_sha256, "expected_ckpt_sha256")
         vae_compat = load_cache_import(args.cache_import_receipt, latents_root, pathlib.Path(args.manifest).resolve(), raw_dir)
     elif getattr(args, "restore_receipt", None):
@@ -945,7 +1087,8 @@ def cmd_pack(args) -> None:
         ms.MotionMeta.load(store_root)     # 自检：契约能读回（含 index sha 现场重算）
         print(f"[pack] 表 {offset:,} B / {totals['rows']} 行 / {n_seg} 段, sha256={table_sha[:16]}…; "
               f"meta 阶段1 落盘（status=packed）; 耗时 {time.perf_counter() - t_all:.1f}s", flush=True)
-        print("PACK_MOTION_DONE=1 raw_dir_match=1 （pack.lock 保留，verify 回填后才释放）", flush=True)
+        print(f"PACK_MOTION_DONE=1 {'latents_origin=local-built-latents raw_dir=null' if local else 'raw_dir_match=1'} "
+              "（pack.lock 保留，verify 回填后才释放）", flush=True)
     except BaseException:
         print("[pack] 失败：pack.lock 与半成品保留", flush=True)
         raise
@@ -975,6 +1118,18 @@ def cmd_verify(args) -> None:
         if ms.sha256_file(pathlib.Path(meta.provenance["latents_root"]) / "metadata.json") != meta.provenance["latents_metadata_sha256"]:
             raise ValueError("verify 历史总 metadata 已变动")
     certification = certification_bytes = None
+    if stage2 and ms.stage2_uses_local(meta.provenance):
+        # local-built 验收：历史总 metadata 摘要 + 完整 bin→段 metadata→总 metadata（逐文件重算 sha）+ 摘要清单。
+        latents_root = pathlib.Path(meta.provenance["latents_root"])
+        check_latents_history(latents_root)
+        listing = check_local_latent_chain(latents_root, [key for _, _, key, _, _ in iter_rows_in_order(entries)],
+                                           rehash=True)
+        ms.validate_bin_sha256_list(_load_json(pathlib.Path(meta.provenance["stage2_compat"]["evidence"]
+                                                            ["wan_latents_bin_sha256"]["path"])),
+                                    _load_json(latents_root / "metadata.json"))
+        if _load_json(pathlib.Path(meta.provenance["stage2_compat"]["evidence"]["wan_latents_bin_sha256"]["path"]))["files"] != listing:
+            raise ValueError("verify: 逐段摘要清单与当前旧库不符")
+        validate_stage2_export_files(_load_json(tokens_root / "export_record.json"), tokens_root, entries)
     if cached:
         validate_stage2_export_files(_load_json(tokens_root / "export_record.json"), tokens_root, entries)
         ref = meta.provenance["stage2_compat"]["evidence"]["wan_cache_import"]
@@ -1145,14 +1300,19 @@ def main() -> None:
     p.add_argument("--latent-grid-subsample", type=int, default=1)
     p.add_argument("--stage2-validation", default=None)
     p.add_argument("--stage2-source-pin", default=None)
-    p.add_argument("--latents-origin", choices=("historical-restore-receipt", ms.STAGE2_CACHE_ORIGIN), default=None)
+    p.add_argument("--latents-origin", choices=("historical-restore-receipt", ms.STAGE2_CACHE_ORIGIN,
+                                                ms.STAGE2_LOCAL_ORIGIN), default=None)
+    p.add_argument("--stage2-project", choices=("wan_stage2", "wan_stage2_rgbstate"), default=None,
+                   help="stage2 运行项目（契约①）；须与 --stage2-source-pin 所在项目一致；local-built 必填")
+    p.add_argument("--lineage-receipt", default=None,
+                   help="local-built 必填：check_data_lineage.py member-pin --out 写出的 lineage.json")
     p.add_argument("--cache-import-receipt", default=None)
     p.add_argument("--manifest", required=True)
     p.add_argument("--tokens", required=True, help="<lib>/motion-tokens")
     p.add_argument("--latents", required=True, help="<lib>/wan-latents（只读 metadata 取 provenance）")
     p.add_argument("--out", required=True, help="<lib>/motion")
     p.add_argument("--encoder-run-dir", required=True)
-    p.add_argument("--raw-dir", required=True)
+    p.add_argument("--raw-dir", default=None, help="非 local-built 来源必填；local-built 给了即拒（provenance 写 null）")
     p.add_argument("--oracle-report", default=None, help="默认 <lib>/oracle/wan-mj/vae_report.json")
     p.add_argument("--restore-receipt", default=None,
                    help="S5-A restore_receipt.json：历史 VAE 与新 encoder 分组校验（须配 --expected-ckpt-sha256）")

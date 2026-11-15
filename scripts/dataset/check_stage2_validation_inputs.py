@@ -22,6 +22,20 @@ from mme_vla_suite.datastore.manifest import load_manifest
 sys.path.insert(0, str(ROOT / "scripts" / "training"))
 from check_data_lineage import input_files, read_json as read_strict_json
 
+
+def _load_by_path(name, path):
+    import importlib.util
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(name, path)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return sys.modules[name]
+
+
+stage2_project = _load_by_path("_g0_stage2_project", ROOT / "scripts/dataset/stage2_project.py")
+member_h5 = _load_by_path("_g0_stage2_member_h5", ROOT / "scripts/dataset/stage2_member_h5.py")
+
 CHUNK_BYTES = 589824
 GRID_STRIDE = 16
 WINDOW_FRAMES = 33
@@ -423,6 +437,73 @@ def build_h5_inputs(manifest_path, latents, source, h5_root, input_manifest, mj_
             "windows": windows, "counts": counts}
 
 
+def build_local_inputs(manifest_path, latents, *, episode_maps, merge_done, member_roots, tar_root=None,
+                       extract_root=None, jobs=6):
+    """4task local-built G0（1114 计划 B check_stage2_validation_inputs 行）：
+
+    顺序固定：选窗（task4x16-endpoints-pad8-seed0-v1：4 任务×16 窗，seed0，demo 尾窗 ≥8，每任务含执行窗）
+    → 按需从 tar 解成员并核摘要（契约②）→ 读原帧核 input_frames_sha256、核 latent 块 → 出 G0 样本。
+    不要求 cache_import_receipt；原帧不走合并 H5＋raw_ep_idx。
+    """
+    latents = pathlib.Path(latents).resolve()
+    manifest = load_manifest(require_file(manifest_path))
+    records = member_h5.load_member_records(
+        episode_maps, expected_map_sha256=member_h5.expected_maps_from_merge_done(merge_done))
+    selected = select_windows(manifest, latents, tasks=ms.LOCAL_G0_TASKS, per_task=ms.LOCAL_G0_PER_TASK,
+                              min_demo_tail=ms.LOCAL_G0_MIN_DEMO_TAIL)
+    chosen = {}
+    for ep, *_ in selected:
+        identity = (ms.task_of_h5(ep["h5_file"]), ep["raw_ep_idx"])
+        if identity not in records:
+            raise ValueError(f"episode_map 缺统一编号 {identity}")
+        chosen[records[identity].member] = records[identity]
+    sha_cache = {}
+    before = {m for m in chosen if member_h5.find_member(chosen[m], member_roots) is not None}
+    paths = member_h5.ensure_members(list(chosen.values()), roots=member_roots, tar_root=tar_root,
+                                     extract_root=extract_root, sha_cache=sha_cache, jobs=jobs)
+    windows, checked = [], {}
+    for item in selected:
+        ep, segment, key, old_grid, row = item
+        record = records[ms.task_of_h5(ep["h5_file"]), ep["raw_ep_idx"]]
+        start, real, pad = row["start_global_frame"], row["real_frames"], row["pad_frames"]
+        frame_ids = list(range(start, start + real)) + [row["pad_source_frame"]] * pad
+        path = paths[record.member]
+        ordered = sorted(set(frame_ids))
+        frames = dict(zip(ordered, member_h5.read_frames(record, path, ordered)))
+        pixels = np.ascontiguousarray(np.stack([frames[f] for f in frame_ids]))
+        if ms.sha256_bytes(pixels.tobytes()) != row["input_frames_sha256"]:
+            raise ValueError(f"{key} 格 {old_grid} 单集 H5 原帧 SHA 与旧库 metadata 不一致（{record.member}:{record.group}）")
+        latent_path = require_file(latents / f"{key}.bin")
+        if latent_path not in checked:
+            lm = read_json(latents / f"{key}.metadata.json")
+            if latent_path.stat().st_size != lm["bytes"] or ms.sha256_file(latent_path) != lm["sha256"]:
+                raise ValueError(f"{latent_path} latent 文件字节数或 SHA 与段 metadata 不一致")
+            checked[latent_path] = lm["sha256"]
+        with latent_path.open("rb") as stream:
+            stream.seek(old_grid * CHUNK_BYTES)
+            block = stream.read(CHUNK_BYTES)
+        if len(block) != CHUNK_BYTES:
+            raise ValueError(f"{latent_path} latent 块不足")
+        windows.append({"key": key, "task": record.task, "episode": record.episode, "segment_kind": segment,
+                        "source_grid": old_grid, "frame_ids": frame_ids,
+                        **{k: row[k] for k in ("real_frames", "pad_frames", "pad_source_frame", "input_frames_sha256")},
+                        "sources": [member_h5.source_entry(record, path)],
+                        "source_frame_indices": [{"source": 0, "index": f} for f in frame_ids],
+                        "latent_path": str(latent_path), "latent_block_sha256": ms.sha256_bytes(block)})
+    counts = {"windows": len(windows), "tasks": len({w["task"] for w in windows}),
+              "demo_tail": sum(w["segment_kind"] == "demo" and w["pad_frames"] > 0 for w in windows),
+              "sha_mismatches": 0}
+    result = {"schema": "stage2-validation-inputs-v1", "gate": "G0", "status": "PASS", "seed": 0,
+              "kind": ms.STAGE2_LOCAL_ORIGIN, "strategy": ms.LOCAL_SAMPLE_STRATEGY,
+              "manifest_sha256": manifest["sha256"], "latent_metadata_sha256": ms.sha256_file(latents / "metadata.json"),
+              "episode_maps_sha256": {r.task: r.map_sha256 for r in records.values()},
+              "member_h5": {"roots": [str(pathlib.Path(r).resolve()) for r in member_roots],
+                            "reused": sorted(before), "extracted": sorted(set(chosen) - before)},
+              "windows": windows, "counts": counts}
+    ms.validate_local_g0(result)        # 生产端与消费端同一校验
+    return result
+
+
 def build_inputs(manifest_path, latents, source, demo_root, *, h5_root=None, input_manifest=None,
                  mj_index=None, cache_import_receipt=None):
     latents, source, demo_root = (pathlib.Path(p).resolve() for p in (latents, source, demo_root))
@@ -480,13 +561,46 @@ def build_inputs(manifest_path, latents, source, demo_root, *, h5_root=None, inp
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ("manifest", "latents", "source", "out"):
+    for name in ("manifest", "latents", "out"):
         parser.add_argument(f"--{name}", type=pathlib.Path, required=True)
+    parser.add_argument("--source", type=pathlib.Path, help="旧 16 任务分支必填：VLA 库 source/ 目录（exec pkl）")
+    # 契约①：G0 既无 store 也无 ckpt，必须显式给出运行项目。
+    stage2_project.add_argument(parser, required=False)
+    local = parser.add_argument_group("4task local-built（契约②；给 --episode-maps 即进入此分支）")
+    local.add_argument("--episode-maps", type=pathlib.Path, help="含 record_dataset_<T>_episode_map.json 的目录")
+    local.add_argument("--merge-done", type=pathlib.Path, help="records/MERGE_DONE.json（核 map sha）")
+    local.add_argument("--member-h5-root", type=pathlib.Path, action="append", default=[],
+                       help="单集 H5 根（如 $LIB/raw-h5），按 <根>/<完整 member> 查找，可重复")
+    local.add_argument("--tar-root", type=pathlib.Path, help="缺成员时的源 tar 目录")
+    local.add_argument("--extract-root", type=pathlib.Path, help="缺成员解到此新子目录（R2：只新增）")
+    local.add_argument("--jobs", type=int, default=6)
     parser.add_argument("--demo-root", type=pathlib.Path,
                         default=pathlib.Path("/scratch/hongze/dataset-local-a100-16task-mixed8-200/data-raw"))
     for name in ("h5-root", "input-manifest", "mj-index", "cache-import-receipt"):
         parser.add_argument(f"--{name}", type=pathlib.Path)
     args = parser.parse_args(argv)
+    if args.stage2_project is None:
+        parser.error("G0 入口既无 store 也无 ckpt，必须显式给出 --stage2-project")
+    if args.episode_maps is not None:
+        if args.stage2_project != "wan_stage2_rgbstate":
+            parser.error("4task local-built G0 只配 --stage2-project wan_stage2_rgbstate")
+        if args.merge_done is None or not args.member_h5_root:
+            parser.error("4task local-built G0 必须给 --merge-done 与至少一个 --member-h5-root")
+        if os.path.lexists(args.out):
+            raise FileExistsError(f"G0 清单已经存在，拒绝覆盖: {args.out}")
+        result = build_local_inputs(args.manifest, args.latents, episode_maps=args.episode_maps,
+                                    merge_done=args.merge_done, member_roots=args.member_h5_root,
+                                    tar_root=args.tar_root, extract_root=args.extract_root, jobs=args.jobs)
+        _publish(args.out, result)
+        c = result["counts"]
+        print(f"STAGE2_G0=PASS kind={ms.STAGE2_LOCAL_ORIGIN} strategy={ms.LOCAL_SAMPLE_STRATEGY} windows={c['windows']} "
+              f"tasks={c['tasks']} demo_tail={c['demo_tail']} sha_mismatches=0 "
+              f"members_reused={len(result['member_h5']['reused'])} members_extracted={len(result['member_h5']['extracted'])}")
+        return
+    if args.stage2_project != "wan_stage2":
+        parser.error("旧 16 任务 G0 只配 --stage2-project wan_stage2")
+    if args.source is None:
+        parser.error("旧 16 任务 G0 必须给 --source")
     originals = (args.h5_root, args.input_manifest, args.mj_index, args.cache_import_receipt)
     if any(x is not None for x in originals) and not all(x is not None for x in originals):
         parser.error("--h5-root --input-manifest --mj-index --cache-import-receipt 四项须齐全")
@@ -496,6 +610,12 @@ def main(argv=None):
         "h5_root": args.h5_root, "input_manifest": args.input_manifest,
         "mj_index": args.mj_index, "cache_import_receipt": args.cache_import_receipt}
     result = build_inputs(args.manifest, args.latents.resolve(), args.source.resolve(), args.demo_root.resolve(), **kwargs)
+    _publish(args.out, result)
+    print(f"RAW_WINDOWS_READY=PASS windows=64 tasks=16 demo_tail={result['counts']['demo_tail']} sha_mismatches=0")
+
+
+def _publish(out, result):
+    args = argparse.Namespace(out=out)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     tmp = None
     try:
@@ -509,7 +629,6 @@ def main(argv=None):
     finally:
         if tmp is not None:
             tmp.unlink()
-    print(f"RAW_WINDOWS_READY=PASS windows=64 tasks=16 demo_tail={result['counts']['demo_tail']} sha_mismatches=0")
 
 
 if __name__ == "__main__":

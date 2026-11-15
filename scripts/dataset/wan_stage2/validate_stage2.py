@@ -87,11 +87,33 @@ def load_module(path, name):
     return module
 
 
+def _motion_store():
+    sys.path.insert(0, str(REPO / "src"))
+    from mme_vla_suite.datastore import motion_store as ms
+    return ms
+
+
+def project_module():
+    return load_module(HERE.parent / "stage2_project.py", "_stage2_project_selector")
+
+
+def is_local(samples):
+    return samples.get("kind") == "local-built-latents"
+
+
 def load_samples(path):
     data = read_json(path)
     if (data.get("schema") != "stage2-validation-inputs-v1" or data.get("gate") != "G0"
             or data.get("status") != "PASS" or data.get("seed") != 0):
         raise ValueError("必须提供 G0 成功的固定 seed=0 样本清单")
+    if is_local(data):
+        # 4task local-built：4 任务×16 窗、demo 尾窗 ≥8、单集 H5 来源（生产端与消费端同一校验）。
+        _motion_store().validate_local_g0(data)
+        for field in ("manifest_sha256", "latent_metadata_sha256"):
+            require_sha(data.get(field), field)
+        for window in data["windows"]:
+            validate_window(window)
+        return data
     windows = data.get("windows", [])
     tasks = Counter(w.get("task") for w in windows)
     tails = sum(w.get("segment_kind") == "demo" and w.get("pad_frames", 0) > 0 for w in windows)
@@ -148,7 +170,18 @@ def read_window_frames(window, hash_cache=None):
         if cache[stamp] != expected:
             raise ValueError(f"原帧文件 SHA 改变：{path}")
         wanted = {x["index"] for x in window["source_frame_indices"] if x["source"] == number}
-        if source["kind"] == "raw_h5":
+        if source["kind"] == "member_h5":
+            # 契约②：完整 member 路径、组名 episode_<raw_episode>、窗口命名用统一 episode。
+            member_h5 = load_module(HERE.parent / "stage2_member_h5.py", "_stage2_member_h5")
+            record = member_h5.record_from_source(source)
+            if record.episode != window.get("episode") or not str(path).endswith(record.member):
+                raise ValueError("单集 H5 的 member 路径或统一 episode 与窗口身份不同")
+            if path.stat().st_size != record.h5_bytes:
+                raise ValueError("单集 H5 字节数与 G0 不同")
+            ordered = sorted(wanted)
+            for index, frame in zip(ordered, member_h5.read_frames(record, path, ordered)):
+                images[number, index] = frame
+        elif source["kind"] == "raw_h5":
             import h5py
             if source.get("episode") != window.get("episode"):
                 raise ValueError("原 H5 episode 与窗口身份不同")
@@ -204,15 +237,15 @@ def normalized_error(actual, expected, std):
     return float(np.mean(delta ** 2)), float(np.max(np.abs(delta)))
 
 
-def assert_ema_state(encoder, payload):
-    """逐项比较原张量；负控实际把 model_live 送入同一比较器并要求拒绝。"""
+def assert_ema_state(encoder, payload, leaves=65):
+    """逐项比较原张量；负控实际把 model_live 送入同一比较器并要求拒绝。leaves 按 arch 取期望值。"""
     import torch
     current = encoder.state_dict()
 
     def compare(raw):
         state = {k.removeprefix("encoder."): v for k, v in raw.items() if k.startswith("encoder.")}
-        if len(current) != 65 or set(state) != set(current):
-            raise ValueError("EMA encoder 必须精确含65个状态项")
+        if len(current) != leaves or set(state) != set(current):
+            raise ValueError(f"EMA encoder 必须精确含{leaves}个状态项")
         for name, value in current.items():
             target = state[name]
             if (value.dtype != torch.float32 or target.dtype != value.dtype or target.shape != value.shape
@@ -230,7 +263,7 @@ def assert_ema_state(encoder, payload):
     try:
         compare(live)
     except ValueError:
-        return dict(leaves=65, state_key="model", exact=1, live_negative_rejected=1)
+        return dict(leaves=leaves, state_key="model", exact=1, live_negative_rejected=1)
     raise ValueError("model_live 负控没有被原张量检查拒绝")
 
 
@@ -258,15 +291,58 @@ def setup_runtime(args):
     torch.manual_seed(0)
     encoder, info = memory.load_ema_encoder(args.ckpt, device=args.device,
                                            expected_sha256=args.expected_sha256)
-    pin = read_json(HERE / "SOURCE_PIN.json")
-    if (any(pin.get(k) != v for k, v in info["source_pin"].items())
-            or pin.get("vae_adapter_sha256") != sha_file(HERE.parent / "wan/wan_motion_infer.py")
-            or pin.get("dependency_lock_sha256") != sha_file(HERE / "uv.lock")):
+    pin = project_pin(args)
+    if any(pin.get(k) != v for k, v in info["source_pin"].items()):
         raise ValueError("实际模块、VAE适配件或锁文件与 SOURCE_PIN 不同")
     return torch, memory, adapter, encoder, info
 
 
+def selected_project(args):
+    return project_module().get_project(getattr(args, "stage2_project", None) or "wan_stage2")
+
+
+def project_pin(args):
+    """契约①：pin 与锁按所选运行项目核对（不再用 HERE）。"""
+    project = selected_project(args)
+    try:
+        return project_module().check_project_files(project, sha_file)
+    except ValueError as exc:
+        raise ValueError(f"实际模块、VAE适配件或锁文件与 SOURCE_PIN 不同：{exc}") from exc
+
+
+def gate_g2_local(args, samples, runtime):
+    """local-built：旧库 fp32 latent 对「sidecar 在线编码同一路径」（wan_motion_infer.encode_chunk）的重编结果。
+
+    门槛与消费端 motion_store.validate_stage2_g2_evidence 同一口径（归一化 MSE≤1e-6、max≤0.01），不改对象、不放宽。
+    """
+    ms = _motion_store()
+    torch, _, adapter, _, info = runtime
+    pin = project_pin(args)
+    vae, vinfo = adapter.load_vae("Wan-AI/Wan2.1-T2V-1.3B-Diffusers", args.device,
+                                  expected_state_sha256=adapter.VAE_STATE_SHA256_EXPECTED)
+    online_vae = {key: vinfo[key] for key in ("vae_id", "vae_state_sha256", "vae_dtype", "latent_mode", "batch", "tf32", "amp")}
+    online_vae.update(adapter_sha256=pin["vae_adapter_sha256"], numerics=info["numerics"],
+                      preprocess=dict(frame_size=256, input_dtype="uint8", input_layout="THWC", window_frames=33))
+    std = np.asarray(vae.config.latents_std, dtype=np.float64)
+    rows, cache = [], {}
+    with torch.no_grad():
+        for window in samples["windows"]:
+            adapter.pin_numerics()
+            actual = adapter.encode_chunk(vae, read_window_frames(window, cache), args.device).cpu().numpy()
+            mse, maximum = normalized_error(actual, read_latent(window), std)
+            if mse > ms.STAGE2_G2_MSE_MAX or maximum > ms.STAGE2_G2_MAX_ABS:
+                raise ValueError(f"G2 超阈值：{window['key']}:{window['source_grid']} mse={mse} max={maximum}")
+            rows.append(dict(key=window["key"], source_grid=window["source_grid"], mse=mse, max_abs=maximum))
+    metrics = dict(windows=len(rows), demo_tail=samples["counts"]["demo_tail"],
+                   worst_mse=max(x["mse"] for x in rows), worst_max=max(x["max_abs"] for x in rows))
+    return dict(kind=ms.STAGE2_LOCAL_ORIGIN, comparison=ms.LOCAL_G2_COMPARISON, metrics=metrics, windows=rows,
+                online_adapter_sha256=sha_file(adapter.__file__), encoder=info["encoder"], source_pin=pin,
+                online_vae=online_vae, numerics=info["numerics"])
+
+
 def gate_g2(args, samples, runtime):
+    if is_local(samples):
+        return gate_g2_local(args, samples, runtime)
     if getattr(args, "cache_import_receipt", None):
         importer = load_module(HERE / "orig16_wan_cache.py", "_stage2_cache_input_check")
         receipt = read_json(args.cache_import_receipt)
@@ -327,13 +403,16 @@ def gate_g3(args, samples, runtime):
         if samples.get("cache_import_receipt_sha256") != sha_file(args.cache_import_receipt):
             raise ValueError("G3 的 G0 与缓存收据不同")
     torch, memory, _, encoder, info = runtime
+    rgbstate = info["encoder"]["arch"] == ms.STAGE2_RGBSTATE_ARCH
     payload = torch.load(args.ckpt, map_location="cpu", weights_only=False)
-    ema = assert_ema_state(encoder, payload)
+    ema = assert_ema_state(encoder, payload, leaves=ms.stage2_expected_leaves(info["encoder"]["arch"]))
     reader_module = load_pinned_mj_source(args.mj_root, "scripts/dataset-build/rgb_gtxyz_reader.py",
                                          "_motion_jepa_paired_cache_reader", info["source_pin"])
     data_module = load_pinned_mj_source(args.mj_root, "src/motion_jepa/data/dataset_paired_wan.py",
                                        "_stage2_paired_data", info["source_pin"])
-    reader = reader_module.PairedWanCacheReader(args.rgb_root)
+    # rgb-state：单流 rgbstate-4task 缓存（无 xyz_valid），旧三路仍用双流 reader。
+    reader = (reader_module.PairedWanCacheReader(args.rgb_root, profile=data_module.RGBSTATE_PROFILE) if rgbstate
+              else reader_module.PairedWanCacheReader(args.rgb_root))
     candidates = sorted(key for key in reader.windows if reader.windows[key]["split"] == "val")
     if len(candidates) < 32:
         raise ValueError("val 窗口不足32")
@@ -344,7 +423,8 @@ def gate_g3(args, samples, runtime):
             pair = reader.read_pair(key, 0)
             if pair["window"]["split"] != "val" or pair["params"]["aug_id"] != 0:
                 raise ValueError("G3 reader 返回了非 val aug0 窗口")
-            masks = data_module.derive_geometry_masks(pair["common_valid"], pair["xyz_valid"])
+            masks = (data_module.derive_rgb_geometry_masks(pair["common_valid"]) if rgbstate
+                     else data_module.derive_geometry_masks(pair["common_valid"], pair["xyz_valid"]))
             geometry = np.asarray(masks["geometry_valid"])
             if geometry.shape != (32, 32) or geometry.dtype != np.bool_ or not geometry.all():
                 raise ValueError("val aug0 的派生 geometry_valid 必须是全真 bool[32,32]")
@@ -367,9 +447,13 @@ def gate_g3(args, samples, runtime):
                 sample_identity=identities, sample_identity_sha256=sha_bytes(canonical(identities)),
                 mj_root=str(Path(args.mj_root).resolve()),
                 encoder=info["encoder"], encoder_state_sha256=info["encoder_state_sha256"],
-                source_pin=read_json(HERE / "SOURCE_PIN.json"), numerics=info["numerics"],
+                source_pin=project_pin(args), numerics=info["numerics"],
                 reader_source_sha256=sha_file(reader_module.__file__),
                 geometry_source_sha256=sha_file(data_module.__file__))
+    if is_local(samples):
+        if not rgbstate:
+            raise ValueError("local-built G3 只能配 rgb-state encoder")
+        result.update(kind=ms.STAGE2_LOCAL_ORIGIN, mask_profile="rgb-state")
     if cached:
         result["metrics"].pop("max_abs")
         result["metrics"].update(shape_mismatches=0, nonfinite=0)
@@ -432,6 +516,10 @@ def reference_g4(args, samples, runtime):
                 python_executable=sys.executable)
 
 
+def checkpoint_arch(path):
+    return project_module().arch_of_checkpoint(path)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--gate", required=True, choices=("G2", "G3", "G4-reference"))
@@ -447,12 +535,16 @@ def main(argv=None):
     parser.add_argument("--store")
     parser.add_argument("--reference-output")
     parser.add_argument("--cache-import-receipt")
+    parser.add_argument("--stage2-project", choices=("wan_stage2", "wan_stage2_rgbstate"),
+                        help="stage2 运行项目（契约①）；不给时按 --ckpt payload 的 arch 推断，不符即拒")
     args = parser.parse_args(argv)
     revoke_report(args.out, gate=args.gate)
     try:
         require_sha(args.expected_sha256, "expected-sha256")
         if sha_file(args.ckpt) != args.expected_sha256:
             raise ValueError("checkpoint SHA 与显式参数不符")
+        args.stage2_project = project_module().resolve_project_name(
+            args.stage2_project, arch=checkpoint_arch(args.ckpt), context="validate_stage2")
         samples_sha = sha_file(args.samples)
         samples = load_samples(args.samples)
         if args.gate == "G3" and not args.rgb_root:
@@ -467,6 +559,11 @@ def main(argv=None):
                       checkpoint_sha256=args.expected_sha256, samples_sha256=samples_sha, **result)
         atomic_json(args.out, record)
         m = record["metrics"]
+        if record.get("kind") == "local-built-latents" and args.gate in ("G2", "G3"):
+            detail = (f"windows={m['windows']} demo_tail={m['demo_tail']} worst_mse={m['worst_mse']} "
+                      f"worst_max={m['worst_max']}" if args.gate == "G2" else
+                      f"windows=32 seed=0 max_abs=0 leaves={m['leaves']} masks=rgb-state")
+            print(f"STAGE2_{args.gate}=PASS kind=local-built-latents project={args.stage2_project} {detail}")
         if args.gate == "G2":
             if args.cache_import_receipt:
                 print("INPUT_EQUIVALENCE=PASS " + " ".join(f"{k}={v}" for k, v in m.items()))
@@ -474,7 +571,7 @@ def main(argv=None):
             else:
                 print("WAN_EQUIV=PASS " + " ".join(f"{k}={v}" for k, v in m.items()))
         elif args.gate == "G3":
-            print("EMA_SOURCE=PASS leaves=65 state_key=model exact=1 live_negative_rejected=1")
+            print(f"EMA_SOURCE=PASS leaves={m['leaves']} state_key=model exact=1 live_negative_rejected=1")
             if args.cache_import_receipt:
                 print("EXPORT_PARITY=NOT_REQUIRED reason=user_decision_same_input")
             else:

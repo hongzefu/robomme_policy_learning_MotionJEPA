@@ -46,12 +46,32 @@ logger = logging.getLogger(__name__)
 # ── 布局常量 ──────────────────────────────────────────────────────────────────
 LAYOUT = "motion-v10-8x256-grid16-demopad17-v1"
 STAGE2_LAYOUT = "motion-stage2-1x1024-grid32-demopad17-v1"
-STAGE2_ARCH = "wan-latent-stage2-blockwise-pool4-three-decoder"
+STAGE2_ARCH = "wan-latent-stage2-blockwise-pool4-three-decoder"   # 旧三路 tag，保留供旧代码引用
+STAGE2_RGBSTATE_ARCH = "wan-latent-stage2-blockwise-pool4-rgb-state"
+STAGE2_ARCHS = (STAGE2_ARCH, STAGE2_RGBSTATE_ARCH)                # stage2 encoder arch 白名单
+# named-tensors 叶子数按 arch 取期望值；两路与三路 encoder 同构，MJ 合成 rgb-state ckpt 实测 65（1114 计划 S2）。
+STAGE2_ARCH_LEAVES = {STAGE2_ARCH: 65, STAGE2_RGBSTATE_ARCH: 65}
 STAGE2_GROUPS = ("encoder", "encoder_state_sha256", "source_pin", "numerics", "stage2_compat", "vae")
 STAGE2_CACHE_ORIGIN = "published-cache-with-local-fill"
 WAN_CACHE_IMPORT_SCHEMA = "orig16-wan-cache-import-v1"
 WAN_CHUNK_BYTES = 9 * 16 * 32 * 32 * 4
 SAME_INPUT_NOT_REQUIRED = {"status": "NOT_REQUIRED", "reason": "user_decision_same_input"}
+# ── 4task local-built-latents 来源（1114 计划 B motion_store 行；只能配 rgb-state）──
+STAGE2_LOCAL_ORIGIN = "local-built-latents"
+LOCAL_SAMPLE_STRATEGY = "task4x16-endpoints-pad8-seed0-v1"
+LOCAL_G0_TASKS, LOCAL_G0_PER_TASK, LOCAL_G0_MIN_DEMO_TAIL = 4, 16, 8     # 4×16=64 窗，demo 尾窗 ≥8
+LOCAL_G2_COMPARISON = "stored-fp32-latent-vs-online-sidecar-vae"
+STAGE2_G2_MSE_MAX, STAGE2_G2_MAX_ABS = 1e-6, 0.01                       # G2 门槛（生产端与消费端同一口径）
+# 历史绑定（A12/C06 合同常量，11-14 实测）：旧库总 metadata 摘要须等于该抽样复核报告记录的值。
+LOCAL_HISTORY_REPORT = "docs/dataset-build-doc/4task-v2-1600ep-motion-demopad17/records/vae-report-summary.json"
+LOCAL_HISTORY_REPORT_SHA256 = "f2713d9044a514d740ed9aeb04af712b5755a4a0dd3642504a9eef0acfdd537c"
+LOCAL_TESTED_METADATA_SHA256 = "c92643178e71dc0bbe7a406770d5ca84c800bb902785118bb3dd62c42efa6eff"
+LOCAL_MEMBER_PIN_SHA256 = "2cb9026fc874964941ddb8c1cf1c0425a3b8ac94d3bd8e2082779f4e95f5c8bd"
+LOCAL_LINEAGE_SCHEMA = "data-lineage-member-pin-v1"
+BIN_SHA256_LIST_SCHEMA = "bin-sha256-list-v1"
+BIN_SHA256_LIST_NAME = "wan-latents-bin-sha256.json"      # 固定在 <--stage2-validation>/ 下
+LOCAL_EVIDENCE_ROLES = ("G0", "G2", "G3", "SOURCE_PIN", "member_pin_lineage", "wan_latents_metadata",
+                        "wan_latents_bin_sha256")
 STAGE2_SAMPLE_STRATEGY = "task64-endpoints-pad8-seed0-v1"
 STAGE2_SAMPLE_AUTHORIZATION = "同意按照你说过的更省时方案 做\nencoder只抽机小部分"
 STAGE2_G2_WAIVER_CHECKPOINT_SHA256 = "27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035"
@@ -254,7 +274,19 @@ def stage2_uses_cache(provenance):
     return provenance.get("stage2_compat", {}).get("kind") == STAGE2_CACHE_ORIGIN
 
 
+def stage2_uses_local(provenance):
+    return provenance.get("stage2_compat", {}).get("kind") == STAGE2_LOCAL_ORIGIN
+
+
+def stage2_expected_leaves(arch):
+    if arch not in STAGE2_ARCH_LEAVES:
+        raise ValueError(f"未知 stage2 encoder arch: {arch!r}")
+    return STAGE2_ARCH_LEAVES[arch]
+
+
 def stage2_evidence_roles(provenance):
+    if stage2_uses_local(provenance):
+        return LOCAL_EVIDENCE_ROLES
     return ("G0", "G2", "G3", "wan_cache_import" if stage2_uses_cache(provenance) else "restore_receipt", "SOURCE_PIN")
 
 
@@ -359,7 +391,8 @@ def validate_wan_cache_import_receipt(receipt, *, manifest_sha256=None, input_ma
 
 def validate_stage2_g2_evidence(record, *, checkpoint_sha256, samples_sha256,
                                source_pin, numerics, online_vae, demo_tail=None,
-                               cache_import_receipt=None, cache_import_receipt_sha256=None) -> str:
+                               cache_import_receipt=None, cache_import_receipt_sha256=None,
+                               local=False) -> str:
     """只接受严格数值PASS，或用户针对固定三份身份授权的数值例外；来源检查始终执行。"""
     if cache_import_receipt is not None:
         receipt = cache_import_receipt
@@ -427,15 +460,24 @@ def validate_stage2_g2_evidence(record, *, checkpoint_sha256, samples_sha256,
         if canonical_json_bytes(record.get(key)) != canonical_json_bytes(expected):
             raise ValueError(f"G2 证据的{key}与实际来源不同")
     status = record.get("status")
+    if local and (status != "PASS" or record.get("kind") != STAGE2_LOCAL_ORIGIN
+                  or record.get("comparison") != LOCAL_G2_COMPARISON):
+        # local-built：对象是「旧库 fp32 latent」对「sidecar 在线编码同一路径」，不接受例外。
+        raise ValueError("local-built G2 必须是同一对象的严格数值 PASS")
     if status == "PASS":
         if "exception" in record or record.get("producer") == "stage2-g2-user-exception-v1":
             raise ValueError("G2 用户例外不能改标为PASS")
+        if not local and record.get("kind") == STAGE2_LOCAL_ORIGIN:
+            raise ValueError("local-built G2 证据不能用于其他来源")
         metrics = record.get("metrics")
+        min_tail = LOCAL_G0_MIN_DEMO_TAIL if local else 16
         if (not isinstance(metrics, dict) or type(metrics.get("windows")) is not int or metrics["windows"] != 64
-                or type(metrics.get("demo_tail")) is not int or metrics["demo_tail"] < 16
+                or type(metrics.get("demo_tail")) is not int or metrics["demo_tail"] < min_tail
                 or (demo_tail is not None and metrics["demo_tail"] != demo_tail)
-                or type(metrics.get("worst_mse")) not in (int, float) or not 0 <= metrics["worst_mse"] <= 1e-6
-                or type(metrics.get("worst_max")) not in (int, float) or not 0 <= metrics["worst_max"] <= 0.01):
+                or type(metrics.get("worst_mse")) not in (int, float)
+                or not 0 <= metrics["worst_mse"] <= STAGE2_G2_MSE_MAX
+                or type(metrics.get("worst_max")) not in (int, float)
+                or not 0 <= metrics["worst_max"] <= STAGE2_G2_MAX_ABS):
             raise ValueError("G2 数值证据不完整或超过原阈值")
         return "PASS"
     if status != "WAIVED" or record.get("producer") != "stage2-g2-user-exception-v1":
@@ -477,7 +519,9 @@ def validate_stage2_provenance(provenance: dict) -> None:
               "arch", "checkpoint_sha256", "config_sha256", "fingerprint_sha256", "source_times", "output_shape")
     if any(k not in enc or enc[k] is None for k in fields):
         raise ValueError("stage2 encoder 必填字段不全")
-    fixed = {"state_key": "model", "weight_type": "ema", "arch": STAGE2_ARCH,
+    if enc["arch"] not in STAGE2_ARCHS:
+        raise ValueError(f"stage2 encoder 架构不在白名单: {enc['arch']!r}")
+    fixed = {"state_key": "model", "weight_type": "ema",
              "source_times": [0, 3, 5, 8], "output_shape": [1, 1024]}
     if any(canonical_json_bytes(enc[k]) != canonical_json_bytes(v) for k, v in fixed.items()):
         raise ValueError("stage2 encoder 架构、EMA 键或输出槽序不符")
@@ -490,8 +534,10 @@ def validate_stage2_provenance(provenance: dict) -> None:
         require_sha256(enc[k], f"encoder.{k}")
     state = provenance["encoder_state_sha256"]
     leaves = state.get("leaves")
-    if state.get("algorithm") != "named-tensors-v1" or not isinstance(leaves, dict) or len(leaves) != 65:
-        raise ValueError("stage2 encoder 状态摘要必须含 named-tensors-v1 的完整 65 项")
+    expected_leaves = stage2_expected_leaves(enc["arch"])
+    if (state.get("algorithm") != "named-tensors-v1" or not isinstance(leaves, dict)
+            or len(leaves) != expected_leaves):
+        raise ValueError(f"stage2 encoder 状态摘要必须含 named-tensors-v1 的完整 {expected_leaves} 项")
     for name, leaf in leaves.items():
         if (not isinstance(name, str) or not name or name.startswith("encoder.")
                 or not isinstance(leaf, dict) or leaf.get("dtype") != "float32"
@@ -519,6 +565,14 @@ def validate_stage2_provenance(provenance: dict) -> None:
     compat = provenance["stage2_compat"]
     if compat.get("schema") != "stage2-compat-v1":
         raise ValueError("stage2_compat schema 不符")
+    if compat.get("kind") == STAGE2_LOCAL_ORIGIN and enc["arch"] != STAGE2_RGBSTATE_ARCH:
+        raise ValueError("local-built-latents 只能配 rgb-state encoder")
+    if stage2_uses_local(provenance):
+        _validate_stage2_local_provenance(provenance)
+        if "encoder_validation" in compat:
+            validate_stage2_encoder_validation(compat["encoder_validation"], provenance)
+        canonical_json_bytes(provenance)
+        return
     if stage2_uses_cache(provenance):
         _validate_stage2_cache_provenance(provenance)
         if "encoder_validation" in compat:
@@ -594,6 +648,135 @@ def _validate_stage2_cache_provenance(provenance):
         require_sha256(item.get("sha256"), f"cache.evidence.{label}")
     if evidence["wan_cache_import"]["sha256"] != compat["cache_import_receipt_sha256"]:
         raise ValueError("缓存收据引用与合同身份不符")
+
+
+def _validate_stage2_local_provenance(provenance):
+    """local-built：不要求 restore_receipt 与 historical_vae；旧库 latent 身份靠历史绑定与逐段摘要清单。"""
+    compat, vae, pin = provenance["stage2_compat"], provenance["vae"], provenance["source_pin"]
+    if "raw_dir" not in provenance or provenance["raw_dir"] is not None:
+        raise ValueError("local-built 的 provenance.raw_dir 必须为 null")
+    if vae.get("vae_id") != "Wan-AI/Wan2.1-T2V-1.3B-Diffusers" or vae.get("latent_mode") != "mode":
+        raise ValueError("local-built 旧库 VAE 模型或取值方式不符")
+    require_sha256(vae.get("vae_state_sha256"), "local.vae.vae_state_sha256")
+    online = compat.get("online_vae", {})
+    fixed = dict(vae_id="Wan-AI/Wan2.1-T2V-1.3B-Diffusers", vae_dtype="float32", latent_mode="mode",
+                 batch=1, tf32="off", amp="off")
+    if (any(type(online.get(k)) is not type(v) or online[k] != v for k, v in fixed.items())
+            or online.get("vae_state_sha256") != vae["vae_state_sha256"]
+            or online.get("adapter_sha256") != pin["vae_adapter_sha256"]
+            or online.get("preprocess") != dict(frame_size=256, input_dtype="uint8", input_layout="THWC", window_frames=33)
+            or canonical_json_bytes(online.get("numerics")) != canonical_json_bytes(provenance["numerics"])):
+        raise ValueError("local-built 在线 VAE 的模型、权重、适配件、预处理或数值环境不符")
+    history = dict(report_path=LOCAL_HISTORY_REPORT, report_sha256=LOCAL_HISTORY_REPORT_SHA256,
+                   tested_metadata_sha256=LOCAL_TESTED_METADATA_SHA256)
+    if compat.get("latents_history") != history or provenance.get("latents_metadata_sha256") != LOCAL_TESTED_METADATA_SHA256:
+        raise ValueError("local-built 旧库总 metadata 摘要与历史 tested_metadata_sha256 不符")
+    if compat.get("member_pin_sha256") != LOCAL_MEMBER_PIN_SHA256:
+        raise ValueError("local-built member pin 与合同常量不符")
+    evidence = compat.get("evidence", {})
+    if not isinstance(evidence, dict) or set(evidence) != set(LOCAL_EVIDENCE_ROLES):
+        raise ValueError("local-built 证据集合不完整或混入其他来源证据")
+    for label, item in evidence.items():
+        if not isinstance(item, dict) or not isinstance(item.get("path"), str) or not item["path"]:
+            raise ValueError(f"local-built 缺 {label} 路径")
+        require_sha256(item.get("sha256"), f"local.evidence.{label}")
+    if evidence["wan_latents_metadata"]["sha256"] != provenance["latents_metadata_sha256"]:
+        raise ValueError("local-built 总 metadata 证据与来源摘要不同")
+    if pathlib.PurePath(evidence["wan_latents_bin_sha256"]["path"]).name != BIN_SHA256_LIST_NAME:
+        raise ValueError("local-built 逐段摘要清单必须是固定文件名")
+
+
+def validate_local_g0(g0, *, manifest_sha256=None, latent_metadata_sha256=None):
+    """4task local-built G0：4 任务×16 窗、demo 尾窗 ≥8、单集 H5 来源（契约②）。返回 demo_tail。"""
+    counts, windows = g0.get("counts", {}), g0.get("windows", [])
+    if (g0.get("schema") != "stage2-validation-inputs-v1" or g0.get("gate") != "G0" or g0.get("status") != "PASS"
+            or g0.get("seed") != 0 or g0.get("kind") != STAGE2_LOCAL_ORIGIN
+            or g0.get("strategy") != LOCAL_SAMPLE_STRATEGY
+            or not isinstance(windows, list) or len(windows) != LOCAL_G0_TASKS * LOCAL_G0_PER_TASK
+            or counts.get("windows") != len(windows) or counts.get("tasks") != LOCAL_G0_TASKS
+            or counts.get("sha_mismatches") != 0
+            or (manifest_sha256 is not None and g0.get("manifest_sha256") != manifest_sha256)
+            or (latent_metadata_sha256 is not None and g0.get("latent_metadata_sha256") != latent_metadata_sha256)):
+        raise ValueError("local-built G0 证据不完整或绑定不同输入")
+    tasks, seen, tails = {}, set(), 0
+    for window in windows:
+        task, episode, kind, grid = (window.get("task"), window.get("episode"), window.get("segment_kind"),
+                                     window.get("source_grid"))
+        if (not isinstance(task, str) or type(episode) is not int or episode < 0 or kind not in SEGMENTS
+                or type(grid) is not int or grid < 0 or grid % 2 or window.get("key") != f"{task}_ep{episode}_{kind}"
+                or (window["key"], grid) in seen):
+            raise ValueError("local-built G0 窗口身份、偶数格或唯一性不符")
+        seen.add((window["key"], grid))
+        sources, indices, frames = window.get("sources"), window.get("source_frame_indices"), window.get("frame_ids")
+        if (not isinstance(sources, list) or len(sources) != 1 or sources[0].get("kind") != "member_h5"
+                or sources[0].get("episode") != episode or type(sources[0].get("raw_episode")) is not int
+                or not isinstance(sources[0].get("member"), str) or not isinstance(frames, list) or len(frames) != 33
+                or indices != [dict(source=0, index=f) for f in frames]):
+            raise ValueError("local-built G0 必须绑定单一单集 H5（member 路径、raw_episode 组名、统一 episode）")
+        for key in ("sha256", "map_sha256"):
+            require_sha256(sources[0].get(key), f"G0.member_h5.{key}")
+        for key in ("input_frames_sha256", "latent_block_sha256"):
+            require_sha256(window.get(key), f"G0.{key}")
+        tasks[task] = tasks.get(task, 0) + 1
+        tails += int(kind == "demo" and window.get("pad_frames", 0) > 0)
+    if (len(tasks) != LOCAL_G0_TASKS or set(tasks.values()) != {LOCAL_G0_PER_TASK}
+            or tails < LOCAL_G0_MIN_DEMO_TAIL or counts.get("demo_tail") != tails):
+        raise ValueError("local-built G0 必须 4 任务×16 窗且 demo 尾窗 ≥8")
+    return tails
+
+
+def validate_bin_sha256_list(record, metadata):
+    """C06：bin→段 metadata 链的可携带清单；files 精确覆盖总 metadata 的全部段。"""
+    files = record.get("files") if isinstance(record, dict) else None
+    if (not isinstance(record, dict) or record.get("schema") != BIN_SHA256_LIST_SCHEMA
+            or not isinstance(record.get("root"), str) or not record["root"] or not isinstance(files, dict)):
+        raise ValueError("wan-latents-bin-sha256.json schema 不符")
+    segments = metadata.get("segments") if isinstance(metadata, dict) else None
+    if not isinstance(segments, dict) or set(files) != {f"{key}.bin" for key in segments}:
+        raise ValueError("逐段摘要清单与总 metadata 的段集合不同")
+    for key, segment in segments.items():
+        if require_sha256(files[f"{key}.bin"], f"bin.{key}") != segment.get("sha256"):
+            raise ValueError(f"逐段摘要清单与总 metadata 不符: {key}")
+
+
+def validate_stage2_local_evidence(provenance, records):
+    """消费端：G0/G2/G3、SOURCE_PIN、member-pin 血缘收据、总 metadata 与逐段摘要清单。"""
+    compat = provenance["stage2_compat"]
+    if records["SOURCE_PIN"] != provenance["source_pin"]:
+        raise ValueError("local-built 证据 SOURCE_PIN 与来源不一致")
+    lineage = records["member_pin_lineage"]
+    if (not isinstance(lineage, dict) or lineage.get("schema") != LOCAL_LINEAGE_SCHEMA
+            or lineage.get("mode") != "member-pin" or lineage.get("status") != "PASS"
+            or lineage.get("member_pin_sha256") != compat["member_pin_sha256"]):
+        raise ValueError("local-built member-pin 血缘收据未 PASS 或 pin 不符")
+    metadata = records["wan_latents_metadata"]
+    if not isinstance(metadata, dict) or metadata.get("manifest_sha256") != provenance.get("manifest_sha256"):
+        raise ValueError("local-built 总 metadata 与清单不同源")
+    validate_bin_sha256_list(records["wan_latents_bin_sha256"], metadata)
+    tails = validate_local_g0(records["G0"], manifest_sha256=provenance.get("manifest_sha256"),
+                              latent_metadata_sha256=provenance.get("latents_metadata_sha256"))
+    evidence = compat["evidence"]
+    validate_stage2_g2_evidence(records["G2"], checkpoint_sha256=provenance["encoder"]["checkpoint_sha256"],
+                                samples_sha256=evidence["G0"]["sha256"], source_pin=provenance["source_pin"],
+                                numerics=provenance["numerics"], online_vae=compat["online_vae"],
+                                demo_tail=tails, local=True)
+    validate_local_g3(records["G3"], provenance, samples_sha256=evidence["G0"]["sha256"])
+
+
+def validate_local_g3(g3, provenance, *, samples_sha256):
+    leaves = stage2_expected_leaves(provenance["encoder"]["arch"])
+    fixed = dict(windows=32, seed=0, max_abs=0, geometry_all_true=1, leaves=leaves, state_key="model", exact=1,
+                 live_negative_rejected=1)
+    metrics = g3.get("metrics", {}) if isinstance(g3, dict) else {}
+    if (not isinstance(g3, dict) or g3.get("schema") != "stage2-validation-gate-v1" or g3.get("gate") != "G3"
+            or g3.get("status") != "PASS" or g3.get("kind") != STAGE2_LOCAL_ORIGIN
+            or g3.get("mask_profile") != "rgb-state"
+            or g3.get("checkpoint_sha256") != provenance["encoder"]["checkpoint_sha256"]
+            or g3.get("samples_sha256") != samples_sha256
+            or any(type(metrics.get(k)) is not type(v) or metrics.get(k) != v for k, v in fixed.items())
+            or any(canonical_json_bytes(g3.get(k)) != canonical_json_bytes(provenance[k])
+                   for k in ("source_pin", "numerics", "encoder_state_sha256"))):
+        raise ValueError("local-built G3 的 EMA、rgb-state 掩码、输入绑定或 32 窗逐位证据不完整")
 
 
 def validate_stage2_cache_evidence(provenance, records):
