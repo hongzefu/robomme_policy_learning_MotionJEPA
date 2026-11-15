@@ -11,15 +11,15 @@ from typing import Optional, Any, Tuple
 import numpy as np
 
 from openpi_client import websocket_client_policy as _websocket_client_policy
-from utils import (
+from utils_692 import (
     pack_buffer,
     check_args,
     TASK_NAME_LIST,
     TASK_WITH_VIDEO_DEMO,
     EpisodeState,
 )
-from utils import RolloutRecorder
-from env_runner import EnvRunner, SpecEnvRunner
+from utils_692 import RolloutRecorder
+from env_runner_692 import EnvRunner, SpecEnvRunner
 
 
 class EpisodeWallClockTimeout(RuntimeError):
@@ -263,8 +263,9 @@ class EpisodeEvaluator:
             state.motion_infers += 1
             state.motion_k_max = max(state.motion_k_max, int(resp["motion_k"]))
             # 服务端侧是 episode 内累计值（FrameSampMemory 每 episode 随 reset 重建），取最大即本集总数
+            # v4 server 只在 overflow=resample 时回传降级步数（raise 口径下不会降级，记 0）
             state.motion_downsample_steps = max(
-                state.motion_downsample_steps, int(resp["motion_downsample_steps"]))
+                state.motion_downsample_steps, int(resp.get("motion_downsample_steps", 0)))
             state.motion_budget = int(resp["motion_budget"])
             state.motion_overflow = str(resp["motion_overflow"])
         action_chunk = resp["actions"]

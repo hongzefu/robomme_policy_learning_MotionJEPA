@@ -11,7 +11,7 @@ import tempfile
 from types import SimpleNamespace
 import unittest
 
-SOURCE = Path(__file__).resolve().parents[2] / 'examples/robomme/eval.py'
+SOURCE = Path(__file__).resolve().parents[2] / 'examples/robomme/eval_692.py'
 
 class ControlTests(unittest.TestCase):
     def setUp(self):
@@ -86,5 +86,23 @@ class ControlTests(unittest.TestCase):
     def test_negative_limit(self):
         self.args.max_episodes = -1
         with self.assertRaises(ValueError): self.run_eval()
+
+    def test_cli_accepts_692_args(self):
+        # 1114 计划 S4-10：run_shard.sh 以 --args.max_steps=2000 与 --args.demo_prefix_store 调 eval_692.py，server 无需改动
+        import tyro
+        parsed = []
+        def evaluate(args: self.ns['Args']): parsed.append(args)
+        tyro.cli(evaluate, args=['--args.max_steps=2000', '--args.demo_prefix_store=/abs/store',
+                                 '--args.episode_plan=/abs/plan.json', '--args.episode_wall_s=2400'])
+        self.assertEqual((parsed[0].max_steps, parsed[0].demo_prefix_store, parsed[0].episode_wall_s),
+                         (2000, '/abs/store', 2400))
+
+    def test_client_imports_692_modules(self):
+        # 692 客户端只从改名后的 692 副本取 utils / env_runner，不触碰 v4 官方客户端
+        imports = {(n.module, a.name) for n in ast.walk(ast.parse(SOURCE.read_text()))
+                   if isinstance(n, ast.ImportFrom) for a in n.names}
+        self.assertIn(('env_runner_692', 'SpecEnvRunner'), imports)
+        self.assertIn(('utils_692', 'RolloutRecorder'), imports)
+        self.assertFalse({m for m, _ in imports} & {'utils', 'env_runner'})
 
 if __name__ == '__main__': unittest.main()

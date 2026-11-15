@@ -245,7 +245,7 @@ def write_episode_h5(path: Path, row, front, wrist, states, task_goal, detail, e
 
 def gen_one(row, sampling, out_root: Path, video_dir: Path, retries: int) -> dict:
     """跑一条候选的 demo 前缀。返回一条记录（含 demo_status）。"""
-    from env_runner import SpecEnvRunner
+    from env_runner_692 import SpecEnvRunner
 
     task, difficulty, episode = row["task"], row["difficulty"], int(row["episode"])
     per_task = {"parameters": sampling["parameters"][task], "positions": sampling["positions"][task]}

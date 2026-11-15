@@ -7,7 +7,7 @@ import numpy as np
 
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / 'examples/robomme'))
-from env_runner import EnvRunner
+from env_runner_692 import EnvRunner
 
 out = Path(sys.argv[1])
 task = sys.argv[2]
