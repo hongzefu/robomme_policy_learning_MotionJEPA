@@ -65,9 +65,9 @@ class Contract:
     episode_manifest_sha256: str = "df0ec8edd823b1415fa2bba6a51fa1c911dadc4d10364590d537a97526add482"
     input_manifest_sha256: str = "655e64b4fd033aea1ff79a1e5ad47f886a148592496759ed2a667fe167c57d86"
     canonical_manifest_sha256: str = "4cd5a170b0ed9718922bfd7c9287e80b3681a0ea7489dfdb07ddeb3a53dbb918"
-    motion_rows: int | str = PLACEHOLDER
-    train_max: int | str = PLACEHOLDER
-    encoder_sha256: str = PLACEHOLDER
+    motion_rows: int | str = 36484
+    train_max: int | str = 71
+    encoder_sha256: str = "ece3465b57f9d1ddea130a631aff1d1006b2c8ba5c68a0e5e92b8215ae80b55c"
     encoder_run: str = "stage2-4task-rgbstate-144ep-1113-a"
     encoder_epoch: int = 144
     merge_records_rel: str = MERGE_RECORDS_REL

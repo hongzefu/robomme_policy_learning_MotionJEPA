@@ -58,8 +58,8 @@ S2RGBSTATE_CONFIG = 'mme_vla_suite_4task_b128_50k'
 # resolved_sha256 依赖 S3 的最终 yaml，S4 先于 S3 合入：此处先放占位（不是 64 位十六进制，main 遇占位即拒绝）。
 # S3 合入后由主会话用 `check_checkpoint.py --resolved-sha256 <yaml>` 复算，以一个小提交补入（S4-09）。
 S2RGBSTATE_PENDING = 'PENDING-S3-FINAL-YAML'
-S2RGBSTATE_MODUL_RESOLVED_SHA256 = S2RGBSTATE_PENDING
-S2RGBSTATE_CTX_RESOLVED_SHA256 = S2RGBSTATE_PENDING
+S2RGBSTATE_MODUL_RESOLVED_SHA256 = '3745defbe8f4c7f934b98f8a6c4f0bce612a005e9cbcf50b51197f8dc04bfdf5'
+S2RGBSTATE_CTX_RESOLVED_SHA256 = '4bbfc5344e76471f31303f4f17b0798b155be55ccd2c6d7a663d4a68ee525cb4'
 NORM_STATS_4TASK_SHA256 = '856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173'
 # stage 交付路径的祖父目录前缀（S5 导出模板 v1-store/exports/hf-ckpt-<RUN>/stage/<step>）
 STAGE_EXPORT_PREFIX = 'hf-ckpt-'
