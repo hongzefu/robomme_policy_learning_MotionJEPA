@@ -88,8 +88,8 @@ def test_4task_yaml_layout_and_motion(name):
     assert (m["stride"], m["window_frames"], m["encoder_kind"], m["online_gpu"]) == (32, 33, "stage2_pool4_concat", 1)
     assert m["store_path"] == "v1-store/datasets/4task-v2-1600ep-604f16da/motion-stage2-1024-rgbstate-ep144"
     assert m["source_run"] == "stage2-4task-rgbstate-144ep-1113-a/checkpoint_epoch_144.pt#model"
-    # ckpt sha 由 encoder 训满后的单独修订 commit 回填（计划文首）；之前任何正式合同必须失败。
-    assert m["checkpoint_sha256"] == "__FILL_AFTER_BUILD__"
+    # ckpt sha 已由 encoder 训满后的单独修订 commit 回填（计划文首），与合同 encoder_sha256 同值。
+    assert m["checkpoint_sha256"] == "ece3465b57f9d1ddea130a631aff1d1006b2c8ba5c68a0e5e92b8215ae80b55c"
     # 与 16task 同布局 8×8 concat yaml 只差库路径、encoder 来源与 sha 三项（注入代码同一份）。
     orig = load_yaml(name.replace("-4task-rgbstate.yaml", "-orig16.yaml"))
     assert {k for k in h if h[k] != orig[k]} == {"motion"}
