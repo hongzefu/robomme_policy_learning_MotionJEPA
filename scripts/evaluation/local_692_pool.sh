@@ -10,6 +10,11 @@
 #        DRY_RUN=1（只打印计划、片→卡/端口映射与预标清单，不起任何分片、不写评估目录）、
 #        EVAL_SHARDS（正式评估逻辑分片数，默认 32）、EVAL_PER_GPU（每卡同时片数，默认 4，即 LOCAL_GPU_SHARE）、
 #        EVAL_MEM_FRACTION（正式评估每片 XLA_PYTHON_CLIENT_MEM_FRACTION，默认 0.2）；G6b 模式不读这三个，保持原行为
+#        POLICY_CONFIG（serve_policy 的训练 config 名，保留调用方的值，不传时默认 mme_vla_suite_b128_80k；1114 计划 A21）、
+#        STAGE2_PYTHON（可选，透传给 run_shard.sh 向 server 传 --stage2_python；1114 计划 4task 取 wan-stage2-rgbstate 解释器）
+# 必传（1114 计划 S4-08，漏传即报错，不再默认 160／16）：EXPECT_MOTION_BUDGET（motion 预算，单位窗）、EXPECT_MOTION_STRIDE（窗步长）
+# DRY_RUN=1 另逐片以 DRY_RUN=1 调 run_shard.sh 取回最终 server 命令行，断言 config、--motion_online_gpu=片号%8 与客户端入口
+#   eval_692.py，每片打一行 SHARD_CMD（1114 计划 A21、S4-08）
 #
 # 流程（正式）：
 #   ① $STORE/E0.txt 首行必须是 DEMO_PREFIX_SRC=PASS（E0，训练前已完成），否则不起跑；
@@ -62,15 +67,22 @@ RETRY_ROOT="$EVAL_REPO/v1-store/evaluation/$RETRY_RUN"
 export MMEVLA_MOTION_OVERFLOW=resample EXPECT_MOTION_STATS=1 EXPECT_DEMO_INJECT=1 CHUNK_EPISODES=20 \
        MMEVLA_MOTION_PROV_RELAX=gpu_name,compute_cap,sm_count EPISODE_WALL_S=2400 EVAL_TIMEOUT=14400 \
        LOCAL_GPU_SHARE="$PER_GPU" XLA_PYTHON_CLIENT_MEM_FRACTION="$MEM_FRACTION" ALLOW_RESUME=1 \
-       POLICY="${POLICY:-perceptual-framesamp-modul-8frame-8x8-wantp768}" POLICY_CONFIG=mme_vla_suite_b128_80k \
-       EXPECT_CKPT_ID="$CKPT_ID" DEMO_PREFIX_STORE="$STORE"
+       POLICY="${POLICY:-perceptual-framesamp-modul-8frame-8x8-wantp768}" POLICY_CONFIG="${POLICY_CONFIG:-mme_vla_suite_b128_80k}" \
+       EXPECT_CKPT_ID="$CKPT_ID" DEMO_PREFIX_STORE="$STORE" \
+       EXPECT_MOTION_BUDGET="${EXPECT_MOTION_BUDGET:?必须显式传 EXPECT_MOTION_BUDGET（motion 预算，单位窗；1114 计划为 96）}" \
+       EXPECT_MOTION_STRIDE="${EXPECT_MOTION_STRIDE:?必须显式传 EXPECT_MOTION_STRIDE（motion 窗步长；1114 计划为 32）}"
+[[ "$EXPECT_MOTION_BUDGET" =~ ^[1-9][0-9]*$ && "$EXPECT_MOTION_STRIDE" =~ ^[1-9][0-9]*$ ]] || {
+    echo "EXPECT_MOTION_BUDGET / EXPECT_MOTION_STRIDE 必须是正整数：$EXPECT_MOTION_BUDGET / $EXPECT_MOTION_STRIDE"; exit 2; }
+[[ "$POLICY_CONFIG" =~ ^[a-zA-Z0-9_]+$ ]] || { echo "POLICY_CONFIG 非法：$POLICY_CONFIG"; exit 2; }
+[[ -z "${STAGE2_PYTHON:-}" ]] || export STAGE2_PYTHON
 unset ROBOMME_GPU_RASTER SAPIEN_DISABLE_RAY_TRACING
 echo "LOCAL692_START mode=$MODE dry=$DRY run=$RUN_NAME ckpt=$CKPT seed=$SEED store=$STORE $(date -u +%FT%TZ)"
 echo "EVAL_ENV MMEVLA_MOTION_OVERFLOW=$MMEVLA_MOTION_OVERFLOW EXPECT_MOTION_STATS=$EXPECT_MOTION_STATS EXPECT_DEMO_INJECT=$EXPECT_DEMO_INJECT" \
      "CHUNK_EPISODES=$CHUNK_EPISODES MMEVLA_MOTION_PROV_RELAX=$MMEVLA_MOTION_PROV_RELAX seed=$SEED max_steps=2000(run_shard.sh)" \
      "EPISODE_WALL_S=$EPISODE_WALL_S EVAL_TIMEOUT=$EVAL_TIMEOUT LOCAL_GPU_SHARE=$LOCAL_GPU_SHARE" \
      "XLA_PYTHON_CLIENT_MEM_FRACTION=$XLA_PYTHON_CLIENT_MEM_FRACTION POLICY=$POLICY POLICY_CONFIG=$POLICY_CONFIG EXPECT_CKPT_ID=$EXPECT_CKPT_ID" \
-     "SHARDS=$SHARDS PER_GPU=$PER_GPU MEM_FRACTION=$MEM_FRACTION"
+     "SHARDS=$SHARDS PER_GPU=$PER_GPU MEM_FRACTION=$MEM_FRACTION" \
+     "EXPECT_MOTION_BUDGET=$EXPECT_MOTION_BUDGET EXPECT_MOTION_STRIDE=$EXPECT_MOTION_STRIDE STAGE2_PYTHON=${STAGE2_PYTHON:-auto}"
 
 # ── 内嵌 Python（经 CLIENT_UV 运行；只用标准库）──────────────────────────────────────────
 read -r -d '' PYHELP <<'PY'
@@ -127,6 +139,13 @@ def cmd_preseed(plan_dir, src, out_root, policy, ckpt, seed, shards):
     print(line, flush=True)
     sys.exit(0 if ok else 1)
 
+# 1114 计划裁决 5（C03、S4-06）：超时 124、SIGKILL 137、SIGTERM 143、SIGINT 130 退出一律是基础设施故障，
+# progress 里有预标 error 或新 error 也不能把它掩盖成 expected / retry；rc≠0 且没有任何 error 同样是 infra。
+INFRA_RC = {124, 137, 143, 130}
+
+def is_infra(complete, rc, errors):
+    return (not complete) or rc in INFRA_RC or (rc != 0 and not errors)
+
 def cmd_scan(eval_root, plan_dir, policy, ckpt, seed, shards):
     """逐片判定：ok / expected（只含预标 error）/ retry（含新 error，写 retry1-plan.json）/ infra（不可重试）。"""
     rec = json.loads((Path(eval_root) / "preseeded-errors.json").read_text(encoding="utf-8"))
@@ -142,7 +161,7 @@ def cmd_scan(eval_root, plan_dir, policy, ckpt, seed, shards):
         errors = sorted(f"{g}/{e}" for g, entries in progress.items() for e, v in entries.items() if v == "error")
         new = [key for key in errors if key not in pre]
         complete = done == planned
-        if not complete or (rc != 0 and not errors):
+        if is_infra(complete, rc, errors):          # 判在 retry / expected 之前
             verdict = "infra"
         elif new:
             verdict = "retry"
@@ -185,6 +204,9 @@ def cmd_integrate(eval_root, retry_root, policy, ckpt, seed, shards):
         rvals = {f"{g}/{e}": v for g, entries in rprog.items() for e, v in entries.items()}
         if set(rvals) != set(keys):
             print(f"RETRY_INFRA shard={tag} rc={retry_rc} 重跑目录不完整：期望 {keys} 实得 {sorted(rvals)}", flush=True)
+            sys.exit(1)
+        if is_infra(True, retry_rc, [k for k, v in rvals.items() if v == "error"]):   # 与 cmd_scan 同一判定
+            print(f"RETRY_INFRA shard={tag} rc={retry_rc} 重跑片退出属基础设施故障（124/137/143/130 或非零且无 error）", flush=True)
             sys.exit(1)
         attempt0 = shard_dir / "attempt0"
         (attempt0 / "videos").mkdir(parents=True, exist_ok=False)
@@ -377,6 +399,23 @@ fi
 # ── ③ C5 按身份重定位预标 ──
 if [[ "$DRY" == 1 ]]; then
     py preseed "$PLAN_DIR" "$PRESEED_SRC" - "$POLICY" "$CKPT_ID" "$SEED" "$SHARDS" || exit 2
+    # 逐片经 run_shard.sh 的 DRY_RUN 取回最终 server 命令行并断言（A21、S4-08）；不起进程、不查 GPU
+    for ((K=0; K<SHARDS; K++)); do
+        G=$((K % 8))
+        OUT="$(env DRY_RUN=1 CUDA_VISIBLE_DEVICES="$G" SHARD_INDEX="$K" \
+            bash scripts/evaluation/run_shard.sh "$RUN_NAME" "$CKPT" "$PLAN_DIR/shard$K.json" "$SEED" "s$K" 2>&1)" \
+            || { echo "DRY_SHARD=FAIL shard=s$K run_shard.sh 拒绝：$OUT"; exit 2; }
+        ARGV="$(sed -n 's/^DRY_SERVER_ARGV .* argv: //p' <<< "$OUT")"
+        ENTRY="$(sed -n 's/^DRY_CLIENT_ENTRY .* entry=\([^ ]*\) .*/\1/p' <<< "$OUT")"
+        [[ " $ARGV " == *" -m scripts.training.serve_policy "* && " $ARGV " == *" --policy.config=$POLICY_CONFIG "* \
+           && " $ARGV " == *" --motion_online_gpu=$G "* && " $ARGV " == *" --policy.dir=$CKPT "* \
+           && "$ENTRY" == examples/robomme/eval_692.py ]] \
+            || { echo "DRY_SHARD=FAIL shard=s$K gpu=$G config=$POLICY_CONFIG argv=$ARGV entry=$ENTRY"; exit 2; }
+        echo "SHARD_CMD shard=s$K gpu=$G client=$ENTRY server: $ARGV"
+    done
+    MAX_ON_GPU=$(( (SHARDS + 7) / 8 ))
+    (( MAX_ON_GPU <= PER_GPU )) || { echo "DRY_SHARDS=FAIL 单卡最多 $MAX_ON_GPU 片 > EVAL_PER_GPU=$PER_GPU"; exit 2; }
+    echo "DRY_SHARDS=PASS shards=$SHARDS per_gpu=$PER_GPU max_on_gpu=$MAX_ON_GPU config=$POLICY_CONFIG client=examples/robomme/eval_692.py"
     echo "DRY 正式评估：$SHARDS 片按 SHARD_MAP 同时起（每卡 <= $PER_GPU 片，flock 占位），之后 scan → retry1 → check_shard → merge"
     exit 0
 fi

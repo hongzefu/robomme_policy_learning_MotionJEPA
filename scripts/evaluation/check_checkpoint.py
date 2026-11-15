@@ -1,5 +1,6 @@
 """不加载大数组，先核对冻结配置、归一化与完整参数形状。
-按 run 根目录名（checkpoint 的父目录名）查 RUNS 表，决定允许的 step 集合、motion 开关、config 名、budget 与两个 sha256 的期望值；
+按 run 根目录名查 RUNS 表（取键规则见 run_key_of：一般是 checkpoint 的父目录名；
+1114 计划的 stage 交付路径 …/exports/hf-ckpt-<run>/stage/<step> 取祖父目录名去掉 hf-ckpt- 前缀），决定允许的 step 集合、motion 开关、config 名、budget 与两个 sha256 的期望值；
 不在表里的 run 直接拒绝——评估只认这张表里登记过的权重。
 
 另一用法（1108 计划 C8 / D1.5）：``check_checkpoint.py --resolved-sha256 <history YAML>`` 按
@@ -45,6 +46,24 @@ WANRAW9_YAML = 'src/mme_vla_suite/models/config/robomme/perceptual-framesamp-mod
 # S2 YAML 合入后（v15 73289a3）已以 `check_checkpoint.py --resolved-sha256 <WANRAW9_YAML>` 复算，逐位一致。
 WANRAW9_RESOLVED_SHA256 = '819a001c58b00d4a4110835b913ac1fb58238fb71d272eaa33a429f6dcb53062'
 
+# 1114 计划（1114-4task-rgbstate-s2concat1024-vla-50k-plan.html 第二部分 B 表 check_checkpoint.py 行，S4-09）：
+# 4task RGB+state stage2 encoder（ep144 EMA）的 concat 1×1024 motion，modulation 与 context 两条，motion.budget = 96 窗、窗步长 32。
+# 以下字面量与 motion_adapter.STAGE2_READOUT、motion_store 的 rgb-state arch 及 local-built-latents 来源 kind 同值，
+# 同样写字面量不 import（S2 的 motion_store 改动与本文件分属两块）。
+S2RGBSTATE_KIND = 'stage2_pool4_concat'
+S2RGBSTATE_READOUT = 'stage2_pool4_concat_v1'
+S2RGBSTATE_ARCH = 'wan-latent-stage2-blockwise-pool4-rgb-state'
+S2RGBSTATE_SOURCE_KIND = 'local-built-latents'
+S2RGBSTATE_CONFIG = 'mme_vla_suite_4task_b128_50k'
+# resolved_sha256 依赖 S3 的最终 yaml，S4 先于 S3 合入：此处先放占位（不是 64 位十六进制，main 遇占位即拒绝）。
+# S3 合入后由主会话用 `check_checkpoint.py --resolved-sha256 <yaml>` 复算，以一个小提交补入（S4-09）。
+S2RGBSTATE_PENDING = 'PENDING-S3-FINAL-YAML'
+S2RGBSTATE_MODUL_RESOLVED_SHA256 = S2RGBSTATE_PENDING
+S2RGBSTATE_CTX_RESOLVED_SHA256 = S2RGBSTATE_PENDING
+NORM_STATS_4TASK_SHA256 = '856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173'
+# stage 交付路径的祖父目录前缀（S5 导出模板 v1-store/exports/hf-ckpt-<RUN>/stage/<step>）
+STAGE_EXPORT_PREFIX = 'hf-ckpt-'
+
 
 def resolved_sha256_of_yaml(yaml_path) -> str:
     """与 scripts/training/train.py::init_history_config 写 history_config.resolved.yaml 同口径：
@@ -79,6 +98,23 @@ def assert_motion(cfg, run, prov):
             (prov.get('encoder'), prov.get('vae'), prov.get('raw9_source_sha256'))
         print(f'BUDGET_CONSISTENT=PASS budget={int(cfg.motion.budget)} motion_kind={kind} readout={run["readout"]} '
               f'tokens_per_window=9 raw9_source_sha256={str(prov["raw9_source_sha256"])[:16]}', flush=True)
+        return
+    if kind == S2RGBSTATE_KIND:
+        # stage2 concat 分支（1114 计划 S4-09）：4×256 原样拼接成 1×1024 的单 token、窗步长 32、budget 96 窗；
+        # prov 即 motion store provenance：encoder arch 须为 rgb-state，来源 kind 须为 local-built-latents
+        assert cfg.motion.get('encoder_kind') == kind, cfg.motion.get('encoder_kind')
+        assert cfg.motion.get('readout') == run['readout'], cfg.motion.get('readout')
+        assert list(cfg.motion.get('source_shape', [])) == [1, 1024], cfg.motion.get('source_shape')
+        assert int(cfg.motion.get('num_tokens', 0)) == 1 and int(cfg.motion.dim) == 1024, \
+            (cfg.motion.get('num_tokens'), cfg.motion.dim)
+        assert int(cfg.motion.stride) == 32 and int(cfg.motion.window_frames) == 33 and int(cfg.motion.frame_size) == 256
+        enc = prov.get('encoder') or {}
+        compat = prov.get('stage2_compat') or {}
+        assert enc.get('arch') == run['motion_arch'], enc.get('arch')
+        assert list(enc.get('output_shape') or []) == [1, 1024], enc.get('output_shape')
+        assert compat.get('kind') == run['motion_source'], compat.get('kind')
+        print(f'BUDGET_CONSISTENT=PASS budget={int(cfg.motion.budget)} motion_kind={kind} readout={run["readout"]} '
+              f'stride=32 arch={enc["arch"]} source={compat["kind"]}', flush=True)
         return
     # 池化分支（1108 计划 1.1 第 6 行）：不要求 motion_source_run，改核快照与 motion_provenance.json 的 kind / readout
     assert kind == WANTP768_KIND, kind
@@ -202,7 +238,52 @@ RUNS = {
         norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
         motion_budget=80, motion_kind=WANRAW9_KIND, readout=WANRAW9_READOUT,
     ),
+    # ── 1114 计划（S4-09）：4task RGB+state stage2 concat 1×1024，modulation / context 两条 50k ──
+    # 正式与 attempt02 只评 @50000（评估读 stage 交付路径 …/exports/hf-ckpt-<run>/stage/50000）；
+    # 短测 run（S3 单条入口 MAX_STEPS=20，最后一份 ckpt 为 19）读 $TRAINROOT/<短测 run>/19。
+    # 两条只差 integration_type（context 不走 modulation 断言）与各自的 resolved_sha256。
 }
+for _fusion, _itype, _sha in (('modul', 'modulation', S2RGBSTATE_MODUL_RESOLVED_SHA256),
+                              ('ctx', 'context', S2RGBSTATE_CTX_RESOLVED_SHA256)):
+    _entry = dict(
+        motion=True, config=S2RGBSTATE_CONFIG, budget=512, integration_type=_itype,
+        resolved_sha256=_sha, norm_stats_sha256=NORM_STATS_4TASK_SHA256,
+        motion_budget=96, motion_kind=S2RGBSTATE_KIND, readout=S2RGBSTATE_READOUT,
+        motion_arch=S2RGBSTATE_ARCH, motion_source=S2RGBSTATE_SOURCE_KIND,
+    )
+    _formal = f'v2-1600ep-m8x8-{_fusion}-motion-s2rgbstate-concat1x1024-b128-50k'
+    RUNS[_formal] = dict(_entry, steps=('50000',))
+    RUNS[f'{_formal}-attempt02'] = dict(_entry, steps=('50000',))
+    RUNS[f'v16-smoke-{_fusion}-s2rgbstate-concat1x1024'] = dict(_entry, steps=('19',))
+del _fusion, _itype, _sha, _entry, _formal
+
+
+def run_key_of(checkpoint: Path) -> str:
+    """RUNS 取键（1114 计划裁决 1）：stage 交付路径 …/hf-ckpt-<run>/stage/<step> 取 <run>，其余取 checkpoint 父目录名。"""
+    if checkpoint.parent.name == 'stage':
+        export = checkpoint.parent.parent.name
+        assert export.startswith(STAGE_EXPORT_PREFIX) and len(export) > len(STAGE_EXPORT_PREFIX), \
+            f'stage 路径的上级目录必须是 {STAGE_EXPORT_PREFIX}<run>：{checkpoint}'
+        return export[len(STAGE_EXPORT_PREFIX):]
+    return checkpoint.parent.name
+
+
+def lookup_run(checkpoint: Path):
+    key = run_key_of(checkpoint)
+    run = RUNS.get(key)
+    assert run is not None, f'未登记的 run {key}（checkpoint {checkpoint}），已登记: {sorted(RUNS)}'
+    assert checkpoint.name in run['steps'], (checkpoint, run['steps'])
+    return key, run
+
+
+def assert_history(cfg, run):
+    """history 快照的全局断言；integration_type 按 run 取值（缺省 modulation，旧条目行为不变）。"""
+    # budget 逐 run 钉死：它是模型语义参数（决定 static_image_emb 的序列长度与取帧数 budget//token_per_image），
+    # 参数树形状对它失明，配错了不会被 PARAM_TREE_EXACT 拦住
+    assert int(cfg.budget) == run['budget'], (cfg.budget, run['budget'])
+    assert cfg.token_per_image == 64 and cfg.integration_type == run.get('integration_type', 'modulation'), \
+        (cfg.token_per_image, cfg.integration_type)
+    assert cfg.perceptual_memory.type == 'frame_sampling'
 
 
 def main(argv):
@@ -210,16 +291,13 @@ def main(argv):
         print(f'RESOLVED_SHA256={resolved_sha256_of_yaml(argv[2])} yaml={argv[2]}', flush=True)
         return
     checkpoint = Path(argv[1]).resolve()
-    run = RUNS.get(checkpoint.parent.name)
-    assert run is not None, f'未登记的 run 根目录 {checkpoint.parent.name}，已登记: {sorted(RUNS)}'
-    assert checkpoint.name in run['steps'], (checkpoint, run['steps'])
+    key, run = lookup_run(checkpoint)
+    assert run['resolved_sha256'] != S2RGBSTATE_PENDING, \
+        f'{key} 的 resolved_sha256 仍是占位，须先按 S3 最终 yaml 复算补入（S4-09）'
+    # 快照与 provenance 仍读 checkpoint.parent（stage 根同样含 history_config.resolved.yaml、motion_provenance.json）
     cfg, motion_enabled = _load_resolved_snapshot(checkpoint.parent)
     assert motion_enabled == run['motion'], (motion_enabled, run['motion'])
-    # budget 逐 run 钉死：它是模型语义参数（决定 static_image_emb 的序列长度与取帧数 budget//token_per_image），
-    # 参数树形状对它失明，配错了不会被 PARAM_TREE_EXACT 拦住
-    assert int(cfg.budget) == run['budget'], (cfg.budget, run['budget'])
-    assert cfg.token_per_image == 64 and cfg.integration_type == 'modulation'
-    assert cfg.perceptual_memory.type == 'frame_sampling'
+    assert_history(cfg, run)
     assert hashlib.sha256((checkpoint.parent / 'history_config.resolved.yaml').read_bytes()).hexdigest() == run['resolved_sha256']
     assert hashlib.sha256((checkpoint / 'assets/robomme/norm_stats.json').read_bytes()).hexdigest() == run['norm_stats_sha256']
     if run['motion']:
