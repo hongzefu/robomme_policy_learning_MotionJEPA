@@ -5,7 +5,7 @@
 ## ② 版本与代码状态
 
 - policy 仓分支 `v16-4task-rgbstate-s2c1024-50k`；Beta 提交即本文件所在提交（TRAIN_HEAD）。
-- 合入链：S2 268dded → S1 3dc626a → S4 8c78b1a → S3 7edcaf1 → S5 dc16c7b（POST_MERGE_REVIEW=PASS）→ 回填 94d44f5（encoder sha、motion_rows=36484、train_max=71、两条 resolved sha）→ FIX1 c659a1b（sidecar 加载前登记 sys.modules）。
+- 合入链：S2 268dded → S1 3dc626a → S4 8c78b1a → S3 7edcaf1 → S5 dc16c7b（POST_MERGE_REVIEW=PASS）→ 回填 94d44f5（encoder sha、motion_rows=36484、train_max=71、两条 resolved sha）→ FIX1 c659a1b（sidecar 加载前登记 sys.modules）→ 首个 Beta ae2b809（作废）→ FIX2 合并（local-built 根快照）。
 - stage2 运行项目 `scripts/dataset/wan_stage2_rgbstate`，MJ 依赖 26c68ca（memexport b7cb8a2），独立 venv `v1-store/venvs/wan-stage2-rgbstate`。
 - MJ 侧 S6a／S6 与重建档案已合入 v12-3decoder（8f1b4e2，1113 done 597f79f 之后）。
 - encoder：`v1-store/external/motionjepa/stage2-4task-rgbstate-144ep-1113-a/checkpoint_epoch_144.pt`（硬链接，sha256 ece3465b57f9d1ddea130a631aff1d1006b2c8ba5c68a0e5e92b8215ae80b55c，等于 1113 `CKPT_HF_VERIFY=PASS epoch=144 bytes=225219235`）。
@@ -53,6 +53,7 @@ VERIFY_MOTION=PASS scanned=36484 mismatches=0 nonfinite=0 segment_set_mismatch=0
 3. 导出短测 `--max-segments 1` 与 `--check-dropout 64` 冲突（4task stride32 每段 ≤36 窗）：短测改 4 段，正式导出参数不变。
 4. L0b 首次 sidecar 真实模式 AttributeError（未登记 sys.modules）：FIX1 修复、审查合入后重跑 PASS。
 5. 审查提示导出 geometry 写死全 1：核 1113 val aug0 200/200 common_valid 全真，等价，未改代码。
+6. 首个 Beta ae2b809 上短测失败：训练侧根快照缺 raw_dir（S2/S3 接缝）。FIX2 顺链修 3 处并在真实 motion 表 CPU 跑通快照与下游校验；G4 在线恢复输入复制到 $LOG/validation/（sha 不变）。重打本 Beta（V15.26Beta），ae2b809 作废、不用于正式训练。
 
 ## tmux 会话清单（本轮）
 
