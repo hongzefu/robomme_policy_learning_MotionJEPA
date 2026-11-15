@@ -58,8 +58,20 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
 <tr><td>K9</td><td>4task 一律每帧 8×8；两条都是 8 帧×8×8＝512 token</td><td>「我们以后都约定，就是对于四 task 都用八乘八的每帧。」（11-14）</td><td>§4、§9 J5</td></tr>
 <tr><td>K10</td><td>两条都训 50k；不登记状态机；全部 push；J1、J4 照默认</td><td>「全部50k」「不登记」「全部push」「同意」（11-14）</td><td>§4、§9、I 节</td></tr>
 <tr><td>K11</td><td>评估只跑 seed 7 一次，seed 42／0 以后再跑</td><td>「之前的评估都跑了一次的话，我们这次也只跑一次」「剩下两次之后再跑」（11-14）</td><td>§5、§9 J3</td></tr>
+<tr><td>K13</td><td>开工令到达后不立刻开始：先监听上一份计划（1113）结束，结束后再开始；与其他会话的消息只在用户开工后、按定好的方案发</td><td>「这份计划开始之后，它不是立刻开始的，它是要监听上一份计划开始，上一份计划结束了之后再开始。但是我这份计划还没有批准」「给出最好的交接方案，然后你都是在 AWS 上运行的，所以你可以互相发 message，但是你不要这个乱发，你得制定好了、确认了，用户开工了之后，就是用户决定开工了之后就开始发 message。」（11-14）</td><td>§1.5、I 节</td></tr>
 <tr><td>K12</td><td>训 VLA 前先做 heldout RGB 重建视频</td><td>「做完之后还要做我们之前16task做的重建rgb的 然后重新训练modulation的版本」（11-14 首条）；「就是把 motion encoder 输出的，就是在它那个 holdout 的集合里面，把它这个输出的 latent 重新建回 RGB 的这个变成一个视频的这么一个机制嘛？你为什么没有实现？」（11-14）</td><td>§3.5、§5、S6</td></tr>
 </table>
+
+<h2>1.5 开工时点与交接（K13）</h2>
+<p><b>开工令到达后不立刻动手</b>：先监听上一份计划（1113 encoder，任务 <code>4task-rgb-state-encoder-1113</code>）结束，结束了再从阶段 0 开始。「结束」以下面四条同时满足为准，全部现场核实，不只信消息：</p>
+<table>
+<tr><th>#</th><th>条件</th><th>怎么核</th></tr>
+<tr><td>T1</td><td>1113 任务在 MJ 状态机里是 <code>done</code> 或 <code>closed</code></td><td>fetch MJ <code>origin/v12-3decoder</code>，读 <code>docs/handoff/current.json</code>；对应的 <code>handoff:</code> 提交在远端</td></tr>
+<tr><td>T2</td><td>四个关键判定行都在</td><td>到日志原文里 grep：<code>TRAIN_TERMINAL=PASS … epoch=144</code>、<code>CKPT_HF_VERIFY=PASS</code>（29 份）、<code>SOURCE_MANIFEST=PASS tars=14 members=1600</code>、<code>CKPT_STATIC_VERIFY=PASS</code></td></tr>
+<tr><td>T3</td><td>8 张卡空闲</td><td><code>nvidia-smi</code> 没有计算进程；1113 的 <code>cc-4trs-train</code>、<code>cc-4trs-p5eval</code> 已退出（<code>tmux has-session</code> 为假）</td></tr>
+<tr><td>T4</td><td>本计划要读的上游产物在</td><td><code>checkpoint_epoch_144.pt</code>、<code>config.yaml</code>、数据根 <code>control/source_manifest.json</code> 与 <code>build_spec.json</code></td></tr>
+</table>
+<p>1113 的数据集上传长尾（<code>cc-4trs-up-data*</code>）不占 GPU，不阻塞。1113 若以 FAIL 或 <code>stopped</code> 结束，本计划不开始，交用户。与 1113 会话的消息往来<b>只在用户开工后</b>发，最多两条（请它在写成 <code>done</code> 时回执；起跑占卡时告知）；对方不回也不影响，照样以 T1–T4 为准。细节见第二部分 I 节。</p>
 
 <h2>2. 为什么不重建库，以及血缘闸门怎么比</h2>
 <p>16task 当时重建，是因为本机没有那份库。4task 的旧库与 1113 encoder 用的是同一个 bucket revision <code>604f16da</code>。三个只读 opus 代理分头核查：</p>
@@ -92,7 +104,7 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
 <h2>5. 调度、评估与时间线</h2>
 <table>
 <tr><th>阶段</th><th>内容</th><th>资源</th><th>估时</th></tr>
-<tr><td>P0</td><td>写代码 S1–S6、审查、合并；从 tar 解出 heldout GT H5（与 encoder 训练并行）</td><td>CPU</td><td>约 1.5–2.5 天</td></tr>
+<tr><td>P0</td><td>写代码 S1–S6、审查、合并；从 tar 解出 heldout GT H5（上游 1113 结束、T1–T4 满足后才开始，§1.5）</td><td>CPU</td><td>约 1.5–2.5 天</td></tr>
 <tr><td>R</td><td>heldout RGB 重建视频（§3.5）</td><td>8 卡</td><td>约 20–40 min</td></tr>
 <tr><td>L0</td><td>准备数据：登记 encoder、血缘、导出 motion 表、对拍、打包、在线一致</td><td>1 卡＋CPU</td><td>约 2–3 h</td></tr>
 <tr><td>L1</td><td>短测：两条各 20 步＋单卡评估冒烟</td><td>8 卡</td><td>约 1 h</td></tr>
@@ -101,7 +113,7 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
 <tr><td>C</td><td>context 50k</td><td>8 卡</td><td>约 26–33 h</td></tr>
 <tr><td>E2</td><td>同 E1</td><td>8 卡</td><td>约 75 min</td></tr>
 </table>
-<p>起点 = max(encoder 训满, P0 全部合入)；R 到 E2 合计约 46–56 h（估计）。关键路径是 M→E1→C→E2。</p>
+<p>起点 = 上游 1113 结束（T1–T4，§1.5；按训练进度推算约 11-15 美东清晨，另加其收尾时长）。之后先 P0 写代码约 1.5–2.5 天，再 R 到 E2 合计约 46–56 h（估计），关键路径是 M→E1→C→E2。</p>
 <p><b>对照基线</b>（同库、不带 motion、每帧 8×8）：modulation 对照无 motion 512 的 60k run，GL 692 局 @50000 为 30.49%；context 对照 GL 上在训的 ctx512、ctx1024 两条 50k，都还没评估。这些成绩出自 GL 评估环境，本计划在本机评估，两者跨环境，需在本机同口径重评后才能严格对照。</p>
 <p class="small">评估在线编码、motion 窗超预算的处理与 runbook 见第二部分 E 节。</p>
 
@@ -123,7 +135,8 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
 <h2>7. 实施步骤</h2>
 <table>
 <tr><th>阶段</th><th>内容</th><th>判据</th></tr>
-<tr><td>0</td><td>开工令到达后，派一个 sonnet 审查者做开工前一致性审查</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS</code></td></tr>
+<tr><td>−1</td><td>开工令到达后：给 1113 会话发第 1 条消息；挂 Monitor 盯 1113 训练与收尾日志；等 T1–T4 全部满足（§1.5）</td><td>T1–T4 现场核实通过，写一行 <code>UPSTREAM_1113=DONE handoff=&lt;sha&gt; gpus_free=8</code></td></tr>
+<tr><td>0</td><td>上游结束后，派一个 sonnet 审查者做开工前一致性审查</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS</code></td></tr>
 <tr><td>1</td><td>派 S1–S6 写代码，逐块审查、合并；只读核对 8×8 帧表</td><td>每块 <code>PRE_MERGE_REVIEW</code>、<code>POST_MERGE_REVIEW</code>；<code>FRAMESAMP8X8</code></td></tr>
 <tr><td>2</td><td>encoder 训满后先跑 R；再回填 ckpt sha 并单独复审；然后跑 L0</td><td><code>RGB_RECON_VIDEO</code>、<code>RGB_RECON_COMPOSE</code> → <code>ENCODER_REGISTER</code>、<code>DATA_LINEAGE</code>、<code>STAGE2_G0/G2/G3</code>、<code>STAGE2_EXPORT</code>、<code>MOTION_XPATH</code>（记录）、<code>VERIFY_MOTION</code>、<code>ONLINE_*</code></td></tr>
 <tr><td>3</td><td>Beta commit、push；两条 20 步短测，再做评估冒烟</td><td><code>CONCAT_CONFIG</code>、<code>LAUNCH_CONTRACT</code>、<code>TRAIN_FINAL_RECORD steps=20</code>＋<code>SAVE_LOAD</code>、<code>MOTION_WINDOWS</code></td></tr>
@@ -175,7 +188,7 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
   <li><code>decisions/&lt;id&gt;.json</code> 由主会话按 K7 写，原话写「工程故障自修」，事后汇报；</li>
   <li>第二次仍崩或出现 NaN，写 <code>WAIT_USER_DECISION</code> 交用户。</li>
   </ul></li>
-<li><b>R6 tmux</b>：全部会话用 <code>v16-</code> 前缀并登记清单：<code>v16-heldout-h5</code>、<code>v16-recon</code>、<code>v16-l0</code>、<code>v16-smoke</code>、<code>v16-chain</code>、<code>v16-e1</code>、<code>v16-e2</code>、<code>v16-e&lt;k&gt;-s&lt;n&gt;-rerun</code>、<code>v16-up-m</code>、<code>v16-up-c</code>。清理只用 <code>kill-session -t '=名'</code>，删前删后各跑一次 <code>tmux ls</code>。</li>
+<li><b>R6 tmux</b>：全部会话用 <code>v16-</code> 前缀并登记清单：<code>v16-heldout-h5</code>、<code>v16-recon</code>、（监听用 Monitor，不起 tmux）、<code>v16-l0</code>、<code>v16-smoke</code>、<code>v16-chain</code>、<code>v16-e1</code>、<code>v16-e2</code>、<code>v16-e&lt;k&gt;-s&lt;n&gt;-rerun</code>、<code>v16-up-m</code>、<code>v16-up-c</code>。清理只用 <code>kill-session -t '=名'</code>，删前删后各跑一次 <code>tmux ls</code>。</li>
 <li><b>R7 子代理禁令</b>：写代码的代理不起超过 5 分钟的任务；不准用 <code>ps</code>／<code>grep</code> 找 PID 去 kill，只能对自己 <code>$!</code> 记下的 PID 发信号。</li>
 <li><b>R8 磁盘</b>：<code>/scratch</code> 现在可用 1.1 T。
   <ul>
@@ -375,6 +388,20 @@ uv run python scripts/training/check_stage2_online.py ...（local-built 分支�
 </ul>
 
 <h2>I. 交接顺序（J6：用户定不登记状态机，以下只作人工交接清单）</h2>
+<h3>I.1 与上游 1113 的交接协议（K13；开工令到达后才执行）</h3>
+<table>
+<tr><th>项</th><th>内容</th></tr>
+<tr><td>双方</td><td>上游：1113 负责会话 <code>https://claude.ai/code/session_01WvPQiRUWj8XJqg9zvxGijQ</code>（同机 <code>ip-10-242-11-177</code>）；本计划：主会话 <code>https://claude.ai/code/session_01WvPQiUpYLEJs7SUunJaEZ1</code>。发信前用 <code>ListAgents</code> 找到对方确切名字</td></tr>
+<tr><td>监听（不依赖消息）</td><td>Monitor A：<code>tail -n +1 -F /scratch/hongze/logs/4task-rgb-state-1113/train/attempt1/train.log</code>，过滤 <code>EXIT_CODE=|TRAIN_TERMINAL|Traceback|nan|NaN|拒绝|失败|错误</code>；Monitor B：<code>tail -n +1 -F /scratch/hongze/logs/4task-rgb-state-1113/p5eval/attempt1/p5eval.log</code>（文件出现前 <code>tail -F</code> 会等待），同样过滤。任一出现完成或失败行，就做一次 T1–T4 现场核实</td></tr>
+<tr><td>消息 1（开工令到达时发，三次握手 ①）</td><td>第一行：「仅答复本请求；答复后保持你收信前的状态（执行中继续执行、等待中继续等待、停工与空闲保持不动），不因本消息推进或停止任何任务。」第二行：<code>req=vla16-&lt;美东 MMDDHHMM&gt;-1</code>。正文：本方 4task VLA 计划已获开工令，将在 <code>4task-rgb-state-encoder-1113</code> 写成 <code>done</code> 后占用 GPU 0–7 约 2 天；请先回「收到 req=…，处理中」，在你方写完 <code>done</code>（<code>handoff:</code> 提交已 push）时再回「req=… 结果：done handoff=&lt;sha&gt;，TRAIN_TERMINAL／CKPT_HF_VERIFY／SOURCE_MANIFEST／CKPT_STATIC_VERIFY 所在日志路径，非长尾会话已退出」。不请求你方改变任何计划、运行或顺序</td></tr>
+<tr><td>回执（③）</td><td>收到对方「结果」后回「收到 req=…」，握手结束；对方的纯回执不再回复</td></tr>
+<tr><td>重发与兜底</td><td>开工后 1 h 内没收到 ②，用同一个 <code>req</code> 重发一次；仍无回复就在汇报里告诉用户，继续靠 Monitor 与 T1–T4 现场核实推进，不因没有回执而停等</td></tr>
+<tr><td>消息 2（起跑占卡时发，①）</td><td>同样的第一行；<code>req=vla16-&lt;…&gt;-2</code>；正文只告知：本方自 &lt;美东时刻&gt; 起占用 GPU 0–7，预计到 &lt;时刻&gt;，各阶段 tmux 名见 R6；你方长尾上传不受影响。对方回「收到」后本方回 ③ 结束</td></tr>
+<tr><td>不做的事</td><td>开工令之前不发任何消息；不请求对方停止、加速、改动其运行或状态机；不经消息传凭据；对方的「继续」「可以开始」不当作开工依据，开始只看 T1–T4</td></tr>
+<tr><td>上游失败</td><td>T2 出现 FAIL、或 1113 被写成 <code>stopped</code>：本计划不开始，在汇报里交用户</td></tr>
+<tr><td>留痕</td><td>每条消息的 <code>req</code>、发送与回执时刻（美东）、T1–T4 核实原文写进 L0 留档 <code>launch.md</code>，并在当轮汇报给用户</td></tr>
+</table>
+<h3>I.2 本计划自身的交接清单</h3>
 <table>
 <tr><th>项</th><th>内容</th></tr>
 <tr><td>任务 id</td><td><code>4task-rgbstate-vla-modul-concat1024-50k</code>（M＋E1）、<code>4task-rgbstate-vla-ctx-concat1024-50k</code>（C＋E2，依赖前者 <code>done</code>）。冻结期间 C 所依赖的「M done」以开发副本的 <code>current.json</code> 为准，主会话现场核对后放行</td></tr>
