@@ -487,6 +487,11 @@ def train_step(
 
     train_rng = jax.random.fold_in(rng, state.step)
     observation, actions = batch
+    # 运行中诊断（1114 计划 B 表 train.py 行）：Python 级编译期开关，关闭时本函数的计算图与 info 键集合逐位不变。
+    diag_enabled = _motion_diag_enabled(config)
+    if diag_enabled:
+        # motion 投影前后方差取自本步前向所用的更新前参数；只读、stop_gradient，不进损失与梯度。
+        motion_var_info = _motion_var_info(model, observation)
 
     # Filter out frozen params.
     diff_state = nnx.DiffState(0, config.trainable_filter)
@@ -536,8 +541,58 @@ def train_step(
     }
     if config.model.use_history and hasattr(grads, "mem_encoder"):
         info["mem_enc_norm"] = optax.global_norm(grads.mem_encoder)
+    if diag_enabled:
+        info.update(_motion_diag_info(model, grads))
+        info.update(motion_var_info)
 
     return new_state, info
+
+
+def _motion_diag_enabled(config) -> bool:
+    """诊断开关（自 c0826be 的 _raw9_diag_enabled 移植，条件加 stage2_pool4_concat）：motion 开启且
+    encoder_kind == "wan_raw9" 或 readout == "stage2_pool4_concat_v1" 时才加诊断键；其余配置 info 键集合逐字不变。"""
+    if not getattr(config.model, "use_history", False):
+        return False
+    hc = getattr(config.model, "history_config", None)
+    mcfg = getattr(hc, "motion", None) if hc is not None and not isinstance(hc, str) else None
+    if mcfg is None or not mcfg.get("enabled", False):
+        return False
+    return mcfg.get("encoder_kind") == "wan_raw9" or mcfg.get("readout") == "stage2_pool4_concat_v1"
+
+
+def _motion_diag_info(model, grads) -> dict:
+    """三键（自 c0826be 原样移植）：motion_encoder_static kernel 范数（更新后参数）、同路径梯度范数、帧路 feature_encoder 梯度范数。"""
+    mem = model.mem_encoder
+    if not mem.motion_enabled or not hasattr(grads, "mem_encoder"):      # 与 mem_enc_norm 同款保护
+        return {}
+    g = grads.mem_encoder
+    return {
+        "motion_enc_kernel_norm": optax.global_norm(nnx.state(mem.motion_encoder_static)["kernel"]),
+        "motion_enc_grad_norm": optax.global_norm(g.motion_encoder_static["kernel"]),
+        "frame_enc_grad_norm": optax.global_norm(g.feature_encoder),
+    }
+
+
+def _masked_var(values, mask):
+    """按 motion_mask 只统计有效窗的全部元素（fp32）；全无有效窗时为 0。"""
+    values = values.astype(jnp.float32)
+    weight = mask.astype(jnp.float32)[..., None]
+    count = jnp.maximum(jnp.sum(weight) * values.shape[-1], 1.0)
+    mean = jnp.sum(values * weight) / count
+    return jnp.sum(jnp.square(values - mean) * weight) / count
+
+
+def _motion_var_info(model, observation) -> dict:
+    """motion_in_var：进入 motion 投影的 motion_emb 方差；motion_out_var：motion_encoder_static 输出（投影后 motion token）方差。
+    与 PerceptualMemory.__call__ 运动路同一算式重算一次投影，只用于记录。"""
+    mem = model.mem_encoder
+    emb, pos, mask = (getattr(observation, key, None) for key in ("motion_emb", "motion_pos", "motion_mask"))
+    if not mem.motion_enabled or emb is None or pos is None or mask is None:
+        return {}
+    emb, pos = jax.lax.stop_gradient(emb), jax.lax.stop_gradient(pos)
+    pos_h = nnx.silu(mem.motion_pos_proj(pos))
+    out = jax.lax.stop_gradient(mem.motion_encoder_static(jnp.concatenate([emb, pos_h], axis=-1)))
+    return {"motion_in_var": _masked_var(emb, mask), "motion_out_var": _masked_var(out, mask)}
 
 
 def main(config: _config.TrainConfig):
@@ -722,7 +777,10 @@ def main(config: _config.TrainConfig):
                                                            reference_observation, step=step)
                         _checkpoints.save_state(checkpoint_manager, train_state, data_loader, step)
                         if final_record_handle is not None and step == config.num_train_steps - 1:
-                            final_record.finish(final_record_handle, train_state, infos, step)
+                            # 最终记录只收五标量；诊断键只进日志与 W&B。诊断关闭时各 info 与原对象键值相同。
+                            final_record.finish(final_record_handle, train_state,
+                                                [{key: value for key, value in info.items() if key in final_record.SCALARS}
+                                                 for info in infos], step)
     finally:
         if timing:
             timing.close()
