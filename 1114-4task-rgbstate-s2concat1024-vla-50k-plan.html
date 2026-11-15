@@ -28,17 +28,17 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
 <h1 style="margin-top:0">1114 4task RGB＋state encoder 的下游 VLA：heldout RGB 重建视频 → 复用旧库补 motion 表 → modulation concat 50k → 692 局评估 → context concat 50k → 692 局评估（v2，已过 workflow 对抗验证）</h1>
 
 <blockquote>
-<p><b>权威性与授权边界</b>：本文件是 1113 encoder（MotionJEPA <code>1113-4task-rgb-state-encoder-plan.md</code>）下游 VLA 的唯一现行计划。<b>只规划不实施</b>：写代码、下载、GPU 任务都要等用户对本文件给出开工令（AGENTS.md 第 2 条）后才能动。v1（<code>59bc133</code>）经 123 个 opus agent 的 workflow 对抗验证：110 条 finding，102 条成立、8 条驳回。本版按成立项全部改过，处置对照见 J 节。</p>
-<p><b>代码锚点</b>：policy 仓 <code>v4-256concat1@f7b2dc8</code>，上面有 16task stage2、concat 读出、60k 训练与交付的全套代码。新分支 <code>v16-4task-rgbstate-s2c1024-50k</code> 从该 sha 切出，写计划的工作树是 <code>/scratch/hongze/worktrees/v16-4trs-vla-plan</code>。4task 专用件（692 局评估栈、BinFill demo 前缀、benchmark fork <code>b4e97f22</code>、增量上传先例）取自 <code>v15-4task-modul-wanraw9-s32-50k@c0826be</code>。MJ 侧导出代码在分支 <code>v12-3decoder-memexport</code>，工作树 <code>/scratch/hongze/worktrees/vla-s2-memexport-20261026</code>。该分支比 <code>v12-3decoder</code> 落后 155 个提交、领先 4 个，需要先合并（S2）。</p>
+<p><b>权威性与授权边界</b>：本文件是 1113 encoder（MotionJEPA <code>1113-4task-rgb-state-encoder-plan.md</code>）下游 VLA 的唯一现行计划。<b>只规划不实施</b>：写代码、下载、GPU 任务都要等用户对本文件给出开工令（AGENTS.md 第 2 条）后才能动。v1（<code>59bc133</code>）经 123 个 opus agent 的 workflow 对抗验证：110 条 finding，102 条成立、8 条驳回。本版按成立项全部改过，处置对照见 J 节。v2（<code>345c0c9</code>）又过了第二轮对抗验证，确认的问题按主会话裁决逐节改过，对照同见 J 节。</p>
+<p><b>代码锚点</b>：policy 仓 <code>v4-256concat1@f7b2dc8</code>，上面有 16task stage2、concat 读出、60k 训练与交付的全套代码。新分支 <code>v16-4task-rgbstate-s2c1024-50k</code> 从该 sha 切出，写计划时用过工作树 <code>/scratch/hongze/worktrees/v16-4trs-vla-plan</code>（只在写计划期间用，已清理，开工后不再使用）。4task 专用件（692 局评估栈、BinFill demo 前缀、benchmark fork <code>b4e97f22</code>、增量上传先例）取自 <code>v15-4task-modul-wanraw9-s32-50k@c0826be</code>。MJ 侧导出代码在分支 <code>v12-3decoder-memexport</code>，工作树 <code>/scratch/hongze/worktrees/vla-s2-memexport-20261026</code>。该分支比 <code>v12-3decoder</code> 落后 155 个提交、领先 4 个，需要先合并（S2）。</p>
 <p><b>外部依赖锚点（P-LINEAGE 计划阶段要求）</b></p>
 <ul>
 <li>encoder run：<code>/scratch/hongze/MotionJEPA/runs/stage2-4task-rgbstate-144ep-1113-a/</code>，arch tag <code>wan-latent-stage2-blockwise-pool4-rgb-state</code>；ckpt 公开 bucket 为 <code>HongzeFu/motionjepa-4task-rgb-state-144ep-v1</code>。</li>
 <li>encoder 训练源 pin：<code>jq -r .member_pin_sha256 /scratch/hongze/dataset-4task-rgb-state-stride2-16views-v1/control/source_manifest.json</code> 输出 <code>2cb9026fc874964941ddb8c1cf1c0425a3b8ac94d3bd8e2082779f4e95f5c8bd</code>（files=1600）。</li>
-<li>VLA 库源 pin：对 git 内 <code>docs/dataset-build-doc/4task-v2-1600ep-604f16da/records/record_dataset_&lt;T&gt;_episode_map.json</code> 的每行 <code>r</code> 取 <code>{member: r.member, h5_sha256: r.h5_sha256_local, h5_bytes: r.h5_bytes}</code>（键名规范为 <code>h5_sha256</code>），1600 条按 <code>member</code> 排序成列表，<code>json.dumps(列表, sort_keys=True, separators=(",",":"), ensure_ascii=False)</code> 按 UTF-8 编码后取 sha256，得 <code>2cb9026f…</code>（2026-11-14 美东三路复算一致，11-15 美东按此公式再复算一致）。保留字面键 <code>h5_sha256_local</code> 会得到 <code>01027855…</code>，是错的。policy <code>check_data_lineage.py</code> 与 MJ <code>stage2_memory_export.py</code> 各自按此公式实现；库 <code>meta/input_manifest.json</code> 的 sha256 为 <code>655e64b4…</code>，与 git 内 <code>records/MERGE_DONE.json::files</code> 4/4 相等。</li>
+<li>VLA 库源 pin：对 git 内 <code>docs/dataset-build-doc/4task-v2-1600ep-604f16da/records/record_dataset_&lt;T&gt;_episode_map.json</code> 的每行 <code>r</code> 取 <code>{member: r.member, h5_sha256: r.h5_sha256_local, h5_bytes: r.h5_bytes}</code>（键名规范为 <code>h5_sha256</code>），1600 条按 <code>member</code> 排序成列表，<code>json.dumps(列表, sort_keys=True, separators=(",",":"), ensure_ascii=False)</code> 按 UTF-8 编码后取 sha256，得 <code>2cb9026f…</code>（2026-11-14 美东三路复算一致，同日晚间按此公式再复算一致）。保留字面键 <code>h5_sha256_local</code> 会得到 <code>01027855…</code>，是错的。policy <code>check_data_lineage.py</code> 与 MJ <code>stage2_memory_export.py</code> 各自按此公式实现；库 <code>meta/input_manifest.json</code> 的 sha256 为 <code>655e64b4…</code>，与 git 内 <code>records/MERGE_DONE.json::files</code> 4/4 相等。</li>
 <li>encoder ckpt sha：要等 <code>TRAIN_TERMINAL=PASS</code> 后，由一个单独的 sha 修订 commit 回填，并只派一个 sonnet 审查者审这一条修订（§7 阶段 2）。</li>
 </ul>
 <p><b>commit 体例</b>：功能 <code>commitV16.&lt;n&gt;</code>，起跑前 <code>commitV16.&lt;n&gt;Beta</code>，子代理 <code>sub/&lt;编号&gt;: </code>，交接 <code>handoff:</code>。tmux 前缀 <code>v16-</code>。</p>
-<p><b>写作时刻</b>：2026-11-14 美东。encoder 16:33 美东到 ep14/144，实测约 5.2 min/轮（含验证与存 ckpt），推算 11-15 约 03:45–04:30 美东训满（估计）。MotionJEPA 已于 11-14 美东 15:00 前后解冻（<code>5ae3ea6</code>，冻结副本已合回 <code>v12-3decoder</code>）。</p>
+<p><b>写作时刻</b>：2026-11-14 美东（本轮修订至 19:55）。encoder 16:33 美东到 ep14/144，19:55 美东到 ep53，实测约 5.2 min/轮（含验证与存 ckpt），推算 11-15 约 03:45–04:30 美东训满（估计）。MotionJEPA 已于 11-14 美东 15:00 前后解冻（<code>5ae3ea6</code>，冻结副本已合回 <code>v12-3decoder</code>）。</p>
 </blockquote>
 
 <h1>第一部分（给人看）</h1>
@@ -61,18 +61,20 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
 <tr><td>K14</td><td>写代码在开工后立刻开始；GPU 部分等 1113 训练完毕即开始，与其收尾同步</td><td>「修改一下，就是写代码的工作全部都是用，就是现在就是我批批准开工之后就可以开始了。然后，但是 GPU 的这一部分你要等到它这个结束了之后再开始。你能不能够在它训练完毕之后就立刻开始呢？就它会有一些收尾的工作，能不能就是和你同步的去做？」（11-14）</td><td>§1.5、I 节</td></tr>
 <tr><td>K13</td><td>开工令到达后不立刻开始：先监听上一份计划（1113）结束，结束后再开始；与其他会话的消息只在用户开工后、按定好的方案发</td><td>「这份计划开始之后，它不是立刻开始的，它是要监听上一份计划开始，上一份计划结束了之后再开始。但是我这份计划还没有批准」「给出最好的交接方案，然后你都是在 AWS 上运行的，所以你可以互相发 message，但是你不要这个乱发，你得制定好了、确认了，用户开工了之后，就是用户决定开工了之后就开始发 message。」（11-14）</td><td>§1.5、I 节</td></tr>
 <tr><td>K12</td><td>训 VLA 前先做 heldout RGB 重建视频</td><td>「做完之后还要做我们之前16task做的重建rgb的 然后重新训练modulation的版本」（11-14 首条）；「就是把 motion encoder 输出的，就是在它那个 holdout 的集合里面，把它这个输出的 latent 重新建回 RGB 的这个变成一个视频的这么一个机制嘛？你为什么没有实现？」（11-14）</td><td>§3.5、§5、S6</td></tr>
+<tr><td>K15</td><td>① 重建视频保留 compose：新 encoder（ep144）与旧 4task v7 encoder（ep72）在同一批 heldout 上各 render，再并排合成；② 评估结果上传同一 bucket 的 <code>eval/</code> 前缀，与 ckpt 分开清单、分开读回</td><td>①「第一处 同时合成 和之前的4task的encoder对比」；②「第二部分 要」（11-14 晚）</td><td>§3.5、§6、§9 J7</td></tr>
 </table>
 
 <h2>1.5 开工时点与交接（K13、K14）</h2>
 <p><b>开工令到达后分两段</b>：</p>
 <table>
 <tr><th>段</th><th>什么时候开始</th><th>做什么</th></tr>
-<tr><td>写代码（CPU）</td><td>开工令到达后<b>立刻</b></td><td>派 S1–S6（S1、S2 互不依赖、并行写）；S6（重建视频）先做。S6 写完并审查后，在 S6 固定工作树＋独立环境里从 tar 按完整 member 路径解出 heldout 28 个成员并核 sha 与字节（<code>nice</code>，不超过 6 路，不拖慢 1113 训练）。给 1113 会话发消息 1</td></tr>
-<tr><td>GPU 阶段</td><td>起点 G：三条同时满足，与 1113 其余收尾<b>同步进行</b></td><td>G1 训练日志出现 <code>TRAIN_TERMINAL=PASS … epoch=144</code> 且 <code>checkpoint_epoch_144.pt</code> 在；G2 1113 的收尾评估 <code>cc-4trs-p5eval</code>（单进程、约占 1 卡）已退出；G3 <code>nvidia-smi</code> 8 卡无计算进程。满足后写 <code>GPU_START=PASS</code>，给 1113 会话发消息 2。GPU 只看开工令＋G1–G3，不等 1113 写 <code>done</code>。之后各 GPU 阶段按代码就绪顺序开始：R 只需 S6；L0a 数据准备需 S1、S2；L0b G4 在线验收另需 S3 的最终 yaml；L1 需 S3、S4</td></tr>
+<tr><td>消息与监听</td><td>开工令到达<b>即</b></td><td>给 1113 会话发消息 1，挂 Monitor A（1113 最大编号 attempt 的 <code>train.log</code>）与 B（收尾评估日志）。若此时 G1–G3 已满足，消息 1、2 合并成一条</td></tr>
+<tr><td>写代码（CPU）</td><td>开工令到达后<b>立刻</b></td><td>派 S1–S6（S1、S2 互不依赖、并行写）。S6 的第一个交付物是小脚本 <code>extract_heldout_h5.py</code>：审查后合入 S6 固定工作树，立刻在独立环境里起解包（<code>v16-heldout-h5</code>），从 tar 按完整 member 路径解出 heldout 28 个成员并核 sha 与字节（<code>nice</code>，不超过 6 路，不拖慢 1113 训练），不等 S6 其余部分</td></tr>
+<tr><td>GPU 阶段</td><td>起点 G：三条同时满足，与 1113 其余收尾<b>同步进行</b></td><td>G1 1113 当前最大编号 attempt 的 <code>train.log</code> 出现 <code>EXIT_CODE=0</code>，<code>checkpoint_epoch_144.pt</code> 在，且本方只读运行一次 MJ <code>stage2_rgbstate_check.py terminal</code> 得到 <code>TRAIN_TERMINAL=PASS … epoch=144</code>（该行不写进 <code>train.log</code>）；G2 1113 的收尾评估 <code>cc-4trs-p5eval</code>（单进程、约占 1 卡）已退出；G3 <code>nvidia-smi</code> 8 卡无计算进程。满足后写 <code>GPU_START=PASS</code>，给 1113 会话发消息 2。GPU 只看开工令＋G1–G3，不等 1113 写 <code>done</code>。之后各 GPU 阶段按代码就绪顺序开始：R 只需 S6；L0a 数据准备需 S1、S2；L0b G4 在线验收另需 S3 的最终 yaml；L1 需 S3、S4</td></tr>
 </table>
 <p><b>不等 1113 的其余收尾</b>：ckpt 上传读回、文档、清理、<code>handoff</code>、数据集上传都只用 CPU／网络，和我方同时进行。为此加两条：① 正式训练（Beta）前，用 1113 的 <code>CKPT_HF_VERIFY</code> 里 ep144 的 sha 核对我方 <code>ENCODER_REGISTER</code> 实算的 sha，不一致即停，1113 还没出这一行就等它；② MJ 仓库提交错开：解包与渲染都在 S6 固定工作树（确定 sha）＋独立环境运行、全部传绝对路径，S6 代码与重建视频档案等 1113 写完 <code>done</code> 后再合进 MJ <code>v12-3decoder</code>，避免两个会话同时往同一分支提交。</p>
 <p><b>M→C 放行</b>：不登记状态机（J6），也不读任何 <code>current.json</code>。C 开始前只核 M 的具名运行收据：M 训练日志的 <code>TRAIN_FINAL_RECORD</code>、交付日志的 <code>CKPT_DELIVERY_READY=PASS step=50000</code>、E1 日志的 1 行 <code>EVAL692</code>。出处见 I.2。</p>
-<p>1113 训练以 FAIL 结束或被写成 <code>stopped</code>：GPU 阶段不开始，交用户（写代码照常）。与 1113 会话的消息<b>只在用户开工后</b>发，最多两条；对方不回也不影响，开始只看 G1–G3。细节见第二部分 I 节。</p>
+<p><b>上游失败只认两种</b>：1113 被写成 <code>stopped</code>，或 terminal 检查得 <code>TRAIN_TERMINAL=FAIL</code>。此时 GPU 阶段不开始，交用户（写代码照常）。单个 attempt 非零退出属 1113 自动续训自理，本方继续监听。与 1113 会话的消息<b>只在用户开工后</b>发，有内容的请求最多两条（③ 纯回执与同 <code>req</code> 重发不计）；对方不回也不影响，开始只看 G1–G3。细节见第二部分 I 节。</p>
 
 <h2>2. 为什么不重建库，以及血缘闸门怎么比</h2>
 <p>16task 当时重建，是因为本机没有那份库。4task 的旧库与 1113 encoder 用的是同一个 bucket revision <code>604f16da</code>。三个只读 opus 代理分头核查：</p>
@@ -84,24 +86,24 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
 <p><b>血缘闸门</b>按四环链逐成员比对，任一环不等就 FAIL，不是放宽、也不是 WAIVE：① 4 个合并 H5 的 sha 与合并记录相等；② 每份 episode_map 的 sha 与合并记录相等；③ 合并记录的源清单 sha 与 encoder 侧相等；④ 1600 个成员逐条相等并复算出 member pin（公式见文首外部依赖锚点）。细节见第二部分 A、B、D 节。</p>
 
 <h2>3. motion 表：从旧库 Wan latent 到 <code>[1,1024]</code></h2>
-<p><b>怎么来</b>：旧库已有的 Wan latent（33 帧窗）隔一取一得到 stride 32 → 过 1113 encoder 的 EMA 权重（冻结）→ 4×256 原样拼成 1×1024 → 打包成 <code>motion-stage2-1024-rgbstate-ep144</code>。训练时每个样本取最多 96 个窗。相对 16task 只差 encoder 的 arch tag 和 latent 来源（本次全部走旧库 latent）。</p>
+<p><b>怎么来</b>：旧库已有的 Wan latent（33 帧窗）隔一取一得到 stride 32 → 过 1113 encoder 的 EMA 权重（冻结）→ 4×256 原样拼成 1×1024 → 打包成 <code>motion-stage2-1024-rgbstate-ep144</code>。训练时每个样本取最多 96 个窗。motion 表这部分相对 16task 只差 encoder 的 arch tag 和 latent 来源（本次全部走旧库 latent）；帧记忆布局另有差异（8×8 对 4×4），见 §4。</p>
 <p><b>两个检查分工不同</b>：</p>
 <ul>
 <li><code>STAGE2_G2</code>（硬门槛）：旧库 fp32 latent 与 sidecar 在线编码同一路径的重编结果比较，沿用现有门槛（归一化 MSE≤1e-6、max≤0.01）。生产端 <code>validate_stage2.py::gate_g2</code> 与消费端 <code>motion_store.py::validate_stage2_g2_evidence</code> 同步改。local-built 验收另核旧库总 metadata 摘要等于历史 <code>tested_metadata_sha256=c9264317…</code>，并保留 bin→总 metadata 检查。</li>
 <li><code>MOTION_XPATH</code>（只记录）：encoder 训练时的 fp16 路径对旧库 fp32 路径的差异，输入原帧相同。64 窗对拍，不作门槛；<code>max_abs</code> 超过 0.055 时在当轮汇报里告诉用户。</li>
 </ul>
-<p><b>XPATH 对齐要点</b>：共同窗口取 1113 <code>windows.parquet</code> 中 split=val、aug_id 0、row_count=1、start%16==0 的窗；按 (task, 统一 episode, kind, start) 对到旧库 <code>&lt;task&gt;_ep&lt;episode&gt;_&lt;kind&gt;.bin</code> 的第 start/16 块；成员与编号映射按单集 H5 契约；没有对应缓存的窗排除并计数；误差为 1024 维逐元素绝对差与相对差。完整规则见第二部分 B、D 节。</p>
+<p><b>XPATH 对齐要点</b>：共同窗口取 1113 <code>windows.parquet</code> 中 split=val、row_count=1、start%16==0 的窗（该表没有 aug_id 列，也不按 <code>parity_aug_id</code> 过滤）。11-14 美东实测 868 窗：exec 519、demo 349，其中尾窗 22；BinFill 没有 demo 窗，共 7 个 (task, kind) 格，每格至少 92 窗。按 (task, kind) 分层、固定种子抽 64 窗。按 (task, 统一 episode, kind, start) 对到旧库 <code>&lt;task&gt;_ep&lt;episode&gt;_&lt;kind&gt;.bin</code> 的第 start/16 块，<code>source_frame_ids</code> 与 real/pad 帧数也须逐项相等；成员与编号映射按单集 H5 契约；没有对应缓存的窗排除并计数；误差为 1024 维逐元素绝对差与相对差。完整规则见第二部分 B、D 节。</p>
 <p class="small">encoder 没训练过的两类窗（exec 段尾部约 6.1% 时步、BinFill demo 补帧尾窗）在合同和留档里写明。逐跳形状与对拍取样见第二部分 B、D、F 节。</p>
 
 <h2>3.5 heldout RGB 重建视频（R 阶段，照 16task）</h2>
-<p>在 encoder 的 heldout 28 集上，把 motion 经 RGB decoder 预测出的 latent 用 Wan VAE 解码回 RGB，每段一条四栏视频（GT｜重建｜像素误差｜latent 损失），出 PSNR 等指标。与 16task 的不同：新 encoder 没有 XYZ decoder，只出 RGB 视频；GT 帧要先从保留的 14 个 tar 里解出 heldout 28 集（S6 写完后在 S6 工作树里做）。GT 用完整 member 路径打开，H5 组名用源编号 <code>raw_episode</code>，输出命名用统一编号 <code>episode</code>（28 集中 24 集两者不同）；RGB 分支不依赖 K 列。</p>
-<p><b>新旧 encoder 并排对比</b>（用户 11-15 裁决）：在同一组 heldout val 窗上 render 两次，<code>--arch stage2-rgbstate</code>（ep144 EMA）与 <code>--arch v7</code>（旧 4task encoder <code>wan-full1600-filter2-b176x4-72ep-a/checkpoint_epoch_72.pt</code>），各出 <code>RGB_RECON_VIDEO=PASS arch=&lt;arch&gt;</code>；再 <code>compose</code> 把两者按 <code>--model-label</code> 并排成新旧两栏（S6 扩展接口），出 <code>RGB_RECON_COMPOSE=PASS groups=&lt;n&gt;</code>。三步都要求全局产物组集合等于预期 heldout 组集合，零组或缺组即 FAIL，不要求每个 rank 非空。另记 <code>OLD_ENC_HOLDOUT_OVERLAP=RECORD unseen=&lt;n&gt;/28</code>：本次 28 集有几集也在旧 encoder 的 holdout 里（统一 episode 编号），只记录、不拦截。指标只记录、不设阈值，与 16task ep105 的数字并列汇报。脚本、产物路径与命令见第二部分 B、E 节。</p>
+<p>在 encoder 的 heldout 28 集上，把 motion 经 RGB decoder 预测出的 latent 用 Wan VAE 解码回 RGB，每段一条四栏视频（GT｜重建｜像素误差｜latent 损失），出 PSNR 等指标。与 16task 的不同：新 encoder 没有 XYZ decoder，只出 RGB 视频；GT 帧要先从保留的 14 个 tar 里解出 heldout 28 集：S6 先交小脚本 <code>extract_heldout_h5.py</code>，合入 S6 工作树后立刻解包，不等 S6 其余部分。GT 用完整 member 路径打开，H5 组名用源编号 <code>raw_episode</code>，输出命名用统一编号 <code>episode</code>（28 集中 24 集两者不同）；RGB 分支不依赖 K 列。</p>
+<p><b>新旧 encoder 并排对比</b>（K15，用户 11-14 晚裁决）：在同一组 heldout val 窗上 render 两次，<code>--arch stage2-rgbstate</code>（ep144 EMA）与 <code>--arch v7</code>（旧 4task encoder <code>wan-full1600-filter2-b176x4-72ep-a/checkpoint_epoch_72.pt</code>），各出 <code>RGB_RECON_VIDEO=PASS arch=&lt;arch&gt;</code>；再 <code>compose</code> 把两者按 <code>--model-label</code> 并排成新旧两栏（S6 扩展接口），出 <code>RGB_RECON_COMPOSE=PASS groups=&lt;n&gt;</code>。三步都要求全局产物组集合等于预期 heldout 组集合，零组或缺组即 FAIL，不要求每个 rank 非空。另记 <code>OLD_ENC_HOLDOUT_OVERLAP=RECORD unseen=&lt;n&gt;/28</code>：本次 28 集有几集也在旧 encoder 的 holdout 里（统一 episode 编号），只记录、不拦截。指标只记录、不设阈值，与 16task ep105 的数字并列汇报。脚本、产物路径与命令见第二部分 B、E 节。</p>
 
 <h2>4. 两条模型</h2>
 <table>
 <tr><th>项</th><th>M：modulation concat</th><th>C：context concat</th></tr>
 <tr><td><code>integration_type</code> / <code>memory_token_dim</code>（唯一差别）</td><td>modulation / 1024</td><td>context / 2048</td></tr>
-<tr><td>共同配置</td><td colspan="2">帧记忆 8 帧×8×8（512）＋ motion 96 窗×1×1024，共 608 个记忆槽；B128、FSDP8、lr 5e-5；<code>num_train_steps=50_001</code>，ckpt 目录恰为 5000…50000 共 10 份，评估与交付用 50000</td></tr>
+<tr><td>共同配置</td><td colspan="2">帧记忆 8 帧×8×8（512）＋ motion 96 窗×1×1024，共 608 个记忆槽；B128、FSDP8、lr 5e-5；两个步数名分开：<code>NUM_TRAIN_STEPS=50001</code>（<code>num_train_steps=50_001</code>，state_step 到 50001，最后一次 loop_step＝checkpoint_step＝50000），<code>CKPT_STEPS=5000…50000</code> 共 10 份；评估与交付用 50000</td></tr>
 <tr><td>run 名</td><td><code>v2-1600ep-m8x8-modul-motion-s2rgbstate-concat1x1024-b128-50k</code></td><td><code>v2-1600ep-m8x8-ctx-motion-s2rgbstate-concat1x1024-b128-50k</code></td></tr>
 <tr><td>公开 bucket</td><td><code>HongzeFu/robomme-vla-4task-m8x8-modul-s2rgbstate-concat1x1024-50k-v1</code></td><td><code>HongzeFu/robomme-vla-4task-m8x8-ctx-s2rgbstate-concat1x1024-50k-v1</code></td></tr>
 </table>
@@ -110,45 +112,46 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
 <h2>5. 调度、评估与时间线</h2>
 <table>
 <tr><th>阶段</th><th>内容</th><th>资源</th><th>估时</th></tr>
-<tr><td>P0</td><td>写代码 S1–S6、审查、合并；从 tar 解出 heldout GT H5（开工令到达后立刻开始，§1.5）</td><td>CPU</td><td>约 1.5–2.5 天</td></tr>
+<tr><td>P0</td><td>写代码 S1–S6、审查、合并（开工令到达后立刻开始，§1.5）；S6 的 <code>extract_heldout_h5.py</code> 一合入就从 tar 解出 heldout GT H5</td><td>CPU</td><td>约 1.5–2.5 天（36–60 h）</td></tr>
 <tr><td>R</td><td>heldout RGB 重建视频：新旧两次 render＋compose（§3.5）</td><td>8 卡</td><td>约 40–70 min</td></tr>
 <tr><td>L0a</td><td>数据准备（需 S1、S2）：登记 encoder、血缘、导出 motion 表、对拍、打包</td><td>1 卡＋CPU</td><td>约 2–3 h</td></tr>
 <tr><td>L0b</td><td>G4 在线验收（另需 S3 的最终 yaml）：在线与离线一致</td><td>1 卡</td><td>含在 L0 内</td></tr>
-<tr><td>L1</td><td>短测：两条各 20 步＋两条正式入口各一次 dry-run＋单卡评估冒烟（含 <code>smoke_demo_inject.py</code>）</td><td>8 卡</td><td>约 1 h</td></tr>
+<tr><td>L1</td><td>Beta 之后依次：两条正式入口各一次 dry-run → 两条各 20 步短测 → 单卡评估冒烟（含 <code>smoke_demo_inject.py</code>）</td><td>8 卡</td><td>约 1 h</td></tr>
 <tr><td>M</td><td>modulation 50k，ckpt 随训随传</td><td>8 卡</td><td>约 13.5–16 h</td></tr>
-<tr><td>E1</td><td>692 局，评 step 50000，seed 7；32 片、每卡 4 worker</td><td>8 卡</td><td>约 75 min</td></tr>
+<tr><td>E1</td><td>692 局，评 step 50000（读严格恢复通过的 <code>stage/50000</code>），seed 7；32 片、每卡 4 worker</td><td>8 卡</td><td>约 75 min</td></tr>
 <tr><td>C</td><td>context 50k</td><td>8 卡</td><td>约 26–33 h</td></tr>
 <tr><td>E2</td><td>同 E1</td><td>8 卡</td><td>约 75 min</td></tr>
 </table>
-<p>P0 从开工令起算约 1.5–2.5 天。GPU 起点 G 按训练进度推算约 11-15 美东 03:40 之后（收尾评估退出即可）；R 只依赖 S6，可紧跟 G 跑；L0a 要等 S1、S2 合入，L0b 再等 S3。从 L0 到 E2 合计约 45–55 h（估计），关键路径是 P0（S1/S2，S3）→ L0 → M → E1 → C → E2。</p>
+<p>P0 从开工令起算约 1.5–2.5 天。GPU 起点 G 在 1113 训满（推算 11-15 美东 03:45–04:30）之后、再加其收尾评估的时长（单进程；1113 计划给整个 P5 收尾约 1 h），以 G1–G3 现场核实为准，不按推算时刻起跑。R 只依赖 S6，可紧跟 G 跑；L0a 要等 S1、S2 合入，L0b 再等 S3。从 L0 到 E2 合计约 45–55 h（估计），关键路径是 P0（S1/S2，S3）→ L0 → M → E1 → C → E2。</p>
+<p><b>端到端估计</b>：开工令后约 P0（36–60 h）＋ 45–55 h，约 3.4–4.8 天。G 若早于 L0a 就绪，G 到 L0a 之间 GPU 只跑 R（约 1 h），其余时间明确空着：本计划没有其他已具备输入的 GPU 工作，也不为占卡另起任务。</p>
 <p><b>对照基线</b>（同库、不带 motion、每帧 8×8）：modulation 对照无 motion 512 的 60k run，GL 692 局 @50000 为 30.49%；context 对照 GL 上在训的 ctx512、ctx1024 两条 50k，都还没评估。这些成绩出自 GL 评估环境，本计划在本机评估，两者跨环境，需在本机同口径重评后才能严格对照。</p>
 <p class="small">评估在线编码、motion 窗超预算的处理与 runbook 见第二部分 E 节。</p>
 
 <h2>6. 验收判定行</h2>
 <table>
 <tr><th>判定行</th><th>查什么（完整字段与查法见第二部分 D 节）</th></tr>
-<tr><td><code>TRAIN_TERMINAL</code></td><td>encoder 训满 144 轮</td></tr>
+<tr><td><code>TRAIN_TERMINAL</code></td><td>encoder 训满 144 轮（本方只读运行 MJ <code>stage2_rgbstate_check.py terminal</code> 得到，不从 <code>train.log</code> 找）</td></tr>
 <tr><td><code>HELDOUT_H5</code>、<code>RGB_RECON_VIDEO</code>（新旧各一行）、<code>RGB_RECON_COMPOSE</code>、<code>OLD_ENC_HOLDOUT_OVERLAP</code>（记录）</td><td>解出的 heldout 28 集 GT 与源清单逐个一致；新旧重建与并排视频的全局组集合都等于预期（零组或缺组即 FAIL），指标已记录</td></tr>
 <tr><td><code>ENCODER_REGISTER</code>、<code>DATA_LINEAGE</code>、<code>FRAMESAMP8X8</code></td><td>encoder ckpt 登记到位；encoder 与 VLA 是同一组 H5（§2 四环链）；8×8 帧表用 <code>jq -e</code> 断言 layout、status、<code>num_rows==1192918</code>、manifest 摘要四项，全过才打 PASS，否则 FAIL 并非零退出</td></tr>
 <tr><td><code>STAGE2_G0/G2/G3</code>、<code>STAGE2_EXPORT</code>、<code>VERIFY_MOTION</code></td><td>导出前证据齐（G2 是 fp32 同路径重编的硬门槛，§3）；每窗都有 1024 维向量、计数对；打包后的表与导出逐位一致</td></tr>
 <tr><td><code>MOTION_XPATH</code>（记录项）</td><td>fp16 训练路径对 fp32 旧库路径的 motion 差异量级，不作门槛</td></tr>
 <tr><td><code>CONCAT_CONFIG</code>、<code>MOTION_LAYOUT</code>、<code>LAUNCH_CONTRACT</code></td><td>两条只差融合方式，预算、库、encoder 与表一致</td></tr>
 <tr><td><code>ONLINE_INPUT_IDENTITY</code>、<code>ONLINE_OFFLINE_PARITY</code></td><td>评估时在线算的 motion 与训练用的离线表一致</td></tr>
-<tr><td><code>TRAIN_FINAL_RECORD</code>、<code>SAVE_LOAD</code>、<code>MOTION_WINDOWS</code></td><td>短测 20 步能存能恢复；评估冒烟能跑；正式训练 50k 跑完（<code>EXIT_CODE=0</code>，ckpt 目录恰 10 份）</td></tr>
-<tr><td><code>CKPT_DELIVERY_READY</code>、<code>CKPT_UPLOAD</code>、<code>HF_VERIFY</code></td><td>step 50000 的 ckpt 可用于评估；10 份 ckpt 上传完整、读回一致（<code>CKPT_UPLOAD=PASS steps=10</code>，由训练成功后的 final 调用给出）</td></tr>
-<tr><td>评估结果上传</td><td>传同一 bucket 的 <code>eval/</code> 前缀，用独立清单与读回判定 <code>EVAL_HF_VERIFY=PASS</code>；ckpt 的全量集合比对排除 <code>eval/</code>，两者先后顺序不限</td></tr>
+<tr><td><code>TRAIN_FINAL_RECORD</code>、<code>SAVE_LOAD</code>、<code>MOTION_WINDOWS</code></td><td>短测 20 步能存能恢复；评估冒烟能跑；正式训练 50k 跑完（<code>EXIT_CODE=0</code>，ckpt 目录恰 10 份）。正式段 <code>NUM_TRAIN_STEPS=50001</code> 下 final record 的尾窗为空是预期，尾段有限性由 EMA 叶全部有限＋训练日志 DIAG／<code>TRAIN_NUMERICS</code> 行兜底</td></tr>
+<tr><td><code>CKPT_DELIVERY_READY</code>、<code>CKPT_UPLOAD</code>、<code>HF_VERIFY</code></td><td><code>stage/50000</code> 严格恢复通过，评估就读这份；10 份 ckpt 上传完整、读回一致（<code>CKPT_UPLOAD=PASS steps=10</code>，由训练成功后的 final 调用给出）</td></tr>
+<tr><td>评估结果上传（K15）</td><td>传同一 bucket 的 <code>eval/</code> 前缀（独立导出根与独立锁），用独立清单与读回判定 <code>EVAL_HF_VERIFY=PASS</code>；ckpt 的全量集合比对排除 <code>eval/</code>，两者先后顺序不限</td></tr>
 <tr><td><code>EVAL692</code></td><td>692 局跑完，逐局 CSV 齐</td></tr>
 </table>
 
 <h2>7. 实施步骤</h2>
 <table>
 <tr><th>阶段</th><th>内容</th><th>判据</th></tr>
-<tr><td>0</td><td>开工令到达后立刻：派一个 sonnet 审查者做开工前一致性审查；给 1113 会话发消息 1；挂 Monitor 盯 1113 训练与收尾评估日志</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS</code></td></tr>
-<tr><td>1</td><td>派 S1–S6 写代码（S1、S2 并行），逐块审查、合并；只读核对 8×8 帧表</td><td>每块 <code>PRE_MERGE_REVIEW</code>、<code>POST_MERGE_REVIEW</code>；<code>FRAMESAMP8X8</code></td></tr>
-<tr><td>2</td><td>GPU 起点 G 满足（§1.5）后先跑 R（只需 S6，在 S6 工作树）；再回填 ckpt sha 并单独复审；然后跑 L0a，S3 合入后跑 L0b</td><td><code>GPU_START=PASS</code> → <code>RGB_RECON_VIDEO</code>（新旧两行）、<code>RGB_RECON_COMPOSE</code> → <code>ENCODER_REGISTER</code>、<code>DATA_LINEAGE</code>、<code>STAGE2_G0/G2/G3</code>、<code>STAGE2_EXPORT</code>、<code>MOTION_XPATH</code>（记录）、<code>VERIFY_MOTION</code>、<code>ONLINE_*</code></td></tr>
-<tr><td>3</td><td>Beta 前核 1113 <code>CKPT_HF_VERIFY</code> 中 ep144 的 sha；Beta commit、push；两条 20 步短测；两条正式入口各一次无 <code>MAX_STEPS</code> 的 dry-run，读回完整继承参数表；再做评估冒烟</td><td><code>CONCAT_CONFIG</code>、<code>LAUNCH_CONTRACT</code>、<code>TRAIN_FINAL_RECORD steps=20</code>＋<code>SAVE_LOAD</code>、<code>MOTION_WINDOWS</code></td></tr>
-<tr><td>4</td><td>正式链依次跑 M → E1 → C → E2；ckpt 增量随训随传（只出 <code>INC_END</code>），训练成功后由串行链调用 final 上传</td><td>M、C 各 <code>TRAIN_FINAL_RECORD</code>、<code>CKPT_DELIVERY_READY=PASS step=50000</code>；E1、E2 各一行 <code>EVAL692</code>（seed 7）</td></tr>
-<tr><td>5</td><td>收尾：回写结论 commit 并留档</td><td>两条 <code>CKPT_UPLOAD=PASS steps=10</code>＋<code>HF_VERIFY=PASS</code>；eval 读回单独通过</td></tr>
+<tr><td>0</td><td>开工令到达后立刻：派一个 sonnet 审查者做开工前一致性审查；给 1113 会话发消息 1（G1–G3 已满足则与消息 2 合并）；挂 Monitor A（1113 最大编号 attempt 的 <code>train.log</code>）、B（收尾评估日志）</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS</code></td></tr>
+<tr><td>1</td><td>派 S1–S6 写代码（S1、S2 并行），逐块审查、合并；S6 先交 <code>extract_heldout_h5.py</code>，合入 S6 工作树后立刻起解包；只读核对 8×8 帧表</td><td>每块 <code>PRE_MERGE_REVIEW</code>、<code>POST_MERGE_REVIEW</code>；<code>HELDOUT_H5</code>；<code>FRAMESAMP8X8</code></td></tr>
+<tr><td>2</td><td>GPU 起点 G 满足（§1.5，含本方只读跑 terminal 得 <code>TRAIN_TERMINAL=PASS</code>）后先跑 R（只需 S6，在 S6 工作树）；再回填 ckpt sha 并单独复审；然后跑 L0a，S3 合入后跑 L0b</td><td><code>GPU_START=PASS</code> → <code>RGB_RECON_VIDEO</code>（新旧两行）、<code>RGB_RECON_COMPOSE</code> → <code>ENCODER_REGISTER</code>、<code>DATA_LINEAGE</code>、<code>STAGE2_G0/G2/G3</code>、<code>STAGE2_EXPORT</code>、<code>MOTION_XPATH</code>（记录）、<code>VERIFY_MOTION</code>、<code>ONLINE_*</code></td></tr>
+<tr><td>3</td><td>Beta 前核 1113 <code>CKPT_HF_VERIFY</code> 中 ep144 的 sha；Beta commit、push；两条正式入口各一次无 <code>MAX_STEPS</code> 的 dry-run，读回完整继承参数表；再两条 20 步短测；最后评估冒烟</td><td><code>CONCAT_CONFIG</code>、<code>LAUNCH_CONTRACT</code>、<code>TRAIN_FINAL_RECORD steps=20</code>＋<code>SAVE_LOAD</code>、<code>MOTION_WINDOWS</code></td></tr>
+<tr><td>4</td><td>正式链依次跑 M → E1 → C → E2；ckpt 增量随训随传（只出 <code>INC_END</code>）；训练成功后串行链同步生成 stage、后台 tmux 做 final 上传读回；评估读严格恢复通过的 <code>stage/50000</code></td><td>M、C 各 <code>TRAIN_FINAL_RECORD</code>、<code>CKPT_DELIVERY_READY=PASS step=50000</code>；E1、E2 各一行 <code>EVAL692</code>（seed 7）</td></tr>
+<tr><td>5</td><td>收尾：回写结论 commit 并留档；某条 run 的 stage 在其 <code>HF_VERIFY=PASS</code>、<code>CKPT_DELIVERY_READY=PASS step=50000</code>、对应 <code>EVAL692</code> 已出 1 行之后才删</td><td>两条 <code>CKPT_UPLOAD=PASS steps=10</code>＋<code>HF_VERIFY=PASS</code>；eval 读回单独通过</td></tr>
 </table>
 
 <h2>8. 子代理分工与合并（简述）</h2>
@@ -158,12 +161,12 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
 <li><b>S1 血缘与起跑合同</b>：实现 §2 的四环链比对；policy 侧独立实现同一公式，与 S2 用同一组 1600 成员对拍得同一 pin。S1、S2 互不依赖，并行写。</li>
 <li><b>S4 692 评估</b>：移植 4task 的 692 局评估，接上在线编码；需 GPU 的 <code>smoke_demo_inject.py</code> 放到 L1。</li>
 <li><b>S3 训练接线</b>：两份配置、训练诊断、M→E1→C→E2 串行链。</li>
-<li><b>S5 上传</b>：ckpt 增量上传与最终导出。</li>
-<li><b>S6 重建视频（MJ 侧）</b>：重建视频脚本支持新 encoder，加 heldout GT 解包脚本。</li>
+<li><b>S5 上传</b>：ckpt 增量上传；最终导出拆成 stage 模式（严格检查、冻结源、写 manifest，不联网、不持上传锁）与上传读回模式；<code>eval/</code> 上传用独立导出根与独立锁。</li>
+<li><b>S6 重建视频（MJ 侧）</b>：第一个交付物是 heldout GT 解包小脚本 <code>extract_heldout_h5.py</code>，先审查合入 S6 工作树并立刻起解包；之后让重建视频脚本支持新 encoder 和新旧并排 compose。</li>
 </ul>
 <p>policy 侧合并顺序 S2 → S1 → S4 → S3 → S5；S6 与其余五块互不依赖，解包与渲染在 S6 固定工作树运行，1113 写完 <code>done</code> 后才合进 MJ <code>v12-3decoder</code>。每合一块前派一个 sonnet 审查者，合入后跑核心短测再 push。下载、导出、训练、评估都由主会话起 tmux。分配表见第二部分 C 节。</p>
 
-<h2>9. 用户裁决记录（11-14 全部定完）</h2>
+<h2>9. 用户裁决记录（11-14 美东全部定完，含当晚补的 J7）</h2>
 <table>
 <tr><th>#</th><th>问题</th><th>裁决（全部已定）</th></tr>
 <tr><td>J1</td><td>encoder 用哪个 ckpt</td><td><code>checkpoint_epoch_144.pt</code> 的 EMA</td></tr>
@@ -172,8 +175,9 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
 <tr><td>J4</td><td>VLA 训练是否排除 encoder 的 28 集 heldout</td><td>不排除（与 16task 一致）</td></tr>
 <tr><td>J5</td><td>帧记忆布局</td><td>8 帧×8×8</td></tr>
 <tr><td>J6</td><td>是否登记进状态机</td><td>不登记，人工交接</td></tr>
+<tr><td>J7</td><td>重建视频是否与旧 encoder 并排对比；评估结果是否上传（K15）</td><td>要并排：新 ep144 与旧 4task v7 ep72 在同一批 heldout 上各 render 后合成（「第一处 同时合成 和之前的4task的encoder对比」）；要上传：同一 bucket 的 <code>eval/</code> 前缀，与 ckpt 分开清单与读回（「第二部分 要」）</td></tr>
 </table>
-<p class="small">J1–J6 均已裁决；开工仍需用户对本版计划给出开工令（AGENTS.md 第 2 条）。逐文件清单、分配表、闸门、runbook、风险、盲区、留档纪律见第二部分。</p>
+<p class="small">J1–J7 均已裁决；开工仍需用户对本版计划给出开工令（AGENTS.md 第 2 条）。逐文件清单、分配表、闸门、runbook、风险、盲区、留档纪律见第二部分。</p>
 
 <h1>第二部分（技术细节，供 agent 追踪）</h1>
 
@@ -188,12 +192,12 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
   </ul>
   打包脚本遇到两种情况会拒绝：输出根已有 <code>store_meta.json</code> 但没给 <code>--resume</code>，或 <code>pack.lock</code> 被占用或有残留。pack 不用 <code>--resume</code>。唯一允许的接管：同一次正常 pack 退出后保留的锁，由 <code>pack_motion_store.py verify --store "$LIB/motion-stage2-1024-rgbstate-ep144" --check-padding --resume</code> 受控接管。仍禁止 <code>--force-break-lock</code>、强破活动的外来锁、<code>--force</code> 与重打包覆盖。</li>
 <li><b>R3 不碰 1113 运行</b>：S6 的 MJ 代码改动在独立 worktree；heldout 解包与重建视频渲染都在该工作树的确定 sha＋独立环境运行，1113 写完 <code>done</code> 后才合进 MJ <code>v12-3decoder</code>；重建视频只读 1113 数据根与 ckpt，写 <code>runs/rgb-recon-video-4trs-*</code> 与 <code>h5-heldout/</code>。不动 <code>cc-4trs-*</code> 会话、encoder run 目录和 1113 数据根，以上都只读。对 encoder run 目录只做硬链接登记，不改原文件。</li>
-<li><b>R4 GPU 时序</b>：任何 GPU 阶段（R、L0 起）只看开工令＋G1–G3：encoder 已 <code>TRAIN_TERMINAL=PASS</code>，MJ 的 P5 评估已退出，8 卡空闲；不等 1113 写 <code>done</code>。M、E1、C、E2 串行跑，任一段在跑时不起别的 GPU 任务。</li>
+<li><b>R4 GPU 时序</b>：任何 GPU 阶段（R、L0 起）只看开工令＋G1–G3：1113 最大编号 attempt 的 <code>train.log</code> 有 <code>EXIT_CODE=0</code>、<code>checkpoint_epoch_144.pt</code> 在、本方只读跑 terminal 得 <code>TRAIN_TERMINAL=PASS … epoch=144</code>，MJ 的 P5 评估已退出，8 卡空闲；不等 1113 写 <code>done</code>。M、E1、C、E2 串行跑，任一段在跑时不起别的 GPU 任务。</li>
 <li><b>R5 run 名与重跑协议</b>：两个 run 名、两个 bucket 在建档时先核实不存在。<code>train.py</code> 不支持 resume，单条入口也会拒绝同名重跑。工程故障按 K7 自己修好后：
   <ul>
   <li>用 <code>&lt;run&gt;-attempt02</code> 新名和 <code>-attempt02</code> bucket，通过 <code>ATTEMPT_MANIFEST_MODUL</code>／<code>ATTEMPT_MANIFEST_CTX</code> 传入；</li>
-  <li><code>decisions/&lt;id&gt;.json</code> 由主会话按 K7 写，原话写「工程故障自修」，事后汇报；</li>
-  <li>第二次仍崩或出现 NaN，写 <code>WAIT_USER_DECISION</code> 交用户。</li>
+  <li>顺序固定三步：先打新 Beta 并 push；再由主会话按 K7 写 <code>decisions/&lt;id&gt;.json</code>，含 <code>allowed_runs: ["&lt;run&gt;-attempt02"]</code>，原话写「工程故障自修」，事后汇报；最后写 attempt 清单，字段恰为 <code>base_run</code>、<code>run</code>、<code>history</code>、<code>train_head</code>（新 Beta sha）、<code>decision</code>（上一步文件路径）、<code>bucket</code> 六项（与 <code>check_attempt</code> 一致）；</li>
+  <li>attempt 只放行 NN=02。第二次仍崩或出现 NaN，写 <code>WAIT_USER_DECISION</code> 交用户，第三次一律等用户。</li>
   </ul>
   <b>修复与接续协议</b>（冻结期内同样适用，见 R9）：
   <ul>
@@ -201,18 +205,19 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
   <li>修复由独立代理做、经审查合入，再打新 Beta、push，重新冻结；改动波及的入口先跑必要短测；</li>
   <li>每段（M、E1、C、E2）的收据记录它自己运行时的 sha。<code>START_STAGE</code> 接续时按各段收据里记录的 sha 核对前段，不用当前 HEAD 回填旧结果；例：M、E1 在 H0 成功，C 修复后在 H1 跑，E1 收据仍按 H0 核。</li>
   </ul></li>
-<li><b>R6 tmux</b>：全部会话用 <code>v16-</code> 前缀并登记清单：<code>v16-heldout-h5</code>、<code>v16-recon</code>、（监听用 Monitor，不起 tmux）、<code>v16-l0</code>、<code>v16-smoke</code>、<code>v16-chain</code>、<code>v16-e1</code>、<code>v16-e2</code>、<code>v16-e&lt;k&gt;-s&lt;n&gt;-rerun</code>、<code>v16-up-m</code>、<code>v16-up-c</code>。清理只用 <code>kill-session -t '=名'</code>，删前删后各跑一次 <code>tmux ls</code>。</li>
+<li><b>R6 tmux</b>：全部会话用 <code>v16-</code> 前缀，清单只列 E 节实际会起的：<code>v16-heldout-h5</code>（解包）、<code>v16-recon</code>（R）、<code>v16-l0</code>（L0a 退出后 L0b 复用此名）、<code>v16-smoke</code>（短测与评估冒烟）、<code>v16-chain</code>（M→E1→C→E2，E1／E2 与单局重跑都在链内跑，不另起会话；<code>START_STAGE</code> 接续在旧会话退出后复用此名）、<code>v16-up-m</code>／<code>v16-up-c</code>（增量上传；<code>INC_END</code> 后 final 上传读回复用此名）、<code>v16-up-eval-m</code>／<code>v16-up-eval-c</code>（<code>eval/</code> 上传）。监听用 Monitor，不起 tmux；复用会话名前先 <code>TaskStop</code> 挂在旧日志上的 Monitor。所有 tmux 命令用日志三件套（<code>PYTHONUNBUFFERED=1</code>、<code>set -o pipefail</code>、<code>tee</code>，尾行 <code>EXIT_CODE=</code>）。清理只用 <code>kill-session -t '=名'</code>，删前删后各跑一次 <code>tmux ls</code>。</li>
 <li><b>R7 子代理禁令</b>：写代码的代理不起超过 5 分钟的任务；不准用 <code>ps</code>／<code>grep</code> 找 PID 去 kill，只能对自己 <code>$!</code> 记下的 PID 发信号。</li>
-<li><b>R8 磁盘</b>：<code>/scratch</code> 现在可用 1.1 T。
+<li><b>R8 磁盘</b>：<code>/scratch</code> 可用约 1.15 TB（<code>df -B1 /scratch</code> 得 1,149,490,270,208 字节，11-14 美东 19:55）。
   <ul>
-  <li><b>体量</b>：不下载帧表；两条 run 各约 120–140 GB；增量上传工具的 stage 是逐文件实体复制，上传期间每条 run 再多占同等体量。</li>
-  <li><b>峰值</b>：两条成功 run 加各自 stage 约 4×140 ≈ 560 GB；再加两条都在晚期失败、各留一份 attempt 产物和 stage、上传又延迟的最坏账约 1064 GB，另有 heldout 约 12.75 GB、视频与缓存。现可用约 1.15 TB，最坏账会越过停写线。</li>
-  <li><b>stage 删除</b>：某条 run 的 stage 只在 <code>HF_VERIFY=PASS</code> 且对 <code>stage/50000</code> 严格恢复 PASS 之后才删。</li>
+  <li><b>体量（实测式）</b>：不下载帧表。单份 ckpt 按同库同形态的旧 run 实测：<code>du -sb v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-modul-wanraw9s32-b128-50k.try2/5000</code> 得 11,945,275,635 字节，16task concat1024 的 50000 目录 11,587,835,271 字节。每条 run 10 份约 120 GB（根目录另有约 0.4 GB 证据与 encoder 依赖）。导出 stage 是逐文件实体复制、累积全部步，上传期间每条 run 再多占约 120 GB；读回临时量只有约一个 ckpt（约 12 GB）。</li>
+  <li><b>峰值</b>：两条成功 run 加各自 stage 约 4×120＝480 GB。最坏账再加两条都在约 45k 失败、各留 9 份 ckpt 的失败 run 与其 stage（约 4×108＝432 GB）、读回临时量约 12 GB、heldout 约 12.75 GB、视频与缓存约 20 GB，合计约 957 GB。可用约 1.15 TB，最坏时剩约 190 GB，不越过 150 GB 停写线，但余量不大，按下面「新 attempt 前预算」逐次算账。</li>
+  <li><b>stage 删除</b>：某条 run 的 stage 只在三条都满足后才删：该 run 的 <code>HF_VERIFY=PASS</code>、对 <code>stage/50000</code> 严格恢复 <code>CKPT_DELIVERY_READY=PASS step=50000</code>、该 run 的 <code>EVAL692</code> 已出 1 行（评估读的正是这份 stage）。</li>
+  <li><b>/dev/shm</b>：tmpfs，共 561 G（11-14 实测已用 234 M）。主会话在 M、C 各自起跑后、中段与结束后各记一次 <code>df -B1 /dev/shm</code> 进 <code>launch.md</code>，超过 300 GB 在汇报里提一句；M 与 C 之间核对已释放。只记录、不拦截。</li>
   <li><b>新 attempt 前预算</b>：主会话按实际存量算账（剩余 ckpt、stage、读回临时量、heldout、视频），起跑后仍须留 150 GB 余量；不够就停写，按清单问用户删什么。</li>
   <li><b>停写线</b>：运行中可用低于 150 GB 时，由主会话停止新写入（不起新阶段、不起新上传），按清单问用户。</li>
   <li><b>不恢复合并 H5</b>：约 792 GB，放不下，也不需要（见 F2）。</li>
   </ul></li>
-<li><b>R9 冻结</b>：Beta commit push 后，主检出写入 <code>$(git rev-parse --git-dir)/AGENTMETARULES_HOLD</code>，内容是 <code>freeze</code> 加 Beta sha。从此到 E2 结束、上传读回完成，主检出不提交、不快进。期间的留档写到开发副本 <code>/scratch/hongze/robomme_policy_learning_MotionJEPA-temp</code> 的分支 <code>dev-v16-4trs-&lt;美东日期&gt;</code>，该副本有自己的 <code>.venv</code>。冻结期出故障按 R5 的修复与接续协议：进程退出 → 保留旧证据 → 修复经审查合入 → 删旧 HOLD、打新 Beta、push → 写新 HOLD 重新冻结 → 必要短测 → <code>START_STAGE</code> 接续。结束后先删 HOLD，再 <code>--no-ff</code> 合回 v16。</li>
+<li><b>R9 冻结</b>：Beta commit push 后，主检出写入 <code>$(git rev-parse --git-dir)/AGENTMETARULES_HOLD</code>，内容是 <code>freeze</code> 加 Beta sha。从此到 E2 结束、上传读回完成，主检出不提交、不快进。期间的留档写到开发副本 <code>/scratch/hongze/robomme_policy_learning_MotionJEPA-temp</code> 的分支 <code>dev-v16-4trs-&lt;美东日期&gt;</code>。该副本现在不在盘（11-14 <code>ls -d</code> 报不存在），开工后在写代码期间（CPU，可并行）建：在主检出 <code>git worktree add</code> 出 -temp 副本与上述分支，其 <code>v1-store</code> 按第 14 条开发副本例外整体是指向主副本 <code>v1-store/</code> 的 symlink；在副本里 <code>uv sync</code> 建它自己的 <code>.venv</code>，并确认 <code>uv run python -m pytest</code> 能跑。冻结期出故障按 R5 的修复与接续协议：进程退出 → 保留旧证据 → 修复经审查合入 → 删旧 HOLD、打新 Beta、push → 写新 HOLD 重新冻结 → 必要短测 → <code>START_STAGE</code> 接续。结束后先删 HOLD，再 <code>--no-ff</code> 合回 v16。</li>
 <li><b>R10 评估检出</b>：评估在主检出上跑，跑前三件事：<code>git checkout v16-4task-rgbstate-s2c1024-50k</code>，<code>git submodule update --init third_party/robomme_benchmark</code>（落在 <code>b4e97f22</code>），<code>git status --porcelain</code> 必须为空。本分支的评估链以 v15 的 692 局为准，v4 那套官方 800 局链路在本分支不再维护。</li>
 </ol>
 
@@ -593,13 +598,15 @@ uv run --project "$R" python "$R/scripts/training/check_stage2_online.py" \
 <table>
 <tr><th>项</th><th>内容</th></tr>
 <tr><td>双方</td><td>上游：1113 负责会话 <code>https://claude.ai/code/session_01WvPQiRUWj8XJqg9zvxGijQ</code>（同机 <code>ip-10-242-11-177</code>）；本计划：主会话 <code>https://claude.ai/code/session_01WvPQiUpYLEJs7SUunJaEZ1</code>。发信前用 <code>ListAgents</code> 找到对方确切名字</td></tr>
-<tr><td>监听（不依赖消息）</td><td>Monitor A：<code>tail -n +1 -F /scratch/hongze/logs/4task-rgb-state-1113/train/attempt1/train.log</code>，过滤 <code>EXIT_CODE=|TRAIN_TERMINAL|Traceback|nan|NaN|拒绝|失败|错误</code>；Monitor B：<code>tail -n +1 -F /scratch/hongze/logs/4task-rgb-state-1113/p5eval/attempt1/p5eval.log</code>（文件出现前 <code>tail -F</code> 会等待），过滤 <code>STAGE2_EVAL=|EXIT_CODE=|Traceback|失败|错误</code>。B 出现结束行后核 G1–G3，满足即 <code>GPU_START=PASS</code></td></tr>
-<tr><td>消息 1（开工令到达时发，三次握手 ①）</td><td>第一行：「仅答复本请求；答复后保持你收信前的状态（执行中继续执行、等待中继续等待、停工与空闲保持不动），不因本消息推进或停止任何任务。」第二行：<code>req=vla16-&lt;美东 MMDDHHMM&gt;-1</code>。正文：本方 4task VLA 计划已获开工令；将在你方训练出 <code>TRAIN_TERMINAL=PASS epoch=144</code>、收尾评估 <code>cc-4trs-p5eval</code> 退出、8 卡空闲后开始占用 GPU 0–7（约 2–3 天），与你方其余收尾（ckpt 上传读回、文档、handoff）同步进行，只读你方 ckpt 与数据根，不写你方任何路径；你方写完 <code>done</code> 之前本方不往 MJ <code>v12-3decoder</code> 提交。请先回「收到 req=…，处理中」，等你方写完 <code>done</code>（<code>handoff:</code> 已 push）时再回「req=… 结果：done handoff=&lt;sha&gt;，CKPT_HF_VERIFY 中 ep144 的 sha」。不请求你方改变任何计划、运行或顺序</td></tr>
-<tr><td>回执（③）</td><td>收到对方「结果」后回「收到 req=…」，握手结束；对方的纯回执不再回复</td></tr>
+<tr><td>监听（不依赖消息）</td><td>Monitor A：<code>tail -n +1 -F</code> 跟 <code>/scratch/hongze/logs/4task-rgb-state-1113/train/attempt*/train.log</code> 中<b>编号最大</b>的那一份（11-14 只有 <code>attempt1</code>）；过滤 <code>EXIT_CODE=|拒绝|失败|FAIL|错误|找不到|Traceback|\bnan\b|\bNaN\b|out of memory|Killed</code>（挂前再 grep 1113 入口与 runner 的 <code>echo</code>／<code>print</code>／<code>raise</code> 文案补全）。A 报非零 <code>EXIT_CODE=</code> 后查是否出现更大编号的 <code>train/attempt&lt;N&gt;/</code>：出现即先 <code>TaskStop</code> 旧 Monitor，再对新 <code>train.log</code> 挂新的（一份日志一个 Monitor）；attempt 内的 <code>Traceback</code>、nan、非零退出只作记录。A 报 <code>EXIT_CODE=0</code> 后，本方只读运行 <code>cd /scratch/hongze/MotionJEPA &amp;&amp; uv run --frozen --no-sync python scripts/stage2_rgbstate_check.py terminal --run /scratch/hongze/MotionJEPA/runs/stage2-4task-rgbstate-144ep-1113-a</code>（只读 ckpt 与 <code>train_metrics_epoch.jsonl</code>），输出原文进 <code>launch.md</code>。Monitor B：<code>tail -n +1 -F /scratch/hongze/logs/4task-rgb-state-1113/p5eval/attempt1/p5eval.log</code>（文件出现前 <code>tail -F</code> 会等待），过滤 <code>STAGE2_EVAL=|EXIT_CODE=|拒绝|失败|FAIL|错误|找不到|Traceback</code>。预期首个关键事件：A 的 <code>EXIT_CODE=</code> 约 11-15 美东 03:45–04:30，B 在 A 结束后约 1 h 内；超过预期一半仍无事件就查日志尾、进程与 <code>tmux ls</code>。B 出现结束行后核 G1–G3，满足即 <code>GPU_START=PASS</code></td></tr>
+<tr><td>消息 1（开工令到达即发，三次握手 ①）</td><td>第一行：「仅答复本请求；答复后保持你收信前的状态（执行中继续执行、等待中继续等待、停工与空闲保持不动），不因本消息推进或停止任何任务。」第二行：<code>req=vla16-&lt;美东 MMDDHHMM&gt;-1</code>。正文：本方 4task VLA 计划已获开工令；将在你方训练 <code>EXIT_CODE=0</code>、ep144 ckpt 在且本方只读核得 <code>TRAIN_TERMINAL=PASS epoch=144</code>、收尾评估 <code>cc-4trs-p5eval</code> 退出、8 卡空闲后开始占用 GPU 0–7（约 2–3 天），与你方其余收尾（ckpt 上传读回、文档、handoff）同步进行，只读你方 ckpt 与数据根，不写你方任何路径；你方写完 <code>done</code> 之前本方不往 MJ <code>v12-3decoder</code> 提交。请先回「收到 req=…，处理中」，等你方写完 <code>done</code>（<code>handoff:</code> 已 push）时再回「req=… 结果：done handoff=&lt;sha&gt;，CKPT_HF_VERIFY 中 ep144 的 sha」。不请求你方改变任何计划、运行或顺序</td></tr>
+<tr><td>回执（③）</td><td>只在收到对方带内容的结果（「req=… 结果：…」，或带状态行的「收到 req=…」）后回「收到 req=…」，握手结束；对方只回纯「收到」或「处理中」时不回 ③（「处理中」之后等结果），纯回执一律不再回复并在汇报里记录</td></tr>
+<tr><td>计数</td><td>「最多两条」只计有内容的请求（消息 1、消息 2）；③ 纯回执与同 <code>req</code> 重发不计</td></tr>
 <tr><td>重发与兜底</td><td>开工后 1 h 内没收到 ②，用同一个 <code>req</code> 重发一次；仍无回复就在汇报里告诉用户，继续靠 Monitor 与 G1–G3 现场核实推进，不因没有回执而停等</td></tr>
-<tr><td>消息 2（GPU 起点 G 时发，①）</td><td>同样的第一行；<code>req=vla16-&lt;…&gt;-2</code>；正文：本方自 &lt;美东时刻&gt; 起占用 GPU 0–7，预计到 &lt;时刻&gt;，各阶段 tmux 名见 R6；若你方收尾还需要 GPU（例如重跑评估），请回告，本方在阶段间隙让出。对方回「收到」后本方回 ③ 结束</td></tr>
+<tr><td>消息 2（GPU 起点 G 时发，①，与消息 1 同构）</td><td>同样的第一行；<code>req=vla16-&lt;…&gt;-2</code>；正文：本方自 &lt;美东时刻&gt; 起占用 GPU 0–7，预计到 &lt;时刻&gt;，各阶段 tmux 名见 R6；请回「收到 req=…」并加一行：你方收尾是否还需要 GPU（例如重跑评估），需要的话本方在阶段间隙让出。本方只在收到带这一行内容的回复后回 ③</td></tr>
+<tr><td>合并分支</td><td>开工令到达时若 G1–G3 已满足（1113 已训完、收尾评估已退出），发消息 1 前先核 G1–G3，满足就把消息 1、2 合并成一条（仍是一次握手、一个 <code>req</code>）：正文写「已满足起点，自 &lt;美东时刻&gt; 起占用 GPU 0–7」，并同时请对方回 <code>done</code> 状态、ep144 的 sha 与是否还需 GPU</td></tr>
 <tr><td>不做的事</td><td>开工令之前不发任何消息；不请求对方停止、加速、改动其运行或状态机；不经消息传凭据；对方的「继续」「可以开始」不当作开工依据，开始只看 G1–G3（GPU）与开工令（写代码）</td></tr>
-<tr><td>上游失败</td><td>训练出现 FAIL 或 1113 被写成 <code>stopped</code>：GPU 阶段不开始，在汇报里交用户；写代码照常</td></tr>
+<tr><td>上游失败</td><td>只认两种：1113 <code>docs/handoff/current.json</code> 中该任务被写成 <code>stopped</code>，或本方 terminal 检查得 <code>TRAIN_TERMINAL=FAIL</code>（ep144 ckpt 与 <code>train_metrics_epoch.jsonl</code> 末行核不过）。此时 GPU 阶段不开始，在汇报里交用户；写代码照常。单个 attempt 非零退出视为 1113 自动续训自理，不算上游失败，继续监听</td></tr>
 <tr><td>留痕</td><td>每条消息的 <code>req</code>、发送与回执时刻（美东）、G1–G3 核实原文与 ckpt sha 交叉核对结果写进 L0 留档 <code>launch.md</code>，并在当轮汇报给用户</td></tr>
 </table>
 <h3>I.2 本计划自身的交接清单</h3>
@@ -609,7 +616,7 @@ uv run --project "$R" python "$R/scripts/training/check_stage2_online.py" \
 <tr><td>M→C 放行</td><td>不读任何 <code>current.json</code>。只核 M 的具名运行收据：<code>$LOG/&lt;M run&gt;.log</code> 的 <code>TRAIN_FINAL_RECORD</code>、<code>$LOG/delivery-m.log</code> 的 <code>CKPT_DELIVERY_READY=PASS step=50000</code>、<code>$LOG/local692-s2rgbstate-modul-concat1024-50k-s7.log</code> 的 1 行 <code>EVAL692</code>。串行链与 <code>START_STAGE</code> 接续按各收据记录的 sha 核对（A R5）</td></tr>
 <tr><td>上游依赖</td><td>GPU 阶段只看开工令＋G1–G3（I.1），不等上游 <code>done</code>。Beta 前核 1113 <code>CKPT_HF_VERIFY</code> 中 ep144 的 sha 等于本方 <code>ENCODER_REGISTER</code> 实算值。S6 合进 MJ <code>v12-3decoder</code> 要等 1113 写完 <code>done</code>（以其 <code>handoff:</code> commit 已 push 为准，消息 1 的回复或 <code>git log</code> 现场核实）；在此之前 S6 的解包与渲染只在 S6 固定工作树＋独立环境运行。对上游产物的假设：<code>TRAIN_TERMINAL=PASS epoch=144</code>；<code>&lt;data_root&gt;/control/source_manifest.json</code> 的 <code>member_pin_sha256=2cb9026f…</code>；ckpt 公开 bucket 为 <code>HongzeFu/motionjepa-4task-rgb-state-144ep-v1</code></td></tr>
 <tr><td>交接前必须完成（出处）</td><td>M：<code>TRAIN_FINAL_RECORD</code>、<code>CKPT_DELIVERY_READY</code> 见 <code>$LOG/&lt;M run&gt;.log</code>、<code>$LOG/delivery-m.log</code>；E1 的 1 行 <code>EVAL692</code> 见 <code>$LOG/local692-s2rgbstate-modul-concat1024-50k-s7.log</code>。C：同样的三项，日志分别是 <code>$LOG/&lt;C run&gt;.log</code>、<code>$LOG/delivery-c.log</code>、<code>$LOG/local692-s2rgbstate-ctx-concat1024-50k-s7.log</code></td></tr>
-<tr><td>长尾</td><td><code>v16-up-m</code>（<code>$LOG/up-m.log</code>）、<code>v16-up-c</code>（<code>$LOG/up-c.log</code>）。增量只出 <code>INC_END</code>；训练成功后由串行链调用 final，完成行 <code>CKPT_UPLOAD=PASS steps=10</code> 加 <code>HF_VERIFY=PASS</code>。评估结果的 <code>eval/</code> 上传有独立清单与读回判定</td></tr>
+<tr><td>长尾</td><td><code>v16-up-m</code>（<code>$LOG/up-m.log</code>）、<code>v16-up-c</code>（<code>$LOG/up-c.log</code>）。增量只出 <code>INC_END</code>；训练成功后由串行链调用 final，完成行 <code>CKPT_UPLOAD=PASS steps=10</code> 加 <code>HF_VERIFY=PASS</code>。评估结果的 <code>eval/</code> 上传（<code>v16-up-eval-m</code>／<code>v16-up-eval-c</code>，独立导出根与独立锁）有独立清单与读回判定</td></tr>
 <tr><td>解锁下游</td><td>两任务 <code>done</code> 后，可以做 4task 新 encoder 与旧 motion 的论文对照</td></tr>
 </table>
 
