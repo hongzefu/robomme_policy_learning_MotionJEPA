@@ -649,6 +649,16 @@ _CONFIGS = [
     ),
 ]
 
+# 1114 4task RGB+state 下游 VLA（计划 B 表 T07）：以 mme_vla_suite_b128_80k 为底，只改 name 与 num_train_steps。
+# NUM_TRAIN_STEPS=50001：state_step 到 50001，最后一次 loop_step＝checkpoint_step＝50000；
+# CKPT_STEPS=5000,10000,…,50000 共 10 份（见 checkpoint_steps）。decay_steps 保留 80_000：peak_lr == decay_lr，
+# warmup 后学习率恒为 5e-5，与改成 50_001 逐步等价，保留即零改动。
+_CONFIGS.append(dataclasses.replace(
+    next(config for config in _CONFIGS if config.name == "mme_vla_suite_b128_80k"),
+    name="mme_vla_suite_4task_b128_50k",
+    num_train_steps=50_001,
+))
+
 if len({config.name for config in _CONFIGS}) != len(_CONFIGS):
     raise ValueError("Config names must be unique.")
 _CONFIGS_DICT = {config.name: config for config in _CONFIGS}
@@ -656,6 +666,14 @@ _CONFIGS_DICT = {config.name: config for config in _CONFIGS}
 
 def cli() -> TrainConfig:
     return tyro.extras.overridable_config_cli({k: (k, v) for k, v in _CONFIGS_DICT.items()})
+
+
+def checkpoint_steps(config: TrainConfig, start_step: int = 0) -> tuple[int, ...]:
+    """按 scripts/training/train.py 训练循环的保存条件列出会落盘的 checkpoint 步（只读推导，不改训练行为）：
+    loop step ∈ [start_step, num_train_steps)，(step % save_interval == 0 且 step > start_step) 或 step == num_train_steps - 1。"""
+    last = config.num_train_steps - 1
+    return tuple(step for step in range(start_step, config.num_train_steps)
+                 if (step % config.save_interval == 0 and step > start_step) or step == last)
 
 
 def get_config(config_name: str) -> TrainConfig:

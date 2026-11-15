@@ -184,6 +184,12 @@ def verify_snapshot(root, delivery=None):
             raise ValueError(f"{role} 的 checkpoint 或 G0 身份不符")
         if role == "SOURCE_PIN" and record != provenance["source_pin"]:
             raise ValueError("SOURCE_PIN 证据与来源记录不一致")
+    verify_encoder_dependencies(root, provenance, delivery)
+    return provenance
+
+
+def verify_encoder_dependencies(root, provenance, delivery=None):
+    """encoder 依赖清单须绑定完整来源组；delivery 下每个依赖实体按 sha 与字节核对且须列入发布清单。"""
     dependencies = read_json(inside(root, "encoder_dependencies.json"))
     if dependencies.get("schema") != "stage2-encoder-dependencies-v1":
         raise ValueError("encoder 依赖 schema 不符")
@@ -204,7 +210,7 @@ def verify_snapshot(root, delivery=None):
     for role, field in (("encoder_checkpoint", "checkpoint_sha256"), ("encoder_config", "config_sha256")):
         if roles.get(role, {}).get("sha256") != provenance["encoder"][field]:
             raise ValueError(f"缺少同源依赖实体: {role}")
-    return provenance
+    return dependencies
 
 
 def flatten(tree, prefix=()):
@@ -507,6 +513,11 @@ def restore_and_check(args, report):
         report["delivery"] = {"manifest_sha256": sha256_file(args.expected_manifest),
                               "files": len(manifest["files"]), "sha256_mismatch": 0}
     provenance = verify_snapshot(root, manifest)
+    return restore_runtime(args, report, root, checkpoint, step, provenance)
+
+
+def restore_runtime(args, report, root, checkpoint, step, provenance):
+    """交付清单与根快照核对通过后的真实恢复段（GPU）：严格恢复参数树、在线推理与 sidecar 设备核对。"""
     online_record, online_arrays = load_online_inputs(root)
     report["runtime_dependencies"] = runtime_dependencies(online_record, provenance)
     reference = None
@@ -553,7 +564,7 @@ def restore_and_check(args, report):
     if 0 not in inventory or 1 not in inventory:
         raise ValueError("缺物理 GPU0/1")
     label = (root / "history_config.txt").read_text().strip()
-    config_name = "mme_vla_suite_orig16_b128_60k" if label.endswith("-orig16.yaml") else "mme_vla_suite_b128_80k"
+    config_name = config_name_for_label(label)
     train_config = config.get_config(config_name)
     # 交付恢复只读checkpoint携带的norm，不依赖原机器训练库或构建占位符。
     train_config = dataclasses.replace(train_config, data=dataclasses.replace(train_config.data,
@@ -627,15 +638,29 @@ def restore_and_check(args, report):
             policy._motion_client.close()
     report["root_complete"] = 1
     # delivery 不填 reference_output_max_abs / ema_mismatch，避免伪造保存前对拍。
-    if args.mode == "smoke":
+    return pass_line(args.mode, step)
+
+
+def pass_line(mode, step):
+    if mode == "smoke":
         return ("SAVE_LOAD=PASS missing=0 extra=0 shape_mismatch=0 dtype_mismatch=0 "
                 "ema_mismatch=0 reference_output_max_abs=0 online_infer=1")
     return (f"{delivery_label(step)}=PASS step={step} root_complete=1 "
             "sha256_mismatch=0 strict_restore=1 online_infer=1")
 
 
+def config_name_for_label(label):
+    """按 run 根 history_config.txt 的配置文件名选 TrainConfig；未列出的后缀沿用 mme_vla_suite_b128_80k。"""
+    if label.endswith("-orig16.yaml"):
+        return "mme_vla_suite_orig16_b128_60k"
+    if label.endswith("-4task-rgbstate.yaml"):
+        return "mme_vla_suite_4task_b128_50k"
+    return "mme_vla_suite_b128_80k"
+
+
 def delivery_label(step):
-    return "CKPT_DELIVERY_READY" if step == 59999 else f"CKPT_{step // 1000}K_READY"
+    # 59999（orig16 60k）与 50000（4task 50k）都是该 run 的最终交付步，判定行名统一为 CKPT_DELIVERY_READY。
+    return "CKPT_DELIVERY_READY" if step in (59999, 50000) else f"CKPT_{step // 1000}K_READY"
 
 
 def parse_args(argv=None):
@@ -644,7 +669,7 @@ def parse_args(argv=None):
     parser.add_argument("--checkpoint", required=True, type=Path)
     parser.add_argument("--reference", type=Path)
     parser.add_argument("--expected-manifest", type=Path)
-    parser.add_argument("--delivery-step", type=int, choices=(59999, 60000, 70000),
+    parser.add_argument("--delivery-step", type=int, choices=(50000, 59999, 60000, 70000),
                         help="交付验收步数，默认 60000；smoke 不接受此参数")
     parser.add_argument("--online-gpu", required=True, type=int)
     parser.add_argument("--out", required=True, type=Path)
