@@ -1,0 +1,890 @@
+{
+  "confirmed": [
+    {
+      "dim": "Astra 闭环 A01–A11",
+      "id": "F1",
+      "title": "A05 未真正闭合：评估到底用 stage/50000 还是训练 run 的 50000，正文互相矛盾",
+      "severity": "major",
+      "plan_section": "B 表 run_4task_concat_modul_eval_ctx_eval_50k.sh（计划行226）、E 节 runbook 步骤5、D 表 CKPT_DELIVERY_READY、dry-run 示例",
+      "claim": "审计 A05 的最小修正是「最终 checkpoint→本地 stage/manifest→对 stage/50000 恢复→评估」。本版 B 表第226行写「评估用的 ckpt 是严格恢复通过的 stage/50000，原始 run 目录只作 stage 的来源」。但 E 节 runbook 第5步写「评估 E1/E2：ckpt 用 $TRAINROOT/<run>/50000」，评估池 dry-run 示例也传 $TRAINROOT/$RM/50000。stage 删除条件只含 HF_VERIFY 与 CKPT_DELIVERY_READY，没有「评估完成」，所以若评估读 stage/50000，stage 可能在评估前被删。",
+      "evidence": "计划文本 B 表第226行（评估用 stage/50000）与 runbook「5. 评估 E1/E2：ckpt 用 \"$TRAINROOT/<run>/50000\"」及 dry-run「local_692_pool.sh \"$TRAINROOT/$RM/50000\" 7」直接冲突；F5、H 节、D「stage 删除」行均只列 HF_VERIFY＋CKPT_DELIVERY_READY。另 check_checkpoint.py 的 RUNS 表按 run 名登记，两种路径的校验口径不同。",
+      "proposed_fix": "二选一并全文统一：(a) 评估读严格恢复通过的 stage/50000，则 runbook、dry-run、check_checkpoint RUNS 映射、delivery 日志都改指 stage 路径，并把「E1/E2 完成」加入 stage 删除条件；(b) 评估读 TRAINROOT 原目录，则删除第226行，并写明 stage/50000 只用于交付恢复校验，同时说明为什么二者字节相同即可。",
+      "verdict": {
+        "real": true,
+        "severity": "minor",
+        "needs_user_decision": false,
+        "reasoning": "[内部产出] 矛盾属实：计划第 293 行写评估用 stage/50000，而第 516 行（dry-run）和第 534 行（runbook 第 5 步）都用 $TRAINROOT/<run>/50000。但严重度不到 major。stage 删除条件（第 210、413、540、556、585 行）确实没有「评估完成」。可是 runbook 里 stage 删除排在评估之后，是最后一步，评估前被删只是推测，没有证据。实际缺陷是同一份计划内部文字不一致。finding 中「check_checkpoint.py 的 RUNS 表校验口径不同」在计划正文里没找到证据，不采信。这是计划内部的文字冲突，不涉及训练语义或规则字面冲突，不需要用户裁决。我只读了 345c0c9 的计划，没有核对 S5 导出器实现。",
+        "corrected_fix": "采纳 (b)，只改第 293 行：评估读 $TRAINROOT/<run>/50000，stage/50000 只用于交付恢复校验，二者来自同一次导出、由 manifest sha 保证字节一致。runbook、dry-run、RUNS 映射和 stage 删除条件都不用改。不要采纳 (a)，它会叠加保护层。若坚持评估读 stage，唯一必需的改动是在 stage 删除条件里加上「评估完成」。"
+      }
+    },
+    {
+      "dim": "Astra 闭环 A01–A11",
+      "id": "F2",
+      "title": "A06 闭合不完整：只补了 verify_sources.py 与 render_probe.py，run_shard.sh 仍调用 v4 的 examples/robomme/eval.py，其余移植脚本仍导入未改名的 env_runner/demo_prefix",
+      "severity": "major",
+      "plan_section": "B 表 S4a/S4b/S4c（计划行231–240）、C 表 S4 验收",
+      "claim": "计划 S4b 把 692 客户端「另存为独立入口 examples/robomme/eval_692.py 及其配套，不覆盖 v4 官方客户端」。但 S4a 要从 c0826be 原样移植 run_shard.sh，其第219行无条件调用 examples/robomme/eval.py；S4c 只改 --motion_online_gpu、--stage2_python、check_local_gpu，没有写把 run_shard.sh 改为调用 eval_692.py。pregen_binfill_demo.py（第203、248行）与 smoke_demo_inject.py（第60、61、119行）都 sys.path 指向 examples/robomme 后 import demo_prefix、env_runner.SpecEnvRunner，这些只在 v15 版存在。计划只处理了 render_probe.py 的 env_runner 导入。",
+      "evidence": "git show c0826be:scripts/evaluation/run_shard.sh 第219行 `examples/robomme/eval.py`；git show 345c0c9 的 examples/robomme/ 只有 env_runner.py、eval.py、readme.md、requirements.txt、simple_test.py、utils.py，没有 demo_prefix.py，也没有 SpecEnvRunner；c0826be 的 pregen_binfill_demo.py:248、smoke_demo_inject.py:61 `from env_runner import SpecEnvRunner`。",
+      "proposed_fix": "在 S4 里明确：run_shard.sh 的客户端入口改为 eval_692.py；给 692 配套文件定死名字（如 env_runner_692.py、demo_prefix.py、utils_692.py），并列出 run_shard.sh、render_probe.py、pregen_binfill_demo.py、smoke_demo_inject.py 的导入与调用替换；CPU 验收加一条「从干净移植树 dry-run 到 client 入口解析」。",
+      "verdict": {
+        "real": true,
+        "severity": "minor",
+        "needs_user_decision": false,
+        "reasoning": "[内部产出] 事实基本成立。c0826be 的 run_shard.sh:219 无条件调用 examples/robomme/eval.py；345c0c9 计划 S4c（计划行308）只写了 --motion_online_gpu、--stage2_python、check_local_gpu，没写把客户端入口换成 eval_692.py。计划行307 说 692 客户端另存为 eval_692.py「及其配套」，但配套文件的名字和落点没定。行302 只处理了 render_probe.py 对 env_runner 的导入。pregen_binfill_demo.py:42/203 用 sys.path 指向 examples/robomme 后导入 demo_prefix，计划也没说 demo_prefix.py 落在哪里。smoke_demo_inject.py 的导入没有核到具体行号，沿用 finding 的说法。严重度应降为 minor。理由：(1) 这是计划措辞漏项，不是设计缺陷，方向（692 客户端独立、不覆盖 v4）已定；(2) 实现者开工写 S4 时，只要对照 run_shard.sh:219 就会发现，且不改就跑不了 692 评估，不会悄悄出错；(3) 不涉及训练语义，也不与规则字面冲突，不需要用户裁决。finding 里的 CPU 验收新增「干净移植树 dry-run」属于叠加保护层，不采纳。计划行349 已有 eval_692.py 解析导入检查，足够覆盖入口落点。",
+        "corrected_fix": "在 S4c（计划行308）补一句：run_shard.sh 第219行的客户端入口由 examples/robomme/eval.py 改为 examples/robomme/eval_692.py。在 S4b（行307）把配套文件落点定死：env_runner、utils 以不冲突的名字（如 env_runner_692.py、utils_692.py）与 eval_692.py 同目录，demo_prefix.py 落在 examples/robomme/（v4 没有此文件，不冲突）。随带说明 render_probe.py、pregen_binfill_demo.py、smoke_demo_inject.py 的导入改成这几个名字。不新增 dry-run 验收，行349 的 eval_692.py 导入检查已够用。"
+      }
+    },
+    {
+      "dim": "Astra 闭环 A12–A22 与附加项",
+      "id": "C01",
+      "title": "评估用 ckpt 路径自相矛盾：stage/50000 与原始 run 目录，且 stage 路径过不了 check_checkpoint",
+      "severity": "major",
+      "plan_section": "B 表串行链行（评估用 ckpt 是 stage/50000）对 E 节 runbook 第 5 步及评估池 dry-run 示例（用 $TRAINROOT/<run>/50000）",
+      "claim": "A05 闭合时 B 表写“评估用的 ckpt 是严格恢复通过的 stage/50000，原始 run 目录只作 stage 的来源”。E 节 runbook 第 5 步却写“评估 E1/E2：ckpt 用 $TRAINROOT/<run>/50000”，评估池 dry-run 示例也传 \"$TRAINROOT/$RM/50000\"。两处互斥。照 B 表用 stage 路径会被 check_checkpoint.py 拒绝。",
+      "evidence": "c0826be:scripts/evaluation/check_checkpoint.py 第 213 行 `run = RUNS.get(checkpoint.parent.name)`，第 214 行未登记即 assert 失败。stage 路径形如 v1-store/exports/hf-ckpt-<run>/stage/50000，其 parent.name 是 \"stage\"，不在计划登记的 run 名里。计划 B 表对 RUNS 的描述只有“登记两条正式 run、两条 -attempt02、两条 v16-smoke-*”，没有为 stage 路径放行。",
+      "proposed_fix": "二选一并全文统一。(a) 评估固定用 $TRAINROOT/<run>/50000，strict 恢复仅作交付闸门，删掉 B 表那句“评估用 stage/50000”。(b) 评估用 stage/50000，同时在 S4 check_checkpoint.py 行里明确按 stage 路径反查 run 名（例如读 manifest），并给出正例负例验收。无论选哪个，都要让 E1/E2 的 EVAL692 日志记录实际 ckpt 路径与 sha。",
+      "verdict": {
+        "real": true,
+        "severity": "minor",
+        "needs_user_decision": false,
+        "reasoning": "[内部产出] 矛盾属实。B 表约第 293 行写评估用 stage/50000，runbook 第 5 步约第 534 行和评估池 dry-run 约第 516 行都用 $TRAINROOT/<run>/50000。c0826be 的 check_checkpoint.py 第 213–214 行按 checkpoint.parent.name 查 RUNS，stage 路径 parent 名是 \"stage\"，会被拒。计划第 303 行也没有为 stage 放行。但这只是文档内部不一致，不是训练语义缺陷。runbook 和 dry-run 这两处可执行细节都指向原始 run 目录，实现时 dry-run 会暴露，所以降为 minor。它也不涉及规则字面冲突，无需用户裁决。",
+        "corrected_fix": "取 (a)：评估固定用 $TRAINROOT/<run>/50000，check_checkpoint.py 不改。只把 B 表那句改成\"stage/50000 只作交付闸门（严格恢复），评估仍用原始 run 目录 50000\"。不要采用 (b)，它要新增按 manifest 反查 run 名的逻辑，属于叠加改动。提议里\"EVAL692 日志记录 ckpt 路径与 sha\"不属于本条修法。"
+      }
+    },
+    {
+      "dim": "Astra 闭环 A12–A22 与附加项",
+      "id": "C02",
+      "title": "改 50_001 步后 TRAIN_FINAL_RECORD 尾窗为空、校验空转，且合同脚本 --steps 只认 20/60000",
+      "severity": "major",
+      "plan_section": "A17 闭合：B 表 config.py 行、run_orig16_stage2_60k.sh 行、check_4task_stage2_launch.py 行，D 表 TRAIN_FINAL_RECORD",
+      "claim": "计划把更新次数固定为 num_train_steps=50_001，并要求 TRAIN_FINAL_RECORD 成为训练收据。但现有 final-record 机制在 50001 步下尾窗必为空，NaN 有限性校验变成空转。串行链的 final_record_ok 与合同脚本也把 --steps 限死在 20/60000。计划只说“以 check_orig16 为模板逐项改”，没有列出这些改动，也没有声明 state_step=50001、loop_step=checkpoint_step=50000 的预期。",
+      "evidence": "train.py 第 703–711 行：step%log_interval==0 时 `infos = []`。最后一步 loop_step=50000，50000%100==0，所以在保存前 infos 已清空。第 724–725 行随后调用 final_record.finish(..., infos, 50000)，final_record.py::finish 因此得到 tail=[]、tail_means 全为 None。check_orig16_stage2_launch.py::check_final_record 的 first=(steps-1)//100*100+1=50001，期望 range(50001,50001)=[]，空尾窗通过，随后“尾段含非有限值”循环一次都不执行。同文件 main 的 `--steps ... choices=(20, 60000)`，run_orig16_concat_ctx_then_modul_60k.sh::final_record_ok 硬编码 `--steps 60000`。",
+      "proposed_fix": "在 S1/S3 行写明：check_final_record 与 final_record_ok 的 steps 白名单加入 50001 并由链传入。状态与步号期望是 state_step=50001、loop_step=checkpoint_step=50000。尾窗在 50001 步下为空，必须改为强制取最后一个 log 窗，或在 finish 前保留 step 50000 的 info，否则放弃“尾窗有限”口径并说明由 DIAG 日志 grep 兜底。验收加：50001 步合成记录能过，尾窗缺失或含 NaN 能拒。",
+      "verdict": {
+        "real": true,
+        "severity": "minor",
+        "needs_user_decision": false,
+        "reasoning": "[内部产出] 机制事实核实成立，但严重度应降为 minor。(1) scripts/training/train.py 在 step%log_interval==0 时执行 infos=[]，位置在保存之前。50_001 步的末个 loop_step 是 50000，50000%100==0，所以调用 final_record.finish 时 infos 为空，final.json 的 tail=[]、tail_means 全为 None。60000 步时末步 59999，尾窗有 99 行。(2) check_orig16_stage2_launch.py::check_final_record 在 steps=50001 时 first=50001，期望 range(50001,50001)=[]，空尾窗按字面通过，逐行有限性循环空转。身份字段 state_step=steps=50001、loop_step=checkpoint_step=steps-1=50000 与模板算式一致，步号期望本身不需要改。(3) 模板里 --steps choices=(20,60000)、check_config 的 steps in (20,60000) 与 base.num_train_steps==60000、ARGV_STEPS 判 steps==60000、串行脚本 final_record_ok 硬编码 --steps 60000，都属实。但计划 S1 行已写“以 check_orig16_stage2_launch.py 为模板逐项改”，S3 行写“STEPS 由环境变量传入”，4task 脚本是新脚本，这些是尚未实现的拟新增功能，不算缺陷，finding 把它当缺口不成立。(4) 真正的缺口只有一点：50_001 下尾窗为空，计划把 TRAIN_FINAL_RECORD 当训练收据，但其中“尾段标量有限”一项失去意义，计划也没说明。不过 ema_leaves 的 finite 校验仍有效，权重出现 NaN 会被拒，风险有限。(5) 50_001 是用户已定口径，不涉及训练语义或规则字面冲突，无需用户裁决。finding 提议的改 train.py 保留 step 50000 的 info 属叠加改动，不是最小修法。",
+        "corrected_fix": "只改计划文字，不改 train.py。在 S1 行和 D 表 TRAIN_FINAL_RECORD 行各补一句：(a) 50_001 步下 loop_step=checkpoint_step=50000、state_step=50001，尾窗为空是预期，tail 有限性项空转，由 ema_leaves 全部 finite 加训练日志 DIAG 行兜底。(b) 4task 合同脚本的 --steps 白名单、CFG_STEPS 中 base.num_train_steps 比较值和 ARGV_STEPS 判据改为 20 和 50001。(c) 串行脚本 final_record_ok 的 --steps 改为随链传入 50001。验收：50001 步合成 final.json（tail 为空、EMA 有限）通过，EMA 含 NaN 被拒。是否改 train.py 保留 step 50000 的 info 为可选项。"
+      }
+    },
+    {
+      "dim": "Astra 闭环 A12–A22 与附加项",
+      "id": "C03",
+      "title": "“124/137 一律按基础设施退出”没有对应的代码改动行，现有分类器会把它判成 expected 或 retry",
+      "severity": "major",
+      "plan_section": "D 表 EVAL692（错误分类）、F7、G 盲区；B 表 S4a local_692_pool.sh 行",
+      "claim": "A“补充验收注意点”要求完整 progress 含预标 error 但进程以 124/137 退出时，不得被 error 掩盖。计划在 D、F7、G 里声明了这一处置，但 B 表 S4a 对 local_692_pool.sh 只写了第 65 行 POLICY_CONFIG 一处改动，S4c 只写进程归属修复。分类逻辑本体没有被列为改动，S4 验收也没有对应用例。",
+      "evidence": "c0826be:scripts/evaluation/local_692_pool.sh::cmd_scan（约 140–150 行）：`if not complete or (rc != 0 and not errors): verdict=\"infra\"`，`elif new: \"retry\"`，`else: \"expected\" if rc != 0 else \"ok\"`。rc 为 124/137、进度完整且含 error 时，得到的是 retry 或 expected，不是 infra。git grep c0826be -- scripts/evaluation 里，124|137 只出现在这一个文件的 infra 判定语句附近，没有按退出码判定的分支。",
+      "proposed_fix": "把 cmd_scan 的 rc∈{124,137}→infra 加入 S4a 或 S4c 的改动清单。S4 CPU 层验收增加单测：rc=124 与 137 且 progress 完整含预标 error，必须输出 verdict=infra 并使 EVAL692=FAIL。",
+      "verdict": {
+        "real": true,
+        "severity": "major",
+        "needs_user_decision": false,
+        "reasoning": "[内部产出] 成立。c0826be:scripts/evaluation/local_692_pool.sh cmd_scan 第 145-159 行：`if not complete or (rc != 0 and not errors): infra; elif new: retry; else: \"expected\" if rc != 0 else \"ok\"`。rc 只用于「rc!=0 且无任何 error」这一支，没有按 124/137 判定的分支。所以进度完整且含 error 时，rc=124/137 会被判成 retry（有新 error）或 expected（只含预标 error），不是 infra。计划 D 表 EVAL692（行410）、F7（行559）、G（行576）都声明「124/137 一律按基础设施退出」，但 B 表 S4a 对 local_692_pool.sh 只写第 65 行 POLICY_CONFIG 一处改动（行300），S4c（行308）只写进程归属修复，S4 CPU 层验收（行346-353）也没有 rc=124/137 的用例。三处声明都落不到代码改动。严重度 major 合理：漏判会让被 timeout/OOM 杀掉的分片混进合并结果，EVAL692 假 PASS。该项属计划缺口，不涉及训练语义或规则字面冲突，不需用户裁决。修法最小：一行判据，不叠加保护层。",
+        "corrected_fix": "在 S4a 的 local_692_pool.sh 条目里加一条：cmd_scan 的 infra 判定改为 `if not complete or rc in (124, 137) or (rc != 0 and not errors): verdict=\"infra\"`，放在 retry/expected 分支之前，此时 verdict=infra 会触发现有第 399 行的 EVAL692=FAIL 停机。S4 CPU 层验收增加一条单测：rc=124 与 137、progress 完整且含预标 error（以及含新 error）时，都必须输出 verdict=infra，且不写 retry1-plan.json。无需新增别的机制。"
+      }
+    },
+    {
+      "dim": "跨节一致性",
+      "id": "X01",
+      "title": "评估所用 ckpt 路径前后矛盾：stage/50000 与 run 目录 50000",
+      "severity": "major",
+      "plan_section": "B 表 S3 run_4task_concat… 行 vs E runbook 正式链第 5 步、正式 dry-run 示例、H 节 stage 删除",
+      "claim": "B 表规定评估用严格恢复通过的 stage/50000，run 目录下的 50000 只是 stage 来源。E 节却让评估直接用 run 目录的 50000。H 节与 R8 又规定 HF_VERIFY 与交付检查通过后即删 stage，所以评估用 stage 与「评估前后各自可删」互相冲突。",
+      "evidence": "B 表 S3：「评估用的 ckpt 是严格恢复通过的 stage/50000（原始 run 目录 v1-store/train-runs/mme_vla_suite_4task_b128_50k/<run>/50000 只作 stage 的来源）」。E 节第 5 步：「评估 E1/E2：ckpt 用 \"$TRAINROOT/<run>/50000\"，seed 7 → EVAL692」。E 节 dry-run 示例：`local_692_pool.sh \"$TRAINROOT/$RM/50000\" 7`。D 表 stage 删除：「CKPT_DELIVERY_READY=PASS step=50000 与 HF_VERIFY=PASS 后同时满足即删」，没有写「E1/E2 之后」。",
+      "proposed_fix": "统一口径：要么评估一律用 stage/50000，E 节和 dry-run 示例改成 stage 路径，并写明 stage 删除要等对应 EVAL692 完成之后；要么评估用 run 目录 50000，B 表那句话删掉。D 表与 H 节的 stage 删除条件同步加上这一项。",
+      "verdict": {
+        "real": true,
+        "severity": "major",
+        "needs_user_decision": false,
+        "reasoning": "原文核实属实。B 表 S3 写评估用严格恢复通过的 stage/50000，run 目录 50000 只作 stage 来源。E 节第 5 步和正式 dry-run 示例却用 \"$TRAINROOT/<run>/50000\"。D 表 stage 删除行（原文第 413 行）、H 节（第 585 行）和 E 节注释（第 540 行）的删除条件只有 HF_VERIFY=PASS 加 CKPT_DELIVERY_READY=PASS step=50000，没有「评估完成之后」。final 上传在后台长尾跑，两个条件可能先于 EVAL692 满足，所以评估若改用 stage 就可能遇到 stage 被删。run 目录的 50000 没有经过 manifest 和 encoder 依赖实体的校验，计划里也没有证据证明它能被评估直接使用。属于计划自身前后不一致，不涉及训练语义或规则字面冲突，不需要用户裁决。",
+        "corrected_fix": "以 B 表为准，评估一律用严格恢复通过的 stage/50000。1) 把 E 节第 5 步和正式 dry-run 示例里的 \"$TRAINROOT/<run>/50000\" 改成 \"$R/v1-store/exports/hf-ckpt-<run>/stage/50000\"。2) 在 D 表 stage 删除行、H 节和 E 节注释三处，给 stage 删除条件各补一条：该 run 对应的 EVAL692 已出 1 行。不要采用「删掉 B 表那句、评估用 run 目录」的方案，因为计划里没有证据证明 run 目录的 50000 自带 encoder 依赖实体，这样会让评估的 ckpt 与交付检查验过的 ckpt 脱钩。"
+      }
+    },
+    {
+      "dim": "跨节一致性",
+      "id": "X02",
+      "title": "「最多两条消息」与 I.1 握手协议的实际消息数不符",
+      "severity": "major",
+      "plan_section": "§1.5、K13 vs I.1",
+      "claim": "§1.5 与 K13 说与 1113 会话的消息「最多两条」。I.1 的协议是消息 1、消息 2，加上对「处理中」和最终「结果」各回的 ③「收到」，再加 1 h 无回复时的同 req 重发。照 I.1 执行，本方至少发 4 条，最多 5 条，超出用户口径。",
+      "evidence": "§1.5：「与 1113 会话的消息只在用户开工后发，最多两条」。I.1 回执行：「收到对方『结果』后回『收到 req=…』」。I.1 消息 2 行：「对方回『收到』后本方回 ③ 结束」。I.1 重发行：「开工后 1 h 内没收到 ②，用同一个 req 重发一次」。",
+      "proposed_fix": "在 §1.5 与 I.1 里写明「最多两条」只计有内容的请求（消息 1、消息 2），③ 纯回执与同 req 重发不计。或者把消息 2 合并进消息 1，并取消重发。必须与用户原话口径对齐，并在 K13 注明。",
+      "verdict": {
+        "real": true,
+        "severity": "minor",
+        "needs_user_decision": false,
+        "reasoning": "原文证据核实：§1.5（第75行）写「最多两条」但未说明计数口径；I.1（第597–600行）有消息1、消息2、各自的③回执、以及一次同req重发，字面最多5条，finding 的计数没错。但③在全局握手规则里是纯回执，重发是幂等兜底、没有新内容，用户口径「最多两条」更自然的读法是两次有内容的请求。缺陷只是计数口径没写明，文字有歧义，不涉及训练语义，不会推进或停止对方任务，也不是规则字面冲突，所以应降为 minor，不是 major。finding 的第二条备选修法（把消息2合并进消息1、取消重发）不可取：消息2的发送时点是GPU起点，晚于消息1，不能合并；取消重发会违反握手的幂等重发要求。K13 不用再改。",
+        "corrected_fix": "只在 §1.5 和 I.1 各加半句：「『最多两条』只计有内容的请求（消息1、消息2）；③纯回执与同req重发不计」。不合并消息、不取消重发，K13 不必改。汇报时顺带向用户说明这一计数口径；用户若坚持字面最多两条，再改成不回③。"
+      }
+    },
+    {
+      "dim": "runbook 命令与真实 CLI",
+      "id": "E-01",
+      "title": "pack 读取的验证证据文件名与 runbook 写出的不一致（g0/g2/g3.json 对 G2.json/G3.json/windows.json）",
+      "severity": "blocker",
+      "plan_section": "E 节 L0a：check_stage2_validation_inputs / validate_stage2 --out 与 pack --stage2-validation \"$LOG/validation\"",
+      "claim": "runbook 把 G0/G2/G3 产物写成小写 $LOG/validation/g0.json、g2.json、g3.json，再把 $LOG/validation 目录交给 pack。pack 实际按大写文件名在该目录里找证据，Linux 文件系统区分大小写，所以会找不到。B 表没有任何一行承诺改这些文件名。",
+      "evidence": "345c0c9:scripts/dataset/pack_motion_store.py 第 517 行 `samples_path = validation_root / \"windows.json\"`；第 576–578 行 `for gate in (\"G2\",\"G3\"): path = validation_root / f\"{gate}.json\"`（另有 G2-waiver.json）；第 759–762 行 cached 分支 `g0 = validation_root / \"G0.json\"`，不存在则退到 `windows.json`。runbook 第 471–476 行 `--out \"$LOG/validation/g0.json\"`、`g2.json`、`g3.json`。对计划全文搜 `windows.json|G0.json|G2.json` 无命中。",
+      "proposed_fix": "E 节把 --out 改成 $LOG/validation/G0.json（或 windows.json）、G2.json、G3.json，同时把 check_stage2_online 的 --samples 指到同一个 G0 文件。或者在 B 表 pack 行明确写出 local-built 分支读取的证据文件名，并让 pack 与 validation 脚本使用同一份常量。",
+      "verdict": {
+        "real": true,
+        "severity": "major",
+        "needs_user_decision": false,
+        "reasoning": "[内部产出] 证据成立：runbook 第 471–477、507 行把 G0/G2/G3 写成小写 g0.json、g2.json、g3.json，第 495 行把 $LOG/validation 目录交给 pack。345c0c9:scripts/dataset/pack_motion_store.py 第 517 行读 windows.json，第 576–577 行读 {G2,G3}.json（G2 可用 G2-waiver.json），第 759–762 行 cached 分支读 G0.json、不存在时退到 windows.json，并读 G2.json、G3.json。Linux 区分大小写，文件名对不上，pack 会找不到证据而失败。B 表没有任何一行承诺改文件名，计划全文也搜不到 G0.json 或 windows.json 的正向写法。另有补充发现：local-built 分支很可能走 _stage2_validation 的 else 分支（第 770 行），读的是 windows.json 而不是 G0.json。降为 major 的理由：pack 会明确报错、不会静默放行，也不会浪费 GPU 或损坏数据，发生在 L0a 数据准备阶段，第 473 行本就写了参数以 S2 实现后 --help 为准，只是一处命名错配。它不涉及训练语义，也没有规则字面冲突，不需要用户裁决。",
+        "corrected_fix": "runbook 把 --out 改成 $LOG/validation/windows.json（G0）、$LOG/validation/G2.json、$LOG/validation/G3.json，并把第 475、477、507 行的 --samples 同步指向 windows.json；或者在 S2 写码时让 _stage2_validation 同样接受 G0.json（与 cached 分支一致），这样 G0 可命名为 G0.json。不新增保护层，不引入共享常量。"
+      }
+    },
+    {
+      "dim": "runbook 命令与真实 CLI",
+      "id": "E-02",
+      "title": "check_stage2_online 命令没设 CUDA_VISIBLE_DEVICES，现有代码会直接拒绝",
+      "severity": "major",
+      "plan_section": "E 节 L0b：check_stage2_online.py ... --online-gpu 0",
+      "claim": "现有 run() 要求环境变量 CUDA_VISIBLE_DEVICES 等于 --online-gpu（online-gpu 为 1 时才额外允许 \"0\"）。runbook 传 --online-gpu 0，却没有给这条命令设 CUDA_VISIBLE_DEVICES，所以会报 ValueError。B 表也没提到改这条规则。",
+      "evidence": "345c0c9:scripts/training/check_stage2_online.py 第 282–285 行 `allowed_parent = {str(args.online_gpu)} | ({\"0\"} if str(args.online_gpu)==\"1\" else set()); if os.environ.get(\"CUDA_VISIBLE_DEVICES\") not in allowed_parent: raise ValueError(\"G4须使用父0/sidecar1或旧的显式同卡拓扑\")`。runbook 第 506–508 行没有 CUDA_VISIBLE_DEVICES 前缀。对比 check_stage2_checkpoint（第 493 行要求 CUDA_VISIBLE_DEVICES=0 且 --online-gpu 1），那条 runbook 命令是对的。",
+      "proposed_fix": "二选一。一是命令前加 `CUDA_VISIBLE_DEVICES=0`，保留 --online-gpu 0（旧的同卡拓扑）。二是改成与 delivery 检查一致的 CUDA_VISIBLE_DEVICES=0 加 --online-gpu 1（两卡拓扑）。同时在 B 表 check_stage2_online 行写明选哪种。",
+      "verdict": {
+        "real": true,
+        "severity": "minor",
+        "needs_user_decision": false,
+        "reasoning": "[内部产出] 证据属实：345c0c9:scripts/training/check_stage2_online.py 第282-285行要求 CUDA_VISIBLE_DEVICES 属于 {str(online_gpu)}（online_gpu==1 时再加\"0\"），否则抛 ValueError；计划HTML第506-508行 L0b 命令带 --online-gpu 0 却无该前缀，且计划中 CUDA_VISIBLE_DEVICES 仅出现在第308、481、498、529行，没有对 L0b 会话 export。因此按现有代码会被拒。但该命令本身是带省略号的草稿，第509行注明参数以 S2 实现后 --help 为准，B表第272行又说明 S2 会改这个脚本；漏一个前缀在首次试跑即暴露，不涉及训练语义，故严重度应为 minor 而非 major。proposed_fix 的二选一不是最小：改成 --online-gpu 1 会引入新卡占用要求。无需用户裁决，也不与规则字面冲突。",
+        "corrected_fix": "只给 L0b 这条命令加前缀 `env -u PYTHONPATH CUDA_VISIBLE_DEVICES=0`，保留 `--online-gpu 0`，与计划第481、498行写法一致（online_gpu=0 时允许集合为 {\"0\"}，恰好通过）。不改代码，也不在 B 表另加说明，更不改成 --online-gpu 1 的两卡拓扑。"
+      }
+    },
+    {
+      "dim": "runbook 命令与真实 CLI",
+      "id": "E-03",
+      "title": "check_stage2_online 的 --out 是文件路径，runbook 传了目录",
+      "severity": "major",
+      "plan_section": "E 节 L0b：--out \"$LOG/online\"",
+      "claim": "check_stage2_online 的 --out 会被当作单个 JSON 文件（先 revoke_report，再 atomic_json 写入）。runbook 写成 \"$LOG/online\" 这种目录式路径，运行结果要么写成一个无扩展名的文件，要么与后面的目录用法冲突。B 表没有把 --out 改成目录。",
+      "evidence": "345c0c9:scripts/training/check_stage2_online.py 第 384–396 行 `V.revoke_report(args.out, gate=\"G4\")`、`V.atomic_json(args.out, record)`。runbook 第 508 行 `--out \"$LOG/online\"`。对照其余命令都用 *.json（g0.json、delivery-<m|c>.json）。",
+      "proposed_fix": "改成 --out \"$LOG/online/g4.json\"（先 mkdir -p），后续引用 G4 证据时用同一路径。",
+      "verdict": {
+        "real": true,
+        "severity": "minor",
+        "needs_user_decision": false,
+        "reasoning": "[内部产出] 事实成立：check_stage2_online.py 的 --out 是单文件路径（第 387 行 V.revoke_report(args.out)、第 390 行 V.atomic_json(args.out, record)），其父目录还被用作临时目录（第 329、361 行 Path(args.out).parent）。计划第 508 行写 --out \"$LOG/online\"，与其余命令的 *.json 写法不一致。但严重度夸大：传 \"$LOG/online\" 并不会使命令失败，只会在 $LOG 下生成一个无扩展名的 JSON 文件 online，父目录 $LOG 里会留下 .g4-reference-* 临时目录（用完即清）。计划里没有任何地方再引用该路径或去 glob g4.json，所以不存在与目录用法冲突的实证（只有 $LOG/validation、$LOG/delivery-*.json，没有 $LOG/online/ 目录）。该条属命令笔误，不涉及训练语义，也不涉及规则字面冲突，不需要用户裁决。该行本身已写明细节以 S2 实现后 --help 为准。最小修法是把这一处改成带 .json 的文件名。",
+        "corrected_fix": "只改计划第 508 行：把 --out \"$LOG/online\" 改成 --out \"$LOG/g4-online.json\"。parent 目录 $LOG 已存在，不需要 mkdir，也不需要新增任何保护层。"
+      }
+    },
+    {
+      "dim": "50k 训练、交付与上传链",
+      "id": "T01",
+      "title": "评估所用 ckpt 路径前后矛盾（stage/50000 还是训练 run 目录/50000），并牵连 stage 删除时机",
+      "severity": "major",
+      "plan_section": "B 节 S3 串行链行（第226行）对 E 节 runbook（约第421、437行）；R8 与 D 表『stage 删除』",
+      "claim": "B 节说评估用严格恢复通过的 stage/50000，原始 run 目录只作 stage 的来源。E 节 runbook 的评估命令和步骤 5 却写 $TRAINROOT/<run>/50000，也就是原始训练目录。两处必须统一。若评估读 stage，删除条件（HF_VERIFY=PASS 加 delivery PASS）没有包含『评估已结束』，长尾上传先完成时 stage 可能在 E1/E2 运行中被删。若评估读训练目录，则 delivery 严格恢复验过的对象不是被评估的对象，delivery 闸门与评估脱钩。",
+      "evidence": "计划文本：『评估用的 ckpt 是严格恢复通过的 stage/50000（原始 run 目录 …/<run>/50000 只作 stage 的来源）』；runbook：『5. 评估 E1/E2：ckpt 用 \"$TRAINROOT/<run>/50000\"』『local_692_pool.sh \"$TRAINROOT/$RM/50000\" 7』；删除条件只写『HF_VERIFY=PASS 与 CKPT_DELIVERY_READY=PASS step=50000』。",
+      "proposed_fix": "二选一并写死。推荐评估读 stage/50000，因为它是被 delivery 验过的对象。此时把 stage 删除条件加上『对应 EVAL692 已出且 eval 上传读回完成』，并改 runbook 的两处路径。若评估读训练目录，则 B 节该句改成『delivery 验的是 stage 副本，评估读原目录，两者靠 manifest sha 同一性对应』，并在评估前比对两者 sha。",
+      "verdict": {
+        "real": true,
+        "severity": "major",
+        "needs_user_decision": false,
+        "reasoning": "[内部产出] 核实成立。计划第293行（B节 S3 链）写明评估用严格恢复通过的 stage/50000，原始 run 目录只作 stage 来源。但 E 节 runbook 第516行（dry-run 注释）和第534行（步骤5）写评估 ckpt 用 \"$TRAINROOT/<run>/50000\"，两处矛盾。步骤4的 delivery 检查对象是 \"$R/v1-store/exports/hf-ckpt-<run>/stage/50000\"，所以若评估读训练目录，delivery 验证的对象不是被评估对象。stage 删除条件（第210、314、413、540、556、585行）只有 HF_VERIFY=PASS 加 CKPT_DELIVERY_READY=PASS，没有写「评估已结束」。final 上传是后台长尾、不阻塞下一阶段，所以长尾先完成时 stage 可能在 E1/E2 运行中被删，竞争风险是真实的。严重度 major 合适（不是 blocker：属文字不一致，实现前改文即可，不涉训练语义）。不属需用户裁决项，也不是规则字面冲突，是内部不一致，选哪边由计划作者定。修法需最小化：只统一路径，并给删除条件加一个已有收据即可，不新增保护层。注意原 finding 里「并要求 eval 上传读回完成」偏重，因为 eval 上传和 stage 无依赖，只需评估已结束。",
+        "corrected_fix": "采纳「评估读 stage/50000」。改两处：第516行 dry-run 注释的路径与第534行步骤5的路径，都改为 \"$R/v1-store/exports/hf-ckpt-<run>/stage/50000\"（第293行不动）。stage 删除条件（第210、314、413、540、556、585行）在原两条件后加一条「对应 EVAL692 已出」（即 E1/E2 日志 1 行 EVAL692，这是现有收据），不必要求 eval 上传读回完成，因为评估只读 stage 的 ckpt，与 eval/ 上传无关。不新增检查或守卫。"
+      }
+    },
+    {
+      "dim": "50k 训练、交付与上传链",
+      "id": "T02",
+      "title": "final 模式是 stage 生成加上传的单体流程，计划要求的『同步生成 stage、后台上传』缺少对应的拆分模式",
+      "severity": "major",
+      "plan_section": "S3 串行链（第223行）、S5 导出器（第241–243行）、E 节步骤 2–4",
+      "claim": "S3 要求串行链『同步调用 S5 final 的 stage 步骤，非零即停；再起长尾 tmux 做 final 上传读回；然后 delivery』。345c0c9 的 _stage2_orig16_vla_ckpt_export_common.sh 只有 trainset、incremental、final 三种模式。final 在同一进程内持 upload.lock，依次做 strict_final、freeze、manifest、transfer 和 verify_all，没有 stage-only 入口。S5 也只写『final 先生成本地 stage 与 manifest，再上传』，没有新增模式。同步调用会让 GPU 空等约 130 GB 的上传加匿名回读，后台调用则没有『同步 stage 步骤』。E 节又把 final 写成『不阻塞下一阶段』并排在 delivery（步骤 4）之前，三处次序描述不一致。",
+      "evidence": "export common 第 486–487、527–541、645–646 行：mode 只允许 trainset/incremental/final，final 里 stage 与 publisher.transfer、verify_all 在同一次调用中，整体在 SingleInstanceLock 内（第 664 行）。计划 S3 与 E 节原文见上。",
+      "proposed_fix": "S5 明确 stage 的产生方式。方案 A：增量模式已经把 step-50000 的 stage 和 manifests/step-50000.json 落盘，delivery 直接读它，final 只负责补 _run-meta、delivery_manifest 并上传读回，同时删掉 S3『同步 stage 步骤』的说法。方案 B：新增 O16_MODE=stage（只 freeze、写 manifest，不持上传锁、不联网），链里同步调用它，再后台起 final 上传。无论哪种，都要把 E 节步骤 2–4 的先后与 S3 对齐。",
+      "verdict": {
+        "real": true,
+        "severity": "minor",
+        "needs_user_decision": false,
+        "reasoning": "[内部产出] 部分成立，严重度降为 minor。属实：orig16 导出脚本 O16_MODE 只允许 trainset/incremental/final（约第 640 行），final 在同一个 SingleInstanceLock 内依次完成 strict_final、freeze、manifest、transfer、verify_all，没有只生成 stage 的入口。计划 S3 第 290 行要求链里「同步调用 S5 final 的 stage 步骤」再后台上传，S5 第 312、370 行只写「final 先生成 stage 与 manifest 再上传」，没有任何地方定义这个 stage 步骤，是文字缺口。第 527 行又说「是否后台起、链末如何收齐由 S3 实现」。夸大或失实：(1)「GPU 空等约 130GB 上传加回读」不符原文，S3 同步的只有本地 stage 生成，上传已在后台 tmux v16-up-m/v16-up-c（第 612 行）；(2)「三处次序不一致」说重了，第 411 行「不阻塞下一阶段」指上传，与 S3 的 stage、起上传、delivery、评估顺序兼容。(3) 该入口属计划里「拟新增」的 S5 实现（第 309 行以 orig16 为模板改写），345c0c9 里 4task 导出文件尚不存在，实现者自然会拆出 stage 步骤，不会导致起跑失败，不应判 major。方案 A 需要额外论证（_run-meta 与 delivery_manifest 只有 final 才生成），未核实。E 节步骤 2–4 完整原文未读。不属于训练语义问题或规则字面冲突。",
+        "corrected_fix": "在 S5 补一句：新增 O16_MODE=stage，只做 strict_final、freeze_sources、写 manifests/step-50000.json 与 delivery_manifest，不持上传锁、不联网；S3 串行链同步调用 stage、再后台起 final 复用同一份 stage 做上传读回，最后做 delivery 严格恢复。这就是原方案 B，不叠加其他保护层。"
+      }
+    },
+    {
+      "dim": "692 评估移植",
+      "id": "S4-01",
+      "title": "[内部产出] 分片 server 起不来：v4 websocket_policy_server 顶层 import scripts.evaluation，而移植的 run_shard.sh 用脚本路径启动",
+      "severity": "blocker",
+      "plan_section": "S4a/S4c（run_shard.sh 移植）",
+      "claim": "c0826be 的 run_shard.sh 用 `python scripts/training/serve_policy.py` 启 server，env.sh 不设 PYTHONPATH。v4 基线（345c0c9）的 src/mme_vla_suite/serving/websocket_policy_server.py 第 14 行在模块顶层 `from scripts.evaluation.runtime_contract import RpcSession`。脚本路径启动时 sys.path[0] 只有 scripts/training，仓库根不在 sys.path，所以 import 报 ModuleNotFoundError。32 片全部在 server 起跑阶段退出，没有一局能评。计划 S4c 只写了加 --motion_online_gpu／--stage2_python，没提这个启动方式要改。",
+      "evidence": "1) `git show 345c0c9:src/mme_vla_suite/serving/websocket_policy_server.py` 第 14 行为 `from scripts.evaluation.runtime_contract import RpcSession`（c0826be 版本里该行不存在）。2) `git show c0826be:scripts/evaluation/run_shard.sh` 第 182 行是 `\"${SERVER_UV[@]}\" scripts/training/serve_policy.py --seed=... policy:checkpoint ...`。3) 实测：`cd /tmp && v1-store/envs/policy-eval-server/bin/python -I -c \"import importlib.util; print(importlib.util.find_spec('scripts'))\"` 输出 None，sys.path 只有 site-packages、src、packages/openpi-client/src；该环境的 _editable_impl_openpi.pth 只指向 src。4) v4 自己的启动器 345c0c9:scripts/evaluation/resident_worker.py 第 22 行用 `python -m scripts.training.serve_policy`，并在第 49-54 行把仓库根放进 PYTHONPATH，正是为了绕开这个问题。5) 当前 shell 的 PYTHONPATH 为空。",
+      "proposed_fix": "在 S4c 里写明：run_shard.sh 启 server 改成 `-m scripts.training.serve_policy`（脚本已 cd \"$EVAL_REPO\"，cwd 即在 sys.path），或在该命令前显式 export PYTHONPATH=\"$EVAL_REPO:$EVAL_REPO/src\"。S4 的 CPU 层验收加一条：用 server 环境解释器、按与 run_shard.sh 完全相同的命令起 `serve_policy --help`，必须成功。smoke_demo_inject.py 也要同样处理，它是 `import mme_vla_suite` 的脚本，且 verify 路径会 import policy。",
+      "verdict": {
+        "real": true,
+        "severity": "major",
+        "needs_user_decision": false,
+        "reasoning": "[内部产出] 事实成立。345c0c9 的 websocket_policy_server.py 第 14 行在模块顶层 `from scripts.evaluation.runtime_contract import RpcSession`，c0826be 版本没有这行。c0826be 的 run_shard.sh 用 `uv run ... python scripts/training/serve_policy.py` 启动 server，env.sh 和 run_shard.sh 都没设 PYTHONPATH。实测 policy-eval-server 环境的 sys.path 只有 site-packages、src 和 packages/openpi-client/src。脚本路径启动时 sys.path[0] 是 scripts/training，仓库根不在，而 scripts/ 没有 __init__.py，必然 ModuleNotFoundError。v4 自己的 resident_worker.py 用 `-m scripts.training.serve_policy` 并设 PYTHONPATH，正是为了绕开这个问题。计划 S4c（第 308 行）只提了加 --motion_online_gpu 和 --stage2_python，没有提启动方式要改。严重度降为 major：失败是确定的，但第一次起 server 就暴露，不产生坏数据，修法只改一行，也不涉及训练语义或规则冲突。finding 里关于 smoke_demo_inject.py 的说法我没有核实，不采纳。",
+        "corrected_fix": "在 S4c 里写明：run_shard.sh 的 server 启动改成 `python -m scripts.training.serve_policy`（脚本已 cd \"$EVAL_REPO\"，cwd 会进 sys.path），或在命令前 export PYTHONPATH=\"$EVAL_REPO:$EVAL_REPO/src\"。S4 的 CPU 层验收加一条：用 server 环境解释器、按与 run_shard.sh 完全相同的方式执行 `serve_policy --help`，必须成功。不叠加其他保护层。"
+      }
+    },
+    {
+      "dim": "692 评估移植",
+      "id": "S4-02",
+      "title": "评估 ckpt 路径前后矛盾（stage/50000 对 TRAINROOT/<run>/50000），而 check_checkpoint 按 checkpoint.parent.name 查 RUNS",
+      "severity": "major",
+      "plan_section": "S3 串行链说明（约 L293）、S4a check_checkpoint、第三部分 runbook（约 L515/L534）",
+      "claim": "计划约 L293 与 L290 说评估用严格恢复通过的 `<hf-ckpt-run>/stage/50000`，原 run 目录只作 stage 来源。runbook 的 dry-run（约 L515）和步骤 5（约 L534）又写 `\"$TRAINROOT/<run>/50000\"`。两条路径下 check_checkpoint.py 都有问题。stage 路径下 `RUNS.get(checkpoint.parent.name)` 得到的键是 `stage`，没有登记，直接 AssertionError。TRAINROOT 路径下键能对上，但 stage2 证据按相对路径解析（根为 checkpoint.parent），而 encoder_dependencies.json 等根文件是 stage 导出才生成的，所以 sidecar 的 validate_stage2_evidence 可能找不到。计划没有说明 RUNS 如何从 stage 路径取 run 名，也没有消除这个矛盾。",
+      "evidence": "c0826be:scripts/evaluation/check_checkpoint.py 第 213-214 行：`run = RUNS.get(checkpoint.parent.name); assert run is not None, '未登记的 run 根目录 ...'`，第 216 行 `_load_resolved_snapshot(checkpoint.parent)`。run_shard.sh 第 167 行对 \"$CKPT\" 原样调用它。345c0c9:scripts/dataset/hf_export/_stage2_orig16_vla_ckpt_export_common.sh 第 484 行 `stage = root / \"stage\"`，root 文件（history_config.resolved.yaml、motion_provenance.json、encoder_dependencies.json）进 stage 根。345c0c9:src/mme_vla_suite/policies/motion_client.py 第 66-80 行 `_evidence_path` 相对路径以 provenance_root（policy_config.py 里是 checkpoint_dir.parent）为根。计划里短测 step19 的 v16-smoke-* 只在 TRAINROOT 下存在，与正式 run 的 stage 口径并存。",
+      "proposed_fix": "计划里统一一个评估 ckpt 口径，并在 S4a 写明 check_checkpoint 的取键规则。推荐：评估 ckpt 为 `<stage>/50000`，RUNS 的键取 checkpoint.parent.parent.name 去掉 `hf-ckpt-` 前缀；smoke 的 TRAINROOT 路径另给兼容分支（parent.name 直接命中）。把 runbook L515/L534 与 L293 改成同一路径。S4 CPU 验收加一条用真实 stage 目录形状（`.../hf-ckpt-<run>/stage/50000`）做 RUNS 命中的正例。",
+      "verdict": {
+        "real": true,
+        "severity": "major",
+        "needs_user_decision": false,
+        "reasoning": "[内部产出] 经核实，该 finding 成立。\n\n1. 计划内部矛盾。L293 写评估用严格恢复通过的 stage/50000，原 run 目录只作 stage 来源。L530 的 delivery 检查也用 hf-ckpt-<run>/stage/50000。但 runbook L515（评估池 dry-run）和 L534（步骤 5）写的是 \"$TRAINROOT/<run>/50000\"。\n2. 取键规则不支持 stage 路径。c0826be 的 check_checkpoint.py 第 213-214 行是 RUNS.get(checkpoint.parent.name)，未登记即断言失败。stage 路径下 parent.name 恒为 stage，所以按 L293 评估会在启动时被拒。run_shard.sh 第 167 行对 \"$CKPT\" 原样调用它。计划 L303 和 L350 只说 RUNS 登记各 run，没写 stage 路径下如何取 run 名。\n3. 应保留 stage 口径。encoder 依赖实体只在 stage 导出时生成，原 run 目录下没有。评估对象也需要和 delivery 检查及上传的对象一致。\n4. 这是文字矛盾加漏写取键规则，不是训练语义变化，也不是规则字面冲突，不需要用户裁决。\n5. 缺的证据：没看到 smoke 评估冒烟实际用哪个路径。这不影响结论。",
+        "corrected_fix": "1. 把 runbook L515 和 L534 的评估 ckpt 统一成 v1-store/exports/hf-ckpt-<run>/stage/50000，与 L293、L530 一致。\n2. 在 S4a 的 check_checkpoint.py 条目里写明取键规则：parent.name == 'stage' 时取 parent.parent.name 并去掉 hf-ckpt- 前缀，其余情况沿用 parent.name。这样 smoke 的 TRAINROOT 路径不用另做兼容分支。\n3. 在 S4 CPU 验收（L350）加一条用真实 stage 目录形状做 RUNS 命中的正例，不另设保护层。"
+      }
+    },
+    {
+      "dim": "692 评估移植",
+      "id": "S4-03",
+      "title": "eval_692.py「另存」未说明配套模块改名，且没写 run_shard.sh 改调 eval_692.py；与 v4 的 utils／env_runner 同名冲突",
+      "severity": "major",
+      "plan_section": "S4b 692 客户端、S4a render_probe.py",
+      "claim": "v15 的 eval.py 用平铺导入 `from utils import (...)`、`from env_runner import EnvRunner, SpecEnvRunner`、`from demo_prefix import DemoPrefixStore`，靠脚本目录 examples/robomme 解析。v4 基线在同一目录已有内容不同的 utils.py、env_runner.py，没有 SpecEnvRunner。计划写「另存为 eval_692.py 及其配套」，但没规定配套文件改什么名，也没说改 import。若同名则覆盖 v4 文件（违背「不覆盖」；check_stage2_checkpoint.py 还会加载原 examples/robomme/utils.py）；若不改名则 eval_692.py 导入到 v4 的模块，报 ImportError 缺 SpecEnvRunner。另外 run_shard.sh 第 219 行写死调用 examples/robomme/eval.py，S4c 只列了 --motion_online_gpu 的改动，没写改成 eval_692.py。照原样跑会去执行 v4 官方 eval.py，它的 Args 没有 episode_plan、shard_tag、demo_prefix_store 等字段，tyro 直接报错。",
+      "evidence": "c0826be:examples/robomme/eval.py 第 14-22 行：`from utils import ...` 与 `from env_runner import EnvRunner, SpecEnvRunner`。345c0c9:examples/robomme/env_runner.py 只有 EnvRunner 类，无 SpecEnvRunner（c0826be 版本有 BaseEnvRunner／EnvRunner／SpecEnvRunner，约 227 行差异）。345c0c9:examples/robomme/eval.py 第 12-18 行用 try 相对导入再回退 `from utils import`，且 Args 无 episode_plan。c0826be:scripts/evaluation/run_shard.sh 第 219 行 `examples/robomme/eval.py`。c0826be:scripts/evaluation/render_probe.py 第 9-10 行 `sys.path.insert(0, 'examples/robomme'); from env_runner import EnvRunner`。345c0c9:scripts/training/check_stage2_checkpoint.py 第 435 行按路径加载原 examples/robomme/utils.py。c0826be:scripts/evaluation/smoke_demo_inject.py 第 45 行同样 sys.path.insert 后 import demo_prefix。",
+      "proposed_fix": "S4b 逐个写明文件名：eval_692.py、env_runner_692.py、utils_692.py、demo_prefix.py（v4 没有同名文件，可原名），并列出要改的 import 行。run_shard.sh 第 219 行改成调 eval_692.py。render_probe.py 与 smoke_demo_inject.py 的 import 改指 env_runner_692／utils_692。CPU 验收加：从 examples/robomme 为 sys.path[0] 运行 `eval_692.py --help` 成功，且 v4 的 eval.py／utils.py／env_runner.py 经 git diff 为空。",
+      "verdict": {
+        "real": true,
+        "severity": "minor",
+        "needs_user_decision": false,
+        "reasoning": "[内部产出] 核实结论：该 finding 基本成立，但严重度偏高，应为 minor。\n成立的部分：\n1) 计划 S4b 只写「v15 的 eval.py、env_runner.py、utils.py、demo_prefix.py 另存为独立入口 examples/robomme/eval_692.py 及其配套，不覆盖 v4 官方客户端」，没有给出配套文件的新名字，也没有说要改哪些 import。\n2) c0826be 的 eval.py 第 14-22 行用 `from utils import` 和 `from env_runner import EnvRunner, SpecEnvRunner`，第 407 行用 `from demo_prefix import`。这是平铺导入，靠 examples/robomme 目录解析。\n3) 345c0c9 的 examples/robomme 目录已有内容不同的 utils.py、env_runner.py。c0826be 版 utils.py 的 blob 是 16f0043，345c0c9 版是 bac2383，两者不同。c0826be 版 env_runner.py 是 86fc6e7，345c0c9 版是 6e4f504，两者也不同。只有 c0826be 版 env_runner.py 带 SpecEnvRunner。\n4) 345c0c9 的 check_stage2_checkpoint.py 第 435 行按路径加载原 examples/robomme/utils.py，所以原名 utils.py 不能被覆盖，配套文件必须改名。\n5) 计划里的 S4a 说 render_probe.py「改为导入 692 独立客户端的配套 env_runner」，这默认配套文件已有独立名字，但 S4b 没有定义这个名字。计划全文 grep 不到「run_shard」与「eval_692」同处出现的地方。c0826be 的 run_shard.sh 第 219 行写死调用 examples/robomme/eval.py，计划 S4c 只列了 --motion_online_gpu 和 check_local_gpu 的改动，漏了入口改调 eval_692.py。smoke_demo_inject.py 的 import 同样需要改指，计划没提。\n3) 和 5) 合起来看，实施者会被迫自己定名、自己改 import，这是文字缺口，不是代码缺陷。\n为什么降到 minor：\n- 「不覆盖 v4」已经是明文约束，实施者必然改名，不会静默覆盖。\n- 计划的 CPU 验收写了「eval_692.py 入口能解析参数并导入」，会抓到导入错误。\n- run_shard.sh 若仍调 eval.py，会在 L1 单卡评估冒烟时立即报错（tyro 不认识 episode_plan 等参数），发生在正式 50k 训练之前，是显性失败，不会产出错误结果。\n- 不涉及训练语义，也不涉及规则字面冲突，不需要用户裁决。\n最小修法：在 S4b 写明配套文件名（至少 env_runner_692.py、utils_692.py 以及两个文件内部对应的 import 改法；demo_prefix.py 在 v4 没有同名文件可原名），并在 S4c 加一句「run_shard.sh 第 219 行改调 eval_692.py，render_probe.py 与 smoke_demo_inject.py 的 import 改指新名」。proposed_fix 里额外要求的 git diff 为空检查是叠加保护层，可省，因为「不覆盖」本身已由命名保证。",
+        "corrected_fix": "降为 minor。S4b 补一句：配套文件改名为 env_runner_692.py、utils_692.py（demo_prefix.py 原名），eval_692.py 内部 import 同步改成这些名字。S4c 补一句：run_shard.sh 第 219 行 eval.py 改调 eval_692.py；render_probe.py 与 smoke_demo_inject.py 的 import 改指新名。不必另加 git diff 为空检查，现有「eval_692.py 能解析参数并导入」的 CPU 验收加上 L1 冒烟已足够。"
+      }
+    },
+    {
+      "dim": "692 评估移植",
+      "id": "S4-04",
+      "title": "S4 验收命令引用的测试文件不在 S4a 移植清单里，进程归属「单测」也没落点",
+      "severity": "major",
+      "plan_section": "第二部分 S4 验收（约 L352）与 S4a 移植清单（约 L298-305）",
+      "claim": "S4 验收命令是 `pytest tests/evaluation scripts/evaluation/test_control.py scripts/evaluation/test_result.py`，并要求「进程归属误判的单测通过」。test_control.py、test_result.py 只存在于 c0826be，v4 基线没有，S4a 的移植清单也没列它们，pytest 会报文件不存在而失败。原 check_local_gpu 的单测在 c0826be:scripts/training/tests/test_s3_eval_local.py（test_c4_check_local_gpu），该文件同样没列。此外 test_c4 里有拿 BASE 提交旧函数逐字对比的断言，改函数后需要重写。计划没写新单测放哪、怎么测。",
+      "evidence": "`git cat-file -e 345c0c9:scripts/evaluation/test_control.py` 与 test_result.py 均报 path does not exist。`git ls-tree -r --name-only c0826be` 含 scripts/evaluation/test_control.py、test_result.py、scripts/training/tests/test_s3_eval_local.py。S4a 清单（约 L298-305）没有这三个文件。test_s3_eval_local.py 第 376-377 行用 `git show {BASE}:scripts/evaluation/run_shard.sh` 抽旧 check_local_gpu 做对照。",
+      "proposed_fix": "S4a 清单补上 test_control.py、test_result.py、test_s3_eval_local.py，并写明 test_control.py 对 eval.py 的 ast 解析要改指 eval_692.py。check_local_gpu 的新单测写进 test_s3_eval_local.py，覆盖三个场景：PPid 读空、孤儿被收养到 PID 1、真外来进程仍被拒。验收命令的路径与这些文件对齐。",
+      "verdict": {
+        "real": true,
+        "severity": "major",
+        "needs_user_decision": false,
+        "reasoning": "[内部产出] 核实成立。(1) 计划 S4 验收命令（plain-text 约 L354）为 pytest \"$W/tests/evaluation\" \"$W/scripts/evaluation/test_control.py\" \"$W/scripts/evaluation/test_result.py\"，判定「全部 passed」；`git cat-file -e 345c0c9:scripts/evaluation/test_control.py` 与 test_result.py 均报 path does not exist，两者只在 c0826be 存在。(2) S4a「逐个列出移植」清单（L298-305）确实没有 test_control.py、test_result.py，也没有 scripts/training/tests/test_s3_eval_local.py（c0826be 存在、345c0c9 不存在）。所以验收命令按字面执行会因文件不存在而失败。(3) c0826be 的 test_control.py 第 14 行 SOURCE 指向 examples/robomme/eval.py 并用 ast 解析；计划让 eval.py 保持不覆盖、另存 eval_692.py，移植后该测试对象不对，须改指 eval_692.py（这一点 finding 说对了）。test_result.py 依赖 check_result，已在清单内。(4) test_s3_eval_local.py 的 test_c4_check_local_gpu 用 git show {BASE}:run_shard.sh 取旧函数做逐字对照，改函数后确需重写；计划 L351 写了「进程归属误判的单测通过」却没说落点。严重度：不会造成训练或评估数据错误，但会让 S4 验收闸门在 L0 就红，且「单测」无落点，属计划缺项，定 major 偏低端可接受（也可视为 minor-major 边界）。不涉及训练语义或规则字面冲突，无需用户裁决。修法方面 finding 建议基本最小，但有一处可更省：不必把整个 test_s3_eval_local.py（含其他 c0826be 专属用例）全搬，只需新增一个小测试。",
+        "corrected_fix": "S4a 移植清单补两项：scripts/evaluation/test_control.py（把 SOURCE 从 examples/robomme/eval.py 改为 examples/robomme/eval_692.py）与 scripts/evaluation/test_result.py（原样）。check_local_gpu 的新单测单列一条：新建一个小测试文件（或只摘 test_s3_eval_local.py 里 gpu_env、_extract_func 与 test_c4_check_local_gpu 三段），去掉对 BASE 旧函数的逐字对照，改为覆盖「PPid 读空不判外来」「孤儿被收养到 PID 1」「真外来进程仍被拒」三个场景；S4 验收命令里的路径与这些文件逐一对齐。不要叠加额外保护层。"
+      }
+    },
+    {
+      "dim": "开工时点、1113 交接与消息",
+      "id": "T01",
+      "title": "G1 要求训练日志出现 TRAIN_TERMINAL=PASS，但该行不会写进 train.log",
+      "severity": "major",
+      "plan_section": "§1.5 G1；I 节 Monitor A（行 485）",
+      "claim": "TRAIN_TERMINAL 由 1113 主会话在 P5（E.6-1）单独跑 stage2_rgbstate_check.py terminal 时打印，不是训练进程输出。Monitor A 只 tail train.log 并以 TRAIN_TERMINAL 为过滤词，永远等不到这一行。G1 在计划写的出处上不可核实。",
+      "evidence": "train.log 当前 grep -c TRAIN_TERMINAL 为 0；run.sh 只把 aws_4task_rgbstate_144ep_local8gpu.sh 的输出 tee 进 train.log，再追加 EXIT_CODE。TRAIN_TERMINAL 只在 /scratch/hongze/MotionJEPA/scripts/stage2_rgbstate_check.py:316 打印。1113 计划 E.6-1 只描述读 checkpoint_epoch_144.pt 与 train_metrics_epoch.jsonl 末行，没有写明输出落在哪份日志。",
+      "proposed_fix": "G1 改成可直接核实的收据：train.log 末行 EXIT_CODE=0，runs/<RUN>/checkpoint_epoch_144.pt 已 rename 完成（不是 .tmp），train_metrics_epoch.jsonl 末行 epoch=144。TRAIN_TERMINAL 只作 1113 会话 handoff 里的参考，不作 Monitor A 的触发条件。若坚持用 TRAIN_TERMINAL，须写明它出现在哪份日志、由谁在何时打印。",
+      "verdict": {
+        "real": true,
+        "severity": "minor",
+        "needs_user_decision": false,
+        "reasoning": "事实成立：train.log 中 TRAIN_TERMINAL 计数为 0；run.sh 只 tee 启动脚本输出并追加 EXIT_CODE，scripts/*.sh 无任何地方调用 stage2_rgbstate_check.py；该行只由 MotionJEPA scripts/stage2_rgbstate_check.py:316 的 terminal 子命令打印，1113 计划（第 720、561 行）把它放在 P5 收尾，未写明日志出处。因此计划第 71 行 G1「训练日志出现 TRAIN_TERMINAL」和第 596 行 Monitor A 的过滤词在 train.log 上不会触发。但严重度被高估：Monitor A 的过滤词同时含 EXIT_CODE=，训练结束不会漏报；G1 按计划是在 Monitor B（P5 评估日志）结束后才核对，那时 1113 主会话 P5 已打印 TRAIN_TERMINAL，可现场核实，不会死等或误起 GPU。属计划措辞和出处描述不准，不是流程性缺陷，也不涉及训练语义或规则字面冲突。",
+        "corrected_fix": "最小改法：G1 把出处从「训练日志」改成「1113 主会话 P5 打印的 TRAIN_TERMINAL=PASS … epoch=144（读其 handoff 或 P5 输出）」，或写明由本方只读运行 stage2_rgbstate_check.py terminal 并给出命令与路径；Monitor A 过滤词去掉 TRAIN_TERMINAL，只留 EXIT_CODE= 等。不新增 ckpt rename、jsonl 末行等叠加收据。"
+      }
+    },
+    {
+      "dim": "开工时点、1113 交接与消息",
+      "id": "T02",
+      "title": "Monitor 与上游失败判据只盯 attempt1，漏掉 1113 的自动续训",
+      "severity": "major",
+      "plan_section": "§1.5 末段；I 节 上游失败（行 485、491）",
+      "claim": "计划把 train.log 里的 FAIL 或非零 EXIT_CODE 当成上游失败，GPU 阶段不开始。但 1113 计划规定训练崩溃由 1113 主会话按 P4-resume 在新 attempt 目录续训，属工程故障自理。Monitor A 只跟 attempt1/train.log，续训后日志在 attempt2，G1 永远不满足。attempt1 的非零 EXIT_CODE 又可能被误判成失败而交用户。",
+      "evidence": "1113 计划 E.4 P4-resume：「取最近一个已 rename 的 checkpoint_epoch_<N>.pt，新 attempt 目录起 CMD=… RESUME_CKPT=…」。日志规则（§Z11.2）为 $LOG/train/attempt<N>/train.log。计划行 485 写死 train/attempt1/train.log。",
+      "proposed_fix": "监听目标改为 train/attempt*/ 下编号最大的 train.log，出现新 attempt 目录时重挂 Monitor，旧的先 TaskStop。上游失败只认两种情形：1113 handoff 明确写 stopped，或 1113 会话在合理时间内未续训、也没有给出原因。attempt 内的单次非零退出只记录、继续监听。G1 以 ep144 ckpt 与最大编号 attempt 的 EXIT_CODE=0 为准。",
+      "verdict": {
+        "real": true,
+        "severity": "major",
+        "needs_user_decision": false,
+        "reasoning": "[内部产出] 成立，严重度 major 合适。证据：(1) 1113 计划 /scratch/hongze/MotionJEPA/1113-4task-rgb-state-encoder-plan.md 第 496 行 P4-resume 规定训练非零退出或机器重启后，取最近 ckpt，在「新 attempt 目录」用 RESUME_CKPT 续训，属工程故障自理；第 378 行 G-TERMINAL 也写「崩溃按续训命令从最近 ckpt 续（工程故障自理）」；第 493 行日志为 $LOG/train/attempt<N>/train.log。(2) 本计划 I.1（HTML 去标签后第 596 行）Monitor A 写死 train/attempt1/train.log，过滤词含 EXIT_CODE=、Traceback、nan 等，并用 -F 跟固定文件名，续训后日志在 attempt2，Monitor A 不会再有事件；attempt1 崩溃时的 Traceback 或非零 EXIT_CODE 又会触发事件。(3) 第 602 行「上游失败：训练出现 FAIL 或 1113 被写成 stopped：GPU 阶段不开始，交用户」措辞里「训练出现 FAIL」未区分单个 attempt 的失败与最终失败，按字面 attempt1 崩溃后即会误判交用户，与用户已定的「工程故障自理」口径不符。注意：Monitor B 盯 p5eval/attempt1 影响小（p5eval 非续训对象），而且第 596 行里 B 的结束行本身就是 GPU_START 的触发点，续训后 B 仍能到达，所以实际失效点主要是 Monitor A 与失败判据。不属于训练语义或规则字面冲突，不需用户裁决。原 finding 的修法偏重：「合理时间内未续训也无原因」引入新的时间阈值与判断层，且要求重挂 Monitor 的流程偏复杂。",
+        "corrected_fix": "只改 I.1 两处文字，不加新机制。(a) Monitor A 不再写死 attempt1：改为 tail -n +1 -F 跟 train/attempt*/ 下编号最大的 train.log，出现更大编号的 attempt 目录时先 TaskStop 旧 Monitor 再挂新的（一份日志一个 Monitor）。过滤词中 EXIT_CODE=/Traceback/nan 在 attempt 内只当记录，不当上游失败。(b) 把「上游失败」改成只认：1113 handoff/current.json 写成 stopped，或 1113 最终判定 TRAIN_TERMINAL=FAIL（ep144 ckpt 与 train_metrics_epoch.jsonl 末行核不过）；单个 attempt 非零退出视为 1113 的 P4-resume 自理范围，继续监听。G1 沿用以 ep144 ckpt 与 TRAIN_TERMINAL=PASS 为准（与 B 的结束行并用），不另设「合理时间」阈值。"
+      }
+    },
+    {
+      "dim": "资源、格式与规则符合",
+      "id": "R01",
+      "title": "G1 要在 1113 训练日志里看到 TRAIN_TERMINAL=PASS，但该行不会写进 train.log",
+      "severity": "major",
+      "plan_section": "§1.5 GPU 阶段起点 G；§7 阶段 0；I.1 监听 Monitor A；R4",
+      "claim": "计划把 G1 写成「训练日志出现 TRAIN_TERMINAL=PASS … epoch=144」，Monitor A 也只盯 train.log 并过滤 TRAIN_TERMINAL。实际这一行由 1113 会话单独运行 stage2_rgbstate_check.py terminal 子命令时打到该命令自己的 stdout，训练日志不含它，Monitor A 收不到这个事件。G1 因此可能一直不满足，GPU 起点 G 被拖住。",
+      "evidence": "(1) /scratch/hongze/logs/4task-rgb-state-1113/train/attempt1/run.sh 末尾：训练命令只 tee 进 train.log，之后 echo \"EXIT_CODE=$?\" 追加进同一文件，没有调用 terminal 子命令。(2) /scratch/hongze/MotionJEPA/scripts/train-script-hongzefu/aws_4task_rgbstate_144ep_local8gpu.sh 只在第 105 行调用 stage2_rgbstate_check.py config-check，grep 不到 terminal。(3) MotionJEPA scripts/stage2_rgbstate_check.py 第 9 行与第 316 行：terminal 子命令读 checkpoint_epoch_144.pt 和 train_metrics_epoch.jsonl 末行后 print TRAIN_TERMINAL=PASS。(4) 1113 计划 E.6 第 1 条把它列为 P5 收尾步骤，没写重定向到哪份日志。(5) policy 计划 HTML 第 71 行（G1）与第 596 行（Monitor A）。",
+      "proposed_fix": "G1 改成可观测条件：train.log 出现 EXIT_CODE=0、checkpoint_epoch_144.pt 存在，并由本方只读运行一次 terminal 子命令（scripts/stage2_rgbstate_check.py terminal --run <encoder run 目录>）得到 TRAIN_TERMINAL=PASS。Monitor A 的过滤词保留 EXIT_CODE=，不再依赖 train.log 里的 TRAIN_TERMINAL。",
+      "verdict": {
+        "real": true,
+        "severity": "major",
+        "needs_user_decision": false,
+        "reasoning": "[内部产出] 核实成立。(1) run.sh 只把训练命令 tee 进 train.log，再追加 EXIT_CODE=，没有调用 terminal 子命令；当前 train.log 里 TRAIN_TERMINAL 计数为 0。(2) aws_4task_rgbstate_144ep_local8gpu.sh 里 grep 不到 terminal。(3) TRAIN_TERMINAL=PASS 只由 stage2_rgbstate_check.py terminal（第 9、316 行）打印，是 1113 会话收尾时单独运行的命令。1113 的 current.json 把它的 where 登记为 logs/4task-rgb-state-1113/train 目录，没有说明写进 train.log。(4) 计划第 71 行 G1 写「训练日志出现 TRAIN_TERMINAL=PASS」，第 596 行 Monitor A 盯 train.log 并过滤 TRAIN_TERMINAL，第 191 行 R4 同样依赖该行。因此 Monitor A 大概率收不到该事件，G1 存在被拖住的风险。反方向的限制：1113 会话可能把该命令输出另存到 train 目录下的某个文件，该文件现在不存在，没有证据说明它不会重定向进 train.log。所以风险是「无法保证」，不是「必然卡死」。严重度：Monitor A 的过滤词里已有 EXIT_CODE=，不会漏掉训练退出事件，只是 G1 判据措辞与观测源不一致，改一句话即可，定为 major 偏轻，不是 blocker。这不涉及训练语义，也不涉及规则字面冲突，不需用户裁决。",
+        "corrected_fix": "只改 G1 与 Monitor A 的判据，不加新保护层。G1 写成：train.log 出现 EXIT_CODE=0，checkpoint_epoch_144.pt 存在，并由本方只读运行一次 `stage2_rgbstate_check.py terminal`（对 encoder run 目录）得到 TRAIN_TERMINAL=PASS epoch=144。Monitor A 的过滤词保留 EXIT_CODE=，去掉对 train.log 里 TRAIN_TERMINAL 的依赖。第 191 行 R4 与第 596、597 行消息 1 中「训练出 TRAIN_TERMINAL=PASS」的说法同步改为这个口径。"
+      }
+    },
+    {
+      "dim": "资源、格式与规则符合",
+      "id": "R02",
+      "title": "I.1 的 Monitor A/B 过滤词少于 CLAUDE.md Monitor 第 9 条的最低集合",
+      "severity": "major",
+      "plan_section": "I.1 监听（Monitor A、Monitor B）；E 节末尾过滤词",
+      "claim": "CLAUDE.md Monitor 第 9 条要求过滤词至少含 拒绝|失败|FAIL|错误|找不到|EXIT_CODE=。E 节末尾的总过滤词满足，但 I.1 里实际盯 1113 日志的两个 Monitor 不满足。A 缺 FAIL、找不到；B 缺 拒绝、FAIL、找不到。该条正是因为漏掉「拒绝」空等约 30 分钟才立的。",
+      "evidence": "policy 计划 HTML 第 596 行：Monitor A 过滤词是 EXIT_CODE=|TRAIN_TERMINAL|Traceback|nan|NaN|拒绝|失败|错误；Monitor B 是 STAGE2_EVAL=|EXIT_CODE=|Traceback|失败|错误。1113 计划 E.6 第 2 条只定义了 STAGE2_EVAL=DONE，没有 =FAIL 形式。",
+      "proposed_fix": "两个 Monitor 的过滤词都补全到 拒绝|失败|FAIL|错误|找不到|EXIT_CODE=|Traceback，B 再加 STAGE2_EVAL=。同时写下预期首个事件时间，超过一半仍无事件就主动查日志尾（第 33 条 H）。",
+      "verdict": {
+        "real": true,
+        "severity": "minor",
+        "needs_user_decision": false,
+        "reasoning": "[内部产出] 事实成立：计划第596行 Monitor A 过滤词 EXIT_CODE=|TRAIN_TERMINAL|Traceback|nan|NaN|拒绝|失败|错误，缺 FAIL、找不到；Monitor B 为 STAGE2_EVAL=|EXIT_CODE=|Traceback|失败|错误，缺 拒绝、FAIL、找不到。CLAUDE.md Monitor 第9条写明「至少含 拒绝|失败|FAIL|错误|找不到|EXIT_CODE=」，字面不符。但属字面规则的小缺口，不是训练语义问题，且并非不可恢复：第542行（E节）已为每份日志的 Monitor 定义了完整过滤词，并明确「开工时再 grep 新脚本 echo／raise 文案补进过滤词」，实际执行时以该行为准，I.1 是与之不一致的精简写法。已核实 I.1 里没有「预期首个事件时间」表述（第9条要求超过一半无事件就查日志），该部分 finding 的补充成立但属次要。严重度应从 major 降为 minor：不会造成漏报，因为 EXIT_CODE= 兜底且 E 节已覆盖；仅需文字对齐。不需要用户裁决。",
+        "corrected_fix": "只改第596行一处：把 Monitor A、B 的过滤词改为引用 E 节第542行的完整过滤词（或补成 EXIT_CODE=|拒绝|失败|FAIL|错误|找不到|Traceback|nan|NaN|TRAIN_TERMINAL，B 用 STAGE2_EVAL=|EXIT_CODE=|拒绝|失败|FAIL|错误|找不到|Traceback），并加一句各 Monitor 的预期首个事件时间、超过一半仍无事件就查日志尾。不新增保护层。"
+      }
+    },
+    {
+      "dim": "资源、格式与规则符合",
+      "id": "R03",
+      "title": "R9 冻结期的开发副本并不存在，计划却写成「该副本有自己的 .venv」",
+      "severity": "major",
+      "plan_section": "A R9；H 留档与 commit 纪律；文首代码锚点",
+      "claim": "R9 规定 Beta push 后主检出冻结（HOLD），留档和修复写到 /scratch/hongze/robomme_policy_learning_MotionJEPA-temp 的分支 dev-v16-4trs-<日期>，并说「该副本有自己的 .venv」。该路径现在不在盘上。计划没有把创建这个副本（clone、建分支、uv sync 建 venv）列成步骤，也没有说由谁、何时做。冻结期要写 M/C 的 launch.md、修复代码时会无处可写。文首写的计划工作树 /scratch/hongze/worktrees/v16-4trs-vla-plan 同样不在盘上。",
+      "evidence": "命令输出：ls -d /scratch/hongze/robomme_policy_learning_MotionJEPA-temp → No such file or directory；ls -d /scratch/hongze/worktrees/v16-4trs-vla-plan → No such file or directory。/scratch/hongze 下实际存在的只有 robomme_policy_learning_MotionJEPA、-eval-dcf23da、-eval-ffb307c、-eval3x3-f0149d89。git worktree list 里也没有 -temp。计划 HTML 第 215 行（R9）。AGENTS.md 第 2 条「写计划前逐项核实每个前提」第 ③ 项要求输入或路径不在盘就把获取步骤写进计划。",
+      "proposed_fix": "R9 把「该副本有自己的 .venv」改成明确的建档步骤：在 Beta 之前用 git clone（或 worktree）建 dev 副本，uv sync 建它自己的 .venv，核对能 uv run pytest，写进 §7 阶段 3 的判据。文首的计划工作树路径改成实际存在的路径，或注明已清理。该步骤是 CPU 任务，应在开工后写代码期间并行完成（第 33 条 B/C）。",
+      "verdict": {
+        "real": true,
+        "severity": "minor",
+        "needs_user_decision": false,
+        "reasoning": "[内部产出] 事实部分成立：计划第 215 行（R9）写开发副本 /scratch/hongze/robomme_policy_learning_MotionJEPA-temp 并称它有自己的 .venv，第 32 行写计划工作树 /scratch/hongze/worktrees/v16-4trs-vla-plan。ls 显示这两个路径现在都不在盘上。但严重度被高估，不该是 major。理由有三条。其一，这是计划，开发副本本来就是冻结期才用到的未来产物，按口径「尚未实现的拟新增功能本身不算缺陷」，不存在不等于缺陷。其二，计划写的是 Beta push 之后才用该副本，计划里没有把它说成已经存在，「有自己的 .venv」读起来是对将来副本的描述。其三，我只检索了 temp、worktrees/v16 和 .venv 三个关键词，没有核对 §7 阶段 3 的判据文字，所以只能确认「建档步骤没有明写」，不能确认「完全缺失」。属实的部分是 R9 没写由谁、何时、怎么建副本（clone、建分支、uv sync、核对能跑 pytest），这是一处轻微的步骤遗漏，不涉及训练语义或规则字面冲突，也不需要用户裁决。",
+        "corrected_fix": "在 R9 加一句最小建档说明：开工后写代码期间（CPU 任务，可并行），用 git worktree 或 clone 建 -temp 副本，在其中 uv sync 建自己的 .venv，并确认 uv run pytest 能跑。文首的计划工作树路径注明「写计划期间用，已清理」，或直接删掉。不用再叠加别的保护层。严重度降为 minor。"
+      }
+    }
+  ],
+  "rejected": [
+    {
+      "dim": "血缘闸门",
+      "title": "ENC_SHA 来源循环：L0a 到导出全程用自己实算的 sha 当期望值，独立交叉核对晚到 Beta 前",
+      "why": "[内部产出] 引用行号取自 345c0c9 版计划去标签后的文本。\n\n事实核对：\n- 第 38 行：ckpt sha 在 TRAIN_TERMINAL=PASS 后由单独 sha 修订 commit 回填，并经 sonnet 单审。\n- 第 148 行：阶段 2 顺序是先回填并复审，再跑 L0a。\n- 第 425 行：ENC_SHA 占位写的是「ENCODER_REGISTER 写出的 sha」。\n- 第 73 行：Beta 前用 1113 的 CKPT_HF_VERIFY 中 ep144 的 sha 核对 ENCODER_REGISTER 实算值，不一致即停，该行未出就等。\n- 第 467 行：REG 里的 ckpt 是对 $ENCRUN/checkpoint_epoch_144.pt 的硬链接，登记时还要比对两侧 sha256。\n- 第 396 行：起跑合同会再查一次硬链接两侧 sha256 一致。\n\n反驳理由：\n1. 循环依赖被夸大。被消费的是 ENCRUN 里的那一个文件，它是训练产物本身，也是唯一事实来源，硬链接保证同 inode。ENC_SHA 的作用是把\"这个具体文件\"钉成常量，让导出、G2、G3、封装和位级校验围绕同一份文件，防的是文件中途被替换。这种钉死不需要外部来源。\n2. CKPT_HF_VERIFY 校验的是 1113 上传到 HF 的副本是否等于本地文件，属于上传保真，不是\"本地文件是否正确\"。就算 Beta 前发现不符，也说明 HF 副本有问题或文件在回填后被改，不说明导出读错了 ckpt。后者会被第 396 行的两侧 sha 复查和各脚本的 --expected-sha256 抓到。\n3. 迟到的代价有限。核对放在 Beta 前，最坏情况是重做 L0a 之后的导出，是 CPU 活。它早于任何 GPU 长训，没有昂贵损失。\n4. 用户已定\"与 1113 收尾同步、不等 1113 其余收尾\"，第 73 行为此专门加了 Beta 前核对作为补偿。finding 提的\"提前交叉核对\"或\"标暂定\"是在此基础上叠加保护层，违背\"最小修法、不叠加保护层\"。\n5. 文档里确有一处可以收紧：第 38 行说回填、第 425 行写\"ENCODER_REGISTER 写出的 sha\"，两处没写清回填常量取自哪里。这是措辞歧义，不是缺陷。\n\n缺失证据：finding 没给出\"本地 ep144 与 1113 登记的不是同一份\"的现实路径。第 71 行 G1 已要求 TRAIN_TERMINAL=PASS epoch=144 且文件在，ENCRUN 只读。其 MotionJEPA current.json 第 1073 行无 ep144，只是 1113 尚未出该行，属于预期时序，不是错误。\n\n不涉及训练语义或规则字面冲突，不需要用户裁决。"
+    },
+    {
+      "dim": "血缘闸门",
+      "title": "DATA_LINEAGE 判定行字段在计划正文里没有定义",
+      "why": "[内部产出] 判定口径与失败语义计划已写：四环链见第84行，PASS 与 FAIL 及非零退出见第133行，R1 缺判定行即停工见第182行。新增 member-pin 子命令的参数见第274行，且「原有 lineage 子命令与导入接口不变」。encoder 侧 pin 来自 build_spec.identity.source_pin.member_pin_sha256（第36、223、396行）。S1 测试已有 member-pin 对拍断言（第332行）。vla_input_pin 保持原含义见第622行。第238行也已承认旧路径取 files 键会 KeyError，所以才新增子命令。finding 说的现有代码取 source_pin['sha256'] 和 ['files'] 属实，但这正是新增子命令要绕开的问题。字段逐项写死属于拟新增功能的实现细节，第539行约定「判定行以 S5 实现为准」，用户口径也说拟新增功能本身不算缺陷。没有证据表明实现时会出现歧义：encoder 侧只有 member_pin_sha256 一个可用 pin。建议的逐字段写死加测试断言属于叠加保护层，不是最小修法。这条不涉及训练语义，也没有规则字面冲突。"
+    },
+    {
+      "dim": "血缘闸门",
+      "title": "四环链的第④环与第③环在 policy 侧缺少 encoder 逐成员比对，两仓口径不对称",
+      "why": "[内部产出] 事实部分属实，但结论不成立。第 274 行 policy 的 member-pin 子命令确实没有 --encoder-source-manifest，第 484 行 MJ 侧才有。但这不构成缺陷，理由有三点。(1) 契约③（第 223 行）把 pin 定义为对全部 1600 条 {member,h5_sha256,h5_bytes} 排序后做规范化 JSON 的 sha256。policy 侧从 git 内 4 份 map 复算出的 pin，与 encoder 记录的 member_pin_sha256 相等，就等价于 1600 条逐条相等（sha256 抗碰撞）。第 84 行的「逐条相等并复算出 member pin」，第 396 行的「按 A16 规范复算并与 encoder source_pin.member_pin_sha256 相等」，都是这一语义。再逐条比一次 files，只是故障时多给一个定位信息，没有增加判定强度。(2) 两仓强度并不真正不对称。MJ 的 --encoder-source-manifest 是它读取 pin 和 files 的入口，不是多一道比对。MJ 侧第 238 行也只是把复算结果与 build_spec 的 member_pin_sha256 比较。(3) 第③环的取值来源（build_spec.identity.source_pin.manifest_sha256）可以顺着 --encoder-ckpt 找到，属于实现细节，计划里没有写出来但不影响口径。提出者自己的复算也显示现状数据全部一致（bad=0/1600）。按用户「不叠加保护层」的口径，再加一个参数和负例测试是叠加。最多是个措辞层面的 minor，可以把第 84 行的「逐条相等」改成「逐条相等（由 pin 相等保证）」，不需要用户裁决，也不涉及训练语义或规则字面冲突。证据不足以支持 major。"
+    }
+  ],
+  "minors": [
+    {
+      "dim": "Astra 闭环 A01–A11",
+      "id": "F3",
+      "title": "S4 验收命令引用的 test_control.py、test_result.py 不在移植清单，且 345c0c9 上不存在",
+      "severity": "minor",
+      "plan_section": "C 表 S4 验收命令（计划行276）与 B 表 S4a 清单（行233）",
+      "claim": "验收命令 `pytest ... $W/scripts/evaluation/test_control.py $W/scripts/evaluation/test_result.py` 要求这两个文件存在，但 S4a 的逐文件清单没有它们。345c0c9 的 scripts/evaluation 里没有任何 test_* 文件，它们只在 c0826be 有，按清单移植后 pytest 会因文件不存在直接失败。这与 A06 要求「交付清单与验收一致」同类。",
+      "evidence": "git ls-tree --name-only 345c0c9 scripts/evaluation/ | grep test_ 无输出；git ls-tree c0826be 有 scripts/evaluation/test_control.py 与 test_result.py。",
+      "proposed_fix": "把 test_control.py、test_result.py 加进 S4a 移植清单及可写集合，或从验收命令里删掉。"
+    },
+    {
+      "dim": "Astra 闭环 A01–A11",
+      "id": "F4",
+      "title": "A01 选择规则在 G2/G3 阶段无从推断，runbook 对应命令也未显式传项目",
+      "severity": "minor",
+      "plan_section": "B 表契约①（行161）、E 节 L0a G2/G3 命令（行381–384）",
+      "claim": "契约①规定不给 --stage2-project 时「按 store provenance 的 arch 推断」。但 validate_stage2.py 的 G2/G3 在打包之前运行，此时没有 store（现有参数只有 --samples/--ckpt/--store 可选），无 provenance 可推。runbook 里 G2/G3 命令只靠解释器路径区分项目、其余用「...」。若执行者不传显式项目，setup_runtime 无依据选择 pin，仍可能落回旧项目的 SOURCE_PIN。G3 另外需要 --rgb-root \"$DATA\"（现有代码第458行强制），runbook 也未列出。",
+      "evidence": "validate_stage2.py::main 参数（437–449）无项目参数；gate_g3 在第458行要求 --rgb-root；计划第161行推断来源只写 store provenance。",
+      "proposed_fix": "在契约①补充：无 store 的命令（G2/G3、导出、check_data_lineage）必须显式传 --stage2-project，或从 ckpt payload 的 arch 推断；runbook G2/G3 行写出 --stage2-project wan_stage2_rgbstate 与 G3 的 --rgb-root \"$DATA\"。"
+    },
+    {
+      "dim": "Astra 闭环 A01–A11",
+      "id": "F5",
+      "title": "A08 并排 compose 的输入/布局仍未定义清楚，v7 render 的数据根在 runbook 里是省略号",
+      "severity": "minor",
+      "plan_section": "§3.5、B 表 rgb_recon_video.py compose 行（行170）、runbook R 节（行364–369）",
+      "claim": "审计 A08 要求「若需要新合成，明确输入和布局、扩展接口」。本版只写 compose「读 parts/stage2-rgbstate 与 parts/v7，按 --model-label 标注新旧两栏」，但 --model-label 是 render 的参数，现有 compose 只接 out/fps/limit-groups，现有 compose_group 是 v7 RGB 行／stage2 RGB 行／stage2 XYZ 行竖叠。新 compose 要并排几栏（是各自四栏还是只比 recon 栏）、标签从哪取、与现有竖叠如何切换都没写。runbook 第365行 v7 render 的 data-root/GT 参数也是「...」，而 v7 要在 1113 的 val 窗上渲染，不给 --data-root \"$DATA\" 会落到 rgb_recon_video.py 默认的旧 DATA_ROOT。",
+      "evidence": "/scratch/hongze/MotionJEPA 52124cb 的 scripts/eval/rgb_recon_video.py：compose 子命令参数（1154–1157）；compose_group docstring（1082–1083）；render --data-root 默认 DATA_ROOT（1143）。",
+      "proposed_fix": "在 B 表写明 compose 新接口（新增参数名、标签来源、栏位与布局），旧布局保持默认；runbook 的 v7 render 显式给出 --data-root \"$DATA\" 与 --h5-root，并要求两个 arch 选窗逐帧一致（compose_group 本来就要求）。"
+    },
+    {
+      "dim": "Astra 闭环 A12–A22 与附加项",
+      "id": "C04",
+      "title": "MOTION_XPATH 窗口过滤用了不存在的 aug_id 列；按字面取 parity_aug_id==0 得不到 64 窗；未要求 source_frame_ids 一致",
+      "severity": "minor",
+      "plan_section": "§3 XPATH 对齐要点；E 节 check_motion_xpath 对齐规则；D 表 MOTION_XPATH；A15 闭合",
+      "claim": "计划的共同窗口写成“windows.parquet 中 split=val、aug_id 0、row_count=1、start%16==0”。1113 的 windows.parquet 没有 aug_id 列，只有 parity_aug_id。val 窗口的 parity_aug_id 绝大多数是 -1。同时 Astra A15 要求的逐帧与补帧身份（source_frame_ids、real_frames/pad_frames）、种子、尾窗与跨段窗负例，正文与 S2 验收都没有落实。",
+      "evidence": "实读 /scratch/hongze/dataset-4task-rgb-state-stride2-16views-v1/index/windows.parquet，列为 window_key, task, episode, kind, start, source_frame_ids, real_frames, pad_frames, is_tail, split, window_id, row_start, row_count, parity_aug_id。val 共 6603 行，parity_aug_id 分布为 {-1: 6547, 0: 56}；其中 parity_aug_id==0 且 start%16==0 的只有 35 窗，达不到“64 窗”。不加 aug 条件时，val 里 row_count=1 且 start%16==0 的有 868 窗。dataset_paired_wan.py 用 aug_id_for(window_key) 动态给出 aug_id，不是列。S2 验收段（C 表）没有任何 XPATH 负例。",
+      "proposed_fix": "写明 aug 条件的真实实现：用 aug_id_for 语义，或不过滤 parity_aug_id，直接取 val、row_count=1、start%16==0 的 868 窗再按固定种子抽 64。对齐键增加 source_frame_ids 与 real_frames/pad_frames 逐项相等，不等则排除并计数。S2 验收增加 XPATH 负例：raw_episode≠episode、尾窗、跨段窗、source_frame_ids 错配。"
+    },
+    {
+      "dim": "Astra 闭环 A12–A22 与附加项",
+      "id": "C05",
+      "title": "START_STAGE 分段 sha 协议只写在 R5/D 表，B 表改造行和 S3 验收没有落实，模板仍是单一 TRAIN_HEAD",
+      "severity": "minor",
+      "plan_section": "A14 闭合：R5、D 表 START_STAGE、F10 对 B 表串行链行与 C 表 S3 验收",
+      "claim": "R5、D 表、F10 都规定各段收据保存自身 sha、续接时按收据 sha 核前段。但 B 表串行链行只写“先用模板的核对函数检查前面各段”，没有说明要把 final_record_ok、日志 TRAIN_HEAD 匹配、check_final_record 的 head 参数改成逐段 sha。S3 验收没有 H0 前段成功、H1 后段修复的接续用例。",
+      "evidence": "run_orig16_concat_ctx_then_modul_60k.sh::final_record_ok 把全局 $TRAIN_HEAD 传给 `--train-head`，续接检查 `grep -aqxF \"TRAIN_HEAD=$TRAIN_HEAD\" \"$log\"`。check_orig16_stage2_launch.py::check_final_record 要求 record.head==传入 head。计划 C 表 S3 验收只有 DRY=1 打出四段命令和 2 个 RUN_NAME，没有 sha 混合场景。",
+      "proposed_fix": "B 表串行链行补一句：final_record_ok、续接日志匹配、delivery 与 EVAL692 收据均按各段自记 sha 核对，不用 $TRAIN_HEAD 回填。S3 验收加一个合成用例：M、E1 收据记 H0，C 记 H1，START_STAGE=C 与 START_STAGE=E2 能接续，收据 sha 被篡改则拒。"
+    },
+    {
+      "dim": "Astra 闭环 A12–A22 与附加项",
+      "id": "C06",
+      "title": "local-built 的历史证据和血缘收据缺固定路径与接线",
+      "severity": "minor",
+      "plan_section": "B 表 motion_store.py 历史绑定行、pack 命令（E 节）；A12 与补充验收注意点第 3 项",
+      "claim": "计划写“记录该报告的路径与 sha”，但没有给出 vae-report-summary.json 的位置，也没有把 member-pin 血缘收据($LOG/lineage.json)送进 pack 的参数。pack 命令只传 --stage2-validation \"$LOG/validation\"，lineage.json 在 $LOG 根而不在该目录里。evidence 角色里的“member-pin 血缘收据”因此没有固定入口，实施者要自行决定。",
+      "evidence": "现场唯一的 vae-report-summary.json 在 git 内 docs/dataset-build-doc/4task-v2-1600ep-motion-demopad17/records/vae-report-summary.json。我核对了它含 tested_metadata_sha256=c92643178e71dc0bbe7a406770d5ca84c800bb902785118bb3dd62c42efa6eff，且 wan-latents/metadata.json 的 sha256 与之相等，所以历史绑定数值本身成立。该报告的 windows_encoded=8632、metadata_rows_checked=71316，是抽样校验而非全量编码。计划 E 节 pack 命令（--stage2-validation \"$LOG/validation\"）没有 lineage.json 参数，写出 lineage.json 的 member-pin 命令用的是 `--out \"$LOG/lineage.json\"`。",
+      "proposed_fix": "固定报告路径与其文件 sha，写成合同常量。lineage.json 输出到 $LOG/validation/ 下，或给 pack 加显式 --lineage-receipt 参数。规定 *.bin.sha256 JSON 清单的文件名和 schema。正文把“抽样 8632 窗、元数据 71316 行”按事实表述，不要写成全量。"
+    },
+    {
+      "dim": "跨节一致性",
+      "id": "X03",
+      "title": "消息 1 的发送时点：§1.5 表格与 §7 阶段 0、I.1 不一致",
+      "severity": "minor",
+      "plan_section": "§1.5 写代码行 vs §7 阶段 0 vs I.1 消息 1",
+      "claim": "§1.5「写代码」行把「给 1113 会话发消息 1」接在「S6 写完并审查后…解出 heldout」的句子之后，读起来是 S6 完成后才发。§7 阶段 0 与 I.1 都说开工令到达时立刻发。",
+      "evidence": "§1.5：「S6 写完并审查后，在 S6 固定工作树…解出 heldout 28 个成员并核 sha 与字节（nice，不超过 6 路，不拖慢 1113 训练）。给 1113 会话发消息 1」。§7 阶段 0：「开工令到达后立刻：…给 1113 会话发消息 1」。I.1：「消息 1（开工令到达时发，三次握手 ①）」。",
+      "proposed_fix": "§1.5 把「给 1113 会话发消息 1」单列成一行，或写成「开工令到达时即发」，不要放在 S6 解包句之后。"
+    },
+    {
+      "dim": "跨节一致性",
+      "id": "X04",
+      "title": "阶段 3 中短测与正式 dry-run 的先后顺序相反",
+      "severity": "minor",
+      "plan_section": "§7 阶段 3 vs D 表「正式 dry-run」行与 E 节",
+      "claim": "§7 阶段 3 先列「两条 20 步短测」，再列「两条正式入口各一次 dry-run」，最后做评估冒烟。D 表与 E 节规定 dry-run 在短测之前。§5 的 L1 行又是短测在前。",
+      "evidence": "§7 阶段 3：「两条 20 步短测；两条正式入口各一次无 MAX_STEPS 的 dry-run，读回完整继承参数表；再做评估冒烟」。D 表：「正式 dry-run | 短测前」。E 节：「正式 dry-run（前台，cwd=$R；Beta commit 后、短测前）」。§5 L1：「两条各 20 步＋两条正式入口各一次 dry-run＋单卡评估冒烟」。",
+      "proposed_fix": "统一成 Beta → 正式 dry-run → 短测 → 评估冒烟，并把 §7 阶段 3 与 §5 L1 的描述顺序改过来。"
+    },
+    {
+      "dim": "跨节一致性",
+      "id": "X05",
+      "title": "tmux 会话清单与 runbook、D 表对重跑的处理不一致",
+      "severity": "minor",
+      "plan_section": "A R6 vs E 节与 D 表 EVAL692",
+      "claim": "R6 登记了 v16-e1、v16-e2、v16-e<k>-s<n>-rerun。但 E 节把 E1、E2 都放在 v16-chain 里，没有任何一步起 v16-e1、v16-e2 或 rerun 会话。D 表 EVAL692 还规定 verdict=infra 时「不手动重跑」，K11 又限定只跑 seed 7。",
+      "evidence": "R6：「v16-chain、v16-e1、v16-e2、v16-e<k>-s<n>-rerun、v16-up-m、v16-up-c」。E 节：「正式链（tmux v16-chain）：bash run_4task_concat_modul_eval_ctx_eval_50k.sh」，其中 E1、E2 在链内。D 表 EVAL692：「分片若判为 verdict=infra，EVAL692=FAIL 即停，留证交用户，不手动重跑、不合并」。",
+      "proposed_fix": "R6 只保留 E 节实际会起的会话；v16-e1、v16-e2 若只用于 START_STAGE 接续就写明用途，rerun 会话在没有授权场景时删除。"
+    },
+    {
+      "dim": "跨节一致性",
+      "id": "X06",
+      "title": "final 上传的拆分与 tmux 归属在 B（S3、S5）与 E 之间不一致",
+      "severity": "minor",
+      "plan_section": "B 表 S3 链行、S5 行 vs E 节第 3 步",
+      "claim": "B 表 S3 把 final 拆成两段：串行链同步跑 S5 的 stage 步骤，再起长尾 tmux v16-up-m/c 做上传读回。B 表 S5 把 final 写成一个整体（先 stage、再上传、再读回），没有单独的 stage 入口。E 节第 3 步则说「final 不阻塞…是否后台起由 S3 实现」，日志名是 up-<m|c>-final.log，没有提 tmux 名。S3 行还复用了增量上传的会话名 v16-up-m/c。",
+      "evidence": "B 表 S3：「同步调用 S5 final 的 stage 步骤…；再起长尾 tmux（v16-up-m／v16-up-c）做 final 上传读回」。B 表 S5：「final…先生成本地 stage（含 encoder 依赖实体）与 manifest，再上传、本机读回」。E 节第 3 步：「final 不阻塞下一阶段训练；是否后台起、链末如何收齐由 S3 实现」。另外，S3 第 4 个合并，S5 第 5 个合并，S3 的 DRY 验收却要打印 S5 的 final 调用。",
+      "proposed_fix": "在 S5 行明确列出两个入口（stage 步骤与 upload/verify 步骤）及日志名，E 节第 3 步照 B 表写死后台 tmux 名。S3 的 DRY 验收只验证命令串，不依赖 S5 文件已合入。"
+    },
+    {
+      "dim": "跨节一致性",
+      "id": "X07",
+      "title": "判定行名 ENCODER_DATA_LINEAGE 与 DATA_LINEAGE 不一致；部分 §7 判据不在 §6、D",
+      "severity": "minor",
+      "plan_section": "B 表 check_4task_stage2_launch 行 vs §6、D、E",
+      "claim": "B 表写「ENCODER_DATA_LINEAGE 改调 member-pin」，而 §6、§7、D、E 全文用的名字都是 DATA_LINEAGE。另外 §7 的 PLAN_CONSISTENCY_REVIEW、GPU_START、PRE/POST_MERGE_REVIEW 没有出现在 §6 判定行汇总表和 D 闸门总表里。",
+      "evidence": "B 表：「ENCODER_DATA_LINEAGE 改调 member-pin」。D 表：「ENCODER_REGISTER、DATA_LINEAGE | L0a 开头」。§7 阶段 0、1：「PLAN_CONSISTENCY_REVIEW=PASS」「PRE_MERGE_REVIEW、POST_MERGE_REVIEW」。§1.5：「GPU_START=PASS」。这几项在 §6 与 D 表中均无。",
+      "proposed_fix": "确认 ENCODER_DATA_LINEAGE 是不是起跑合同内部的另一行名。若是，在 D 表注明它与 DATA_LINEAGE 的关系，若不是就统一成 DATA_LINEAGE。§6 或 D 表补一行流程类判定（GPU_START、*_REVIEW）。"
+    },
+    {
+      "dim": "跨节一致性",
+      "id": "X08",
+      "title": "GPU 起点推算时刻早于 encoder 推算训满时刻",
+      "severity": "minor",
+      "plan_section": "文首写作时刻 vs §5",
+      "claim": "文首说 encoder 约 11-15 美东 03:45–04:30 训满。§5 却说 GPU 起点 G 约 03:40 之后。G 还要等收尾评估 cc-4trs-p5eval 退出，必然晚于训满，所以 03:40 比训满的最早估计还早。",
+      "evidence": "文首：「推算 11-15 约 03:45–04:30 美东训满（估计）」。§5：「GPU 起点 G 按训练进度推算约 11-15 美东 03:40 之后（收尾评估退出即可）」。",
+      "proposed_fix": "§5 改成「训满（03:45–04:30）加收尾评估时长之后」，或直接去掉具体时刻，只留 G1–G3 判据。"
+    },
+    {
+      "dim": "跨节一致性",
+      "id": "X09",
+      "title": "磁盘数字：R8 与 F5 内部口径不一，单条 run 体量与最坏账对不上",
+      "severity": "minor",
+      "plan_section": "A R8 vs F 节 F5",
+      "claim": "R8 算两条成功 run 加 stage 是 4×140≈560 GB。F5 里同样的「run 加 stage」两份失败产物算出 504 GB，即每份约 126 GB，与 140 不一致。R8 对可用空间还同时写了「1.1 T」和「1.15 TB」。",
+      "evidence": "R8：「两条成功 run 加各自 stage 约 4×140 ≈ 560 GB…最坏账约 1064 GB」以及「/scratch 现在可用 1.1 T」与「现可用约 1.15 TB」。F5：「约多出 504 GB；叠加…约 560 GB，合计约 1064 GB」。560+504=1064 能对上，但 504≠4×140。",
+      "proposed_fix": "统一单条 run 体量（120–140 GB 取上限或实测值），重算 504 或把它写成 4×126，统一可用空间写法（1,149,738,553,344 字节≈1.15 TB）。"
+    },
+    {
+      "dim": "跨节一致性",
+      "id": "X10",
+      "title": "§3 称只差 arch tag 与 latent 来源，与 §4 的 8×8 帧布局差异矛盾；§9 缺 11-15 裁决条目",
+      "severity": "minor",
+      "plan_section": "§3、§4、§9 与 K 列表",
+      "claim": "§3 写「相对 16task 只差 encoder 的 arch tag 和 latent 来源」，而 §1、§4 明确还有帧记忆布局 8×8 对 32×4×4 的差异。§3.5 新增的「用户 11-15 裁决」（新旧 encoder 并排）在 §9 裁决表和 K 列表里没有对应条目，而 §9 标题是「11-14 全部定完」。",
+      "evidence": "§3：「相对 16task 只差 encoder 的 arch tag 和 latent 来源（本次全部走旧库 latent）」。§4：「只差投影前帧记忆的切法（8 帧×8×8 对 32 帧×4×4）」。§3.5：「新旧 encoder 并排对比（用户 11-15 裁决）」。§9 标题：「用户裁决记录（11-14 全部定完）」，J1–J6 里没有这一项。",
+      "proposed_fix": "§3 加「motion 表部分」限定词，说明帧布局差异见 §4。§9 增加 K15 或 J7 记录 11-15 的并排对比裁决（附用户原话），并把标题改成「11-14／11-15」。"
+    },
+    {
+      "dim": "跨节一致性",
+      "id": "X11",
+      "title": "L0a 的 G2、G3、导出命令未体现 --stage2-project，而 B 表项目推断依赖 store provenance",
+      "severity": "minor",
+      "plan_section": "B 表契约① vs E 节 L0a",
+      "claim": "契约①规定：不给 --stage2-project 时按 store provenance 的 arch 推断。但 L0a 里 G0、G2、G3、导出都发生在 store 打包之前，没有 store 可推断。E 节这几条命令的参数都用「...」省略，只有 pack 显式带了 --stage2-project。照字面执行，G2、G3 的项目选择没有来源。",
+      "evidence": "B 表契约①：「显式参数 --stage2-project 优先；不给时按 store provenance 的 arch 推断」。E 节：`env -u PYTHONPATH \"$S2PY\" …/validate_stage2.py --gate G2 --samples … --out … ...`，不含 --stage2-project。只有 pack 命令写了 `--stage2-project wan_stage2_rgbstate`。",
+      "proposed_fix": "在 E 节 G0、G2、G3、导出、compare 命令里显式写 --stage2-project wan_stage2_rgbstate，或在契约①写明这些入口按 --ckpt 的 arch 或 $S2PY 所属项目推断。"
+    },
+    {
+      "dim": "跨节一致性",
+      "id": "X12",
+      "title": "ckpt sha 回填与 ENCODER_REGISTER 的先后顺序含糊",
+      "severity": "minor",
+      "plan_section": "文首外部依赖锚点 vs §7 阶段 2 vs E 节",
+      "claim": "§7 阶段 2 的顺序是 R → 回填 ckpt sha 并复审 → L0a（其中才有 ENCODER_REGISTER）。E 节却把 ENC_SHA 定义为「ENCODER_REGISTER 写出的 sha」。回填发生在登记之前，来源就对不上。",
+      "evidence": "§7 阶段 2：「先跑 R…；再回填 ckpt sha 并单独复审；然后跑 L0a」。D 表：「ENCODER_REGISTER、DATA_LINEAGE | L0a 开头」。E 节：「ENC=$REG/checkpoint_epoch_144.pt ; ENC_SHA=<ENCODER_REGISTER 写出的 sha>」。",
+      "proposed_fix": "写明回填用的 sha 由 sha256sum 对 $ENCRUN 下的 ckpt 直接算出，ENCODER_REGISTER 再核硬链接两侧一致。E 节 ENC_SHA 的来源也同步改。"
+    },
+    {
+      "dim": "跨节一致性",
+      "id": "X13",
+      "title": "EVAL692 对失败单局自动重跑与「不为提高成功率重试」自相矛盾",
+      "severity": "minor",
+      "plan_section": "D 表 EVAL692 行",
+      "claim": "同一格里既说脚本内置 C7 会对新出现的 error 单局自动重跑一次，又说不为提高成功率重试。需要说明自动重跑只针对基础设施类 error，否则对「不重试」的理解会有分歧。",
+      "evidence": "D 表 EVAL692：「脚本内置的 C7 对新出现的 error 单局自动重跑一次，记录 retried 次数并保留 attempt0/…不为提高成功率重试（第 22 条）」。",
+      "proposed_fix": "写清 C7 重跑的触发条件（仅环境或基础设施 error、不含策略失败）和它与第 22 条的关系，或去掉「不为提高成功率重试」这句。"
+    },
+    {
+      "dim": "runbook 命令与真实 CLI",
+      "id": "E-04",
+      "title": "runbook 的 member-pin 命令带 --out，B 表参数表里没有",
+      "severity": "minor",
+      "plan_section": "B 表 check_data_lineage.py 行与 E 节 L0a 第一条 check_data_lineage 命令",
+      "claim": "B 表写 member-pin 的参数是 --encoder-ckpt --expected-ckpt-sha256 --vla-input-manifest --merge-done --episode-maps，没有 --out。runbook 却传 --out \"$LOG/lineage.json\"。现有 lineage 子命令也没有 --out，只往 stderr 打 DATA_LINEAGE 行。两处不一致，按 B 表实现的子代理不会加 --out，命令会因未知参数失败。",
+      "evidence": "计划 B 表第 274 行参数列表无 --out；runbook 第 468–470 行 `--merge-done ... --episode-maps \"$MAPS\" --out \"$LOG/lineage.json\"`。345c0c9:scripts/training/check_data_lineage.py 第 115–118 行 lineage 子命令只有 encoder-ckpt、expected-ckpt-sha256、vla-input-manifest、mj-source-manifest 四个参数。",
+      "proposed_fix": "在 B 表 member-pin 参数列表里补上 --out（写 JSON 证据），或去掉 runbook 的 --out，改用 tee 保存输出。"
+    },
+    {
+      "dim": "runbook 命令与真实 CLI",
+      "id": "E-05",
+      "title": "pack 命令的 --stage2-project 在 B 表 pack 行里没有承诺",
+      "severity": "minor",
+      "plan_section": "E 节 pack 命令 --stage2-project wan_stage2_rgbstate 与 B 表 pack_motion_store.py 行",
+      "claim": "现有 pack 子命令没有 --stage2-project。B 表 pack_motion_store.py 行只写了 --latents-origin、--raw-dir 非必填、SOURCE_PIN 按 --stage2-source-pin 所在项目核对，没有新增 --stage2-project。契约①只在 stage2_sidecar 行、check_stage2_online 等处提到这个参数。按 B 表实现 pack，runbook 命令会因未知参数失败。",
+      "evidence": "345c0c9:scripts/dataset/pack_motion_store.py 第 1143–1161 行 pack 参数表无 stage2-project。计划第 221 行契约①写“显式参数 --stage2-project 优先”，第 254 行只落到 stage2_sidecar。runbook 第 496 行 `--stage2-project wan_stage2_rgbstate`。",
+      "proposed_fix": "在 B 表 pack 行补一句“pack 增加 --stage2-project（与契约①一致，默认按 provenance arch 推断）”，或者从 runbook 里删掉这个参数，只靠 --stage2-source-pin 推断。"
+    },
+    {
+      "dim": "runbook 命令与真实 CLI",
+      "id": "E-06",
+      "title": "stage2_memory_export 的新参数 --lineage-mode 等目前不存在，要等 S2 落地后才能核对",
+      "severity": "minor",
+      "plan_section": "E 节 L0a 导出命令",
+      "claim": "导出命令用了 --lineage-mode、--encoder-source-manifest、--episode-maps。memexport 工作树现状（50a8534）没有这三个参数，它们全部来自 S2 新增。B 表第 238 行已承诺这些参数，所以按规则不算缺陷。其余参数（--ckpt --expected-sha256 --latents --manifest --input-manifest --out --expected-counts --grid-subsample --batch --check-dropout --max-segments）与现有 argparse 一致。但 runbook 的先短测只靠注释说明，没有写成可执行命令。",
+      "evidence": "worktree vla-s2-memexport-20261026 的 scripts/stage2_memory_export.py 第 393–402 行：必填 ckpt、expected-sha256、latents、manifest、input-manifest、out；可选 expected-counts、grid-subsample、batch、device、max-segments、check-dropout、resume。计划第 238 行承诺了三个新参数，第 480 行短测只是注释。",
+      "proposed_fix": "开工后合入 S2 先跑 --help 核对三个新参数。建议把短测命令写成完整的一行（--max-segments 1 --out $LOG/export-smoke，不带 --expected-counts）。"
+    },
+    {
+      "dim": "MJ 侧导出与重建视频",
+      "id": "MJ-01",
+      "title": "v7 渲染不需要读同目录 config.yaml，计划措辞会误导实现",
+      "severity": "minor",
+      "plan_section": "第二部分 B 节 rgb_recon_video.py：--arch v7 …… 并读该 ckpt 同目录的 config.yaml",
+      "claim": "v12-3decoder 现有的 v7 路径已支持 --checkpoint 覆盖，且全程不读 config.yaml。ENCODER_ARGS、DECODER_ARGS 在 v7_source.py 里写死，validate_checkpoint 只用 ckpt 字典内嵌的 config.ema.enabled。S6 不必新增读 config.yaml 的逻辑。",
+      "evidence": "v12-3decoder:scripts/eval/rgb_recon_video.py 第 932 行 `ckpt = args.checkpoint or CKPT[args.arch]`，V7Arch.__init__ 只做 torch.load 后 validate_checkpoint 和 build_v7_models。v7_source.py 第 63-87 行要求 arch=='wan-latent-v7'、epoch 在 2..72 的偶数、ema_only=True、config.ema.enabled=True。我用 MotionJEPA 的 venv 以 mmap 只读加载旧 ckpt，得到 epoch=72、arch='wan-latent-v7'、ema_only=True、has_live_weights=False、config.ema={'enabled':True,'decay':0.999}，含 encoder 和 wan_decoder 两键，latents_mean 形状为 (1,16,1,1)。这些都满足 validate_checkpoint。旧目录的 config.yaml（hidden 768、depth 8、motion.dim 768、num_tokens 1）与 ENCODER_ARGS 一致。",
+      "proposed_fix": "把计划这句改成「--arch v7 已支持 --checkpoint 覆盖，配置取自 ckpt 内嵌 config，无需读同目录 config.yaml；旧 ckpt epoch=72 经 validate_checkpoint 预检可过」。S6 只需保证 CLI 新增的 --h5-root、--data-root 等参数同样作用于 v7 路径。"
+    },
+    {
+      "dim": "MJ 侧导出与重建视频",
+      "id": "MJ-02",
+      "title": "memexport 合入 v12-3decoder 实测无文本冲突，计划写「解冲突」夸大",
+      "severity": "minor",
+      "plan_section": "第二部分 B 节「MJ 分支操作」与 S2",
+      "claim": "计划称合并时要「解冲突」。实测两分支 merge-tree 干净，没有冲突文件。真正的风险是语义不兼容：memexport 上的 stage2_memory.py 在合并后的 factory 和 stage2_model 下能否工作。",
+      "evidence": "`git merge-tree --write-tree --name-only v12-3decoder-memexport v12-3decoder` 只输出一行 tree sha e353cdfc38929f902781736fcfd9d63191db8a27，没有 CONFLICT 行。memexport 相对 v12-3decoder 是 4 个提交领先、155 个落后，与计划数字一致。stage2_memory.py 第 16-18 行 import 了 build_stage2_model_from_cfg、STAGE2_ARCH_TAG、_canonical、load_stage2_checkpoint、Stage2WanLatentMotionEncoder，这些在 v12-3decoder 的 factory.py、stage2_model.py、wan_latent_encoder.py 中都存在（factory.py 第 182 行等）。",
+      "proposed_fix": "把「解冲突」改为「合并后立刻跑 tests/test_stage2_memory_export.py 与新增 rgb-state 用例，确认无语义回归」。该条已在 S2 测试清单中，只需改措辞。"
+    },
+    {
+      "dim": "MJ 侧导出与重建视频",
+      "id": "MJ-03",
+      "title": "stage2_memory.py 里 STAGE2_ARCH_TAG 的使用点不止 load_ema_encoder 的判断一处",
+      "severity": "minor",
+      "plan_section": "第二部分 B 节 stage2_memory.py：load_ema_encoder 的 arch 判断改为 payload[\"arch\"] in STAGE2_ARCH_TAGS，identity 里的 arch 取 payload 的实际值",
+      "claim": "计划描述的改动覆盖第 119 行判断和第 150 行 identity 两处，与现状吻合。导出代码里还有其它依赖三路 arch 的地方，S2 应一并过一遍。已确认 encoder 前向对 rgb-state 的调用兼容。",
+      "evidence": "memexport 分支 stage2_memory.py 第 119 行 `payload.get(\"arch\") != STAGE2_ARCH_TAG`，第 150 行 identity 的 \"arch\": STAGE2_ARCH_TAG。encode_windows 在第 178、203 行以 `encoder(latents, geometry)` 调用，geometry 为全真 (N,32,32) bool。v12-3decoder 的 Stage2RgbStateModel.forward 同样用 `self.encoder(rgb, geometry)`。load_stage2_checkpoint 用 stage2_arch_of(model) 校验，而 build_stage2_model_from_cfg 按 cfg.model.arch 构造 rgb-state 模型，所以 load_ema_encoder 放宽判断后能加载。",
+      "proposed_fix": "S2 实现时再 grep 一遍 stage2_memory*.py 与 stage2_memory_export.py 里的 STAGE2_ARCH_TAG 和 \"three-decoder\" 字面量，避免漏改。计划原文已够用。"
+    },
+    {
+      "dim": "血缘闸门",
+      "id": "LIN-D",
+      "title": "input_manifest 与 MERGE_DONE 的相等关系表述混淆",
+      "severity": "minor",
+      "plan_section": "文首外部依赖锚点第 37 行；§2 第 84 行第①环",
+      "claim": "第 37 行写「input_manifest.json 的 sha256 为 655e64b4…，与 MERGE_DONE.json::files 4/4 相等」。实际相等的是 input_manifest.files 里 4 个合并 H5 的各自 sha256 与 MERGE_DONE.files 一一相等。655e64b4 是 manifest 整个文件的 sha，与 MERGE_DONE 的 files 值无可比关系。读者容易把它理解成「文件 sha 等于 files」。",
+      "evidence": "git show 345c0c9:docs/dataset-build-doc/4task-v2-1600ep-604f16da/records/input_manifest.json 的 sha256sum 为 655e64b4fd033aea…，库 meta/input_manifest.json 同值。其 files 的 4 个 sha（c3665557…、8bd49a0f…、93bd6039…、5ba5ef58…）与 MERGE_DONE.files 一致。",
+      "proposed_fix": "改写为：input_manifest.json 文件 sha256=655e64b4…，其 files 的 4 个 H5 sha 与 MERGE_DONE.files 逐项相等（第①环）。"
+    },
+    {
+      "dim": "50k 训练、交付与上传链",
+      "id": "T03",
+      "title": "num_train_steps=50_001 时最终记录的 tail 为空，现有『最终尾段非有限值』证据在正式段失效",
+      "severity": "minor",
+      "plan_section": "R9 之前的 D 表『TRAIN_FINAL_RECORD』、S3 合同脚本参数化、第317–319行",
+      "claim": "final_record.finish 的 tail 取自 train.py 里 infos 的残留。每到 step%100==0 就清空 infos，而最后一步 loop_step=50000 恰是 100 的倍数，所以 finish 时 infos=[]，tail 为空，tail_means 全为 None。check_final_record 的期望是 range(first, steps)，其中 first=(50001-1)//100*100+1=50001，也是空，所以空表通过。60k 版 loop_step=59999 时 tail 有 99 行，这是 TRAIN_FINAL_RECORD 的非有限值闸门所依赖的证据。正式 50k 的该闸门只剩 EMA 叶检查，等于没有末段标量证据。计划把『TRAIN_FINAL_RECORD tail_steps=…』当作与 60k 同强度的收据，却没有说明这一点。",
+      "evidence": "train.py 第 703–709 行 step%log_interval==0 时 infos=[]；第 724–725 行 step==num_train_steps-1 时调用 final_record.finish(...,infos,step)。final_record.py 第 67–73 行 tail 由 infos 构造。check_orig16_stage2_launch.py 第 315–316 行 first=(steps-1)//100*100+1。",
+      "proposed_fix": "计划注明：50_001 下 TRAIN_FINAL_RECORD 的 tail 为空，是预期现象，NaN 与 OOM 由日志 TRAIN_NUMERICS 诊断加 EMA 叶有限性兜底。或者在 train.py 改动里让 final_record 保留最近 N 步（例如 99 步）滚动窗，再让合同脚本改查该窗。无论哪种，都要把 tail_steps 的期望值写进收据判定。"
+    },
+    {
+      "dim": "50k 训练、交付与上传链",
+      "id": "T04",
+      "title": "R5 attempt02 协议没有写出 check_attempt 所需的清单字段和 decision 的 allowed_runs，且清单绑定 train_head",
+      "severity": "minor",
+      "plan_section": "R5",
+      "claim": "计划只说『通过 ATTEMPT_MANIFEST_MODUL/CTX 传入』，以及『decisions/<id>.json 由主会话写，原话写「工程故障自修」』。现有 check_attempt 要求清单字段恰为 base_run、run、history、train_head、decision、bucket 六项。decision 文件必须含 allowed_runs 列表且包含该 attempt run。bucket 必须等于 base bucket 加 -attempt02。清单的 train_head 必须等于当次 --train-head，而修复后 Beta sha 会变，所以 attempt 清单要在新 Beta 之后才能写。计划没有写这些，实施者容易漏字段，或者在新 Beta 之前就写清单而被拒。",
+      "evidence": "check_orig16_stage2_launch.py 第 94–121 行（ATTEMPT_KEYS、allowed_runs、train_head 比对、bucket 后缀）；export common 第 170–186 行（清单六字段、run==RUN、bucket==环境 BUCKET）。",
+      "proposed_fix": "R5 补一行：先新 Beta，再写 decisions/<id>.json（含 allowed_runs:[<run>-attempt02]），最后写六字段清单（train_head 为新 Beta sha）。attempt 只放行 NN=02，第三次一律 WAIT_USER_DECISION。"
+    },
+    {
+      "dim": "50k 训练、交付与上传链",
+      "id": "T05",
+      "title": "eval/ 上传与 final 上传共用同一导出根的非阻塞 upload.lock，计划未处理并发冲突",
+      "severity": "minor",
+      "plan_section": "S5 eval 入口、D 表『EVAL_HF_VERIFY』、E 节 eval 上传",
+      "claim": "导出根 hf-ckpt-<run> 的 SingleInstanceLock 用 flock(LOCK_NB)，抢不到就抛 UPLOAD_LOCK_BUSY。M 的 final 长尾上传（约 130 GB，后台）可能还在跑，而 E1 约 75 分钟就结束。如果 eval 入口也进同一导出根或同一锁，E1 刚结束时的 eval 上传会直接 FAIL。计划只说『三种先后顺序都须通过』，没说用独立根或独立锁，也没说排队或重试规则。",
+      "evidence": "ckpt_upload_common.py 第 166–191 行（LOCK_EX|LOCK_NB，BlockingIOError 即 UploaderStop('UPLOAD_LOCK_BUSY')）；export common 第 664 行锁路径为 root/upload.lock。",
+      "proposed_fix": "S5 注明 eval 入口使用独立导出根或独立锁文件，例如 hf-eval-<run>/upload.lock，并为 eval 单独写 marker。或者规定『eval 上传前先等 v16-up-<m|c> 会话退出』，并把 UPLOAD_LOCK_BUSY 加进监听过滤词。"
+    },
+    {
+      "dim": "50k 训练、交付与上传链",
+      "id": "T06",
+      "title": "『STEPS』一词同时指 num_train_steps=50001 和 ckpt 步集合 5000…50000，final-record 的步数参数容易错成 50000",
+      "severity": "minor",
+      "plan_section": "B 节 run_orig16_stage2_60k.sh 行与导出脚本行（第221、242行）、第279行",
+      "claim": "现有入口里 STEPS 是训练总步数，传给 --check-final-record 的 --steps 以及 CFG_STEPS，合同要求 state_step=steps、loop_step=steps-1。导出脚本里 STEPS 是 ckpt 步元组。计划两处都写『STEPS』，且 dry-run 要求『打出 --num_train_steps=50001』。但 orig16 的 ARGV_STEPS 对正式段断言『argv 里没有 --num-train-steps』，50001 应来自 config 参数表而不是 argv。照搬 orig16 的合同会冲突，或把 steps 设成 50000 导致 final record 身份不符。",
+      "evidence": "run_orig16_stage2_60k.sh 的 STEPS=60000，以及 --check-final-record … --steps \"$STEPS\"。check_orig16_stage2_launch.py 第 196 行 ARGV_STEPS 为 (steps==60000 and not values)，第 204 行 CFG_STEPS 的 steps in (20, 60000)，第 310 行 state_step=steps、loop_step=steps-1。export common 第 55 行 STEPS 为 ckpt 元组。",
+      "proposed_fix": "计划把两个概念分开命名，例如 NUM_TRAIN_STEPS=50001 与 CKPT_STEPS=5000…50000，并写明 --check-final-record 传 50001（loop_step=50000）。dry-run 的 50001 来自 TrainConfig 读回表而不是 argv，ARGV_STEPS 的『正式段无步数 flag』规则保留。"
+    },
+    {
+      "dim": "50k 训练、交付与上传链",
+      "id": "T07",
+      "title": "新 TrainConfig 条目只写了步数，没写以哪个现有条目为底，也没写 decay_steps、workers、assets_dir 等继承项",
+      "severity": "minor",
+      "plan_section": "B 节 config.py 行（第220行）、§4 表",
+      "claim": "计划只给出 num_train_steps=50_001 和『每 5000 步存一份』，并在 §4 说 B128、FSDP8、lr 5e-5。没有说明 base 是 b128_60k、b128_80k 还是 orig16_b128_60k，也没说明 decay_steps（50_001 还是沿用 80_000 或 60_000）、num_workers（60k 条目 8，80k 条目 16）、assets_dir（4task-v2-1600ep-604f16da 的 norm）和 warmup。v15 的 50k 先例是在 b128_80k 条目上用命令行覆盖 --num_train_steps=50001，decay_steps 仍是 80_000。peak==decay 时 lr 恒为 5e-5，结果相同，但合同脚本里『base 与 cfg 逐项相等』的断言需要一个明确的基准。",
+      "evidence": "c0826be 的 config.py 第 574–611 行 b128_80k：decay_steps=80_000、num_workers=16、fsdp_devices=8、assets_dir=4task-v2-1600ep-604f16da。c0826be:scripts/training/run_4task_wanraw9s32_50k.sh 第 70 行 STEPS=50001。check_orig16_stage2_launch.py 第 204–209 行用 dataclasses.replace(base,…) 逐项对比。",
+      "proposed_fix": "在 B 节写明：mme_vla_suite_4task_b128_50k 等于 b128_80k 条目，只把 name 和 num_train_steps 改为 50_001（decay_steps 写明是 50_001 还是保留 80_000，peak==decay 时等价）。其余项逐项列出，供 dry-run 参数表对账。"
+    },
+    {
+      "dim": "692 评估移植",
+      "id": "S4-05",
+      "title": "check_local_gpu 误判的根因推断只被日志部分支持，修复方案只覆盖「PPid 读空」一种成因",
+      "severity": "minor",
+      "plan_section": "S4c check_local_gpu 修复；F7",
+      "claim": "计划推断 v15 s5 被拒的原因是 nvidia-smi 列出的短命进程在读 /proc 前已退出。v15 自己的 result.md 把原因写成 slot 文件里同卡另一片尚处 pending。s5.try1.log 的 roots 里已有 4 个 PID，推翻了 pending 说法，对计划的推断是支持的，但没有任何证据指明 PID 1242253 是什么进程。实际代码在 PPid 链断到 0 或 1 时同样判外来：进程活着但父进程已退出、被 init 收养，会被拒，计划的修法对此不起作用。检查时点也有问题：第一次检查（gpu_procs=0）通过，第二次检查在 check_checkpoint 等步骤约 3 分钟之后，此时同卡兄弟分片正在启动。一次重采样仍留竞争窗口，被拒后整片 exit 2，扫描会判 infra，EVAL692 直接 FAIL。",
+      "evidence": "c0826be:docs/training-doc/local692-wanraw9s32-50k/result.md ⑩.2 写「原因判断：slot 文件里同卡另一片尚处 pending」。v1-store/evaluation/local692-wanraw9s32-50k/logs/s5.try1.log：首行附近 `LOCAL_GPU_SHARE=PASS device=5 share=4 registered=4 gpu_procs=0`（17:30:33Z），随后 `所选 GPU 上的计算进程 1242253 不属于已登记分片的进程树（根=1238170 1238170 1238221 1238281 1238367）`（END_UTC 17:33:42Z，EXIT_CODE=2）。run_shard.sh 第 99-105 行：循环 `while q 非空 且 q 不为 0/1 且 q 不在 roots` 取 PPid；读空或到 1 时 `[[ -n q && roots 含 q ]]` 为假，返回 2。c0826be:local_692_pool.sh 第 399 行：scan 出现 verdict=infra 即 EVAL692=FAIL。",
+      "proposed_fix": "计划里把成因写成「未证实」，修法改为：多次重采样（如 3 次，间隔 2 秒）；PPid 读空或链终止于 1 的进程，用 /proc/<pid>/environ 或 cwd 判断是否属本仓库评估，判不了才拒；可选地给第二次 check_local_gpu 前加一个同卡 barrier。同时在 result.md 的待修缺陷里说明 pending 说法已被日志推翻。"
+    },
+    {
+      "dim": "692 评估移植",
+      "id": "S4-06",
+      "title": "EVAL692 对 124/137 的处置：scan 的修改点、重跑分支和测试都没写，覆盖码集也偏窄",
+      "severity": "minor",
+      "plan_section": "第三部分 EVAL692 判据（约 L410）、F7、S4a local_692_pool.sh",
+      "claim": "计划要求 124/137 一律按基础设施退出处理。该分类在 local_692_pool.sh 的内嵌 cmd_scan 里，而 S4a 对 local_692_pool.sh 只列了 POLICY_CONFIG 默认值与 DRY_RUN 断言两项，没提 scan 的改动；CPU 验收也没有这条的测试。cmd_scan 当前只在「不完整」或「rc≠0 且无任何 error」时判 infra。124 且只含预标 error、进度完整的分片会判 expected，判 124 且含新 error 则走 retry。cmd_integrate 对重跑分片的 retry_rc 只记录不判定，重跑片以 124／137 退出同样会被吞掉。143（TERM）、130 等其他非零码、以及 server 中途崩溃后其余局全被记成 error 再整批 retry，都不在计划处理范围。",
+      "evidence": "c0826be:scripts/evaluation/local_692_pool.sh 第 145-159 行（infra／retry／expected 分类）、第 178-179 行（retry_rc 仅读入）、第 224-225 行记录。c0826be:examples/robomme/eval.py 第 446-452 行：异常一律记为 error 并继续。run_shard.sh 第 218-227 行 timeout 管道与 set -euo pipefail，124 会向上传到分片退出码。计划 L576 自认「审计没有做完整反驳」。",
+      "proposed_fix": "S4a 里明确写出 cmd_scan／cmd_integrate 的改动：rc 属于集合 {124,137,143,130} 或者 rc≠0 但不是 eval 的 error 类退出，一律 infra，且优先于 expected／retry；重跑片同样判定；某分片新 error 数超过阈值（例如超过 3）直接 infra。给 scan 的这几个分支各加一个假分片单测，放进 test_s3_eval_local.py。"
+    },
+    {
+      "dim": "692 评估移植",
+      "id": "S4-07",
+      "title": "sidecar 卡号口径：除 run_shard.sh 外，smoke_demo_inject.py 与 MMEVLA_MOTION_* 环境变量在 v4 上是死代码",
+      "severity": "minor",
+      "plan_section": "S4c、L1 评估冒烟",
+      "claim": "v4 基线的 policy_config 不读 MMEVLA_MOTION_ONLINE_GPU，只认 create_trained_policy 的 motion_online_gpu 参数，serve_policy 对应 --motion_online_gpu 旗标。run_shard.sh 第 178 行的环境变量导出因此无效，计划已用显式旗标替代。smoke_demo_inject.py 的 verify 仍靠 setdefault(MMEVLA_MOTION_ONLINE_GPU) 并且调 create_trained_policy 时不传 motion_online_gpu、stage2_python，L1 冒烟会用快照里写死的 online_gpu 与默认解释器，与正式评估的口径不一致，也不一定与新 rgbstate 项目的解释器吻合。local_692_pool.sh 的 MMEVLA_MOTION_PROV_RELAX 在 v4 同样不被读取，无害但应在计划里说明。",
+      "evidence": "345c0c9:src/mme_vla_suite/policies/policy_config.py 第 76-77 行与第 102-109 行（参数形式，无 env 读取）。345c0c9 的 src、scripts/training 里对 MMEVLA_MOTION_ONLINE_GPU 的出现只在 scripts/training/legacy-eval 下。c0826be:scripts/evaluation/smoke_demo_inject.py 第 127-128、156-157 行。`git grep MMEVLA_MOTION_PROV_RELAX 345c0c9 -- src scripts/training scripts/dataset` 无结果。345c0c9:scripts/training/serve_policy.py 第 59-60 行已有 motion_online_gpu／stage2_python 字段。",
+      "proposed_fix": "S4c 补一句：smoke_demo_inject.py 的 verify 显式传 motion_online_gpu 与 stage2_python（取契约①的新项目解释器），删除对 MMEVLA_MOTION_ONLINE_GPU 的依赖；同时从 run_shard.sh 删掉第 178-179 行死导出。"
+    },
+    {
+      "dim": "692 评估移植",
+      "id": "S4-08",
+      "title": "DRY_RUN 验收命令缺 ckpt 位置参数；EXPECT_MOTION_BUDGET／STRIDE 默认值是 160／16，漏传不报错",
+      "severity": "minor",
+      "plan_section": "S4 CPU 验收（约 L348）、第三部分 EVAL692（约 L292）",
+      "claim": "L348 的命令 `DRY_RUN=1 POLICY_CONFIG=... bash local_692_pool.sh` 没带 ckpt 参数，脚本第 40 行 `CKPT=\"${1:?需要 checkpoint 绝对路径}\"` 会直接退出，验收按字面不能成立（runbook L515 带了参数）。DRY_RUN 现有行为也只打印 SHARD_MAP 和预标，不打印每片 server argv，「列出 32 片命令、断言最终 argv 的 config」是新功能，属拟新增，但需要 run_shard.sh 支持 dry 模式或在 pool 里复刻 argv，计划没定。EXPECT_MOTION_BUDGET／EXPECT_MOTION_STRIDE 靠调用方环境传入，漏传时 check_shard 以 160／16 验收，新 run（96／32）会以莫名其妙的 budget 不符失败，或在误配时反而判过。",
+      "evidence": "c0826be:scripts/evaluation/local_692_pool.sh 第 40 行、第 316-334 行、第 378-382 行。c0826be:scripts/evaluation/check_shard.py 第 24 行 `MOTION_STRIDE = int(os.environ.get(\"EXPECT_MOTION_STRIDE\", \"16\"))` 与第 80 行 `EXPECT_MOTION_BUDGET` 默认 \"160\"。第 62-66 行的 export 列表不含这两个变量。",
+      "proposed_fix": "L348 命令补上 ckpt 与 seed 参数。pool 脚本在 export 段对这两个变量用 `${EXPECT_MOTION_BUDGET:?}`、`${EXPECT_MOTION_STRIDE:?}` 强制必传，DRY_RUN 的输出里打印它们。明确 argv 来源：建议 run_shard.sh 增加 DRY_RUN 模式，只打印最终 server 命令行后退出，pool 的 dry-run 逐片调用并断言。"
+    },
+    {
+      "dim": "692 评估移植",
+      "id": "S4-09",
+      "title": "RUNS 的 resolved_sha256 等钉死值依赖 S3 的最终 yaml，而合并顺序 S4 在 S3 之前",
+      "severity": "minor",
+      "plan_section": "S4a check_checkpoint、合并顺序 S2→S1→S4→S3→S5",
+      "claim": "check_checkpoint 的 RUNS 每条要写 resolved_sha256（来自最终 history yaml）、norm_stats_sha256、motion_budget=96、kind／readout 等，且 assert_motion 要有 stage2 concat 分支。yaml 与 config.py 条目在 S3，S3 在 S4 之后合入，S4 的验收「六条 run 都能查到」只能核键，无法核 sha。计划没说 sha 何时、用什么命令填，也没列 stage2 分支要断言哪些字段（encoder_kind=stage2_pool4_concat、readout、stride=32、dim=1024、budget=96、provenance 里的 stage2 字段）。run 的 `cfg.token_per_image == 64 and integration_type == 'modulation'` 的 L221 断言按 run 取值已写明，这部分没问题。",
+      "evidence": "c0826be:scripts/evaluation/check_checkpoint.py 第 46、152-157、223 行，第 59-94 行 assert_motion 的分支结构，以及第 5-6 行 `--resolved-sha256` 复算用法。计划 S3 行写「依赖 S4 入口；第 4 个合」。",
+      "proposed_fix": "在计划里写：RUNS 的 sha 在 S3 合入后用 `check_checkpoint.py --resolved-sha256 <yaml>` 复算，作为 S3 之后的小提交补入，S4 的验收只验键与分支结构；并列出 stage2 concat 分支的断言清单。"
+    },
+    {
+      "dim": "692 评估移植",
+      "id": "S4-10",
+      "title": "「serve_policy.py 接上 692 的 max_steps=2000 profile」描述不准",
+      "severity": "minor",
+      "plan_section": "S4b",
+      "claim": "max_steps 只是客户端参数（run_shard.sh 里写死 MAX_STEPS=2000，经 --args.max_steps 传给 eval.py）。serve_policy.py 在 c0826be 和 v4 两个版本里都没有 max_steps／profile 字段，v4 的 testx profile 在 v4 的 eval.py 里，不在 server。server 侧需要的只是 FrameSampMemory 的 max_steps=4096 帧号上界，BinFill demo 约 1282 帧加 2000 步仍在内。该句容易让实现者去改一个不需要改的文件。",
+      "evidence": "c0826be:scripts/evaluation/run_shard.sh 第 28、222 行；`git grep max_steps 345c0c9 -- scripts/training/serve_policy.py` 无结果；345c0c9:src/mme_vla_suite/policies/framesamp_memory.py 第 49、68 行（max_steps=4096）。",
+      "proposed_fix": "删掉该句，改写为「eval_692.py 接受 --args.max_steps=2000，server 无需改动」，并在 S4b 的验收里保留「eval_692.py 解析 max_steps=2000」一条。"
+    },
+    {
+      "dim": "开工时点、1113 交接与消息",
+      "id": "T03",
+      "title": "消息 2 的「对方回收到后本方回 ③」与第 28 条纯回执规则冲突",
+      "severity": "minor",
+      "plan_section": "I 节 消息 2（行 600）",
+      "claim": "第 28 条规定，对方只说「收到」而无新内容的纯回执不再回复，否则会形成回执循环。消息 2 没有要求对方给出结果，却写「对方回『收到』后本方回 ③」。若对方只回一句收到，本方再回就违规。",
+      "evidence": "CLAUDE.global 第 28 条：「对方的纯回执（③，或只说收到／已读、无新内容）不再回复」。③ 只在收到对方带内容的「结果」后发送。计划行 600 与行 598 的措辞不一致。",
+      "proposed_fix": "消息 2 改成与消息 1 同构：要求对方回「收到 req=…」加一行状态，例如是否还需要 GPU。本方仅在收到带内容的「req=… 结果：…」后回 ③。对方只回纯「收到」则不再回复，并在汇报里记录。"
+    },
+    {
+      "dim": "开工时点、1113 交接与消息",
+      "id": "T04",
+      "title": "消息 1 没有覆盖开工令到达时 1113 已训完或已 done 的情形",
+      "severity": "minor",
+      "plan_section": "I 节 消息 1（行 597）、§1.5",
+      "claim": "消息 1 的正文固定写「将在你方训练出 TRAIN_TERMINAL=PASS … 之后开始」。训练预计 11-15 美东 03:45–04:30 结束，用户开工令可能晚于此时。那时 G1–G3 已满足，对方可能处于空闲或 done，措辞与事实不符，计划也没有写如何调整。",
+      "evidence": "当前美东 11-14 19:40，train.log 到 epoch 50，距训满约 8 小时。计划行 27 与行 123 自己预计 11-15 03:45–04:30 美东训满。行 597 的消息 1 与行 600 的消息 2 内容没有条件分支。",
+      "proposed_fix": "在 I 节加一条分支：发送前先核 G1–G3，已满足就把消息 1 和消息 2 合并成一条（仍是一次握手），正文改写成「已满足起点、自 <时刻> 起占卡」。仍保持最多两条。"
+    },
+    {
+      "dim": "开工时点、1113 交接与消息",
+      "id": "T05",
+      "title": "Monitor A 过滤词用裸 nan，1113 已为此改成 \\bnan\\b",
+      "severity": "minor",
+      "plan_section": "I 节 Monitor A（行 485）",
+      "claim": "train.log 是含大量数字与键名的 JSON 行，过滤词写裸「nan」会按子串误报。1113 计划 N7 已明确训练日志用 \\bnan\\b。",
+      "evidence": "1113 计划行 394：「训练日志用 \\bnan\\b（N7；§Z13 已同步）」。计划行 485 的过滤词是 EXIT_CODE=|TRAIN_TERMINAL|Traceback|nan|NaN|拒绝|失败|错误。",
+      "proposed_fix": "过滤词改为 \\bnan\\b|\\bNaN\\b。并按第 28 条补全中文与项目拒绝语（FAIL、找不到、拒绝覆盖）。"
+    },
+    {
+      "dim": "资源、格式与规则符合",
+      "id": "R04",
+      "title": "磁盘账用的单 run 体量没有实测依据且偏大，「最坏账越过停写线」的结论因此未得到证据支持",
+      "severity": "minor",
+      "plan_section": "A R8；F5；§5 时间线下方",
+      "claim": "R8 写「两条 run 各约 120–140 GB」，并据此算出最坏账约 1064 GB、越过 150 GB 停写线。计划没有给出任何 du 或 ls 证据。本机同类 run 实测约为每份 ckpt 11 GB，10 份约 110 GB。按实测重算，最坏账约 836 GB 加 heldout，到约 850 GB，剩余约 300 GB，高于停写线。结论方向偏保守，但它是计划里的事实陈述，没有证据，还会触发不必要的停写询问。另外 R8 写「可用 1.1 T」，F5 写「1.15 TB」，两处不统一。",
+      "evidence": "du -sh …/mme_vla_suite_orig16_b128_60k/orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k/50000 → 11G；同目录 timepool 的 12 份 ckpt 各 11G（共 130G，12 份）；encoder_dependencies 只有 300M。当前 df -B1 /scratch 可用 1149521268736 字节。读回只用单文件 readback.bin（_stage2_orig16_vla_ckpt_export_common.sh 第 424 行），所以不是整份拷贝；try2/verify 12G 就是一个 ckpt 的大小。计划 HTML 第 551 行（F5）和 R8。",
+      "proposed_fix": "R8、F5 把单 run 体量改成实测式：10 份 ckpt 乘 11 GB 约 110 GB（引用上面的 du 命令），重算最坏账，并注明读回临时量只有约一个 ckpt 大小。R8 与 F5 统一用同一个可用量数字（约 1.15 TB）。只有重算后仍越线，才保留「越线」的说法。"
+    },
+    {
+      "dim": "资源、格式与规则符合",
+      "id": "R05",
+      "title": "计划完全没提 /dev/shm（内存盘）占用",
+      "severity": "minor",
+      "plan_section": "A R8 磁盘；F 风险登记；E runbook",
+      "claim": "同库、同 8×8 帧布局、同机的 wanraw9-s32 50k 训练实测 /dev/shm 稳定占 209–225 GB（峰值 225 GB，tmpfs 总量 561 GB，有 300 GB 告警线和 r9-shmmon 采样）。本计划全文没有出现 shm，没有采样、告警线，也没写 M 结束到 C 开始之间的清理或核对。context 段多出 motion 窗，占用只会更大。",
+      "evidence": "c0826be:docs/training-doc/v2-1600ep-m8x8-modul-wanraw9s32-b128-50k/result.md 第 35 行：「/dev/shm … 稳定在约 209–225 GB 平台（峰值 225 GB，远低于 561 GB tmpfs 与 300 GB 告警线）」。df -h /dev/shm → 561G 总量。grep -i shm 计划 HTML → 无输出。",
+      "proposed_fix": "在 R8 或 F 风险表加一行：训练期间用 r9-shmmon 同口径采样 /dev/shm，300 GB 告警，M、C 之间核对 /dev/shm 已释放，只记录、不拦截（不叠加新的保护层）。"
+    },
+    {
+      "dim": "资源、格式与规则符合",
+      "id": "R06",
+      "title": "「美东」日期标成 11-15，实际写作时刻仍是美东 11-14",
+      "severity": "minor",
+      "plan_section": "文首外部依赖锚点；§5；F5",
+      "claim": "计划多处写「11-15 美东」「11-15 实测」，但这些动作发生在美东 11-14 晚（UTC 已过零点）。违反「对用户报时刻一律用美东、不报 UTC」，也会让后续读者对不上日志时间。",
+      "evidence": "git log 345c0c9 作者时间为 2026-11-15 00:38:11 +0000，即美东 11-14 19:38。当前 TZ=America/New_York date 为 Sat Nov 14 19:39:57 EST 2026。计划 HTML 第 37 行写「11-15 美东按此公式再复算一致」，第 551 行写「11-15 实测」。「用户 11-15 裁决」同理，是否同样偏了一天需要核。",
+      "proposed_fix": "这些记录日期按美东改成 11-14，或写具体美东时刻。只有「推算 11-15 约 03:45–04:30 美东训满」是将来时刻，可以保留。"
+    },
+    {
+      "dim": "资源、格式与规则符合",
+      "id": "R07",
+      "title": "时间线没有给出端到端总时长，也没交代 P0 期间 GPU 空档",
+      "severity": "minor",
+      "plan_section": "§5 时间线",
+      "claim": "§5 的「合计约 45–55 h」只覆盖 L0 到 E2，不含 R（40–70 min）和 P0（1.5–2.5 天）。GPU 从 G（约 03:40）开始可用，真正持续占用要等 P0 的 S1、S2 合入，之间约 1.5–2.5 天里除 R 约 1 h 外 8 卡空着。计划没有写这段空档，也没写总墙钟。第 33 条 D 要求 GPU 空闲期要填满，或至少要明说。分项估时本身可以由先例核对：context 稳态约 1.9 s/步、50k 约 26 h，E 评估先例 73 min，encoder 约 5.07 min/轮、剩 94 轮约 03:35 美东训满。",
+      "evidence": "我的求和：L0a 2–3 h + L1 1 h + M 13.5–16 h + E1 1.25 h + C 26–33 h + E2 1.25 h = 45–55.5 h，不含 R。先例：orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k/result.md「稳态约 1.9 秒/步」；c0826be local692-wanraw9s32-50k/result.md「约 73 分钟」；encoder ckpt mtime 间隔约 25.3 min/5 轮。计划 HTML 第 117–123 行。",
+      "proposed_fix": "§5 加一句端到端估计：从开工令起约 P0（36–60 h）加 45–55 h，约 3.4–4.8 天；并说明 G 到 L0a 之间 GPU 的空档如何处置（明确空着，或在用户已定范围内列出可并行的、已具备输入的 GPU 工作）。"
+    },
+    {
+      "dim": "资源、格式与规则符合",
+      "id": "R08",
+      "title": "heldout GT 解包被排在 S6 写完并审查之后，违反第 33 条 B/C",
+      "severity": "minor",
+      "plan_section": "§1.5 写代码段；§7 阶段 1；F9",
+      "claim": "解包只需要 1113 的 heldout 名单（已在盘上）和 /scratch/hongze/source-4task-h5-604f16da/tar（14 个 tar 在盘），不依赖 S6 的任何代码。计划却要「S6 写完并审查后」才开始，而 F9 自己估计单个 tar 要 25–40 min（xz 单流），14 个 tar 分 6 路至少 3 轮约 2 h。这是可以在开工令一到就并行启动的 CPU 长任务，却被串在代码实施之后。R 因此还要多等这段时间。",
+      "evidence": "policy 计划 HTML 第 70 行（§1.5 表）：「S6 写完并审查后，在 S6 固定工作树…解出 heldout 28 个成员」。ls /scratch/hongze/source-4task-h5-604f16da/tar 有 13–14 个 .tar.xz，共约 85G。1113 数据根 reports/split_count.json 里 val_episodes=28。AGENTS.md 第 33 条 B、C、M。",
+      "proposed_fix": "开工令后立刻用一个最小 tar 解包加 sha 核对脚本（nice、最多 6 路）起 v16-heldout-h5，不等 S6。S6 的 extract_heldout_h5.py 之后只用于复核或复现。"
+    },
+    {
+      "dim": "资源、格式与规则符合",
+      "id": "R09",
+      "title": "子代理分配表缺「资源占用」与「预期时长」两列；runbook 写法约定缺日志三件套",
+      "severity": "minor",
+      "plan_section": "C 子代理分配表；E 写法约定；R6",
+      "claim": "(1) AGENTS.md 第 2 条要求分配表列「资源占用（GPU、端口、run_name、tmux 前缀）」与「共享文件归属裁决」，第 33 条 I 要求委派写预期时长以便超 1.5 倍主动查。C 节表头只有 编号/目标/可写集合/禁触/依赖与合并顺序/验收。(2) E 节「写法约定」只写 set -euo pipefail，没有 PYTHONUNBUFFERED=1、tee 落日志、尾行 EXIT_CODE= 这三件套，而 D 表的判据（如 EXIT_CODE=0）依赖它。(3) R6 的 tmux 清单里 v16-e1、v16-e2 与 v16-chain（串行链内含 E1、E2）并列，没说两者是否同时存在。",
+      "evidence": "计划 HTML 第 322 行表头：编号／目标／可写集合／禁触／依赖／合并顺序／验收（worktree 内，CPU，≤5 min）。grep 'tee' 计划 HTML → 0 处；PYTHONUNBUFFERED 无；第 417 行写法约定只有 set -euo pipefail。grep '1.5 倍' 无。AGENTS.md 第 2 条「子代理分工与合并必须写进计划」与第 33 条 I，CLAUDE.md「长任务放 detached tmux」。",
+      "proposed_fix": "C 表加两列：资源占用（S6 的解包与渲染占 CPU、GPU 0–7、tmux 名；S2 的合成 ckpt 测试等）与预期时长。E 写法约定补一句「tmux 命令用 PYTHONUNBUFFERED=1、set -o pipefail、tee 日志、尾行 echo EXIT_CODE=」。R6 写清 v16-e1、v16-e2 是否只在 START_STAGE 单独续接时使用。"
+    },
+    {
+      "dim": "资源、格式与规则符合",
+      "id": "R10",
+      "title": "Astra 22 项没有逐条处置对照，只在正文里零散引用了 16 个编号",
+      "severity": "minor",
+      "plan_section": "J 节；H 留档；文首",
+      "claim": "J 节只覆盖 workflow 对抗验证 v1 到 v2（110 项）。上一轮 Astra 审计 A01–A22 在计划里只是行内引用 A01、A02、A03、A05、A06、A07、A09、A10、A11、A12、A13、A16、A17、A18、A21、A22 共 16 个编号。A04（pack 锁协议）、A08（单模型 compose）、A14（冻结期修复协议）、A15（XPATH 对齐）、A19（磁盘最坏账）、A20（FRAMESAMP jq）没有编号对应，只能靠读内容推断已处理。读者无法一眼核对 22 项是否都落了地。留档本身齐全：Astra 审计 html 与 json、1114-4trs-vla-plan-review 的 README 与 records/workflow-result.json 都在 345c0c9。",
+      "evidence": "grep -o 'A[0-2][0-9]' 计划 HTML 得到 16 个不同编号；git ls-tree 345c0c9 docs/audits/1115-astra-high-audit 有 html 与 json；docs/audits/1114-4trs-vla-plan-review 有 README.md 与 records/workflow-result.json。Astra json 的 22 项标题：A04 为「正常 pack→verify 的锁协议…」，A08 为「单模型重建仍调用旧 compose…」，A14 为「冻结期修复和 START_STAGE 缺逐阶段版本恢复协议」，A15 为「MOTION_XPATH 的窗口对齐规则仍未落入正文」，A19 为「560GB 最坏峰值漏算获准的失败 attempt」，A20 为「FRAMESAMP8X8 命令读错字段」。",
+      "proposed_fix": "在 J 节后加一张 Astra A01–A22 到本版章节的对照表（22 行：编号、处置、落点节），并在 docs/audits/1115-astra-high-audit/ 加一行出处索引。"
+    }
+  ],
+  "unverified_heavy": [],
+  "critic": {
+    "findings": [
+      {
+        "id": "N01",
+        "title": "MOTION_XPATH 共同窗口过滤条件 aug_id=0 在 windows.parquet 里没有对应列",
+        "severity": "major",
+        "plan_section": "§3 XPATH 对齐要点；E 节 runbook 对齐规则（共同窗口取 split=val、aug_id=0、row_count=1、start%16==0）；B 表 check_motion_xpath.py；D 表 MOTION_XPATH",
+        "claim": "计划要求用 1113 windows.parquet 里 split=val、aug_id=0、row_count=1、start%16==0 取共同窗口。该数据根的 windows.parquet 没有 aug_id 列，只有 parity_aug_id。按字面实现会 KeyError；若有人把它换成 parity_aug_id==0，val 窗只剩很少几条，对拍覆盖面会被悄悄压没。",
+        "evidence": "读 /scratch/hongze/dataset-4task-rgb-state-stride2-16views-v1/index/windows.parquet，列为 window_key, task, episode, kind, start, source_frame_ids, real_frames, pad_frames, is_tail, split, window_id, row_start, row_count, parity_aug_id。val 共 6603 窗，row_count 全为 1，parity_aug_id 有 6547 条是 -1、56 条是 0。val 中 start%16==0 的窗共 868 条，其中 parity_aug_id==0 的只有 35 条，is_tail 的有 22 条；BinFill 在这 868 条里只有 exec，没有 demo。计划全文 grep 到的 aug_id 有 2 处，都没有说明它对应哪一列。",
+        "proposed_fix": "把过滤条件改写成 split=='val' 且 row_count==1 且 start%16==0（共 868 窗，其中 22 个 tail），删掉 aug_id 条件，不用 parity_aug_id。把 868、22 和 BinFill 无 demo 窗写进合同。64 窗取样策略要写明分层键 (task, kind)，并核对 BinFill 无 demo 时每个 (task, kind) 格的可用窗数是否足够。"
+      },
+      {
+        "id": "N02",
+        "title": "S5 导出驱动没有列出 hygiene 白名单，公开前扫描会因未裁决命中而拒绝",
+        "severity": "minor",
+        "plan_section": "B 表 S5 行（_stage2_4task_vla_ckpt_export_common.sh 等）；eval/ 上传；D 表 CKPT_UPLOAD／EVAL_HF_VERIFY",
+        "claim": "orig16 导出公共体在上传前对准确上传集合做 scan()。命中 P9／P10 等模式时，如果 hygiene_allowlist_orig16_stage2_vla.json 里没有按文件名通配符给出 accept 条目，就 need() 失败，整个上传停住。计划说 S5「以 orig16 版为模板」，只列了库名、RUNS、bucket、README 模板，没有新增 4task 白名单文件，也没有给 eval/ 前缀文件（逐局 CSV、日志、元数据）的白名单或扫描口径。",
+        "evidence": "git show 345c0c9:scripts/dataset/hf_export/_stage2_orig16_vla_ckpt_export_common.sh 第 485 行 allow=EXPORT/'hygiene_allowlist_orig16_stage2_vla.json'；第 330–341 行 scan() 在命中而无 accept 条目时 need(...,'公开前未裁决命中')。该白名单现有 path_glob 只有 README.md、_run-meta/train.log、encoder_dependencies.json、encoder_dependencies/*/config.yaml、history_config.resolved.yaml、motion_evidence/*.json、motion_provenance.json、online_restore_inputs.json。4task 的新证据文件名（member-pin 血缘收据、逐段 sha 清单、local-built 证据）和 eval/ 下的文件都不在其中。计划 B 表 S5 行与 S5 验收命令里没有出现 hygiene 白名单。",
+        "proposed_fix": "在 S5 可写集合里加 hygiene_allowlist_4task_stage2_vla.json，并写明 ckpt 范围与 eval/ 范围各自的 path_glob。S5 验收加一条：用真实形态的 stage 与 eval 样例跑 scan，必须 HYGIENE=PASS。"
+      },
+      {
+        "id": "N03",
+        "title": "ENCODER_REGISTER 的 ln 命令目标目录不存在，且该命令只对 ckpt 与 config 做硬链接",
+        "severity": "minor",
+        "plan_section": "E 节 L0a 第一条命令；R3",
+        "claim": "runbook 写 ln \"$ENCRUN/checkpoint_epoch_144.pt\" \"$ENCRUN/config.yaml\" \"$REG/\"，但 REG=$R/v1-store/external/motionjepa/stage2-4task-rgbstate-144ep-1113-a 目前不存在，命令前也没有 mkdir -p，set -e 下会直接失败。",
+        "evidence": "ls /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/external/motionjepa/ 只有 aws-stage2-nostate-1101-a、aws-stage2-noxyz-1101-a、stage2-full144-1025-a、wan-full1600-filter2-b176x4-72ep-a、wan-mixed8-200-*、wan-v8-filter10-72ep-a，没有 stage2-4task-rgbstate-144ep-1113-a。计划 E 节第 374 行 ln 之前没有建目录。",
+        "proposed_fix": "在 ln 前加 mkdir -p \"$REG\"，或把登记动作封装成 S2 的脚本，由脚本负责建目录、硬链接和两侧 sha256 比对。"
+      },
+      {
+        "id": "N04",
+        "title": "串行链模板需要 TRAIN_HEAD、FINAL_ROOT 环境变量并依赖 pending/decisions 目录，runbook 的调用没有提供",
+        "severity": "minor",
+        "plan_section": "E 节正式链（tmux v16-chain 命令）；B 表 run_4task_concat_modul_eval_ctx_eval_50k.sh；R5",
+        "claim": "计划让新串行链「以 run_orig16_concat_ctx_then_modul_60k.sh 为模板」。该模板开头强制 : \"${TRAIN_HEAD:?}\" 和 : \"${FINAL_ROOT:?}\"，失败时写 $FINAL_ROOT/pending/<run>-<stage>.json，并用 decisions/<id>.json 判断是否已裁决。runbook 里只写 bash \"$R/scripts/training/run_4task_concat_modul_eval_ctx_eval_50k.sh\"，没有给这两个变量；FINAL_ROOT、pending／decisions 的落点计划里也没定义。",
+        "evidence": "git show 345c0c9:scripts/training/run_orig16_concat_ctx_then_modul_60k.sh 第 9–10 行 : \"${TRAIN_HEAD:?必须指定TRAIN_HEAD}\"、: \"${FINAL_ROOT:?必须指定FINAL_ROOT}\"；wait_user() 在 $FINAL_ROOT/pending 下写文件；has_unresolved() 读 $FINAL_ROOT/decisions。计划 E 节第 425 行的调用不带变量，R5 说 decisions/<id>.json 由主会话写，但没说放在哪个根。",
+        "proposed_fix": "在 E 节写明 TRAIN_HEAD=<Beta sha> FINAL_ROOT=<绝对路径> 的传法，并指出 pending／decisions 放在哪个根（不是状态机、不写 current.json）。S3 的 DRY=1 验收加一条：不给这两个变量必须拒绝，给了能打出四段命令。"
+      },
+      {
+        "id": "N05",
+        "title": "库内 raw-h5 实际有 54 个 H5，计划写「36 个 g4prep 单集 H5」",
+        "severity": "minor",
+        "plan_section": "B 表 stage2_member_h5.py 行；F2；R2",
+        "claim": "计划说复用库内 raw-h5/ 下已核过 sha 的 36 个 g4prep 单集 H5。实测 raw-h5 下有 54 个 .h5，而 g4prep 清单只有 36 集。多出的 18 个不在计划的登记范围内。契约②「先核摘要再复用」如果只对 36 个做，其余 18 个会成为未核的存量文件，G0 的 member 解析可能误用。",
+        "evidence": "find raw-h5 -name '*.h5' | wc -l 输出 54，find raw-h5 -type f | wc -l 也是 54；wc -l _g4prep_work/episodes.jsonl 输出 36。文件名里有 VideoUnmaskSwap_ep37_seed8700.h5 出现两次，说明跨难度目录有同名文件。",
+        "proposed_fix": "S2 在复用前对 raw-h5 做一次全量盘点：54 个文件逐个按 member 路径核 map 里的 sha 与字节，把不属于 36 个 g4prep 的 18 个单独列出，并写明保留、复用还是只读不用。stage2_member_h5.py 解析时一律走完整 member 路径，不按 basename 找文件。"
+      }
+    ],
+    "confirmed_ok": [
+      "[内部产出] 外部锚点实测一致：1113 数据根 control/source_manifest.json 的 member_pin_sha256 为 2cb9026f…c5f8bd。按计划公式（键名取 h5_sha256_local 重命名为 h5_sha256，1600 条按 member 排序，sort_keys、紧凑分隔符、ensure_ascii=False）从 git 里 4 份 episode_map 复算，得到同一值 2cb9026f…。",
+      "[内部产出] 旧库实测：framesamp-8x8/meta/store_meta.json 的 layout=framesamp-8x8-v1、status=verified、num_rows=1192918、manifest_sha256=4cd5a170…，与 FRAMESAMP8X8 的 jq 断言吻合。input_manifest.json 为 655e64b4…，episode_manifest.json 为 df0ec8ed…，norm_stats.json 为 856c75ea…，与计划常量一致。",
+      "[内部产出] 1113 的 28 集 heldout 与计划一致：episodes.parquet 中 split=val 共 28 集（BinFill 6、RouteStick 8、VideoRepick 6、VideoUnmaskSwap 8），其中 24 集 episode≠raw_episode，h5_bytes 合计 12.75 GB。这 28 集的统一编号全部落在旧 v7 encoder 的 holdout 区间内，OLD_ENC_HOLDOUT_OVERLAP 的预期是 unseen=0/28。",
+      "[内部产出] 1113 ep144 的保存逻辑成立：stage2_train.py 第 713 行 epoch%save_every==0 或 epoch==run_until_epoch 才存，144 会存；make_stage2_checkpoint 的 model 字段是 EMA（weight_type=ema）、model_live 另存，所以 J1「ep144 的 EMA」可行。训练时间线与计划相符：训练 11-14 20:20 UTC 起跑，epoch 52 约在 00:45 UTC，约 5.1 min/轮，推算 ep144 约 03:30 美东前后训满。",
+      "[内部产出] 8×8 的 history yaml 模板已存在：perceptual-framesamp-{modul,ctx}-8frame-8x8-motion-stage2-1x1024-orig16.yaml，modul 为 memory_token_dim 1024、ctx 为 2048，motion 节 budget 96、stride 32、window_frames 33。计划「只差 integration_type 与 memory_token_dim」的说法成立。",
+      "[内部产出] c0826be 先例成立：run_4task_wanraw9s32_50k.sh 与 run_4task_wantp768_50k.sh 都用 STEPS=50001 覆盖 --num_train_steps，最后一份 ckpt 为 50000。主检出 third_party/robomme_benchmark 已在 b4e97f22（status 显示 M），该提交在本地子模块里存在（cat-file 为 commit），gitlink 在 345c0c9 仍是 856bc3a，计划的 S4 gitlink 快进说法一致。",
+      "[内部产出] 环境事实：/scratch 可用约 1.1T，与 R8 一致；hf 可执行文件与 HongzeFu 令牌目录存在；1113 的 tmux 会话 cc-4trs-train 在跑，GPU 满载；1113 计划的删盘清单（Z9.2 的 5 个 v1-store 目录）不含本计划依赖的旧库、旧 4task v7 encoder 和 source-4task-h5 的 tar，且明确 tar 保留，故不冲突。",
+      "[内部产出] 旧 wan-stage2 项目 pyproject 把 motion-jepa 钉在 git 提交 b5d23a5（只支持三路 arch），所以新增 wan_stage2_rgbstate 独立项目与独立 venv 是必要的，B 表契约①的设计成立。"
+    ]
+  }
+}

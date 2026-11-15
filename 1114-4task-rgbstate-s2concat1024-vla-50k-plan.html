@@ -25,7 +25,7 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
 </head>
 <body>
 
-<h1 style="margin-top:0">1114 4task RGB＋state encoder 的下游 VLA：heldout RGB 重建视频 → 复用旧库补 motion 表 → modulation concat 50k → 692 局评估 → context concat 50k → 692 局评估（v2，已过 workflow 对抗验证）</h1>
+<h1 style="margin-top:0">1114 4task RGB＋state encoder 的下游 VLA：heldout RGB 重建视频 → 复用旧库补 motion 表 → modulation concat 50k → 692 局评估 → context concat 50k → 692 局评估（v3：经两轮 workflow 对抗验证与一轮 Codex Astra 审计）</h1>
 
 <blockquote>
 <p><b>权威性与授权边界</b>：本文件是 1113 encoder（MotionJEPA <code>1113-4task-rgb-state-encoder-plan.md</code>）下游 VLA 的唯一现行计划。<b>只规划不实施</b>：写代码、下载、GPU 任务都要等用户对本文件给出开工令（AGENTS.md 第 2 条）后才能动。v1（<code>59bc133</code>）经 123 个 opus agent 的 workflow 对抗验证：110 条 finding，102 条成立、8 条驳回。本版按成立项全部改过，处置对照见 J 节。v2（<code>345c0c9</code>）又过了第二轮对抗验证，确认的问题按主会话裁决逐节改过，对照同见 J 节。</p>
@@ -625,7 +625,7 @@ env -u PYTHONPATH CUDA_VISIBLE_DEVICES=0 uv run --project "$R" python "$R/script
 #   RUN=&lt;run&gt; BUCKET=&lt;bucket&gt; bash "$R/scripts/dataset/hf_export/run_4task_stage2_ckpt_inc.sh"，日志 $LOG/up-&lt;m|c&gt;.log
 # ── eval 上传（E1、E2 之后；cwd=$R）：S5 提供的 eval 入口，写同一 bucket 的 eval/ 前缀，独立清单与读回
 #   用独立导出根（如 $R/v1-store/exports/hf-eval-&lt;run&gt;，自带 upload.lock 与 marker），不与 ckpt final 争锁
-#   （入口名、导出根与判定行以 S5 实现为准；tmux 名见 A R6）
+#   tmux v16-up-eval-m / v16-up-eval-c；日志 $LOG/up-eval-&lt;m|c&gt;.log（入口名与判定行以 S5 实现为准，见 A R6）
 # ── stage 删除：ckpt 范围 HF_VERIFY=PASS、CKPT_DELIVERY_READY=PASS step=50000、该 run 的 EVAL692 已出 1 行，
 #   三者都满足后 ls -ld 核对 → 删 → df 记录
 </code></pre>
@@ -672,7 +672,7 @@ env -u PYTHONPATH CUDA_VISIBLE_DEVICES=0 uv run --project "$R" python "$R/script
 <li>计划提交用 <code>docs:</code>；S1–S5 的合并提交从 <code>commitV16.1</code> 起；正式起跑前打 <code>commitV16.&lt;n&gt;Beta</code>，跑完回写同号的 <code>commitV16.&lt;n&gt;</code>。</li>
 <li>冻结期修复：保留旧日志、旧 run 与旧收据，不覆盖、不删；修复经审查合入后出新的 <code>commitV16.&lt;n&gt;Beta</code>、重新冻结。每段收据（<code>TRAIN_FINAL_RECORD</code>、<code>CKPT_DELIVERY_READY</code>、<code>EVAL692</code>）记录本段实际运行的 sha，留档按段写明，不用新 sha 回填旧结果。</li>
 <li>留档目录见 B 表最后一行，每个目录三件套，含用户原话和判定行；<code>docs/training-doc/README.md</code> 的索引同步加行。</li>
-<li>评估结果上 ckpt 同一 bucket 的 <code>eval/</code> 前缀（用户 11-15 原话「第二部分 要」），用独立导出根、独立锁、独立清单与独立读回判定；ckpt 范围的 <code>HF_VERIFY</code> 不含 <code>eval/</code>。</li>
+<li>评估结果上 ckpt 同一 bucket 的 <code>eval/</code> 前缀（用户 11-14 晚原话「第二部分 要」），用独立导出根、独立锁、独立清单与独立读回判定；ckpt 范围的 <code>HF_VERIFY</code> 不含 <code>eval/</code>。</li>
 <li>每条 run 的 export stage 在 ckpt 范围 <code>HF_VERIFY=PASS</code>、<code>CKPT_DELIVERY_READY=PASS step=50000</code> 与该 run 的 <code>EVAL692</code> 已出 1 行之后删除，删前 <code>ls -ld</code> 核对、删后 <code>df</code> 记录。</li>
 <li>逐段 <code>*.bin.sha256</code> 作为证据引用时，用 JSON 清单封装后再交给消费端，不直接把文本 sha 文件当 JSON 读。</li>
 <li>重建视频的 manifest、per_group CSV、verdicts（含两个 arch 的 <code>RGB_RECON_VIDEO</code>、<code>RGB_RECON_COMPOSE</code>、<code>OLD_ENC_HOLDOUT_OVERLAP</code>）复制进 MJ docs 档案。</li>
@@ -706,7 +706,7 @@ env -u PYTHONPATH CUDA_VISIBLE_DEVICES=0 uv run --project "$R" python "$R/script
 <tr><td>解锁下游</td><td>两任务 <code>done</code> 后，可以做 4task 新 encoder 与旧 motion 的论文对照</td></tr>
 </table>
 
-<h2>J. workflow 对抗验证与处置（v1 → v2）</h2>
+<h2>J. 对抗验证与处置（v1 → v2 → v3）</h2>
 <p>v1 锚点 <code>59bc133</code>。workflow 共 123 个 opus agent：12 个维度各派一名审查者，每条 finding 配一名独立反驳者，最后一名做完整性评审。结果：110 条 finding，102 条成立（blocker 6、major 30、minor 66），8 条驳回；完整性评审另提 4 条（major 2、minor 2），全部采纳。原始结果在 <code>docs/audits/1114-4trs-vla-plan-review/records/</code>。成立项按主题归并处置如下：</p>
 <table>
 <tr><th>主题</th><th>finding</th><th>v2 怎么改</th></tr>
@@ -754,6 +754,10 @@ env -u PYTHONPATH CUDA_VISIBLE_DEVICES=0 uv run --project "$R" python "$R/script
 <tr><td>A21</td><td>P2</td><td>移植评估池覆盖 POLICY_CONFIG</td><td>采纳：<code>${POLICY_CONFIG:-…}</code>，dry-run 断言 server argv</td><td>B local_692_pool 行；D 正式 dry-run；E dry-run</td></tr>
 <tr><td>A22</td><td>P2</td><td>共享血缘函数与 G4 跨任务依赖未闭合</td><td>采纳：两仓各自实现契约③；L0a／L0b 拆开，G4 等 S3 最终 yaml</td><td>B 契约③、check_stage2_online 行；D <code>ONLINE_*</code>；F8</td></tr>
 </table>
+
+<h3>J.2 第二轮 workflow 对抗验证（锚点 345c0c9 → v3）</h3>
+<p>按 Astra 审计修订后（<code>345c0c9</code>），再跑一轮 workflow：10 个维度各一名 sonnet 审查者（其中两名逐条核对 A01–A22 是否真正闭合），blocker／major 各配一名独立反驳者，最后一名完整性评审，共 35 个 agent，全部成功。结果：69 条 finding；验证 24 条（成立 21、驳回 3），45 条 minor 未单独验证、由写入代理逐条回原文核实后处理；完整性评审另提 5 条。无需要用户裁决的项。原始结果在 <code>docs/audits/1115-plan-review-r2/records/workflow-result.json</code>。</p>
+<p>主会话对分歧条目的裁决：评估读严格恢复通过的 <code>stage/50000</code>（check_checkpoint 按 stage 路径反查 run 名，stage 待该 run 的 EVAL692 出行后才删）；50001 步最终记录尾窗为空是预期，由 EMA 叶有限＋DIAG 行兜底，合同放行 20／50001；G1 改为最大编号 attempt 的 <code>EXIT_CODE=0</code>＋ep144 ckpt＋本方只读跑 <code>terminal</code> 得 PASS；「最多两条消息」只计有内容的请求；124／137／143／130 退出一律判 infra。修订由三名 opus 写入代理分节完成（<code>2080406</code>、<code>2135cbe</code>、<code>b139037</code>），主会话合并后统一跨节口径。</p>
 
 </body>
 </html>
