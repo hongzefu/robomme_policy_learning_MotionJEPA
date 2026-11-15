@@ -44,210 +44,114 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
 <h1>第一部分（给人看）</h1>
 
 <h2>1. 要做什么与已定口径</h2>
-
-<p><b>一句话方案</b>：encoder 训满后，先照 16task 的做法，在 encoder 的 heldout 测试集上把 motion 经 RGB decoder 解出的 latent 用 Wan VAE 解码回 RGB，拼成四栏重建视频（GT｜重建｜像素误差｜latent 损失），出 PSNR 等指标（§3.5）。之后不重建 4task VLA 库。在现有 <code>4task-v2-1600ep-604f16da</code> 上做四件事：补一条按成员比对的血缘记录；直接用库里已有的 8×8 帧表（<code>framesamp-8x8</code>，4task 一律每帧 8×8）；用 1113 encoder 的 EMA 权重，按 33 帧窗、stride 32、每集 96 窗导出 <code>[1,1024]</code> motion 表；以「本地自建 latents」这个新来源打包。然后在 8 卡上串行训两条 50k，先 <b>modulation＋concat 1×1024</b>，训完立即跑 692 局评估；再 <b>context＋concat 1×1024</b>，训完再评估。除步数（50k，与 4task 基线对齐）和帧布局（4task 一律 8×8）外，超参与 16task 的 concat 实验（<code>1030-orig16-context-modul-nosplit-60k-plan.md</code>）一致。</p>
-
-<pre><code>P0（与 encoder 训练并行）：S1–S5 写代码与审查合并（约 1.5–2.5 天）
-   │  起点 = max(encoder TRAIN_TERMINAL, P0 全部合入)
-   ▼
-R  heldout RGB 重建视频（MJ 侧，8 卡，约 20–40 min；GT H5 在 P0 已从 tar 解出）
-   ▼
-L0 登记 encoder → 血缘 → G0/G2/G3 → 导出（1 卡）→ 对拍 → 打包 → bitexact → verify → G4（约 2–3 h）
-   ▼
-L1 两条 20 步短测＋单卡 4 片评估冒烟（8 卡，约 1 h）
-   ▼
-M  modulation concat 50k（8 卡，约 13.5–16 h）──► E1 692 局 × seed 7（约 1.2 h）
-                                                   ▼
-                     C  context concat 50k（8 卡，约 26–33 h）──► E2 692 局 × seed 7（约 1.2 h）
-</code></pre>
-
+<p><b>一句话方案</b>：encoder 训满后，先照 16task 做 heldout RGB 重建视频 → 不重建 4task VLA 库，在旧库 <code>4task-v2-1600ep-604f16da</code> 上补血缘记录并导出 stride 32 的 motion 表 → 8 卡串行：<b>modulation concat 1×1024</b> 训 50k → 692 局评估（seed 7）→ <b>context concat 1×1024</b> 训 50k → 692 局评估（seed 7）。除步数（50k）和帧布局（8×8）外，超参与 16task 的 concat 实验一致。</p>
 <table>
 <tr><th>#</th><th>已定口径</th><th>依据（用户原话逐字）</th><th>见</th></tr>
-<tr><td>K1</td><td>encoder 训完后做下游：库 → modulation → 评估 → context → 评估，<b>全部 8 卡</b>、串行</td><td>「做完之后还要做我们之前16task做的重建rgb的 然后重新训练modulation的版本 训完直接评估 评估完然后训context版本 然后再评估 都是8卡」</td><td>§5</td></tr>
-<tr><td>K2</td><td>motion 窗 stride 32，与 16task 统一</td><td>「这次的stride和16task同意 应该都是32」</td><td>§3</td></tr>
-<tr><td>K3</td><td>两版都用 concat 1×1024（<code>stage2_pool4_concat_v1</code>），以后不用 split</td><td>「全部都是用concat 1×1024 我们之后都放弃用split」</td><td>§4</td></tr>
-<tr><td>K4</td><td>尽可能不重建库；三路对抗验证后改为复用旧库</td><td>「为什么这个是必要的 对抗验证一下 全部opus 尽可能不要重建？」</td><td>§2</td></tr>
-<tr><td>K5</td><td>encoder 与 VLA 必须同一数据集，起跑合同带 <code>DATA_LINEAGE</code> 闸门，不得 WAIVE</td><td>「加入一个强约束，以后 encoder 和 VI 必须是同一个数据集，不可以出现混用的情况。」（10-27，AGENTS.md P-LINEAGE）</td><td>§2、A R1、D</td></tr>
-<tr><td>K6</td><td>评估默认 32 片、每卡 4 worker，分片与显存参数不需与历史一致</td><td>「实现每卡4worker worker现存等以后都不需要保持一致」（11-13）</td><td>§5</td></tr>
-<tr><td>K7</td><td>ckpt 上传公开 bucket；执行期的工程问题自己修、事后汇报，只有训练语义变化才停下问</td><td>「除非发现训练语义上的变化需要来问我之外，其他的都可以自己来处理。但是你处理完了有这些额外的问题，你都要汇报给我。」（11-13）</td><td>§4、A R5、D</td></tr>
-<tr><td>K9</td><td>4task 一律每帧 8×8（<code>token_per_image 64</code>）；本计划两条都是 8 帧×8×8＝512 token</td><td>「我们以后都约定，就是对于四 task 都用八乘八的每帧。」（11-14）</td><td>§4、§9 J5</td></tr>
-<tr><td>K10</td><td>两条都训 50k（存到 step 50000）；不登记状态机；新分支与全部提交都 push；J1 ep144 EMA、J4 不排除 heldout 照默认</td><td>「全部50k」「不登记」「全部push」「同意」（11-14）</td><td>§4、§9、I 节</td></tr>
-<tr><td>K12</td><td>encoder 训完后先照 16task 做 heldout 测试集 RGB 重建视频（motion→RGB decoder→Wan VAE 解码），再训 VLA</td><td>「做完之后还要做我们之前16task做的重建rgb的 然后重新训练modulation的版本」（11-14 首条）；「就是把 motion encoder 输出的，就是在它那个 holdout 的集合里面，把它这个输出的 latent 重新建回 RGB 的这个变成一个视频的这么一个机制嘛？你为什么没有实现？」（11-14）</td><td>§3.5、§5、S6</td></tr>
-<tr><td>K11</td><td>评估只跑 seed 7 一次（与 4task 历史 692 局一致），seed 42／0 以后再跑，不进本次串行链</td><td>「之前的评估都跑了一次的话，我们这次也只跑一次」「剩下两次之后再跑」（11-14）</td><td>§5、§9 J3</td></tr>
-<tr><td>K8</td><td>写完整方案后跑 workflow 对抗验证，不需要批准，最后交完整计划</td><td>「写完完整完整方案之后，进行一次 workflow 对抗验证，尽可能详细，不限制这个 agent 的数量，然后不需要叫我批准，直接开始 workflow，然后最后交给我一份完整的计划。」</td><td>J 节</td></tr>
+<tr><td>K1</td><td>库 → modulation → 评估 → context → 评估，全部 8 卡、串行</td><td>「做完之后还要做我们之前16task做的重建rgb的 然后重新训练modulation的版本 训完直接评估 评估完然后训context版本 然后再评估 都是8卡」</td><td>§5</td></tr>
+<tr><td>K2</td><td>motion 窗 stride 32</td><td>「这次的stride和16task同意 应该都是32」</td><td>§3</td></tr>
+<tr><td>K3</td><td>两版都用 concat 1×1024，不用 split</td><td>「全部都是用concat 1×1024 我们之后都放弃用split」</td><td>§4</td></tr>
+<tr><td>K4</td><td>不重建库，复用旧库</td><td>「为什么这个是必要的 对抗验证一下 全部opus 尽可能不要重建？」</td><td>§2</td></tr>
+<tr><td>K5</td><td>encoder 与 VLA 必须同一数据集，<code>DATA_LINEAGE</code> 闸门不得 WAIVE</td><td>「加入一个强约束，以后 encoder 和 VI 必须是同一个数据集，不可以出现混用的情况。」（10-27，AGENTS.md P-LINEAGE）</td><td>§2、A R1、D</td></tr>
+<tr><td>K6</td><td>评估 32 片、每卡 4 worker，不需与历史一致</td><td>「实现每卡4worker worker现存等以后都不需要保持一致」（11-13）</td><td>§5</td></tr>
+<tr><td>K7</td><td>ckpt 传公开 bucket；工程问题自己修、事后汇报，训练语义变化才问</td><td>「除非发现训练语义上的变化需要来问我之外，其他的都可以自己来处理。但是你处理完了有这些额外的问题，你都要汇报给我。」（11-13）</td><td>§4、A R5、D</td></tr>
+<tr><td>K8</td><td>写完方案跑 workflow 对抗验证，不需批准</td><td>「写完完整完整方案之后，进行一次 workflow 对抗验证，尽可能详细，不限制这个 agent 的数量，然后不需要叫我批准，直接开始 workflow，然后最后交给我一份完整的计划。」</td><td>J 节</td></tr>
+<tr><td>K9</td><td>4task 一律每帧 8×8；两条都是 8 帧×8×8＝512 token</td><td>「我们以后都约定，就是对于四 task 都用八乘八的每帧。」（11-14）</td><td>§4、§9 J5</td></tr>
+<tr><td>K10</td><td>两条都训 50k；不登记状态机；全部 push；J1、J4 照默认</td><td>「全部50k」「不登记」「全部push」「同意」（11-14）</td><td>§4、§9、I 节</td></tr>
+<tr><td>K11</td><td>评估只跑 seed 7 一次，seed 42／0 以后再跑</td><td>「之前的评估都跑了一次的话，我们这次也只跑一次」「剩下两次之后再跑」（11-14）</td><td>§5、§9 J3</td></tr>
+<tr><td>K12</td><td>训 VLA 前先做 heldout RGB 重建视频</td><td>「做完之后还要做我们之前16task做的重建rgb的 然后重新训练modulation的版本」（11-14 首条）；「就是把 motion encoder 输出的，就是在它那个 holdout 的集合里面，把它这个输出的 latent 重新建回 RGB 的这个变成一个视频的这么一个机制嘛？你为什么没有实现？」（11-14）</td><td>§3.5、§5、S6</td></tr>
 </table>
-
-<p><b>本计划先替用户取的默认值</b>（§9，已全部裁决）：J1 encoder 用 <code>checkpoint_epoch_144.pt</code> 的 EMA；J2 两条都训 50k；J3 只评 step 50000、只跑 seed 7；J4 不排除 encoder 的 28 集 heldout；J5 帧记忆 8 帧×8×8（K9）；J6 不登记状态机。</p>
 
 <h2>2. 为什么不重建库，以及血缘闸门怎么比</h2>
-
-<p>16task 当时重建，是因为本机根本没有官方 16×100 的 VLA 库，而且 encoder 必须与 VLA 同源。1027 计划第二节原文写的是 VLA 库清单「无」，属于数据身份问题，不是格式问题。4task 不一样：旧库与 1113 encoder 用的是同一个 bucket revision <code>604f16da</code>、同一份 MANIFEST <code>df992cdf</code>。三个只读 opus 代理分头核查：</p>
-<table>
-<tr><th>代理</th><th>判定行</th><th>关键证据</th></tr>
-<tr><td>A 血缘</td><td><code>LINEAGE_REUSE=PASS</code></td><td>member pin <code>2cb9026f…</code> 从三条独立路径复算一致，各 1600 条：MANIFEST、episode_map 的 <code>h5_sha256_local</code>（合并时本地实算）、encoder 的 receipt。合并时 <code>merge_v2_h5.py</code> 先逐个核对源 sha，合并后用 <code>compare_tree</code> 逐 dataset 全值比，结果 <code>MERGE_VERIFY=PASS level=full … episodes=1600 … mismatches=0</code>；episode 顺序 1600/1600 一致。</td></tr>
-<tr><td>B 格式</td><td><code>FORMAT_REUSE=PARTIAL</code></td><td>SigLIP 源 pkl（605,611 个）、norm_stats（<code>856c75ea</code>）、episode manifest 都能复用。（K9 定为 8×8 后不再需要）4×4 帧表本可从 bucket 拉回：同为 <code>framesamp-4x4-v1</code> 格式，37 个文件，78,349,606,034 B。源 features 当初没上传，所以本机不能重打 4×4。stage2 1×1024 motion 表是新产物，需要按 S2 的改法打包。</td></tr>
-<tr><td>C 反方</td><td><code>REBUILD_REQUIRED=NO</code></td><td>旧库 <code>exec_start_idx</code> 等于 encoder scope 的 D，<code>num_timesteps</code> 等于 T，Σ(T−D) 恰好是 605,611。要补的几项都不用重建：改血缘比对代码、在合同里写明 exec 段口径、做跨路径对拍、拉回 4×4。</td></tr>
-</table>
-
-<p><b>血缘闸门的比法</b>：4task 库是合并库，<code>meta/input_manifest.json</code> 只记了 4 个合并 H5。本计划按 P-LINEAGE 的硬约束（同一组源 H5、逐文件 sha256 相同）做<b>链式逐成员比对</b>：合并库只能这样比，依据是 1113 计划 §Z2.5「下游须新增逐成员比对模式」，<b>不是放宽，也不是 WAIVE</b>。链上四环，任一环不等就 FAIL：</p>
-<ol>
-<li><code>input_manifest.files</code> 的 4 个 sha 与 <code>MERGE_DONE.files</code> 相等。</li>
-<li>每份 episode_map 的 sha256 等于 <code>MERGE_DONE.maps_sha256[T]</code>。</li>
-<li><code>MERGE_DONE.source_pin.manifest_sha256</code> 与 encoder 侧对应字段相等，缺这个字段也按 FAIL 处理。</li>
-<li>1600 个成员的 <code>{member,h5_sha256,h5_bytes}</code> 逐条相等，并复算出 member pin。</li>
-</ol>
-<p>encoder 侧的输入有三样：实算 sha 的 ckpt、<code>config.yaml::data.data_root</code> 下的 <code>control/source_manifest.json</code>、<code>build_spec.json::identity.source_pin.member_pin_sha256</code>。判定行里的 <code>vla_input_pin</code> 沿用原含义 sha256(input_manifest)，另加 <code>member_pin</code> 字段。</p>
+<p>16task 当时重建，是因为本机没有那份库。4task 的旧库与 1113 encoder 用的是同一个 bucket revision <code>604f16da</code>。三个只读 opus 代理分头核查：</p>
+<ul>
+<li><code>LINEAGE_REUSE=PASS</code>：1600 个源文件的指纹（member pin <code>2cb9026f…</code>）从三条独立路径复算一致。</li>
+<li><code>FORMAT_REUSE=PARTIAL</code>：帧特征、norm_stats、episode 清单都能复用；只有 1×1024 motion 表是新产物，需要新导出、打包。</li>
+<li><code>REBUILD_REQUIRED=NO</code>：要补的几项（血缘比对代码、合同口径、跨路径对拍）都不用重建库。</li>
+</ul>
+<p><b>血缘闸门</b>按四环链逐成员比对，任一环不等就 FAIL，不是放宽、也不是 WAIVE：① 4 个合并 H5 的 sha 与合并记录相等；② 每份 episode_map 的 sha 与合并记录相等；③ 合并记录的源清单 sha 与 encoder 侧相等；④ 1600 个成员逐条相等并复算出 member pin。细节见第二部分 A、B、D 节。</p>
 
 <h2>3. motion 表：从旧库 Wan latent 到 <code>[1,1024]</code></h2>
-
-<table>
-<tr><th>跳</th><th>内容</th><th>形状 / dtype / 字节</th><th>可训练参数</th><th>改不改数</th></tr>
-<tr><td>源</td><td>旧库 <code>wan-latents/</code>：schema 3，grid16，33 帧窗，<code>grid_origin=segment_start</code>，fp32；VAE 与 1113 <code>build_spec.json::contract.wan_weight_sha256=d6e524b3…</code> 是同一份权重</td><td><code>float32[9,16,32,32]</code>，576 KiB/窗</td><td>—</td><td>不改</td></tr>
-<tr><td>选窗</td><td><code>--grid-subsample 2</code>：grid16 隔一取一，得到 stride 32；demo 尾窗 <code>demopad17</code> 用末帧重复补齐（同 16task）</td><td>行数与段数由 L0 按 <code>manifest_segments</code> 统计后填进 <code>--expected-counts</code>（推算约 36,484 行、单集最多 71 窗，以实测为准）</td><td>—</td><td>只选窗</td></tr>
-<tr><td>encoder</td><td><code>Stage2WanLatentMotionEncoder</code> 的 EMA 权重；fp32、B=1、eval、TF32 关；输入只有 RGB latent＋<code>geometry_valid</code>（全有效），state 不进 encoder</td><td>输出 <code>(1,4,256)</code>，时间组 <code>[0,3,5,8]</code>，4 KiB</td><td>0（冻结）</td><td>编码</td></tr>
-<tr><td>读出</td><td><code>stage2_pool4_concat_v1</code>：4×256 原样拼成 1×1024，不平均、不丢组</td><td><code>float32[1,1024]</code>，4 KiB/行，全表约 143 MiB</td><td>—</td><td>无损 reshape</td></tr>
-<tr><td>打包</td><td><code>pack_motion_store.py pack --layout stage2 --latents-origin local-built-latents</code> 输出到 <code>&lt;库&gt;/motion-stage2-1024-rgbstate-ep144/</code>，layout <code>motion-stage2-1x1024-grid32-demopad17-v1</code></td><td>行表、index、provenance</td><td>—</td><td>数值不改；arch 白名单放行 rgb-state，新增一种来源</td></tr>
-<tr><td>训练读</td><td>dataloader 按 <code>budget=96</code>、<code>num_tokens=1</code> 取当前时步之前的窗，不足补齐</td><td><code>float32[96,1024]</code>，384 KiB/样本</td><td>VLA 侧 motion 投影参数量在短测时实测回填</td><td>校验放行 rgb-state，读法不改</td></tr>
-</table>
-<p>相对 16task concat 只差两处：encoder 的 arch tag，以及 latent 来源（16task 约 94% 的窗是直接拷贝 encoder 训练缓存，本次全部走旧库 latent）。</p>
-
-<p class="warn">⚠ 跨路径差异。1113 训练窗里没有 aug_id 0，无法像 16task 那样拷贝 encoder 训练缓存，所以 VLA 训练和在线评估都走旧库这条 fp32 编码路径；encoder 训练时走的是另一条 fp16 full33 路径。两边输入都是 256×256 uint8 原帧，几何相同，aug_id 0 是恒等变换：不裁、不缩、不转、不调色。差别只在编码精度和代码路径。</p>
-<p class="warn">16task 当时的跨路径精度准入已由用户取消（<code>STAGE2_LATENT_PARITY=NOT_REQUIRED reason=user_decision_same_input</code>），在线与离线一致性由 G4 单独把关（最大绝对差 0.0055）。</p>
-<p class="warn">本计划的 <code>MOTION_XPATH</code> 只记录、不拦截：</p>
-<ul>
-<li><b>取样</b>：1113 <code>windows.parquet</code> 里 <code>split=val</code>、<code>row_count=1</code>、<code>start%16==0</code> 的 64 个窗。</li>
-<li><b>对齐</b>：按 <code>(task, episode, kind, start)</code> 对齐到旧库 <code>&lt;task&gt;_ep&lt;episode&gt;_&lt;kind&gt;.bin</code> 的第 <code>start/16</code> 块。这里的 episode 等于旧库的 <code>raw_ep_idx</code>，不能用 <code>raw_episode</code>。</li>
-<li><b>度量</b>：两路分别过同一个 encoder，比逐元素绝对差与相对差。</li>
-<li><b>处置</b>：<code>max_abs</code> 超过 0.055（16task G4 绝对差的 10 倍）时在当轮汇报里告诉用户，L0 不中断。</li>
-</ul>
-<p>两类窗口 encoder 没训练过，都在合同和留档里写明：</p>
-<ul>
-<li><b>exec 段尾部</b>：encoder 只训练 <code>[D,C)</code>，VLA 用 <code>[D,T)</code>，差出的 37,219 个时步（约 6.1%）。这是数据的固有属性，16task 先例相同。</li>
-<li><b>BinFill demo 补帧尾窗</b>：1113 用 <code>exec_only_tasks</code> 排除了这类窗，<code>MOTION_XPATH</code> 也覆盖不到。BinFill 的 demo 完整窗与 exec 同帧，属于训练分布内。L0 打包后实测保留了多少个 BinFill demo 尾窗，记入留档。</li>
-</ul>
+<p><b>怎么来</b>：旧库已有的 Wan latent（33 帧窗）隔一取一得到 stride 32 → 过 1113 encoder 的 EMA 权重（冻结）→ 4×256 原样拼成 1×1024 → 打包成 <code>motion-stage2-1024-rgbstate-ep144</code>。训练时每个样本取最多 96 个窗。相对 16task 只差 encoder 的 arch tag 和 latent 来源（本次全部走旧库 latent）。</p>
+<p class="warn">⚠ 跨路径差异：VLA 侧走旧库的 fp32 编码路径，encoder 训练时走 fp16 路径；输入原帧相同，只差编码精度与代码路径。用 64 窗对拍记录差异（<code>MOTION_XPATH</code>），只记录、不拦截；<code>max_abs</code> 超过 0.055 时在当轮汇报里告诉用户。</p>
+<p class="small">encoder 没训练过的两类窗（exec 段尾部约 6.1% 时步、BinFill demo 补帧尾窗）在合同和留档里写明。逐跳形状、对拍取样与对齐办法见第二部分 B、D、F 节。</p>
 
 <h2>3.5 heldout RGB 重建视频（R 阶段，照 16task）</h2>
-<p><b>先例</b>：16task 阶段二 ep105 用 MotionJEPA <code>scripts/eval/rgb_recon_video.py</code>（<code>30e2e18</code> 新增，<code>bdd7169</code> 加 <code>--model-label</code>）在 8 卡上跑 <code>render --arch stage2</code> → <code>compose</code>，出 149 条视频，约 36 min。判定行 <code>RGB_RECON_VIDEO=PASS arch=stage2 groups=149 videos=149 frames=43523 gap_frames=714 psnr_mean=25.6024 floor_psnr_mean=29.4208 latent_rgb=0.0112594 identity_rgb=0.189294</code>，档案在 <code>docs/training-doc/stage2-full144-1025-a/rgb_recon_video/</code>（<code>6c79ebb</code>：manifest、per_group CSV、verdicts、启动脚本）。</p>
-<table>
-<tr><th>项</th><th>口径（与 16task 相同，除标注外）</th></tr>
-<tr><td>测试集</td><td><code>stage2_diagnose.build_datasets</code> 的 val 划分：aug_id 0、排除尾窗、过运动过滤；即 1113 的 heldout 28 集（每任务×难度格最后 2 集）</td></tr>
-<tr><td>重建</td><td>每窗只用锚帧 z0＋EMA encoder 的 motion，经 RGB decoder 预测后 32 帧 latent，再用 Wan VAE（fp32、autocast 关、clamp[−1,1]）解码成像素；整段按窗拼接，每个 (task, episode, kind) 一条 mp4，四栏：GT｜重建｜像素误差叠加｜latent 损失图</td></tr>
-<tr><td>指标</td><td>只统计预测帧（窗内偏移 1..32）：RGB PSNR／像素 MSE；GT latent 直接解码作 VAE 底噪线（<code>floor_psnr</code>）；latent 预测损失与恒等基线（<code>identity_rgb</code>）</td></tr>
-<tr><td>与 16task 的不同</td><td>新 encoder 没有 XYZ decoder，<b>只出 RGB 视频</b>；数据根换成 1113 的 <code>/scratch/hongze/dataset-4task-rgb-state-stride2-16views-v1</code>，ckpt 换成 <code>checkpoint_epoch_144.pt</code> 的 EMA；4task 源 H5 在抽取后已按计划释放，GT 帧改从保留的 14 个 tar 里只解出 heldout 28 集（P0 做，逐个核 MANIFEST sha）</td></tr>
-<tr><td>产物</td><td>视频与中间结果：<code>/scratch/hongze/MotionJEPA/runs/rgb-recon-video-4trs-ep144-&lt;美东日期&gt;-a/</code>；档案：MJ <code>docs/training-doc/stage2-4task-rgbstate-144ep-1113-a/rgb_recon_video/</code>（manifest、per_group CSV、verdicts、启动脚本，体例同 16task）</td></tr>
-<tr><td>判定行</td><td><code>RGB_RECON_VIDEO=PASS arch=stage2-rgbstate groups=&lt;n&gt; videos=&lt;n&gt; frames=&lt;n&gt; psnr_mean=&lt;&gt; floor_psnr_mean=&lt;&gt; latent_rgb=&lt;&gt; identity_rgb=&lt;&gt;</code>、<code>RGB_RECON_COMPOSE=PASS</code>；指标只记录、不设阈值，结果在当轮汇报里给出，与 16task ep105 的数字并列</td></tr>
-</table>
+<p>在 encoder 的 heldout 28 集上，把 motion 经 RGB decoder 预测出的 latent 用 Wan VAE 解码回 RGB，每段一条四栏视频（GT｜重建｜像素误差｜latent 损失），出 PSNR 等指标。与 16task 的不同：新 encoder 没有 XYZ decoder，只出 RGB 视频；GT 帧要先从保留的 14 个 tar 里解出 heldout 28 集（P0 做）。</p>
+<p>判定行是 <code>RGB_RECON_VIDEO</code>、<code>RGB_RECON_COMPOSE</code>；指标只记录、不设阈值，与 16task ep105 的数字并列汇报。脚本、产物路径与命令见第二部分 B、E 节。</p>
 
 <h2>4. 两条模型</h2>
-
 <table>
 <tr><th>项</th><th>M：modulation concat</th><th>C：context concat</th></tr>
-<tr><td>history yaml（新增，从 v4 线 <code>perceptual-framesamp-{modul,ctx}-8frame-8x8-motion-stage2-1x1024-orig16.yaml</code> 复制，改库、encoder 与 sha）</td><td><code>perceptual-framesamp-modul-8frame-8x8-motion-stage2-1x1024-4task-rgbstate.yaml</code></td><td><code>perceptual-framesamp-ctx-8frame-8x8-motion-stage2-1x1024-4task-rgbstate.yaml</code></td></tr>
-<tr><td><code>integration_type</code> / <code>memory_token_dim</code></td><td>modulation / 1024</td><td>context / 2048</td></tr>
-<tr><td>帧记忆（K9）</td><td colspan="2"><code>budget 512</code>＝8 帧×8×8（<code>token_per_image 64</code>），读本机已有的 <code>framesamp-8x8</code>（<code>layout framesamp-8x8-v1</code>，<code>status verified</code>，1,192,918 行，manifest <code>4cd5a170…</code>，与 GL 上 ctx512／ctx1024 读的是同一份）</td></tr>
-<tr><td>motion</td><td colspan="2"><code>source_shape [1,1024]</code>、<code>readout stage2_pool4_concat_v1</code>、<code>num_tokens 1</code>、<code>dim 1024</code>、<code>budget 96</code>、<code>stride 32</code>、<code>window_frames 33</code>、<code>demo_min_real_frames 17</code>、<code>demo_tail_pad repeat_last</code>、<code>grid_origin segment_start</code>、<code>encoder_kind stage2_pool4_concat</code>、<code>store_path …/motion-stage2-1024-rgbstate-ep144</code>、<code>source_run stage2-4task-rgbstate-144ep-1113-a/checkpoint_epoch_144.pt#model</code>（<code>#model</code> 只是格式要求，实际装的是 EMA）</td></tr>
-<tr><td>总记忆槽</td><td colspan="2">608（512＋96）</td></tr>
-<tr><td>TrainConfig（新增 <code>mme_vla_suite_4task_b128_50k</code>，从 <code>mme_vla_suite_orig16_b128_60k</code> 复制，改 assets、数据根与 <code>num_train_steps=50_001</code>）</td><td colspan="2">B128、FSDP8（GPU 0–7）、workers 16、seed 42、训到 step 50000（<code>num_train_steps=50_001</code>，与 v11/v15 做法相同）、warmup 5000、peak/decay lr 5e-5（warmup 后恒定，与 GL 基线相同）、AdamW、梯度裁剪 1.0、EMA 0.999、从 <code>pi05_base</code> 初始化；每 5000 步存一份，5000…50000 共 10 份。按 exec 样本计约 10.6 遍数据，与 4task 历史 50k 相同</td></tr>
+<tr><td><code>integration_type</code> / <code>memory_token_dim</code>（唯一差别）</td><td>modulation / 1024</td><td>context / 2048</td></tr>
+<tr><td>共同配置</td><td colspan="2">帧记忆 8 帧×8×8（512）＋ motion 96 窗×1×1024，共 608 个记忆槽；B128、FSDP8、训到 step 50000、lr 5e-5；每 5000 步存一份，共 10 份</td></tr>
 <tr><td>run 名</td><td><code>v2-1600ep-m8x8-modul-motion-s2rgbstate-concat1x1024-b128-50k</code></td><td><code>v2-1600ep-m8x8-ctx-motion-s2rgbstate-concat1x1024-b128-50k</code></td></tr>
 <tr><td>公开 bucket</td><td><code>HongzeFu/robomme-vla-4task-m8x8-modul-s2rgbstate-concat1x1024-50k-v1</code></td><td><code>HongzeFu/robomme-vla-4task-m8x8-ctx-s2rgbstate-concat1x1024-50k-v1</code></td></tr>
-<tr><td>16task 参考耗时</td><td>modulation concat 1×1024 在 16task <b>只跑过 20 步短测</b>（10-30 PASS），60k 因用户 10-31 叫停没跑，本计划是首次正式长训；按 split 版 60k 16.3 h 外推，50k 约 13.5 h，concat 少 288 个槽，应更短</td><td>concat 31.2 h（1.9 s/步，每卡约 41.8 GB）</td></tr>
-<tr><td>16task 参考成绩（800 局官方，3 seed，不能与 692 局直接比）</td><td>无（split 版 43.42±0.52）</td><td>37.33±0.59</td></tr>
 </table>
-
-<p><b>运行中记录</b>（计划阶段就定好）：随 <code>log_interval</code> 记录以下各项，只记录、不设拦截阈值。</p>
-<ul>
-<li>motion 投影输入、输出的激活方差：<code>motion_in_var</code>、<code>motion_out_var</code>。v15 出现过 motion token 方差在 5k→50k 步之间从 142 涨到 7279。</li>
-<li>从 v15 移植的 motion 诊断三键（<code>_motion_diag_info</code>），含分支梯度范数。</li>
-<li>稳态 s/步、每卡显存峰值、参数量。</li>
-</ul>
-<p>改 <code>train.py</code> 由 S3 负责；开关关闭时 loss 与梯度必须逐位不变。</p>
+<p class="small">训练中另记录 motion 投影方差、motion 诊断三键、步速与显存，只记录、不拦截。yaml、TrainConfig 与完整超参见第二部分 B 节。</p>
 
 <h2>5. 调度、评估与时间线</h2>
-
 <table>
 <tr><th>阶段</th><th>内容</th><th>资源</th><th>估时</th></tr>
-<tr><td>P0（与 encoder 训练并行）</td><td>S1–S6 写代码、审查、合并；只读核对 <code>framesamp-8x8</code> 的 store_meta；从 tar 解出 heldout 28 集 GT H5（<code>nice</code>、并行不超过 6 路，避免拖慢 encoder 训练）</td><td>CPU</td><td>代码约 1.5–2.5 天（估计，可能晚于 encoder 训满，届时 P0 就是起点瓶颈）</td></tr>
-<tr><td>R</td><td>heldout RGB 重建视频：<code>render --arch stage2-rgbstate</code> → <code>compose</code>（§3.5）</td><td>8 卡</td><td>约 20–40 min（16task 149 组 36 min；4task heldout 组数约 30–56）</td></tr>
-<tr><td>L0</td><td>登记 encoder → 血缘 → G0/G2/G3 → 导出 → 对拍 → 打包 → bitexact → verify → G4</td><td>1 卡＋CPU</td><td>约 2–3 h</td></tr>
-<tr><td>L1</td><td>两条 20 步短测：存 step19、严格恢复；用 step19 ckpt 在单卡按正式参数起 4 片评估（每卡 4 片、显存占比 0.2、接 stage2 sidecar），跑 1 局，记显存峰值 <code>peak_mem_gb</code></td><td>8 卡</td><td>约 1 h</td></tr>
-<tr><td>M</td><td>modulation 50k，增量上传随训随传</td><td>8 卡</td><td>约 13.5–16 h（估计）</td></tr>
-<tr><td>E1</td><td>692 局，评 step 50000，只跑 seed 7（K11；seed 42／0 以后另跑）；32 片、每卡 4 worker、显存占比 0.2；<code>max_steps=2000</code>、<code>MMEVLA_MOTION_OVERFLOW=resample</code></td><td>8 卡</td><td>约 75 min</td></tr>
-<tr><td>C</td><td>context 50k</td><td>8 卡</td><td>约 26–33 h（估计）</td></tr>
+<tr><td>P0</td><td>写代码 S1–S6、审查、合并；从 tar 解出 heldout GT H5（与 encoder 训练并行）</td><td>CPU</td><td>约 1.5–2.5 天</td></tr>
+<tr><td>R</td><td>heldout RGB 重建视频（§3.5）</td><td>8 卡</td><td>约 20–40 min</td></tr>
+<tr><td>L0</td><td>准备数据：登记 encoder、血缘、导出 motion 表、对拍、打包、在线一致</td><td>1 卡＋CPU</td><td>约 2–3 h</td></tr>
+<tr><td>L1</td><td>短测：两条各 20 步＋单卡评估冒烟</td><td>8 卡</td><td>约 1 h</td></tr>
+<tr><td>M</td><td>modulation 50k，ckpt 随训随传</td><td>8 卡</td><td>约 13.5–16 h</td></tr>
+<tr><td>E1</td><td>692 局，评 step 50000，seed 7；32 片、每卡 4 worker</td><td>8 卡</td><td>约 75 min</td></tr>
+<tr><td>C</td><td>context 50k</td><td>8 卡</td><td>约 26–33 h</td></tr>
 <tr><td>E2</td><td>同 E1</td><td>8 卡</td><td>约 75 min</td></tr>
 </table>
-
-<p>从 max(<code>TRAIN_TERMINAL=PASS</code>, P0 全部合入) 起算，各段相加约 46–56 h，即约 1.9–2.3 天（估计）。关键路径是 M→E1→C→E2。</p>
-<ul>
-<li><b>评估在线编码</b>：评估要起 stage2 在线 sidecar，把仿真里的画面在线用 Wan VAE 编码，再过同一个 encoder，读法与训练用的离线表相同。新 sidecar 环境是 <code>v1-store/venvs/wan-stage2-rgbstate</code>，16task 的旧环境不动。G4 核对在线与离线一致。</li>
-<li><b>motion 窗超预算</b>：评估最多 2000 步，单集 motion 窗可达约 98 个，超过 96。超出部分按 4task 既有口径，在 exec 段等距抽稀，demo 段全保，降级次数随 <code>MOTION_DOWNSAMPLE</code> 记录。</li>
-<li><b>对照基线</b>（4task 上已有的、同库 <code>4task-v2-1600ep-604f16da</code>、不带 motion 的 run，全部是每帧 8×8）：
-  <ul>
-  <li><b>modulation</b>：8 帧×8×8（512）60k run，GL 692 局 @50000 为 30.49%、@59999 为 32.95%；16 帧（1024）@79999 41.33%；32 帧×8×8（2048）@79999 45.66%；64 帧（4096）@79999 45.95%。出处：v11 分支 <code>docs/training-doc/binfilldemo-nomotion50k-gl/result.md</code>。</li>
-  <li><b>context</b>：GreatLakes 上正在训两条 50k。ctx512 <code>v2-1600ep-m8x8-ctx-b128-50k-gl</code>（8 帧×8×8，配置 <code>mme_vla_suite_b128_60k</code>，预计 11-17 约 16:30 美东训完）；ctx1024 <code>v2-1600ep-m16x8x8-ctx-b128-50k-gl</code>（16 帧×8×8，配置 <code>mme_vla_suite_b128_80k</code>，预计 11-20 约 06:30 美东训完）。两条都还没做闭环评估，引用入口是 <code>origin/v4.2-plswap-full@da29add</code> 的两份 <code>interim-1114.md</code>。这些配置的 <code>peak_lr</code> 和 <code>decay_lr</code> 都是 5e-5，warmup 之后学习率恒定，与本计划相同，所以同步数比较不受日程影响。</li>
-  <li>v11 Wan pool768 modulation 50k 的成绩是 43.06%，只作参考：帧记忆档位、步数、motion 来源三者都与本计划不同，<b>不能归因到单一变量</b>。</li>
-  <li>上面这些成绩都是 GL 评估环境出的；本计划在本机评估，两者跨环境，需在本机同口径重评后才能严格对照。</li>
-  </ul></li>
-</ul>
+<p>起点 = max(encoder 训满, P0 全部合入)；R 到 E2 合计约 46–56 h（估计）。关键路径是 M→E1→C→E2。</p>
+<p><b>对照基线</b>（同库、不带 motion、每帧 8×8）：modulation 对照无 motion 512 的 60k run，GL 692 局 @50000 为 30.49%；context 对照 GL 上在训的 ctx512、ctx1024 两条 50k，都还没评估。这些成绩出自 GL 评估环境，本计划在本机评估，两者跨环境，需在本机同口径重评后才能严格对照。</p>
+<p class="small">评估在线编码、motion 窗超预算的处理与 runbook 见第二部分 E 节。</p>
 
 <h2>6. 验收判定行</h2>
-
 <table>
-<tr><th>查什么</th><th>怎么查</th><th>过了说明什么</th><th>判定行</th></tr>
-<tr><td>encoder 训满</td><td>MJ <code>stage2_rgbstate_check.py terminal</code></td><td>ep144、步数等于 144×95、arch 对</td><td><code>TRAIN_TERMINAL=PASS arch=wan-latent-stage2-blockwise-pool4-rgb-state epoch=144</code></td></tr>
-<tr><td>heldout GT H5</td><td>从 14 个 tar 只解出 heldout 28 集成员，逐个比 MANIFEST 的 <code>h5_sha256</code> 与 <code>h5_bytes</code></td><td>重建视频的 GT 帧就是 encoder 训练源那 1600 个 H5 里的原文件</td><td><code>HELDOUT_H5=PASS files=28 mismatches=0</code></td></tr>
-<tr><td>heldout 重建视频</td><td>§3.5，8 卡 render 后 compose</td><td>新 encoder 在 heldout 上重建 RGB 的效果，可与 16task ep105 并列比较</td><td><code>RGB_RECON_VIDEO=PASS arch=stage2-rgbstate …</code>、<code>RGB_RECON_COMPOSE=PASS</code></td></tr>
-<tr><td>encoder 登记</td><td>把 <code>checkpoint_epoch_144.pt</code> 和 <code>config.yaml</code> 硬链接到 <code>v1-store/external/motionjepa/stage2-4task-rgbstate-144ep-1113-a/</code>，两侧 sha 相等</td><td>sidecar、合同、打包都能按既有路径找到 ckpt</td><td><code>ENCODER_REGISTER=PASS ckpt_sha256=&lt;…&gt; config_sha256=&lt;…&gt;</code></td></tr>
-<tr><td>同源</td><td><code>scripts/training/check_data_lineage.py member-pin</code>（S1），按 §2 的四环链</td><td>encoder 与 VLA 是同一组 H5，且 VLA 实际读的合并 H5 就是由这些成员合并而来</td><td><code>DATA_LINEAGE=PASS encoder_ckpt=&lt;sha8&gt; encoder_source_pin=2cb9026f… vla_input_pin=655e64b4… member_pin=2cb9026f… files=1600 mismatches=0</code></td></tr>
-<tr><td>8×8 帧表</td><td>只读 <code>$LIB/framesamp-8x8/meta/store_meta.json</code>：<code>layout=framesamp-8x8-v1</code>、<code>status=verified</code>、行数、manifest sha</td><td>训练读的是那份已 verified、与 GL 基线同一份的 8×8 表</td><td><code>FRAMESAMP8X8=PASS rows=1192918 manifest_sha256=4cd5a170…</code></td></tr>
-<tr><td>G0/G2/G3</td><td><code>validate_stage2.py</code> 的 4task 参数：4 任务×16 窗=64 窗，demo_tail≥16，seed 0</td><td>导出前的抽样窗、来源、encoder 证据都齐</td><td><code>STAGE2_G0=PASS windows=64 tasks=4</code>、<code>STAGE2_G2=PASS</code>、<code>STAGE2_G3=PASS windows=32</code></td></tr>
-<tr><td>导出</td><td>导出器自检：先跑 <code>--max-segments 1</code> 短测，再导全表</td><td>每窗都有有限的 1024 维向量，计数与预期一致</td><td><code>STAGE2_EXPORT=PASS</code>（先 <code>scope=smoke</code>，后全表）</td></tr>
-<tr><td>跨路径</td><td>§3 的 64 窗对拍</td><td>两条编码路径的 motion 差异量级（记录项）</td><td><code>MOTION_XPATH=RECORD n=64 max_abs=&lt;&gt; mean_abs=&lt;&gt; max_rel=&lt;&gt; mean_rel=&lt;&gt; ref16=0.005494</code></td></tr>
-<tr><td>打包与逐位</td><td><code>pack</code> → <code>compare_stage2.py</code> 写 <code>encoder_bitexact.json</code> → <code>pack_motion_store.py verify</code></td><td>表与导出逐位一致，窗口与时步对齐</td><td><code>VERIFY_MOTION=PASS rows=&lt;n&gt; train_max_windows=&lt;k&gt;</code></td></tr>
-<tr><td>配置</td><td><code>check_4task_stage2_launch.py</code>：两份 yaml 只差 <code>integration_type</code>／<code>memory_token_dim</code>；预算、库、encoder sha 与表一致</td><td>两条只差融合方式</td><td><code>CONCAT_CONFIG=PASS runs=2</code>、<code>MOTION_LAYOUT=PASS readout=concat tokens_per_window=1 budget=96 total_tokens=608</code>、<code>LAUNCH_CONTRACT=PASS</code></td></tr>
-<tr><td>在线一致（G4）</td><td><code>check_stage2_online.py</code> 的 local-built 分支：64 窗，非 cache 路径，端到端阈值 1e-5</td><td>评估时模型看到的 motion 与训练同源、同读法</td><td><code>ONLINE_INPUT_IDENTITY=PASS windows=64 handshake=1 input_sha_mismatch=0 nonfinite=0</code>、<code>ONLINE_OFFLINE_PARITY=PASS</code></td></tr>
-<tr><td>短测</td><td>两条各 20 步，存 step19 并严格恢复</td><td>正式训练不会在保存或恢复上出问题</td><td><code>TRAIN_FINAL_RECORD=PASS steps=20</code>、<code>SAVE_LOAD=PASS</code></td></tr>
-<tr><td>评估冒烟</td><td>单卡 4 片、1 局</td><td>sidecar 能加载，显存可承受</td><td><code>MOTION_WINDOWS=PASS</code>、<code>peak_mem_gb=&lt;x&gt;</code>（只记录）</td></tr>
-<tr><td>正式训练</td><td>run 日志末段</td><td>50k 跑完、10 份 ckpt 齐</td><td><code>TRAIN_FINAL_RECORD=PASS</code>、<code>EXIT_CODE=0</code></td></tr>
-<tr><td>交付</td><td><code>check_stage2_checkpoint.py --mode delivery --delivery-step 50000</code></td><td>ckpt 可用于评估</td><td><code>CKPT_DELIVERY_READY=PASS step=50000</code></td></tr>
-<tr><td>上传</td><td>10 份增量上传，最后全量匿名读回</td><td>公开备份完整</td><td><code>CKPT_UPLOAD=PASS steps=10</code>、<code>HF_VERIFY=PASS</code></td></tr>
-<tr><td>评估</td><td><code>local_692_pool.sh</code> 汇总</td><td>692 局跑完，逐局 CSV 齐</td><td><code>EVAL692=PASS success=&lt;k&gt;/692 seed=&lt;s&gt;</code></td></tr>
+<tr><th>判定行</th><th>查什么（完整字段与查法见第二部分 D 节）</th></tr>
+<tr><td><code>TRAIN_TERMINAL</code></td><td>encoder 训满 144 轮</td></tr>
+<tr><td><code>HELDOUT_H5</code>、<code>RGB_RECON_VIDEO</code>、<code>RGB_RECON_COMPOSE</code></td><td>解出的 heldout 28 集 GT 与源清单逐个一致；重建视频出齐，指标已记录</td></tr>
+<tr><td><code>ENCODER_REGISTER</code>、<code>DATA_LINEAGE</code>、<code>FRAMESAMP8X8</code></td><td>encoder ckpt 登记到位；encoder 与 VLA 是同一组 H5（§2 四环链）；训练读的是已校验的那份 8×8 帧表</td></tr>
+<tr><td><code>STAGE2_G0/G2/G3</code>、<code>STAGE2_EXPORT</code>、<code>VERIFY_MOTION</code></td><td>导出前证据齐；每窗都有 1024 维向量、计数对；打包后的表与导出逐位一致</td></tr>
+<tr><td><code>MOTION_XPATH</code>（记录项）</td><td>两条编码路径的 motion 差异量级</td></tr>
+<tr><td><code>CONCAT_CONFIG</code>、<code>MOTION_LAYOUT</code>、<code>LAUNCH_CONTRACT</code></td><td>两条只差融合方式，预算、库、encoder 与表一致</td></tr>
+<tr><td><code>ONLINE_INPUT_IDENTITY</code>、<code>ONLINE_OFFLINE_PARITY</code></td><td>评估时在线算的 motion 与训练用的离线表一致</td></tr>
+<tr><td><code>TRAIN_FINAL_RECORD</code>、<code>SAVE_LOAD</code>、<code>MOTION_WINDOWS</code></td><td>短测 20 步能存能恢复；评估冒烟能跑；正式训练 50k 跑完（<code>EXIT_CODE=0</code>）</td></tr>
+<tr><td><code>CKPT_DELIVERY_READY</code>、<code>CKPT_UPLOAD</code>、<code>HF_VERIFY</code></td><td>step 50000 的 ckpt 可用于评估；10 份 ckpt 上传完整、读回一致</td></tr>
+<tr><td><code>EVAL692</code></td><td>692 局跑完，逐局 CSV 齐</td></tr>
 </table>
 
 <h2>7. 实施步骤</h2>
-
 <table>
 <tr><th>阶段</th><th>内容</th><th>判据</th></tr>
-<tr><td>0</td><td>开工令到达后，派一个 sonnet 审查者做开工前一致性审查；P-LINEAGE 的 ckpt sha 一项记为「待补，L0 前复审」，其余项必须 PASS</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS</code></td></tr>
-<tr><td>1</td><td>派 S1–S5（opus，各用独立 worktree）；同时只读核对 8×8 帧表</td><td>每块依次 <code>PRE_MERGE_REVIEW=PASS</code> → <code>--no-ff</code> 合入 → <code>POST_MERGE_REVIEW=PASS</code>；<code>FRAMESAMP8X8=PASS</code></td></tr>
-<tr><td>2</td><td>encoder 训满后先跑 R 阶段 heldout 重建视频（tmux <code>v16-recon</code>，8 卡），档案提交到 MJ；再发 ckpt sha 修订 commit，派一个 sonnet 审查者只审这条修订；然后跑 L0 全串</td><td>先过 <code>RGB_RECON_VIDEO</code>、<code>RGB_RECON_COMPOSE</code>，再拿到 <code>PLAN_CONSISTENCY_REVIEW=PASS</code>（P-LINEAGE 项），然后依次过 <code>ENCODER_REGISTER</code>、<code>DATA_LINEAGE</code>、<code>STAGE2_G0/G2/G3</code>、<code>STAGE2_EXPORT</code>、<code>MOTION_XPATH</code>（记录）、<code>VERIFY_MOTION</code>、<code>ONLINE_*</code></td></tr>
-<tr><td>3</td><td>Beta commit、push，写 <code>AGENTMETARULES_HOLD</code>；两条 20 步短测（tmux <code>v16-smoke</code>），再做评估冒烟</td><td><code>CONCAT_CONFIG</code>、<code>LAUNCH_CONTRACT</code>、两组 <code>TRAIN_FINAL_RECORD steps=20</code>＋<code>SAVE_LOAD</code>、<code>MOTION_WINDOWS</code></td></tr>
-<tr><td>4</td><td>正式链 tmux <code>v16-chain</code> 依次跑 M → E1 → C → E2；上传随训随传</td><td>M、C 各 <code>TRAIN_FINAL_RECORD=PASS</code>、<code>CKPT_DELIVERY_READY=PASS</code>；E1、E2 各 1 行 <code>EVAL692=PASS</code>（seed 7）</td></tr>
-<tr><td>5</td><td>删 HOLD，把开发副本的状态分支合回，回写结论 commit 并留档；状态机 <code>done</code>，长尾结束后改 <code>closed</code></td><td><code>HANDOFF_WRITE=PASS</code>、两条 <code>CKPT_UPLOAD=PASS</code>＋<code>HF_VERIFY=PASS</code></td></tr>
+<tr><td>0</td><td>开工令到达后，派一个 sonnet 审查者做开工前一致性审查</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS</code></td></tr>
+<tr><td>1</td><td>派 S1–S6 写代码，逐块审查、合并；只读核对 8×8 帧表</td><td>每块 <code>PRE_MERGE_REVIEW</code>、<code>POST_MERGE_REVIEW</code>；<code>FRAMESAMP8X8</code></td></tr>
+<tr><td>2</td><td>encoder 训满后先跑 R；再回填 ckpt sha 并单独复审；然后跑 L0</td><td><code>RGB_RECON_VIDEO</code>、<code>RGB_RECON_COMPOSE</code> → <code>ENCODER_REGISTER</code>、<code>DATA_LINEAGE</code>、<code>STAGE2_G0/G2/G3</code>、<code>STAGE2_EXPORT</code>、<code>MOTION_XPATH</code>（记录）、<code>VERIFY_MOTION</code>、<code>ONLINE_*</code></td></tr>
+<tr><td>3</td><td>Beta commit、push；两条 20 步短测，再做评估冒烟</td><td><code>CONCAT_CONFIG</code>、<code>LAUNCH_CONTRACT</code>、<code>TRAIN_FINAL_RECORD steps=20</code>＋<code>SAVE_LOAD</code>、<code>MOTION_WINDOWS</code></td></tr>
+<tr><td>4</td><td>正式链依次跑 M → E1 → C → E2，上传随训随传</td><td>M、C 各 <code>TRAIN_FINAL_RECORD</code>、<code>CKPT_DELIVERY_READY</code>；E1、E2 各一行 <code>EVAL692</code>（seed 7）</td></tr>
+<tr><td>5</td><td>收尾：回写结论 commit 并留档</td><td>两条 <code>CKPT_UPLOAD</code>＋<code>HF_VERIFY</code></td></tr>
 </table>
 
 <h2>8. 子代理分工与合并（简述）</h2>
-
 <p>拆六块写代码，每块用 opus 在独立 worktree 里做：</p>
 <ul>
-<li><b>S2 导出与打包</b>（工作量最大）：MJ 侧把 <code>v12-3decoder</code> 合进 memexport 分支，让加载器认新 tag，导出器支持按成员血缘；policy 侧 motion_store、dataloader、sidecar 客户端的 arch 白名单与新来源 <code>local-built-latents</code>，G0/G2/G3 不再写死 16 任务，新建 wan-stage2-rgbstate 环境与 SOURCE_PIN，新增跨路径对拍脚本。</li>
-<li><b>S1 血缘与起跑合同</b>：调用 S2 提供的新来源接口。</li>
-<li><b>S4 692 评估</b>：移植 v15 的整套 692 评估，benchmark gitlink 改到 fork <code>b4e97f22</code>，692 客户端另立入口、不覆盖 16task 官方客户端，sidecar 换成 stage2 在线编码，修进程归属误判。</li>
-<li><b>S3 训练接线</b>：yaml、TrainConfig、单条入口守卫、<code>train.py</code> 诊断、交付检查映射，以及 M→E1→C→E2 串行链（支持从中间段接续）。</li>
-<li><b>S5 上传</b>：4task 版增量上传与最终导出。</li>
-<li><b>S6 重建视频（MJ 侧）</b>：测试集构建认 rgbstate 数据集；重建视频脚本加 <code>stage2-rgbstate</code> 架构（只跑 encoder＋RGB decoder）、可指定 GT H5 根目录；heldout GT H5 解包脚本。在 MJ 的独立 worktree 里改，encoder 训完后再合进 <code>v12-3decoder</code>，训练期间不动 MJ 主检出。</li>
+<li><b>S2 导出与打包</b>（工作量最大）：让导出、打包、读表各环节认新 encoder 和新的 latent 来源。</li>
+<li><b>S1 血缘与起跑合同</b>：实现 §2 的四环链比对。</li>
+<li><b>S4 692 评估</b>：移植 4task 的 692 局评估，接上在线编码。</li>
+<li><b>S3 训练接线</b>：两份配置、训练诊断、M→E1→C→E2 串行链。</li>
+<li><b>S5 上传</b>：ckpt 增量上传与最终导出。</li>
+<li><b>S6 重建视频（MJ 侧）</b>：重建视频脚本支持新 encoder，加 heldout GT 解包脚本。</li>
 </ul>
-<p>S6 与其余五块互不依赖，单独合进 MJ。policy 侧合并顺序 S2 → S1 → S4 → S3 → S5，按依赖排：S1、S4 都要用 S2 的接口和 sha，S3 要调 S4 的评估入口，S5 要用 S3 定下的名字。可以同时开工的先开。每合一块前，派一个 sonnet 审查者审钉死的 BASE..TIP；合入后跑核心短测再 push。下载、导出、训练、评估都由主会话起 tmux，不交给写代码的代理。</p>
+<p>policy 侧合并顺序 S2 → S1 → S4 → S3 → S5；S6 与其余五块互不依赖，单独合进 MJ。每合一块前派一个 sonnet 审查者，合入后跑核心短测再 push。下载、导出、训练、评估都由主会话起 tmux。分配表见第二部分 C 节。</p>
 
 <h2>9. 用户裁决记录（11-14 全部定完）</h2>
-
 <table>
-<tr><th>#</th><th>问题</th><th>默认</th><th>备选与影响</th></tr>
-<tr><td>J1</td><td>encoder 用哪个 ckpt</td><td colspan=\"2\"><b>已定</b>（用户「同意」）：<code>checkpoint_epoch_144.pt</code> 的 EMA（本计划就是训满 144 轮）</td></tr>
-<tr><td>J2</td><td>步数</td><td colspan="2"><b>已定</b>：两条都 50k（K10，「全部50k」）。M 与 modulation 无 motion 512 的 @50000 对照，C 与 GL 上的 ctx512／ctx1024（都是 50k）同一步数对照</td></tr>
-<tr><td>J3</td><td>评估规模</td><td colspan="2"><b>已定</b>：只评 step 50000、只跑 seed 7（K11，与 4task 历史 692 局一致）；seed 42／0 以后另跑，不进本次串行链</td></tr>
-<tr><td>J4</td><td>VLA 训练是否排除 encoder 的 28 集 heldout</td><td colspan=\"2\"><b>已定</b>（用户「同意」）：不排除（与 16task 一致）</td></tr>
-<tr><td>J5</td><td>帧记忆布局</td><td colspan="2"><b>已定</b>：8 帧×8×8（K9，用户 11-14：「我们以后都约定，就是对于四 task 都用八乘八的每帧。」）。M 对照 modulation 无 motion 512，C 对照 ctx512。</td></tr>
-<tr><td>J6</td><td>是否登记进 <code>docs/handoff/current.json</code> 状态机</td><td colspan="2"><b>已定</b>：不登记（K10，「不登记」），人工交接</td></tr>
+<tr><th>#</th><th>问题</th><th>裁决（全部已定）</th></tr>
+<tr><td>J1</td><td>encoder 用哪个 ckpt</td><td><code>checkpoint_epoch_144.pt</code> 的 EMA</td></tr>
+<tr><td>J2</td><td>步数</td><td>两条都 50k</td></tr>
+<tr><td>J3</td><td>评估规模</td><td>只评 step 50000、只跑 seed 7</td></tr>
+<tr><td>J4</td><td>VLA 训练是否排除 encoder 的 28 集 heldout</td><td>不排除（与 16task 一致）</td></tr>
+<tr><td>J5</td><td>帧记忆布局</td><td>8 帧×8×8</td></tr>
+<tr><td>J6</td><td>是否登记进状态机</td><td>不登记，人工交接</td></tr>
 </table>
 <p class="small">J1–J6 均已裁决；开工仍需用户对本版计划给出开工令（AGENTS.md 第 2 条）。逐文件清单、分配表、闸门、runbook、风险、盲区、留档纪律见第二部分。</p>
 
