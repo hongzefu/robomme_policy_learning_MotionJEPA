@@ -148,11 +148,31 @@ def init_history_config(config: _config.TrainConfig, resolved_history_config=Non
             })
             if mm.raw["layout"] == _ms.STAGE2_LAYOUT:
                 _ms.validate_stage2_provenance(mm.provenance)
-                prov.update({key: copy.deepcopy(mm.provenance[key]) for key in _ms.STAGE2_GROUPS})
-                prov.update({key: mm.provenance[key] for key in ("source_grid_sha256", "latents_metadata_sha256")})
-                write_stage2_motion_snapshot(pathlib.Path(ckpt_root), prov)
+                write_stage2_motion_snapshot(pathlib.Path(ckpt_root), stage2_snapshot_provenance(prov, mm.provenance))
                 return
     (ckpt_root / "motion_provenance.json").write_text(_json.dumps(prov, ensure_ascii=False, indent=1, default=str) + "\n")
+
+
+STAGE2_LOCAL_SNAPSHOT_KEYS = ("raw_dir", "manifest_sha256")
+
+
+def stage2_snapshot_provenance(prov, store_provenance):
+    """训练侧根快照来源：在 run 级字段上拷 motion 表的六组与两项摘要；local-built 另带 raw_dir、manifest_sha256。"""
+    from mme_vla_suite.datastore import motion_store as ms
+    prov.update({key: copy.deepcopy(store_provenance[key]) for key in ms.STAGE2_GROUPS})
+    prov.update({key: store_provenance[key] for key in ("source_grid_sha256", "latents_metadata_sha256")})
+    prov.update(stage2_local_snapshot_fields(store_provenance))
+    return prov
+
+
+def stage2_local_snapshot_fields(store_provenance):
+    """local-built 快照额外携带的顶层键：raw_dir（_validate_stage2_local_provenance 要求键在且为 null）、
+    manifest_sha256（validate_stage2_local_evidence 用它核总 metadata 与 G0 的清单身份）。
+    其他来源（历史恢复 / 发布缓存）返回空，旧快照逐字节不变。"""
+    from mme_vla_suite.datastore import motion_store as ms
+    if not ms.stage2_uses_local(store_provenance):
+        return {}
+    return {key: copy.deepcopy(store_provenance[key]) for key in STAGE2_LOCAL_SNAPSHOT_KEYS}
 
 
 def _atomic_stage2_file(path: pathlib.Path, data: bytes) -> None:

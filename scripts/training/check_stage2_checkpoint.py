@@ -175,7 +175,8 @@ def verify_snapshot(root, delivery=None):
             motion_store.validate_stage2_g2_evidence(
                 record, checkpoint_sha256=provenance["encoder"]["checkpoint_sha256"],
                 samples_sha256=evidence["G0"]["sha256"], source_pin=provenance["source_pin"],
-                numerics=provenance["numerics"], online_vae=provenance["stage2_compat"]["online_vae"])
+                numerics=provenance["numerics"], online_vae=provenance["stage2_compat"]["online_vae"],
+                local=motion_store.stage2_uses_local(provenance))
         if role in ("G0", "G3") and (record.get("gate") != role or record.get("status") != "PASS"):
             raise ValueError(f"来源证据未通过: {role}")
         if role in (("G3",) if motion_store.stage2_uses_cache(provenance) else ("G2", "G3")) and (
