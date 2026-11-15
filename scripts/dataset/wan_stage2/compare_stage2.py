@@ -262,6 +262,11 @@ def certify(args):
         if (meta.raw["layout"] != V.LAYOUT or type(getattr(args, "expect_rows", None)) is not int
                 or args.expect_rows <= 0 or meta.num_rows != args.expect_rows):
             raise ValueError("正式 G5a 行数必须与显式 --expect-rows 相同")
+        # 契约①：显式 --stage2-project 优先，store provenance 的 arch 推断，不符即拒。
+        args.stage2_project = V.project_module().resolve_project_name(
+            getattr(args, "stage2_project", None), arch=meta.provenance["encoder"]["arch"], context="compare_stage2")
+        if ms.stage2_uses_local(meta.provenance) and args.scope != "full":
+            raise ValueError("local-built 来源必须走全表 bitexact（--scope full）")
         ms.run_fast_checks(meta)
         ms.run_full_checks(meta)
         bound_paths = [root / ms.META_RELPATH, root / ms.INDEX_RELPATH,
@@ -361,6 +366,8 @@ def main(argv=None):
     parser.add_argument("--batch", type=int, default=1, choices=(1,))
     parser.add_argument("--expect-rows", required=True, type=int)
     parser.add_argument("--device", default="cuda:0")
+    parser.add_argument("--stage2-project", choices=("wan_stage2", "wan_stage2_rgbstate"),
+                        help="stage2 运行项目（契约①）；不给时按 store 的 encoder.arch 推断，不符即拒")
     args = parser.parse_args(argv)
     certify(args)
     return 0

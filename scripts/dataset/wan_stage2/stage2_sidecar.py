@@ -29,11 +29,18 @@ def _load(path, name):
     return module
 
 
-def checked_source_pin() -> dict:
-    """先核本机适配件和独立锁文件；实际 MJ 导入身份在模型加载前另核。"""
-    pin = json.loads((HERE / "SOURCE_PIN.json").read_text())
+def stage2_project(name="wan_stage2"):
+    """契约①：按名取运行项目（pin、锁、venv）；sidecar 脚本本身在 wan_stage2/ 共用。"""
+    selector = _load(HERE.parent / "stage2_project.py", "_stage2_project_selector")
+    return selector.get_project(name)
+
+
+def checked_source_pin(name="wan_stage2") -> dict:
+    """先核所选运行项目的适配件和独立锁文件；实际 MJ 导入身份在模型加载前另核。"""
+    project = stage2_project(name)
+    pin = json.loads(project.source_pin.read_text())
     for key, path in (("vae_adapter_sha256", HERE.parent / "wan/wan_motion_infer.py"),
-                      ("dependency_lock_sha256", HERE / "uv.lock")):
+                      ("dependency_lock_sha256", project.lock)):
         if hashlib.sha256(path.read_bytes()).hexdigest() != pin[key]:
             raise ValueError(f"阶段二来源锁不符: {key}")
     return pin
@@ -55,6 +62,7 @@ def main() -> int:
     parser.add_argument("--ckpt")
     parser.add_argument("--expected-sha256")
     parser.add_argument("--expected-vae-sha256")
+    parser.add_argument("--stage2-project", default="wan_stage2")
     args = parser.parse_args()
     protocol = _load(ROOT / "src/mme_vla_suite/policies/motion_protocol.py", "motion_protocol")
     sock = socket.socket(fileno=args.fd)
@@ -76,7 +84,9 @@ def main() -> int:
             environment = os.environ.get("UV_PROJECT_ENVIRONMENT")
             if not environment or Path(sys.prefix).resolve() != Path(environment).resolve():
                 raise RuntimeError("真实 sidecar 未使用指定的独立阶段二环境")
-            pin = checked_source_pin()
+            if Path(sys.prefix).resolve() != stage2_project(args.stage2_project).venv.resolve():
+                raise RuntimeError(f"真实 sidecar 的 sys.prefix 不是运行项目 {args.stage2_project} 的 venv")
+            pin = checked_source_pin(args.stage2_project)
             adapter = _load(HERE.parent / "wan/wan_motion_infer.py", "wan_stage2_vae_adapter")
             adapter.check_env()
             adapter.pin_numerics()

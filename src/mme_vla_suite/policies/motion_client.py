@@ -41,6 +41,19 @@ PROV_SAME_ENC = ("checkpoint", "checkpoint_sha256", "checkpoint_epoch", "arch", 
                  "compute_cap", "sm_count", "driver", "flags")
 
 STAGE2_KIND = "stage2_pool4_concat"
+
+
+def _stage2_project_module():
+    """契约①的选择接口只用标准库，按路径加载（scripts/dataset 不是包）。"""
+    import importlib.util
+    name = "_mme_vla_stage2_project"
+    if name in sys.modules:
+        return sys.modules[name]
+    spec = importlib.util.spec_from_file_location(name, _REPO_ROOT / "scripts/dataset/stage2_project.py")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
 STAGE2_GROUPS = ("encoder", "encoder_state_sha256", "source_pin", "numerics", "stage2_compat", "vae")
 
 
@@ -94,6 +107,9 @@ def validate_stage2_evidence(provenance: dict, root: pathlib.Path | None) -> Non
         records[key] = json.loads(path.read_text(encoding="utf-8"))
     if ms.stage2_uses_cache(provenance):
         ms.validate_stage2_cache_evidence(provenance, records)
+        return
+    if ms.stage2_uses_local(provenance):
+        ms.validate_stage2_local_evidence(provenance, records)
         return
     if records["SOURCE_PIN"] != provenance["source_pin"]:
         raise ValueError("证据 SOURCE_PIN 与来源不一致")
@@ -207,16 +223,18 @@ class MotionEncoderClient:
                  v1_store: str | pathlib.Path | None = None, handshake_timeout: float = P.HANDSHAKE_TIMEOUT_S,
                  source_run: str | None = None, encoder_kind: str = "v10",
                  provenance_root: str | pathlib.Path | None = None,
-                 stage2_python: str | None = None, eval_target_contract: str | pathlib.Path | None = None):
+                 stage2_python: str | None = None, eval_target_contract: str | pathlib.Path | None = None,
+                 stage2_project: str | None = None):
         self.encoder_kind = encoder_kind
         self._eval_target_contract = eval_target_contract
-        if encoder_kind != STAGE2_KIND and (stage2_python or eval_target_contract):
+        if encoder_kind != STAGE2_KIND and (stage2_python or eval_target_contract or stage2_project):
             raise ValueError("阶段二评估选项不能用于其他encoder")
         if encoder_kind == STAGE2_KIND:
             self._init_stage2(online_gpu=online_gpu, encoder_run_dir=encoder_run_dir,
                              expected_ckpt_sha256=expected_ckpt_sha256, store_provenance=store_provenance,
                              stub=stub, v1_store=v1_store, handshake_timeout=handshake_timeout,
-                             source_run=source_run, provenance_root=provenance_root, stage2_python=stage2_python)
+                             source_run=source_run, provenance_root=provenance_root, stage2_python=stage2_python,
+                             stage2_project=stage2_project)
             return
         if encoder_kind != "v10":
             raise ValueError(f"未知 motion.encoder_kind: {encoder_kind}")
@@ -280,7 +298,8 @@ class MotionEncoderClient:
         self.total_s = 0.0
 
     def _init_stage2(self, *, online_gpu, encoder_run_dir, expected_ckpt_sha256, store_provenance,
-                     stub, v1_store, handshake_timeout, source_run, provenance_root, stage2_python=None) -> None:
+                     stub, v1_store, handshake_timeout, source_run, provenance_root, stage2_python=None,
+                     stage2_project=None) -> None:
         self._lock = threading.Lock()
         self.stub = bool(stub)
         self._online_gpu = str(online_gpu)
@@ -307,16 +326,20 @@ class MotionEncoderClient:
         expected_dir = delivered or registered
         if encoder_run_dir is not None and pathlib.Path(encoder_run_dir).resolve() != expected_dir.resolve():
             raise ValueError("阶段二 encoder_run_dir 与注册或交付身份不同")
-        project = _REPO_ROOT / "scripts/dataset/wan_stage2"
-        local_pin = json.loads((project / "SOURCE_PIN.json").read_text())
-        for key, path in (("dependency_lock_sha256", project / "uv.lock"),
-                          ("vae_adapter_sha256", project.parent / "wan/wan_motion_infer.py")):
-            if _sha256(path) != local_pin[key]:
-                raise ValueError(f"阶段二本地文件不符合 SOURCE_PIN: {key}")
+        # 契约①：项目根、SOURCE_PIN、uv.lock、venv、sidecar 脚本目录按所选运行项目取；
+        # 显式值优先，有 store_provenance 时按其 encoder.arch 推断，二者不符即拒；都没有时沿用旧项目。
+        selector = _stage2_project_module()
+        arch = selector.arch_of_provenance(store_provenance) if store_provenance is not None else None
+        name = (selector.resolve_project_name(stage2_project, arch=arch, context="motion_client")
+                if stage2_project is not None or arch is not None else "wan_stage2")
+        selected = selector.get_project(name, v1_store=v1)
+        self.stage2_project = name
+        project = selected.root
+        local_pin = selector.check_project_files(selected, lambda path: _sha256(pathlib.Path(path)))
         if not self.stub and store_provenance["source_pin"] != local_pin:
             raise ValueError("阶段二 store 与当前 SOURCE_PIN 不同源")
         child_env = dict(os.environ)
-        child_env.update(UV_LINK_MODE="copy", UV_PROJECT_ENVIRONMENT=str(v1 / "venvs/wan-stage2"),
+        child_env.update(UV_LINK_MODE="copy", UV_PROJECT_ENVIRONMENT=str(selected.venv), MMEVLA_V1_STORE=str(v1),
                          UV_CACHE_DIR=str(v1 / "cache/uv"),
                          HF_HOME=str(v1 / "cache/hf"), HF_HUB_OFFLINE="1",
                          CUDA_VISIBLE_DEVICES=str(online_gpu), PYTHONUNBUFFERED="1")
@@ -328,6 +351,8 @@ class MotionEncoderClient:
             interpreter = pathlib.Path(stage2_python).absolute()
             if not interpreter.is_file() or interpreter.parent.name != "bin":
                 raise ValueError("stage2_python必须为现存虚拟环境bin内解释器")
+            if not self.stub and interpreter.parent.parent.resolve() != selected.venv.resolve():
+                raise ValueError(f"stage2_python 必须是所选运行项目 {name} 的解释器 {selected.python}")
             child_env["UV_PROJECT_ENVIRONMENT"] = str(interpreter.parent.parent)
             # 直接保留uv管理venv入口，使Popen PID就是握手进程，且不丢失venv前缀。
             argv = [str(interpreter)]
@@ -337,7 +362,8 @@ class MotionEncoderClient:
         self._sock = parent_sock
         self._stage2_socket_identity = (child_sock.fileno(), os.fstat(child_sock.fileno()).st_ino)
         self._stage2_script_argv_offset = len(argv)
-        argv += [str(project / "stage2_sidecar.py"), "--fd", str(child_sock.fileno())]
+        argv += [str(selected.sidecar_dir / "stage2_sidecar.py"), "--fd", str(child_sock.fileno()),
+                 "--stage2-project", name]
         if self.stub:
             argv.append("--stub")
         else:

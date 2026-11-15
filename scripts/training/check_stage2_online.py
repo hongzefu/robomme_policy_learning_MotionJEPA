@@ -51,12 +51,17 @@ def reference_subprocess(args, meta, v1, directory):
     enc = meta.provenance["encoder"]
     checkpoint = v1 / "external/motionjepa" / enc["run_name"] / enc["checkpoint_name"]
     output, report = Path(directory) / "references.npy", Path(directory) / "reference.json"
+    # 契约①：项目、venv 与脚本路径按所选运行项目取（显式优先，store arch 推断，不符即拒）。
+    selector = V.project_module()
+    project = selector.resolve_project(getattr(args, "stage2_project", None), arch=enc["arch"],
+                                       context="check_stage2_online", v1_store=v1)
     env = dict(os.environ)
-    env.update(UV_PROJECT_ENVIRONMENT=str(v1 / "venvs/wan-stage2"), UV_LINK_MODE="copy",
+    env.update(UV_PROJECT_ENVIRONMENT=str(project.venv), UV_LINK_MODE="copy", MMEVLA_V1_STORE=str(v1),
                CUDA_VISIBLE_DEVICES=str(args.online_gpu), HF_HOME=str(v1 / "cache/hf"), HF_HUB_OFFLINE="1")
     env.pop("PYTHONPATH", None)
     env.pop("PYTHONHOME", None)
-    argv = ["uv", "run", "--project", str(PROJECT), "--no-sync", "python", str(PROJECT / "validate_stage2.py"),
+    argv = ["uv", "run", "--project", str(project.root), "--no-sync", "python",
+            str(project.sidecar_dir / "validate_stage2.py"), "--stage2-project", project.name,
             "--gate", "G4-reference", "--samples", str(Path(args.samples).resolve()),
             "--store", str(meta.root.resolve()), "--ckpt", str(checkpoint),
             "--expected-sha256", enc["checkpoint_sha256"], "--reference-output", str(output), "--out", str(report)]
@@ -191,7 +196,15 @@ def prepare_restore_inputs(meta, samples, v1, output_root, *, framesamp_store=No
     demo_path = Path(demo_source["path"])
     if len(window["sources"]) != 1 or V.sha_file(demo_path) != demo_source["sha256"]:
         raise ValueError("便携demo原图必须来自G0已绑定的完整H5")
-    if demo_source["kind"] == "raw_h5":
+    if demo_source["kind"] == "member_h5":
+        # local-built：demo 原帧经契约②读单集 H5（不要求原合并 H5 根）。
+        member_h5 = V.load_module(REPO / "scripts/dataset/stage2_member_h5.py", "_stage2_member_h5")
+        record = member_h5.record_from_source(demo_source)
+        if (record.episode != episode["raw_ep_idx"] or demo_path.stat().st_size != record.h5_bytes
+                or not str(demo_path).endswith(record.member)):
+            raise ValueError("单集 H5 的统一 episode、member 路径或字节数与 G0 不同")
+        demo = member_h5.read_frames(record, demo_path, list(range(es)))
+    elif demo_source["kind"] == "raw_h5":
         if h5_root is None or input_manifest is None:
             raise ValueError("原版H5必须显式提供h5_root和input_manifest")
         expected_path = Path(h5_root).resolve() / episode["h5_file"]
@@ -207,7 +220,7 @@ def prepare_restore_inputs(meta, samples, v1, output_root, *, framesamp_store=No
         with h5py.File(demo_path, "r") as handle:
             demo = handle["frames"][:]
     else:
-        raise ValueError("demo来源必须是raw_h5或旧demo_h5")
+        raise ValueError("demo来源必须是member_h5、raw_h5或旧demo_h5")
     if demo.shape != (es, 256, 256, 3) or demo.dtype != np.uint8:
         raise ValueError("demo整段形制与manifest不符")
     states_table = np.memmap(state_path, mode="r", dtype="<f4", shape=(frame_meta.num_rows, 8))
@@ -330,7 +343,7 @@ def run(args):
         reference, reference_record = reference_subprocess(args, meta, v1, directory)
     common = dict(encoder_kind="stage2_pool4_concat", online_gpu=motion["online_gpu"], source_run=source_run,
                   expected_ckpt_sha256=enc["checkpoint_sha256"], store_provenance=meta.provenance,
-                  provenance_root=meta.root, v1_store=v1)
+                  provenance_root=meta.root, v1_store=v1, stage2_project=getattr(args, "stage2_project", None))
     real = MotionEncoderClient(**common, stub=False)
     try:
         require_handshake(real, stub=False)
@@ -360,11 +373,12 @@ def run(args):
         raise ValueError("G4 期间 packed 索引改变")
     portable = prepare_restore_inputs(meta, samples, v1, Path(args.out).parent,
         framesamp_store=args.framesamp_store, h5_root=args.h5_root, input_manifest=args.input_manifest,
-        history=config if args.framesamp_store else None)
+        history=config if (args.framesamp_store or ms.stage2_uses_local(meta.provenance)) else None)
     return dict(schema="stage2-validation-gate-v1", gate="G4", status="PASS", producer=V.PRODUCER,
                 checkpoint_sha256=enc["checkpoint_sha256"], samples_sha256=samples_sha, history_sha256=history_sha,
                 **(dict(output_numerics=dict(ms.SAME_INPUT_NOT_REQUIRED), kind=ms.STAGE2_CACHE_ORIGIN)
-                   if ms.stage2_uses_cache(meta.provenance) else {}),
+                   if ms.stage2_uses_cache(meta.provenance) else
+                   dict(kind=ms.STAGE2_LOCAL_ORIGIN) if ms.stage2_uses_local(meta.provenance) else {}),
                 metrics=dict(windows=64, handshake=1, response_bytes=4096,
                              **(dict(shape_mismatches=0, nonfinite=0) if ms.stage2_uses_cache(meta.provenance) else dict(encoder_max_abs=0)),
                              e2e_max_abs=max(row["max_abs"] for row in rows), **machine),
@@ -381,6 +395,8 @@ def main(argv=None):
     parser.add_argument("--framesamp-store")
     parser.add_argument("--h5-root")
     parser.add_argument("--input-manifest")
+    parser.add_argument("--stage2-project", choices=("wan_stage2", "wan_stage2_rgbstate"),
+                        help="stage2 运行项目（契约①）；不给时按 store 的 encoder.arch 推断，不符即拒")
     args = parser.parse_args(argv)
     if any((args.framesamp_store, args.h5_root, args.input_manifest)) and not all((args.framesamp_store, args.h5_root, args.input_manifest)):
         parser.error("原版在线输入须同时给出framesamp-store、h5-root、input-manifest")
@@ -394,6 +410,10 @@ def main(argv=None):
         raise
     if record.get("kind") == "published-cache-with-local-fill":
         print("ONLINE_INPUT_IDENTITY=PASS windows=64 handshake=1 input_sha_mismatch=0 nonfinite=0")
+    elif record.get("kind") == "local-built-latents":
+        # local-built：33 帧输入逐窗经 G0 的 input_frames_sha256 核过（单集 H5），再做非 cache 的 1e-5 端到端比较。
+        print("ONLINE_INPUT_IDENTITY=PASS windows=64 handshake=1 input_sha_mismatch=0 source=member_h5")
+        print("ONLINE_OFFLINE_PARITY=PASS " + " ".join(f"{k}={v}" for k, v in record["metrics"].items()))
     else:
         print("ONLINE_OFFLINE_PARITY=PASS " + " ".join(f"{k}={v}" for k, v in record["metrics"].items()))
     return 0

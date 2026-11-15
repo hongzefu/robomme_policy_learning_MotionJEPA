@@ -129,7 +129,8 @@ def materialize(sample, item):
 
 def cli_args(sample, out):
     return ["--manifest", str(sample.manifest_path), "--latents", str(sample.latents),
-            "--source", str(sample.source), "--demo-root", str(sample.demo_root), "--out", str(out)]
+            "--source", str(sample.source), "--demo-root", str(sample.demo_root), "--out", str(out),
+            "--stage2-project", "wan_stage2"]   # 1114 契约①：G0 入口必须显式给出运行项目
 
 
 def test_full_64_window_cli_and_reproducibility(tmp_path, capsys):

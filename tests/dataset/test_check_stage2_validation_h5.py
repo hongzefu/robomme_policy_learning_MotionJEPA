@@ -136,7 +136,8 @@ def test_real_h5_cli_covers_64_windows_and_all_routes(tmp_path, capsys, receipt_
     g0.main(["--manifest", str(sample.manifest_path), "--latents", str(sample.latents),
              "--source", str(sample.source), "--h5-root", str(sample.h5_root),
              "--input-manifest", str(sample.input_path), "--mj-index", str(sample.index_path.parent),
-             "--cache-import-receipt", str(sample.receipt_path), "--out", str(out)])
+             "--cache-import-receipt", str(sample.receipt_path), "--out", str(out),
+             "--stage2-project", "wan_stage2"])
     result = g0.read_json(out)
     assert "RAW_WINDOWS_READY=PASS" in capsys.readouterr().out
     assert result["counts"] == {"windows": 64, "tasks": 16, "demo_tail": 16, "sha_mismatches": 0,
@@ -231,7 +232,8 @@ def test_original_h5_arguments_are_all_or_nothing(sample, tmp_path, present):
     out = tmp_path / "G0.json"
     result = subprocess.run([sys.executable, str(legacy.SCRIPT), "--manifest", str(sample.manifest_path),
                              "--latents", str(sample.latents), "--source", str(sample.source),
-                             "--out", str(out), *flags[:2*present]], capture_output=True, text=True, timeout=30)
+                             "--out", str(out), "--stage2-project", "wan_stage2", *flags[:2*present]],
+                            capture_output=True, text=True, timeout=30)
     assert result.returncode != 0 and "四项须齐全" in result.stderr
     assert not out.exists() and "RAW_WINDOWS_READY=PASS" not in result.stdout
 

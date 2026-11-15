@@ -91,7 +91,7 @@ def check_motion_contract(mcfg, meta: ms.MotionMeta):
         sha = mcfg.get("checkpoint_sha256")
         if not isinstance(sha, str) or re.fullmatch(r"[0-9a-f]{64}", sha) is None:
             raise ValueError("stage2 motion.checkpoint_sha256 必须显式提供 SHA256")
-        if (enc.get("arch"), enc.get("state_key"), enc.get("weight_type")) != (ms.STAGE2_ARCH, "model", "ema"):
+        if enc.get("arch") not in ms.STAGE2_ARCHS or (enc.get("state_key"), enc.get("weight_type")) != ("model", "ema"):
             raise ValueError("stage2 motion 必须来自阶段 III 的 model/EMA")
     if "checkpoint_sha256" in mcfg and mcfg["checkpoint_sha256"] != enc.get("checkpoint_sha256"):
         raise ValueError(
