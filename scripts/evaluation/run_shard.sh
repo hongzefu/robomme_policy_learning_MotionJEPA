@@ -4,9 +4,15 @@
 # 可覆盖：EVAL_TIMEOUT（每块客户端超时秒，默认 7200）、CHUNK_EPISODES（每块最多新评几集，默认 20）
 #        ALLOW_RESUME=1（运行目录已存在时继续跑，用于被 Slurm 砍掉后重提）
 #        POLICY（结果目录层级名，默认 perceptual-framesamp-modul-8frame-8x8）、POLICY_CONFIG（serve_policy 的训练 config 名，默认 mme_vla_suite）
+#        STAGE2_PYTHON（可选；stage2 sidecar 解释器绝对路径，给了才向 server 传 --stage2_python，须等于所选 stage2 项目的解释器，
+#                      1114 计划 4task 为 $EVAL_REPO/v1-store/venvs/wan-stage2-rgbstate/bin/python；不给则由 motion_client 按项目选择自取）
+#        DRY_RUN=1（1114 计划 S4-08：做完参数检查后只打印最终 server 命令行与客户端入口即退出，不起任何进程、不查 GPU、不写目录）
 #        EXPECT_CKPT_ID（只接受这个 step 目录名，默认 59999）、EPISODE_WALL_S（单集墙钟秒，不设则用 eval.py 默认 900）
 #        SHARD_INDEX（srun 进既有作业时代替 SLURM_ARRAY_TASK_ID 决定默认分片标识与端口基准）
 #        MMEVLA_MOTION_PROV_RELAX（motion 轮：sidecar provenance 放行的硬件键，见 motion_client.py）
+#   server 用 `python -m scripts.training.serve_policy` 在 cwd=$EVAL_REPO 下启动（S4-01：websocket_policy_server.py 顶层
+#   import scripts.evaluation.runtime_contract，按脚本路径启动时 scripts 包不可见）；每片显式传 --motion_online_gpu（S4-07）。
+#   客户端入口是 examples/robomme/eval_692.py（692 局专用客户端，v4 官方 eval.py 不动；F2）。
 #        DEMO_PREFIX_STORE（BinFill demo 前缀库根目录绝对路径，给了才注入；见 0922-binfill-demo-prefix-plan.md）
 #        MMEVLA_ENC_CHUNK（SigLIP 编码分批尺寸，0/不设 = 一次编完，与改动前逐字等价）
 #        MMEVLA_MOTION_OVERFLOW（raise|resample，默认 raise；补 demo 后 motion 轮须设 resample）
@@ -37,6 +43,13 @@ TLS_TUNABLE="glibc.rtld.optional_static_tls=65536"
 [[ "$EVAL_TIMEOUT" =~ ^[1-9][0-9]*$ && "$CHUNK_EPISODES" =~ ^[1-9][0-9]*$ ]] || exit 2
 [[ "$POLICY" =~ ^[a-zA-Z0-9_.-]+$ && "$POLICY_CONFIG" =~ ^[a-zA-Z0-9_]+$ && "$EXPECT_CKPT_ID" =~ ^[0-9]+$ && "$SHARD_INDEX" =~ ^[a-zA-Z0-9_-]+$ ]] || exit 2
 [[ -z "$EPISODE_WALL_S" || "$EPISODE_WALL_S" =~ ^[1-9][0-9]*$ ]] || exit 2
+DRY="${DRY_RUN:-0}"
+[[ "$DRY" =~ ^[01]$ ]] || { echo 'DRY_RUN 只能是 0 / 1'; exit 2; }
+STAGE2_PYTHON="${STAGE2_PYTHON:-}"
+if [[ -n "$STAGE2_PYTHON" ]]; then
+    [[ "$STAGE2_PYTHON" == /*/bin/* ]] || { echo "STAGE2_PYTHON 必须是虚拟环境 bin 内解释器的绝对路径：$STAGE2_PYTHON"; exit 2; }
+    [[ "$DRY" == 1 || -x "$STAGE2_PYTHON" ]] || { echo "STAGE2_PYTHON 不存在或不可执行：$STAGE2_PYTHON"; exit 2; }
+fi
 DEMO_PREFIX_STORE="${DEMO_PREFIX_STORE:-}"
 if [[ -n "$DEMO_PREFIX_STORE" ]]; then
     [[ "$DEMO_PREFIX_STORE" == /* ]] || { echo "DEMO_PREFIX_STORE 必须是绝对路径：$DEMO_PREFIX_STORE"; exit 2; }
@@ -60,6 +73,28 @@ RUN_DIR="$EVAL_REPO/v1-store/evaluation/$RUN_NAME/$SHARD_TAG"
 RESULT_ROOT="$RUN_DIR/$POLICY/ckpt$CKPT_ID/seed$SEED"
 if [[ -e "$RESULT_ROOT/progress.json" && "${ALLOW_RESUME:-0}" != 1 ]]; then
     echo "运行结果已存在：$RESULT_ROOT/progress.json（要续跑请显式 ALLOW_RESUME=1）"; exit 2
+fi
+# motion sidecar 的卡号跟随本进程可见的第一张卡（Slurm 单卡 step 里是 0；本机是 CUDA_VISIBLE_DEVICES 所选卡），
+# 以 --motion_online_gpu 显式传给 server（S4-07；原 MMEVLA_MOTION_ONLINE_GPU 导出在 v4 上无人读取，已删）
+MOTION_ONLINE_GPU="${CUDA_VISIBLE_DEVICES%%,*}"
+[[ -n "$MOTION_ONLINE_GPU" ]] || MOTION_ONLINE_GPU=0
+[[ "$MOTION_ONLINE_GPU" =~ ^[0-9]+$ ]] || { echo "motion sidecar 卡号必须是整数：$MOTION_ONLINE_GPU"; exit 2; }
+# 端口：按 array 下标错开基准，避开同节点多片同时探到同一个空闲端口的竞态窗口（起跑时从 PORT 向上探测空闲）
+PORT_SLOT="$SHARD_INDEX"; [[ "$PORT_SLOT" =~ ^[0-9]+$ ]] || PORT_SLOT=$(( $(printf '%s' "$PORT_SLOT" | cksum | cut -d' ' -f1) % 100 ))
+PORT=$((18011 + (PORT_SLOT % 100) * 7))
+server_argv() {  # 最终 server 命令行（DRY_RUN 打印与真实启动共用同一份）
+    SERVER_ARGV=("${SERVER_UV[@]}" -m scripts.training.serve_policy --seed="$SEED" --port="$PORT"
+                 --motion_online_gpu="$MOTION_ONLINE_GPU")
+    [[ -z "$STAGE2_PYTHON" ]] || SERVER_ARGV+=(--stage2_python="$STAGE2_PYTHON")
+    SERVER_ARGV+=(policy:checkpoint --policy.dir="$CKPT" --policy.config="$POLICY_CONFIG")
+}
+CLIENT_ENTRY=examples/robomme/eval_692.py
+if [[ "$DRY" == 1 ]]; then
+    server_argv
+    printf 'DRY_SERVER_ARGV shard=%s cuda=%s cwd=%s argv:' "$SHARD_TAG" "${CUDA_VISIBLE_DEVICES:-}" "$EVAL_REPO"
+    printf ' %q' "${SERVER_ARGV[@]}"; printf '\n'
+    echo "DRY_CLIENT_ENTRY shard=$SHARD_TAG entry=$CLIENT_ENTRY max_steps=$MAX_STEPS plan=$PLAN"
+    exit 0
 fi
 [[ -z "$(git -C "$EVAL_REPO" status --porcelain)" ]] || { echo '必须从 clean HEAD 启动'; exit 2; }
 command -v uv
@@ -94,16 +129,38 @@ check_local_gpu() {
     done <<< "$slots"
     [[ "$own" == 1 ]] || { echo "本片 $SHARD_TAG 未在占位文件登记，停止起跑：$slot_file"; return 2; }
     (( n_reg <= LOCAL_GPU_SHARE )) || { echo "本卡已登记 $n_reg 片 > $LOCAL_GPU_SHARE，停止起跑：$slot_file"; return 2; }
-    for p in $gpu_pids; do
-        q="$p"
-        while [[ -n "$q" && "$q" != 0 && "$q" != 1 && " $roots " != *" $q "* ]]; do
-            q="$(awk '/^PPid:/ {print $2}' "/proc/$q/status" 2>/dev/null || true)"
+    # 进程归属（1114 计划 S4-05）：重采样至多 3 次、间隔 2 秒，3 次都判外来才拒。PPid 链读空（短命进程在读 /proc 前
+    # 退出）或终止于 PID 1（孤儿被收养）的进程，再按 /proc/<pid>/environ 的 EVAL_REPO 或 /proc/<pid>/cwd 判断是否属本仓库
+    # 评估（server、sidecar 都继承 env.sh 导出的 EVAL_REPO，server 的 cwd 是 $EVAL_REPO），属则不判外来，判不了才算外来。
+    local attempt foreign cwd
+    for attempt in 1 2 3; do
+        if (( attempt > 1 )); then
+            sleep 2
+            gpu_pids="$(nvidia-smi -i "$CUDA_VISIBLE_DEVICES" --query-compute-apps=pid --format=csv,noheader)" || return 2
+        fi
+        foreign=""
+        for p in $gpu_pids; do
+            q="$p"
+            while [[ -n "$q" && "$q" != 0 && "$q" != 1 && " $roots " != *" $q "* ]]; do
+                q="$(awk '/^PPid:/ {print $2}' "/proc/$q/status" 2>/dev/null || true)"
+            done
+            [[ -n "$q" && " $roots " == *" $q "* ]] && continue
+            if tr '\0' '\n' < "/proc/$p/environ" 2>/dev/null | grep -qxF "EVAL_REPO=$EVAL_REPO"; then
+                echo "LOCAL_GPU_OWN_ORPHAN pid=$p via=environ chain_end=${q:-empty}"; continue
+            fi
+            cwd="$(readlink "/proc/$p/cwd" 2>/dev/null || true)"
+            if [[ -n "$cwd" && ( "$cwd" == "$EVAL_REPO" || "$cwd" == "$EVAL_REPO"/* ) ]]; then
+                echo "LOCAL_GPU_OWN_ORPHAN pid=$p via=cwd chain_end=${q:-empty}"; continue
+            fi
+            foreign="$foreign $p"
         done
-        [[ -n "$q" && " $roots " == *" $q "* ]] || {
-            echo "所选 GPU 上的计算进程 $p 不属于已登记分片的进程树（根=$roots），停止起跑"
-            return 2
-        }
+        [[ -n "$foreign" ]] || break
+        echo "LOCAL_GPU_FOREIGN_SAMPLE attempt=$attempt/3 pids=${foreign# }"
     done
+    [[ -z "$foreign" ]] || {
+        echo "所选 GPU 上的计算进程${foreign} 不属于已登记分片的进程树（根=$roots），3 次采样均判外来，停止起跑"
+        return 2
+    }
     echo "LOCAL_GPU_SHARE=PASS device=$CUDA_VISIBLE_DEVICES share=$LOCAL_GPU_SHARE registered=$n_reg gpu_procs=$(wc -w <<< "$gpu_pids")"
 }
 check_local_gpu
@@ -166,21 +223,16 @@ print(sorted(plan['groups'])[0].split('/')[0])
 timeout --kill-after=15s 180s "${CLIENT_UV[@]}" scripts/evaluation/render_probe.py "$RUN_DIR/render" "$PROBE_TASK"
 JAX_PLATFORMS=cpu "${SERVER_UV[@]}" scripts/evaluation/check_checkpoint.py "$CKPT" | tee "$RUN_DIR/checkpoint.log"
 
-# 端口：按 array 下标错开基准，避开同节点多片同时探到同一个空闲端口的竞态窗口
-PORT_SLOT="$SHARD_INDEX"; [[ "$PORT_SLOT" =~ ^[0-9]+$ ]] || PORT_SLOT=$(( $(printf '%s' "$PORT_SLOT" | cksum | cut -d' ' -f1) % 100 ))
-PORT=$((18011 + (PORT_SLOT % 100) * 7))
 while (exec 3<>"/dev/tcp/127.0.0.1/$PORT") 2>/dev/null; do
     PORT=$((PORT + 1))
     (( PORT < 18811 )) || exit 2
 done
 check_local_gpu
-# motion sidecar 的卡号跟随本进程可见的第一张卡（Slurm 单卡 step 里是 0；本机冒烟是 CUDA_VISIBLE_DEVICES 所选卡）
-export MMEVLA_MOTION_ONLINE_GPU="${CUDA_VISIBLE_DEVICES%%,*}"
-[[ -n "$MMEVLA_MOTION_ONLINE_GPU" ]] || export MMEVLA_MOTION_ONLINE_GPU=0
-echo "EVAL_PARAMS policy=$POLICY config=$POLICY_CONFIG ckpt=$CKPT_ID seed=$SEED max_steps=$MAX_STEPS wall=${EPISODE_WALL_S:-default} online_gpu=$MMEVLA_MOTION_ONLINE_GPU prov_relax=${MMEVLA_MOTION_PROV_RELAX:-none}"
+echo "EVAL_PARAMS policy=$POLICY config=$POLICY_CONFIG ckpt=$CKPT_ID seed=$SEED max_steps=$MAX_STEPS wall=${EPISODE_WALL_S:-default} online_gpu=$MOTION_ONLINE_GPU stage2_python=${STAGE2_PYTHON:-auto} prov_relax=${MMEVLA_MOTION_PROV_RELAX:-none}"
 echo "EVAL_PARAMS_DEMO demo_prefix_store=${DEMO_PREFIX_STORE:-none} enc_chunk=${MMEVLA_ENC_CHUNK:-0} motion_overflow=${MMEVLA_MOTION_OVERFLOW:-raise} expect_motion_stats=${EXPECT_MOTION_STATS:-0}"
-"${SERVER_UV[@]}" scripts/training/serve_policy.py --seed="$SEED" --port="$PORT" policy:checkpoint \
-    --policy.dir="$CKPT" --policy.config="$POLICY_CONFIG" > "$RUN_DIR/server.log" 2>&1 &
+server_argv
+printf 'SERVER_ARGV cwd=%s argv:' "$PWD"; printf ' %q' "${SERVER_ARGV[@]}"; printf '\n'
+"${SERVER_ARGV[@]}" > "$RUN_DIR/server.log" 2>&1 &
 SERVER_PID=$!
 READY=0
 for ((ATTEMPT=0; ATTEMPT<180; ATTEMPT++)); do
@@ -216,7 +268,7 @@ CHUNKS=$(( (PLAN_EPISODES + CHUNK_EPISODES - 1) / CHUNK_EPISODES ))
 for ((CHUNK=1; CHUNK<=CHUNKS; CHUNK++)); do
     echo "CHUNK_START $CHUNK/$CHUNKS"
     timeout --signal=TERM --kill-after=20s "${EVAL_TIMEOUT}s" \
-        env "GLIBC_TUNABLES=$TLS_TUNABLE" "${CLIENT_UV[@]}" examples/robomme/eval.py \
+        env "GLIBC_TUNABLES=$TLS_TUNABLE" "${CLIENT_UV[@]}" "$CLIENT_ENTRY" \
         --args.host=127.0.0.1 --args.port="$PORT" --args.model_seed="$SEED" \
         --args.policy_name="$POLICY" --args.model_ckpt_id="$CKPT_ID" \
         --args.max_steps="$MAX_STEPS" --args.save_dir="$RUN_DIR" \

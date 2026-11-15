@@ -28,6 +28,9 @@
     uv run scripts/evaluation/smoke_demo_inject.py verify \
         --store <前缀库根> --task BinFill --difficulty easy --episode 156 \
         --ckpt <绝对路径>/50000 --config mme_vla_suite_b128_80k
+    # 1114 计划（S4-07）：verify 显式把 --motion-online-gpu 与 --stage2-python 传给 create_trained_policy，
+    # 不再依赖 MMEVLA_MOTION_ONLINE_GPU（v4 上无人读取）；--stage2-python 缺省取契约①新项目解释器
+    # v1-store/venvs/wan-stage2-rgbstate/bin/python，非 stage2 checkpoint 传 --stage2-python '' 关闭
 判定行：``SMOKE_RESET=PASS {...}`` / ``SMOKE_INJECT=PASS {...}``
 """
 from __future__ import annotations
@@ -42,6 +45,8 @@ import time
 import numpy as np
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+# 契约①（1114 计划第二部分 B）：新项目 wan_stage2_rgbstate 的 venv；S2 的 stage2_project.py 合入后核对与其登记一致
+STAGE2_PYTHON_REL = "v1-store/venvs/wan-stage2-rgbstate/bin/python"
 sys.path.insert(0, str(REPO / "examples/robomme"))
 
 
@@ -58,7 +63,7 @@ def reset_npy_path(out_dir: pathlib.Path, task: str, difficulty: str, episode: i
 def cmd_export_reset(args) -> int:
     """client 环境：建干净 env，取 reset 帧，与前缀第 0 帧比一眼，存 npy。"""
     from demo_prefix import DemoPrefixStore
-    from env_runner import SpecEnvRunner
+    from env_runner_692 import SpecEnvRunner
     from robomme.injection_candidates import load_candidates, candidate_key
     import robomme
 
@@ -123,9 +128,9 @@ def cmd_verify(args) -> int:
 
     if jax.default_backend() != "gpu":
         raise SystemExit(f"错误: jax 后端 {jax.default_backend()} != gpu")
-    # sidecar 卡号与 run_shard.sh 同一口径：跟随本进程可见的第一张卡
-    os.environ.setdefault("MMEVLA_MOTION_ONLINE_GPU",
-                          (os.environ.get("CUDA_VISIBLE_DEVICES", "") or "0").split(",")[0] or "0")
+    # sidecar 卡号与 run_shard.sh 同一口径（缺省跟随本进程可见的第一张卡），显式传给 policy（S4-07）
+    online_gpu = args.motion_online_gpu or ((os.environ.get("CUDA_VISIBLE_DEVICES", "") or "0").split(",")[0] or "0")
+    stage2_python = args.stage2_python or None
 
     out_dir = pathlib.Path(args.out or (REPO / "v1-store/demo-prefix/smoke-inject"))
     npy = reset_npy_path(out_dir, args.task, args.difficulty, args.episode)
@@ -148,13 +153,15 @@ def cmd_verify(args) -> int:
     report: dict = {"task": args.task, "difficulty": args.difficulty, "episode": args.episode,
                     "D": d, "exec_start_idx": es, "first_batch_frames": int(images.shape[0]),
                     "enc_chunk": os.environ.get("MMEVLA_ENC_CHUNK", "0"),
-                    "motion_overflow_env": os.environ.get("MMEVLA_MOTION_OVERFLOW", "")}
+                    "motion_overflow_env": os.environ.get("MMEVLA_MOTION_OVERFLOW", ""),
+                    "motion_online_gpu": online_gpu, "stage2_python": stage2_python}
 
     # ⚠ 绝不能用 motion_stub=True：stub sidecar 靠 P.stub_decode(window) 从**像素**解帧编号，
     # 只认 P.stub_frame(j) 那种合成的带编号帧；真实渲染帧解出来是乱的，必报
     # 「33 帧编号不符合连续前缀与重复末帧规则」。真实帧只能走真 sidecar——正式评测本来也是这么跑的。
     policy = _policy_config.create_trained_policy(
-        _config.get_config(args.config), pathlib.Path(args.ckpt), motion_stub=args.motion_stub)
+        _config.get_config(args.config), pathlib.Path(args.ckpt), motion_stub=args.motion_stub,
+        motion_online_gpu=online_gpu, stage2_python=stage2_python)
     mem = policy.mem_buffer
     report["motion_stub"] = bool(args.motion_stub)
     report["motion_enabled"] = bool(policy.motion_enabled)
@@ -251,6 +258,10 @@ def main() -> int:
     parser.add_argument("--motion-stub", action="store_true",
                         help="用 stub sidecar。只对合成的带编号帧有效，喂真实帧必报错，"
                              "所以本脚本默认关闭、走与正式评测同一条的真 sidecar")
+    parser.add_argument("--motion-online-gpu", default="",
+                        help="verify：motion sidecar 卡号（缺省取 CUDA_VISIBLE_DEVICES 第一张，再缺省 0）")
+    parser.add_argument("--stage2-python", default=str(REPO / STAGE2_PYTHON_REL),
+                        help="verify：stage2 sidecar 解释器（契约①新项目 wan_stage2_rgbstate 的 venv）；传空串表示不传")
     parser.add_argument("--out", default="")
     args = parser.parse_args()
     if args.mode == "export-reset":
