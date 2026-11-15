@@ -136,7 +136,7 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
 <tr><td><code>ONLINE_INPUT_IDENTITY</code>、<code>ONLINE_OFFLINE_PARITY</code></td><td>评估时在线算的 motion 与训练用的离线表一致</td></tr>
 <tr><td><code>TRAIN_FINAL_RECORD</code>、<code>SAVE_LOAD</code>、<code>MOTION_WINDOWS</code></td><td>短测 20 步能存能恢复；评估冒烟能跑；正式训练 50k 跑完（<code>EXIT_CODE=0</code>，ckpt 目录恰 10 份）</td></tr>
 <tr><td><code>CKPT_DELIVERY_READY</code>、<code>CKPT_UPLOAD</code>、<code>HF_VERIFY</code></td><td>step 50000 的 ckpt 可用于评估；10 份 ckpt 上传完整、读回一致（<code>CKPT_UPLOAD=PASS steps=10</code>，由训练成功后的 final 调用给出）</td></tr>
-<tr><td>评估结果上传</td><td>传同一 bucket 的 <code>eval/</code> 前缀，用独立清单与读回判定；ckpt 的全量集合比对排除 <code>eval/</code>，两者先后顺序不限</td></tr>
+<tr><td>评估结果上传</td><td>传同一 bucket 的 <code>eval/</code> 前缀，用独立清单与读回判定 <code>EVAL_HF_VERIFY=PASS</code>；ckpt 的全量集合比对排除 <code>eval/</code>，两者先后顺序不限</td></tr>
 <tr><td><code>EVAL692</code></td><td>692 局跑完，逐局 CSV 齐</td></tr>
 </table>
 
@@ -382,7 +382,7 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
   <li>解包脚本对一个合成 tar 能按名单取出并核 sha，篡改即 FAIL。</li>
   </ul>
   命令：<code>uv run --project "$W" python -m pytest "$W/tests" -q -k "rgb_recon or heldout or diagnose"</code>。判定：全部 passed</td></tr>
-<tr><td>主会话</td><td>下载、L0、短测、正式链、留档</td><td><code>v1-store/</code> 下 R2 列出的新增路径、<code>docs/</code>、<code>current.json</code></td><td>R2、R3</td><td>—</td><td>D 节判定行</td></tr>
+<tr><td>主会话</td><td>下载、L0、短测、正式链、留档</td><td><code>v1-store/</code> 下 R2 列出的新增路径、<code>docs/</code>（不登记状态机，不写 <code>current.json</code>）</td><td>R2、R3</td><td>—</td><td>D 节判定行</td></tr>
 </table>
 
 <h2>D. 闸门总表</h2>
@@ -409,7 +409,7 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
 <tr><td><code>CKPT_DELIVERY_READY=PASS step=50000</code></td><td>M、C 训练成功后，评估前</td><td>对 S5 导出器生成的本地 stage 做严格恢复：<code>--checkpoint &lt;stage&gt;/50000 --expected-manifest &lt;stage&gt;/manifests/step-50000.json --delivery-step 50000</code>；沿用现有设备合同（父进程 <code>CUDA_VISIBLE_DEVICES=0</code>、<code>--online-gpu 1</code>）。缺 encoder 依赖实体或任一 sha 不符必须拒绝</td><td>不进评估；工程问题自修后重跑本检查</td></tr>
 <tr><td><code>EVAL692</code></td><td>E1、E2</td><td>692 局逐局 CSV 齐，seed 7。错误分类：分片进程以 124（超时）或 137（被杀）退出，按基础设施退出处理，即使 progress 里含预标 error 也不能掩盖。<code>check_checkpoint.py</code> 的 RUNS 映射覆盖两条 run、step19 短测与获准的 attempt02</td><td>脚本内置的 C7 对新出现的 error 单局自动重跑一次，记录 retried 次数并保留 attempt0/。分片若判为 <code>verdict=infra</code>，<code>EVAL692=FAIL</code> 即停，留证交用户，不手动重跑、不合并。不为提高成功率重试（第 22 条）。<code>peak_mem</code> 只记录</td></tr>
 <tr><td><code>CKPT_UPLOAD=PASS steps=10</code>、<code>HF_VERIFY=PASS</code>（ckpt 范围）</td><td>长尾</td><td>增量模式只出 <code>INC_END</code>，不算最终验收；训练 <code>EXIT_CODE=0</code> 后由串行链调用 final 才出这两行。远端全量精确集合比对排除 <code>eval/</code> 前缀，只核 ckpt 清单</td><td>记录后重传；不阻塞下一阶段训练</td></tr>
-<tr><td>eval 上传与读回（eval 范围；判定行名以 S5 实现为准）</td><td>E1、E2 之后</td><td>同一 bucket 的 <code>eval/</code> 前缀，独立清单、独立读回判定。三种先后顺序都须通过：评估先完成、ckpt 上传先完成、重启后重验</td><td>记录后重传；不阻塞下一阶段</td></tr>
+<tr><td><code>EVAL_HF_VERIFY</code>（eval 范围）</td><td>E1、E2 之后</td><td>同一 bucket 的 <code>eval/</code> 前缀，独立清单、独立读回判定。三种先后顺序都须通过：评估先完成、ckpt 上传先完成、重启后重验</td><td>记录后重传；不阻塞下一阶段</td></tr>
 <tr><td>stage 删除</td><td>每条 run 两个条件都满足后</td><td>同时满足 ckpt 范围 <code>HF_VERIFY=PASS</code> 与 <code>CKPT_DELIVERY_READY=PASS step=50000</code></td><td>任一未满足不删</td></tr>
 </table>
 
@@ -493,8 +493,8 @@ uv run --project "$R" python "$R/scripts/dataset/pack_motion_store.py" pack --la
   --latents-origin local-built-latents --manifest "$LIB/meta/episode_manifest.json" \
   --tokens "$LIB/motion-tokens-stage2-rgbstate-ep144" --latents "$LIB/wan-latents" --encoder-run-dir "$REG" \
   --expected-ckpt-sha256 "$ENC_SHA" --stage2-validation "$LOG/validation" --stage2-source-pin "$S2PROJ/SOURCE_PIN.json" \
-  --out "$LIB/motion-stage2-1024-rgbstate-ep144"
-  # --raw-dir 现为必填；local-built 下保留或条件化由 S2 在 parser、路径转换、provenance 一并处理，以 --help 为准
+  --stage2-project wan_stage2_rgbstate --out "$LIB/motion-stage2-1024-rgbstate-ep144"
+  # local-built 来源不传 --raw-dir（S2 把它改为非必填，local-built 下给了即拒，provenance 写 null；见 B 表 pack 行）
 env -u PYTHONPATH CUDA_VISIBLE_DEVICES=0 "$S2PY" "$R/scripts/dataset/wan_stage2/compare_stage2.py" \
   --store "$LIB/motion-stage2-1024-rgbstate-ep144" --latents "$LIB/wan-latents" --ckpt "$ENC" \
   --expected-sha256 "$ENC_SHA" --scope full --expect-rows &lt;grid32 行数&gt;      # encoder_bitexact.json
