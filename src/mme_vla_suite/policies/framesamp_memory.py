@@ -115,6 +115,8 @@ class FrameSampMemory:
         self.motion_encode_s = 0.0
         # 本局降级步数：resample 口径下由 policy.infer 回传客户端
         self.motion_downsample_steps = 0
+        # 最近一次装配时的合法窗数（降级前）：由 policy.infer 回传客户端，供 check_shard.py 的 MOTION_WINDOWS 闸复核
+        self.motion_last_k = 0
 
     @property
     def n_steps(self) -> int:
@@ -128,6 +130,7 @@ class FrameSampMemory:
         self._next_grid_start_exec = 0
         self.exec_start_idx = None
         self.motion_downsample_steps = 0
+        self.motion_last_k = 0
 
     def add_buffer(
         self,
@@ -282,6 +285,7 @@ class FrameSampMemory:
         frames = self.visible_motion_frames(step_idx)
         k = len(frames)
         B = self.motion_budget
+        self.motion_last_k = k
         if k > B:
             # getattr 缺省 raise：测试夹具 / 对拍脚本用 __new__ 绕过构造，未设该字段时行为同改动前
             if getattr(self, "motion_overflow", "raise") != "resample":

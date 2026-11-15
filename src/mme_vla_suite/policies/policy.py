@@ -124,6 +124,13 @@ class MME_VLA_Policy:
         # 只有 resample 口径附带本局累计降级步数；官方缺省响应字典与改动前相同
         if self.motion_enabled and self._motion_cfg.get("overflow") == "resample":
             outputs["motion_downsample_steps"] = int(self.mem_buffer.motion_downsample_steps)
+        if self.motion_enabled:
+            # 692 评估（S4b，移植自 v15 c0826be）：随 infer_time_ms 回传本步合法窗数、预算与超预算口径，
+            # 客户端 eval_692.py 累计成 motion_stats.json，check_shard.py 的 MOTION_WINDOWS 闸据此独立复核；
+            # 非 motion 模型响应字典不变
+            outputs["motion_k"] = int(self.mem_buffer.motion_last_k)
+            outputs["motion_budget"] = int(self.mem_buffer.motion_budget)
+            outputs["motion_overflow"] = str(self.mem_buffer.motion_overflow)
 
         return outputs
     
