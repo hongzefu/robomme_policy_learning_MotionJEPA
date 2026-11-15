@@ -346,7 +346,7 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
   <ul>
   <li><code>CKPT_STEPS</code> 固定为 5000…50000 共 10 份，缺任一份即拒（A17；模板常量 <code>STEPS</code> 改名，T06）；</li>
   <li>增量模式每份落盘即传，只出 <code>INC_END</code>，不冒充最终验收；</li>
-  <li>final 拆成两个入口（裁决 8、T02、X06），都只由 S3 串行链在训练成功后调用：<code>O16_MODE=stage</code> 只做 <code>strict_final</code>、冻结源、写 <code>stage/50000</code>（含 encoder 依赖实体）、<code>manifests/step-50000.json</code> 与 delivery manifest，不联网、不持 <code>upload.lock</code>，同步运行，日志 <code>$LOG/stage-&lt;m|c&gt;.log</code>；<code>O16_MODE=upload</code> 复用同一份 stage 做上传、本机读回，持 <code>upload.lock</code>，出 <code>CKPT_UPLOAD=PASS steps=10</code> 与 <code>HF_VERIFY=PASS</code>，后台 tmux <code>v16-up-&lt;m|c&gt;</code>，日志 <code>$LOG/up-&lt;m|c&gt;.log</code>（A05、A17）。stage 已存在且 manifest 一致时 upload 不重建；</li>
+  <li>final 拆成两个入口（裁决 8、T02、X06），都只由 S3 串行链在训练成功后调用：<code>O16_MODE=stage</code> 只做 <code>strict_final</code>、冻结源、写 <code>stage/50000</code>（含 encoder 依赖实体）、<code>manifests/step-50000.json</code> 与 delivery manifest，不联网、不持 <code>upload.lock</code>，同步运行，日志 <code>$LOG/stage-&lt;m|c&gt;.log</code>；<code>O16_MODE=upload</code> 复用同一份 stage 做上传、本机读回，持 <code>upload.lock</code>，出 <code>CKPT_UPLOAD=PASS steps=10</code> 与 <code>HF_VERIFY=PASS</code>，后台 tmux <code>v16-up-&lt;m|c&gt;</code>，日志 <code>$LOG/up-&lt;m|c&gt;-final.log</code>（A05、A17）。stage 已存在且 manifest 一致时 upload 不重建；</li>
   <li>评估结果放同一 bucket 的 <code>eval/</code> 前缀（K15 第二条：与 ckpt 分开清单与读回），单独一条上传命令（<code>O16_MODE=eval</code>），自有清单与读回判定 <code>EVAL_HF_VERIFY</code>。eval 用独立导出根 <code>v1-store/exports/hf-eval-&lt;run&gt;/</code>，锁为其下的 <code>upload.lock</code>、marker 也写在该根，不与 ckpt 的 <code>upload.lock</code> 争用（T05）。ckpt 的 <code>verify_all</code> 全量精确集合比对排除 <code>eval/</code> 前缀；eval 只比对 <code>eval/</code> 前缀。评估先完成、上传先完成、重启后重验三种顺序都必须通过（A10）；</li>
   <li>hygiene 白名单（N02）：新增 <code>hygiene_allowlist_4task_stage2_vla.json</code>，按 orig16 版（<code>hygiene_allowlist_orig16_stage2_vla.json</code>）改写，ckpt 范围与 <code>eval/</code> 范围各写自己的 <code>path_glob</code>；</li>
   <li>stage 删除条件三条同时满足才删：<code>HF_VERIFY=PASS</code>、该 stage 的严格恢复 <code>CKPT_DELIVERY_READY=PASS step=50000</code>、该 run 的 <code>EVAL692</code> 已出 1 行（A05、裁决 1）。</li>
@@ -617,9 +617,9 @@ env -u PYTHONPATH CUDA_VISIBLE_DEVICES=0 uv run --project "$R" python "$R/script
 #      CUDA_VISIBLE_DEVICES=0 uv run --project "$R" python "$R/scripts/training/check_stage2_checkpoint.py" --mode delivery \
 #        --delivery-step 50000 --checkpoint "$R/v1-store/exports/hf-ckpt-&lt;run&gt;/stage/50000" \
 #        --expected-manifest "$R/v1-store/exports/hf-ckpt-&lt;run&gt;/stage/manifests/step-50000.json" \
-#        --online-gpu 1 --out "$LOG/delivery-&lt;m|c&gt;.json"         # → CKPT_DELIVERY_READY=PASS step=50000
+#        --online-gpu 1 --out "$LOG/delivery-&lt;m|c&gt;.json" 2&gt;&amp;1 | tee "$LOG/delivery-&lt;m|c&gt;.log"   # 判定行 CKPT_DELIVERY_READY=PASS step=50000 落 .log，json 留作证据
 #      （stage 路径沿用导出模板 v1-store/exports/hf-ckpt-&lt;RUN&gt;/stage，以 S5 实现为准）
-#   6. 评估 E1/E2：ckpt 用 "$R/v1-store/exports/hf-ckpt-&lt;run&gt;/stage/50000"（严格恢复通过的那份），seed 7 → EVAL692
+#   6. 评估 E1/E2：ckpt 用 "$R/v1-store/exports/hf-ckpt-&lt;run&gt;/stage/50000"（严格恢复通过的那份），seed 7 → EVAL692；链用 tee 把日志落在 $LOG/&lt;RUN_NAME&gt;.log
 #   接续：START_STAGE=E1|C|E2 时，前段按各自收据记录的 sha 核，不用当前 HEAD 回填
 # ── 增量上传（tmux v16-up-m / v16-up-c；cwd=$R）：
 #   RUN=&lt;run&gt; BUCKET=&lt;bucket&gt; bash "$R/scripts/dataset/hf_export/run_4task_stage2_ckpt_inc.sh"，日志 $LOG/up-&lt;m|c&gt;.log
@@ -702,7 +702,7 @@ env -u PYTHONPATH CUDA_VISIBLE_DEVICES=0 uv run --project "$R" python "$R/script
 <tr><td>M→C 放行</td><td>不读任何 <code>current.json</code>。只核 M 的具名运行收据：<code>$LOG/&lt;M run&gt;.log</code> 的 <code>TRAIN_FINAL_RECORD</code>、<code>$LOG/delivery-m.log</code> 的 <code>CKPT_DELIVERY_READY=PASS step=50000</code>、<code>$LOG/local692-s2rgbstate-modul-concat1024-50k-s7.log</code> 的 1 行 <code>EVAL692</code>。串行链与 <code>START_STAGE</code> 接续按各收据记录的 sha 核对（A R5）</td></tr>
 <tr><td>上游依赖</td><td>GPU 阶段只看开工令＋G1–G3（I.1），不等上游 <code>done</code>。Beta 前核 1113 <code>CKPT_HF_VERIFY</code> 中 ep144 的 sha 等于本方 <code>ENCODER_REGISTER</code> 实算值。S6 合进 MJ <code>v12-3decoder</code> 要等 1113 写完 <code>done</code>（以其 <code>handoff:</code> commit 已 push 为准，消息 1 的回复或 <code>git log</code> 现场核实）；在此之前 S6 的解包与渲染只在 S6 固定工作树＋独立环境运行。对上游产物的假设：<code>TRAIN_TERMINAL=PASS epoch=144</code>；<code>&lt;data_root&gt;/control/source_manifest.json</code> 的 <code>member_pin_sha256=2cb9026f…</code>；ckpt 公开 bucket 为 <code>HongzeFu/motionjepa-4task-rgb-state-144ep-v1</code></td></tr>
 <tr><td>交接前必须完成（出处）</td><td>M：<code>TRAIN_FINAL_RECORD</code>、<code>CKPT_DELIVERY_READY</code> 见 <code>$LOG/&lt;M run&gt;.log</code>、<code>$LOG/delivery-m.log</code>；E1 的 1 行 <code>EVAL692</code> 见 <code>$LOG/local692-s2rgbstate-modul-concat1024-50k-s7.log</code>。C：同样的三项，日志分别是 <code>$LOG/&lt;C run&gt;.log</code>、<code>$LOG/delivery-c.log</code>、<code>$LOG/local692-s2rgbstate-ctx-concat1024-50k-s7.log</code></td></tr>
-<tr><td>长尾</td><td><code>v16-up-m</code>（<code>$LOG/up-m.log</code>）、<code>v16-up-c</code>（<code>$LOG/up-c.log</code>）。增量只出 <code>INC_END</code>；训练成功后由串行链调用 final，完成行 <code>CKPT_UPLOAD=PASS steps=10</code> 加 <code>HF_VERIFY=PASS</code>。评估结果的 <code>eval/</code> 上传（<code>v16-up-eval-m</code>／<code>v16-up-eval-c</code>，独立导出根与独立锁）有独立清单与读回判定</td></tr>
+<tr><td>长尾</td><td><code>v16-up-m</code>（<code>$LOG/up-m.log</code>）、<code>v16-up-c</code>（<code>$LOG/up-c.log</code>）。增量只出 <code>INC_END</code>；训练成功后由串行链调用 final（同名 tmux 复用，日志 <code>$LOG/up-m-final.log</code>／<code>$LOG/up-c-final.log</code>，复用前先 TaskStop 旧 Monitor），完成行 <code>CKPT_UPLOAD=PASS steps=10</code> 加 <code>HF_VERIFY=PASS</code> 落在该 final 日志。评估结果的 <code>eval/</code> 上传（<code>v16-up-eval-m</code>／<code>v16-up-eval-c</code>，独立导出根与独立锁）有独立清单与读回判定</td></tr>
 <tr><td>解锁下游</td><td>两任务 <code>done</code> 后，可以做 4task 新 encoder 与旧 motion 的论文对照</td></tr>
 </table>
 
