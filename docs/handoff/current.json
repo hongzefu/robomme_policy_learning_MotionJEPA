@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-14T23:04:10Z",
-    "america_new_york": "2026-11-14T18:04:10-05:00"
+    "utc": "2026-11-16T14:37:05Z",
+    "america_new_york": "2026-11-16T09:37:05-0500"
   },
   "repo": {
     "branch": "v4.2-plswap-full",
-    "base_head": "8bb3fe70d2e70332c974667c0382d68d1399f597",
+    "base_head": "7dd722cd81c84f1c9c577b121bfe589cace07222",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -2602,6 +2602,72 @@
           "what": "用户决定是否跑 Frozen Wan 同口径对照、MotionMem VideoRepick、core 组（spec 已生成：rs/wan、vr/motion、vr/wan）",
           "command": "见 launch.md 与 result.md ⑧",
           "verdict_line": "RS_SAMEP / VR_SAMEP"
+        }
+      ]
+    },
+    "steer-speedup-1116": {
+      "plan": {
+        "file": "1116-steer-speedup-fix-plan.html",
+        "sha": "7dd722cd81c84f1c9c577b121bfe589cace07222"
+      },
+      "state": "running",
+      "state_changed_at": "2026-11-16T14:37:05Z",
+      "state_reason": "用户开工令到达；开工审查与 S-A..S-D 改代码进行中",
+      "owner": {
+        "session": "Claude Code 会话 89cd97e5-8264-43d7-9a9c-b1dd6b275bbc",
+        "host": "sled-aspen"
+      },
+      "depends_on": [
+        "steer-4task-1115"
+      ],
+      "pre_handoff": [
+        {
+          "what": "ENC_TOL",
+          "evidence": "",
+          "where": "docs/evaluation-doc/steer-speedup-1116/",
+          "status": "pending"
+        },
+        {
+          "what": "NOOP_EQ2",
+          "evidence": "",
+          "where": "docs/evaluation-doc/steer-speedup-1116/",
+          "status": "pending"
+        },
+        {
+          "what": "BEHAVIOR_TOL",
+          "evidence": "",
+          "where": "docs/evaluation-doc/steer-speedup-1116/",
+          "status": "pending"
+        },
+        {
+          "what": "Frozen Wan RS / MotionMem VR / Frozen Wan VR / MotionMem core 读数",
+          "evidence": "",
+          "where": "docs/evaluation-doc/steer-speedup-1116/result.md",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [],
+      "running_handles": [
+        {
+          "tmux": "GL 占位 66207065,66207067,66207068,66207069 (s5t-hold-1..4)",
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/steer-4task-1115/s5t-hold-*.out",
+          "done_line": "scancel"
+        }
+      ],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-11-16",
+          "quote": "同意，开工",
+          "scope": "1116-steer-speedup-fix-plan.html @7dd722c 全部步骤，GL 占位同时最多 4 个，开工后一路跑到底"
+        }
+      ],
+      "pending_decisions": [],
+      "next_steps": [
+        {
+          "what": "PLAN_CONSISTENCY_REVIEW → S-A..S-D worktree 子代理",
+          "command": "",
+          "verdict_line": "PRE_MERGE_REVIEW=PASS"
         }
       ]
     }
