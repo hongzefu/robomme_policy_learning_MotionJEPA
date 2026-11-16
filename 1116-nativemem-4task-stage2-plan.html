@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NativeMEM 4task 训练计划</title>
+<style>
+:root{--bg:#fff;--fg:#1d1d1f;--muted:#5f6368;--line:#d7dbe0;--code:#f4f5f7;--accent:#1a5fb4;--warn:#9a3412;--ok:#166534}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#15171a;--fg:#e6e6e6;--muted:#a0a4aa;--line:#33373d;--code:#1f2227;--accent:#7fb2ff;--warn:#f0a36b;--ok:#7bd88f}}
+:root[data-theme="dark"]{--bg:#15171a;--fg:#e6e6e6;--muted:#a0a4aa;--line:#33373d;--code:#1f2227;--accent:#7fb2ff;--warn:#f0a36b;--ok:#7bd88f}
+body{background:var(--bg);color:var(--fg);font:15px/1.7 -apple-system,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;max-width:1100px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:1.6em;border-bottom:2px solid var(--line);padding-bottom:.3em;margin-top:2em}
+h2{font-size:1.25em;margin-top:1.8em;border-left:4px solid var(--accent);padding-left:.5em}
+h3{font-size:1.05em;margin-top:1.4em}
+table{border-collapse:collapse;width:100%;margin:.8em 0;font-size:.92em;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:6px 8px;vertical-align:top;text-align:left}
+th{background:var(--code)}
+code{background:var(--code);padding:1px 4px;border-radius:3px;font-size:.9em;word-break:break-all}
+pre{background:var(--code);padding:10px 12px;border-radius:6px;overflow-x:auto;font-size:.86em;line-height:1.5}
+pre code{background:none;padding:0}
+blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color:var(--muted)}
+.warn{color:var(--warn);font-weight:600}
+.ok{color:var(--ok);font-weight:600}
+.small{font-size:.88em;color:var(--muted)}
+</style>
+</head>
+<body>
+<p class="small">NativeMEM 4task 计划</p>
+<p><b>1116 NativeMEM 原版形式（作者编码器，只做 Stage 1.5＋2）在 4×400 上训一个覆盖 4 任务的模型（20k×b128）与本机 692 局评估计划（第二版：按用户「尽可能还原paper原版」与三路对抗验证修订）</b></p>
+<p><b>权威性与授权边界</b>：本文件是 NativeMEM 4task 训练的唯一现行计划。<span class="warn">只规划不实施</span>：重抽数据、写代码、起 GPU、上传都要等用户对本文件第二版给出开工令（AGENTS.md 第 2 条）。</p>
+<p><b>版本</b>：第一版 fork <code>8aaaddf</code>（美东 11-16 16:50 前后）。第二版：用户反对 D1–D3、要求「尽可能还原paper原版的设计，除了做multi task learning」「做对抗验证」；3 个 sonnet 对抗验证共 17 条 finding，主会话逐条核实后采纳；更正第一版「作者权重不含主干」的错误结论。</p>
+<p><b>代码锚点</b>：fork <code>hongzefu/NativeMEM</code> 分支 <code>robomme-4task</code>（本地 <code>/scratch/hongze/NativeMEM</code>，上游 <code>OpenDriveLab/NativeMEM@c599f81</code>，已有 <code>0ecc55b</code> 第一轮帧库脚本）；评估参考 <code>NativeMEM-RMBench@36cf2ca</code>；policy 仓 <code>v17-4task-ctx-motion160-v7-50k@24d7b8e</code> 只读引用。</p>
+<p><b>外部依赖锚点</b>：作者 Stage1 权重 <code>Ziyeeee/NativeMEM:checkpoints/mem_tokenizer_pretrain/pretrain/49999/params</code>（6.4 GB，含 PaliGemma 全树＋encoder＋memory_proj_in＋mem_bos，已下载到 fork <code>checkpoints/</code>）；源 H5 bucket <code>HongzeFu/robomme-4task-h5-20260912-v2</code>（MANIFEST sha256 <code>df992cdf…</code>，与 V17 encoder 侧 source_pin 相同）；V17 训练库 <code>v1-store/datasets/4task-v2-1600ep-604f16da</code>（episode_manifest、建库记录 episode_map 用于同源核对）。</p>
+<p><b>commit 体例</b>：fork 内功能 <code>commitNM&lt;x&gt;.&lt;y&gt;</code>、起跑前 <code>commitNM&lt;x&gt;.&lt;y&gt;Beta</code>、子代理 <code>sub/&lt;编号&gt;: </code>；tmux 前缀 <code>nm-</code>；正式 run <code>nativemem-4task1600-b128-20k</code>。</p>
+<h1>第一部分（给人看）</h1>
+
+<h2>0. 白话总览（先读这一节）</h2>
+<p><b>要做什么</b>：NativeMEM 是给 pi0.5 加「历史画面记忆」的做法：每帧每路相机压成 1 个记忆 token，拼进模型输入。这次<b>除了「一个模型训多个任务」这一处，其余尽量照 NativeMEM 原版</b>（论文 arXiv 2607.06678 v2 ＋ 代码 <code>OpenDriveLab/NativeMEM@c599f81</code>）。</p>
+<p><b>不做什么、用什么</b>：<b>不做 Stage 1</b>，记忆编码器直接用作者发布的那一份；只做 Stage 1.5（用它把每帧画面离线算成记忆 token）和 Stage 2（全参数微调）。数据是与 V17 相同的 4×400（BinFill、RouteStick、VideoRepick、VideoUnmaskSwap 各 400 集，共 1600 集、1,192,918 帧），<b>一个模型训 4 个任务，20k 步 × batch 128</b>。</p>
+<p><b>什么时候训</b>：现在 8 张卡被 V17 占满。本计划获批后先做不占显卡的准备（重抽数据、写代码、CPU 冒烟）；<b>V17 的 692 局评估一结束、8 卡空出，就立刻上 GPU</b>，不再回头问。</p>
+<table>
+<tr><th>步</th><th>内容</th><th>资源</th><th>估时</th></tr>
+<tr><td>0</td><td>获批后重抽数据：下载原始 H5，流式抽出两路相机＋state＋action</td><td>CPU＋网络</td><td>下载约 3 min（11-16 实测 14 个归档 2 分 48 秒）＋抽取 30–60 min</td></tr>
+<tr><td>1</td><td>开工审查（一个审查代理查本计划自相矛盾）＋两个子代理并行写代码＋审查合并</td><td>CPU</td><td>3 h</td></tr>
+<tr><td>2</td><td>CPU 冒烟＋算归一化统计</td><td>CPU</td><td>30 min</td></tr>
+<tr><td>3</td><td>等 V17 评估结束、8 卡空闲</td><td>—</td><td>约美东 11-17 早上 4–5 点</td></tr>
+<tr><td>4</td><td>抽 token：约 238 万张图（1,192,918 帧 × 两路相机）过作者编码器</td><td>8 卡</td><td>约 45 min</td></tr>
+<tr><td>5</td><td>试训 20 步、在线 token 一致性、试评估、评估并发压测</td><td>8 卡</td><td>约 45 min</td></tr>
+<tr><td>6</td><td>正式训练 20k 步 × batch 128</td><td>8 卡</td><td>约 13–15 h</td></tr>
+<tr><td>7</td><td>692 局评估（每次执行 48 步，推理次数约为 16 步口径的 1/3）</td><td>8 卡</td><td>约 1–1.5 h</td></tr>
+</table>
+<p><b>预计美东 11-17 晚上约 19–23 点出结果。</b>两处不确定：训练速度没有实测过，约 2.3–2.8 s/步是估计（前缀 = 3 路图像位 768（右腕全零也占位、被 mask）＋ prompt 补齐到 200 ＋ 641 个记忆位 ≈ 1609 位，比 V17 context 的 1248 位长约三成）；V17 何时让出显卡（美东 11-16 16:24 时 V17 在 31.2k/50k、约 1.9 s/步，预计美东 11-17 凌晨约 2:30 训完，随后 692 局评估约 1.5 h）。</p>
+<p class="warn">第二版改了什么：第一版里主会话自定的 D1（记忆只用前视图）、D2（动作块 20 步、执行 16 步）、D3（pi05_base 叠作者的记忆投影）用户明确反对（「d1 d2 d3反对」「都尽可能原版的形式」），本版全部改回原版做法。另外第一版有一个错误结论：「作者权重不含 pi0.5 主干，照官方配置加载会把主干静默随机初始化」——这是错的，第一版解析权重树时漏掉了外层的 params 包裹层；主干就在作者权重里，本版改为用官方加载器直接加载（详见 §2、§3）。第一版的 D1–D8 整体作废，由 §1 的 V1–V9（照原版）与 X1–X11（不得不偏离）取代。</p>
+
+<h2>1. 已定口径</h2>
+<h3>1.1 用户定的（原话逐字）</h3>
+<table>
+<tr><th>#</th><th>已定口径</th><th>依据</th></tr>
+<tr><td>K1</td><td>用 NativeMEM 训一个覆盖全部任务的模型</td><td>用户原话：「https://github.com/opendrivelab/NativeMEM 这个是怎么训练的 我要对我们heldout的task 进行训练 要怎么实现 我们应该只做阶段2？ 只做20k？ 我想要训一个模型 for all task」</td></tr>
+<tr><td>K2</td><td>先 fork 并本地保存；网页、源代码、论文都读过再出计划</td><td>用户原话：「你先fork他这个github repo然后在本地保存一份 之后再来跟我说计划」「网页 源代码 paper 都要读」。已做：fork <code>https://github.com/hongzefu/NativeMEM</code>，本地 <code>/scratch/hongze/NativeMEM</code>，分支 <code>robomme-4task</code>（首个提交 <code>0ecc55b</code>）</td></tr>
+<tr><td>K3</td><td>不做 Stage 1，只做 Stage 1.5 和 Stage 2</td><td>用户原话：「我们不做stage1了 只做stage1.5 2 给出完整的方案」</td></tr>
+<tr><td>K4</td><td>记忆编码器用作者发布的 tokenizer</td><td>选择题选「A 作者发布的 tokenizer」。选项原文已提示它与我们的 VLA 数据不同源、按 P-LINEAGE 属违规、需用户明确开例外；用户看到提示后选了 A（见 §5）</td></tr>
+<tr><td>K5</td><td>训练集是 4×400</td><td>用户原话：「你在说什么？我要的是4*400task！」；训练集一题选「4 任务（ButtonUnmask 等）」，实际 4 个任务是 BinFill、RouteStick、VideoRepick、VideoUnmaskSwap</td></tr>
+<tr><td>K6</td><td>预算按原版每任务样本量换算</td><td>选择题选「按原版每任务样本量换算」。原版每任务 20k 步 × batch 32，4 任务即 4×20k×32 = 20k×128（见 X2）</td></tr>
+<tr><td>K7</td><td>计划写成 HTML，第一部分由 fable 写</td><td>用户原话：「html」「用fable写第一部分」</td></tr>
+<tr><td>K8</td><td>V17 评估结束后立刻开始训</td><td>用户原话：「评估结束后立刻开始训这个nativemem」</td></tr>
+<tr><td>K9</td><td>获批前不写代码、不算开工，只做准备</td><td>用户原话：「现在做好准备工作」「先不要写代码 先给我完整方案批准！」「谁让你开工了！」「做好准备工作！」</td></tr>
+<tr><td>K10</td><td>第一版的 D1、D2、D3 不采用</td><td>用户原话：「d1 d2 d3反对」</td></tr>
+<tr><td>K11</td><td>除多任务外，尽量还原论文原版设计</td><td>用户原话：「都尽可能原版的形式」「尽可能还原paper原版的设计，除了做multi task learning」</td></tr>
+<tr><td>K12</td><td>方案要做对抗验证</td><td>用户原话：「做对抗验证」（结果见 §3）</td></tr>
+<tr><td>K13</td><td>计划文件放在仓库内</td><td>用户原话：「计划写在仓库内！」。落 policy 仓根目录并提交：主检出的 V17 评估链路 <code>run_shard.sh</code> 起跑前检查 <code>git status</code> 要求工作区干净，不能留未跟踪文件；只含计划 html 的 docs 提交与 11-16 已有的 <code>24d7b8e docs:</code> 同类，不影响在跑的 V17 训练进程</td></tr>
+</table>
+
+<h3>1.2 照原版（不偏离）</h3>
+<table>
+<tr><th>#</th><th>做法</th><th>原版出处</th></tr>
+<tr><td>V1</td><td>记忆视角：所有相机都进记忆。RoboMME 两路相机，每帧 2 个 token，按「帧在外层、视角在内层」展平</td><td>原版 <code>_query_memory</code></td></tr>
+<tr><td>V2</td><td>当前观测：front→<code>base_0_rgb</code>、wrist→<code>left_wrist_0_rgb</code>；<code>right_wrist_0_rgb</code> 填全零且 <code>image_mask=False</code></td><td>原版 <code>AlohaInputs</code> 对缺失相机正是这样处理</td></tr>
+<tr><td>V3</td><td>动作：<code>action_horizon</code> 50；动作块取未来 50 帧，到 episode 末尾就重复最后一帧；关节做 delta、夹爪绝对；补齐到 32 维</td><td>原版 LeRobot <code>_get_query_indices</code> 的行为</td></tr>
+<tr><td>V4</td><td>图像预处理：训练侧当前帧与记忆帧都用 <code>resize_with_pad_cv2</code> 到 224 ＋ JPEG q95 往返后的像素；评估侧在线记忆 token 与当前帧用 openpi <code>image_tools.resize_with_pad</code> 到 224、<b>不做 JPEG</b>；RGB 原样</td><td>训练侧：原版转换脚本；评估侧：原版部署。原版的在线与离线本来就不逐位一致，照搬</td></tr>
+<tr><td>V5</td><td>权重：官方 <code>NativeMEMWeightLoader</code> 直接加载作者 Stage 1 整棵权重树</td><td>官方代码行为；与论文「backbone 从预训练 π0.5 初始化、W_mem/b_mem 来自 Stage1」一致</td></tr>
+<tr><td>V6</td><td>可训练参数：全部参数（SigLIP 也训）</td><td>官方 Stage 2 配置没设 <code>freeze_filter</code></td></tr>
+<tr><td>V7</td><td>训练记忆采样：从当前帧往回，每次随机隔 8–16 帧取一帧，直到 episode 起点；第 0 帧与当前帧必含。多个 worker 的随机数相同是原版缺陷，改用 worker seed 播种（不改分布，是一处小改）</td><td><code>MemLeRobotDataset._get_memory_indices</code>（interval <code>randint(8,16)</code>）</td></tr>
+<tr><td>V8</td><td>超参：warmup 1000、peak 2e-5、cosine 降到 1e-6（decay 20k）；EMA 0.99；AdamW(0.9, 0.95, 1e-8, wd 1e-10, clip 1)；seed 42；<code>save_interval</code> 10000；<code>keep_period</code> 20000；<code>num_workers</code> 8；训 20k 步</td><td>原版 Stage 2 配置，全部照搬</td></tr>
+<tr><td>V9</td><td>评估部署：动作块 50，每次执行 48 步（<code>pi0_step</code> 48）；记忆每 12 帧取一个（<code>memory_interval</code> 12）；记忆帧号 <code>range(t,-1,-12)</code> 末尾补 0；token 按帧号缓存，每局 reset 清空，历史不截断</td><td>NativeMEM-RMBench <code>policy/nativemem</code></td></tr>
+</table>
+
+<h3>1.3 不得不偏离（每条写理由）</h3>
+<table>
+<tr><th>#</th><th>偏离</th><th>为什么不能照搬</th></tr>
+<tr><td>X1</td><td>一个模型训 4 个任务（原版每任务一个模型）</td><td>用户唯一指定的偏离（K1、K11）</td></tr>
+<tr><td>X2</td><td>batch 128（原版 32）；8 卡 FSDP8（原版 2×H100、fsdp 1）</td><td>batch 来自 K6 的换算；8 卡属基础设施。<b class="warn">lr 等仍照原版不缩放——batch 放大 4 倍而 lr 不变没有验证过，交用户确认（§9 第 1 条）</b></td></tr>
+<tr><td>X3</td><td>训练样本只用执行帧（605,611 帧）；演示帧仍进数据、可作记忆；归一化统计同样只在执行帧上算</td><td>原版每帧都是样本，但 RoboTwin 没有演示帧。RoboMME 开头约一半是 planner 演示帧（BinFill 50.0%、RouteStick 50.0%、VideoRepick 48.1%、VideoUnmaskSwap 47.9%，合计 587,307/1,192,918），评估时策略不在这些帧出动作</td></tr>
+<tr><td>X4</td><td>新写 RoboMME 版 8 维单臂输入输出变换（无翻转），其余变换链照原版</td><td>原版 <code>AlohaInputs</code> 做 14 维关节翻转、<code>AlohaOutputs</code> 取前 14 维，不能用于 Panda 8 维</td></tr>
+<tr><td>X5</td><td>state[t] = <code>joint_state[t]</code> ＋ <code>gripper_state[t][:1]</code>（实测）；action[t] = <code>joint_action[t]</code>（该帧下发的指令）；不移位、不丢帧</td><td>原版 state[t]=vec[t]、action[t]=vec[t+1]，因为 RoboTwin 的 joint_action/vector 是指令序列；RoboMME 数据语义不同，照搬移位会错一帧</td></tr>
+<tr><td>X6</td><td>新写同逻辑的归一化统计脚本：逐执行帧取 state 与未来 50 步动作窗（末尾补最后一个），过 8 维输入变换与 <code>DeltaActions(make_bool_mask(7,-1))</code> 后进 RunningStats，存 mean/std/q01/q99；训练用分位数归一化（原版 <code>use_quantile_norm</code>）</td><td>原版 Stage 2 用的是 Stage 1 数据准备阶段 <code>prepare_mem_tokenizer_h5.py::accumulate_episode_stats</code> 写出的 assets/sim，是 RoboTwin 14 维的，本机没有也不适用</td></tr>
+<tr><td>X7</td><td><code>max_len</code> 640（原版按任务 256/512）</td><td>多任务只能取一个值。训练最坏：BinFill 2304 帧、间隔 8 → 578 行；评估最坏：约 3152 步（执行上限 2000 ＋ 演示前缀最长约 1152）、间隔 12 → 约 528 行。都不触发截断（原版截断会先丢第 0 帧）。代价：每个样本按 640 行补齐计算</td></tr>
+<tr><td>X8</td><td>数据容器：每集一个 H5（两路 224 JPEG q95 字节、state、action、is_demo、task_goal）＋ 一个 mem_token memmap（形状 [1192918, 2, 1152]）；数据集类按 <code>MemLeRobotDataset</code> 的语义取样</td><td>原版把 224 图像（PNG 嵌 parquet）、mem_token、state、action 写进一个 LeRobot 数据集，转换时还要在 GPU 上逐集抽 token。1600 集、119 万帧 × 2 路相机单线程写 LeRobot 预计数小时，且现在 GPU 被占。张量数值与原版一致（JPEG 解码出的像素就是 LeRobot 存的像素），只换容器</td></tr>
+<tr><td>X9</td><td>评估帧号锚点：推理帧号为 D+48k（D 是演示前缀长度）；记忆帧号仍用 <code>range(t,-1,-12)</code> 补 0；服务器改为按需编码所需帧号；帧号含演示帧（第 0 帧 = 第一帧演示）</td><td>原版 RMBench 从第 0 帧开始、48 是 12 的倍数，推理帧号恒为 12 的倍数，所以服务器只编码 <code>frame%12==0</code> 的帧。RoboMME 的 D 一般不是 12 的倍数。以当前帧为锚与训练采样「从当前帧往回」一致，且 48%12=0 保证缓存可增量复用</td></tr>
+<tr><td>X10</td><td>在新代码目录复制一份评估客户端，最小改两处：<code>add_buffer</code> 同时发腕部历史；执行步数改 48。环境、692 局分片计划、种子 7、demo 前缀库、成功判定不变</td><td>policy 仓 <code>examples/robomme/eval.py</code> 只发前视历史，<code>utils.py::check_args</code> 强制执行 16 步</td></tr>
+<tr><td>X11</td><td class="warn">可比性：与基线不是同条件对照</td><td>现有 V11／V16／V17 都是执行 16 步，本次 48 步（推理次数约 1/3、开环更长），成功率差异不能单独归因于记忆结构。是否另加 16 步对照评估交用户决定（§9 第 4 条）</td></tr>
+</table>
+
+<h2>2. 第一版到第二版改了什么</h2>
+<table>
+<tr><th>项目</th><th>第一版</th><th>第二版</th><th>为什么改</th></tr>
+<tr><td class="warn">权重（第一版错了）</td><td>结论「作者 Stage 1 权重不含 pi0.5 主干，官方 Stage 2 会把主干静默随机初始化」；因此定 D3：pi05_base 全量 ＋ 作者的 <code>memory_proj_in</code>／<code>mem_bos</code></td><td>官方 <code>NativeMEMWeightLoader</code> 直接加载作者整棵树（V5）</td><td>第一版结论是错的：解析 orbax 树时漏掉了外层 <code>params</code> 包裹层。主会话复核 <code>_METADATA</code>，权重树为 <code>params/PaliGemma/img/*</code>、<code>params/PaliGemma/llm/*</code>（含 action expert）、<code>action_in/out_proj</code>、<code>time_mlp_*</code>、<code>encoder/*</code>、<code>memory_proj_in</code>、<code>mem_bos</code>，主干在里面，不会随机初始化</td></tr>
+<tr><td>记忆视角</td><td>D1：只前视图，每帧 1 个 token</td><td>两路相机都进记忆，每帧 2 个 token（V1）</td><td>用户反对 D1；原版所有相机都进记忆</td></tr>
+<tr><td>动作块</td><td>D2：20 步</td><td>50 步，末尾重复最后一帧（V3）</td><td>用户反对 D2；原版 50 步</td></tr>
+<tr><td>评估间隔与执行步数</td><td>执行 16 步、记忆每 8 帧一个</td><td>执行 48 步、记忆每 12 帧一个（V9），帧号锚点按 X9</td><td>照原版 RMBench 部署；代价是与 16 步基线不可直接比（X11）</td></tr>
+<tr><td>在线预处理</td><td>在线与离线用逐位同一份代码，<code>TOKEN_PARITY</code> 要求逐帧一致</td><td>在线照原版部署：<code>resize_with_pad</code>、不做 JPEG（V4）；差异只记录不拦截（<code>ONLINE_TOKEN</code>）</td><td>原版在线不做 JPEG 往返，在线与离线本来就不逐位一致</td></tr>
+<tr><td>存档间隔</td><td>每 5000 步，共 4 份</td><td>照原版 <code>save_interval</code> 10000、<code>keep_period</code> 20000：第 10000 步与最后一步 19999 各存一次，<code>max_to_keep=1</code> 且 10000 不是 20000 的倍数，所以最终只保留 19999 一份</td><td>5000 不是原版</td></tr>
+<tr><td>归一化统计</td><td>沿用 V17 的 norm_stats（sha256 <code>856c75ea…</code>，20 步口径）</td><td>新算：执行帧 605,611 个样本、50 步动作窗（X6）</td><td>动作块改 50 步、8 维变换重写后旧统计不适用；审查还指出第一版把原版的归一化脚本说错了</td></tr>
+<tr><td>数据容器</td><td>当前观测复用 V17 的 605,611 个 pkl（256×256、20 步动作块）；另建只含前视图的记忆帧库</td><td>每集一个 H5（两路 224 JPEG＋state＋action＋is_demo＋task_goal）＋ mem_token memmap（X8）</td><td>pkl 里是 20 步动作块、256 图，不符合原版 50 步与 224 预处理；记忆帧要加腕视图</td></tr>
+<tr><td><code>max_len</code></td><td>512 行</td><td>640 行（X7）</td><td>每帧 2 个 token 后行数翻倍</td></tr>
+<tr><td>评估客户端</td><td>不改，直接用 policy 仓的</td><td>复制一份、改两处（X10）</td><td>要发腕部历史、执行 48 步</td></tr>
+</table>
+
+<h2>3. 对抗验证结论</h2>
+<p>按 K12 派了 3 个 sonnet 审查代理，各审一块。每条 finding 都由主会话回原文和代码逐条核实后采纳；其中权重那条由主会话亲自读 <code>_METADATA</code> 复核。</p>
+<table>
+<tr><th>审查范围</th><th>判定行</th><th>采纳的 finding</th><th>落到哪里</th></tr>
+<tr><td>权重与超参</td><td><code>ADJUST_REVIEW=FAIL scale=same findings=5</code></td><td>「权重不含主干」是错的；batch 128 与 <code>save_interval</code> 5000 不是原版；<code>keep_period</code>、<code>num_workers</code> 没写</td><td>V5、V8、X2、§2 第 1 行</td></tr>
+<tr><td>数据与记忆采样</td><td><code>ADJUST_REVIEW=PASS scale=same findings=5</code></td><td>归一化脚本说错；缺 8 维输入输出变换；action[t] 取法要写明；演示帧排除要写成偏离并同步统计口径；记忆帧要加腕视图</td><td>X6、X4、X5、X3、V1</td></tr>
+<tr><td>评估协议</td><td><code>ADJUST_REVIEW=FAIL scale=same findings=7</code></td><td>在线 token 原版不做 JPEG 往返；帧号锚点；48 步与 16 步基线不可直接比；客户端最小改法；演示帧对应方式</td><td>V4、X9、X11、X10</td></tr>
+</table>
+<p class="small">两个 FAIL 针对的是第一版的写法，本版已按 finding 改完；改后的全文在开工前还要过一次 <code>PLAN_CONSISTENCY_REVIEW</code>（§7 第 1 步）。</p>
+
+<h2>4. 机制：从原始 H5 到动作</h2>
+<p><b>原版思路</b>：用 pi0.5 自己的 SigLIP 当记忆编码器，每帧每视角前面拼一个可学习 query，只取 query 的输出，得到 1 个 1152 维 token；经 <code>memory_proj_in</code>（1152→2048）投影，前面加一个可学习的 <code>mem_bos</code>，拼在前缀 [当前帧图像 token | prompt（含离散 state）] 之后。论文里的 heldout 任务（Grocery Scanning）就是 Stage 1 没见过、Stage 2 照样微调，所以只做 Stage 1.5＋2 是论文认可的用法；论文消融里不用 Stage 1 编码器（直接用 SigLIP 均值池化特征）平均 58%，完整流程 84%，所以用作者的编码器而不是跳过它。</p>
+<table>
+<tr><th>跳</th><th>这一跳做什么</th><th>形状</th><th>来源</th><th>这一跳改没改数</th></tr>
+<tr><td>1</td><td>取原始单集 H5</td><td>1600 集</td><td>HF 私有 bucket <code>HongzeFu/robomme-4task-h5-20260912-v2</code>，14 个 tar.xz 约 100 GB，流式解压，H5 用完即删（全展开约 790 GB，盘只剩约 756 GB）</td><td>不改；每集 H5 sha256 须等于 V17 建库记录 <code>episode_map</code> 的 <code>h5_sha256</code></td></tr>
+<tr><td>2</td><td>抽成每集一个小 H5：前视、腕部两路图（含演示帧）；state、action（X5）；is_demo；task_goal</td><td>1,192,918 帧 × 2 路，224×224 JPEG 字节；state、action 各 8 维</td><td>第 1 跳</td><td class="warn">图像改：<code>resize_with_pad_cv2</code> 224 ＋ JPEG q95（V4）；state、action 原值</td></tr>
+<tr><td>3</td><td>离线抽 token：每张图过作者编码器</td><td>memmap [1192918, 2, 1152]</td><td>作者权重树的 <code>encoder/*</code>（<code>/scratch/hongze/NativeMEM/checkpoints/mem_tokenizer_pretrain/pretrain/49999/params</code>，6.4 GB）</td><td class="warn">改：1 张图 → 1 个 token</td></tr>
+<tr><td>4</td><td>取训练样本：只在执行帧上取（X3）；动作块取未来 50 帧，末尾重复最后一帧</td><td>605,611 个样本；动作 50×8</td><td>第 2 跳</td><td>不改，只取窗</td></tr>
+<tr><td>5</td><td>取记忆：从当前帧往回每次随机隔 8–16 帧，到第 0 帧；第 0 帧与当前帧必含；演示帧也在候选里（V7）</td><td>帧 × 2 视角展平，帧外层、视角内层；最坏 578 行，补齐到 640</td><td>第 3 跳的 memmap</td><td>不改，只查表</td></tr>
+<tr><td>6</td><td>变换与归一化：8 维输入变换（X4）；关节 delta、夹爪绝对；分位数归一化（X6）；补齐到 32 维</td><td>state 32；动作 50×32</td><td>第 4 跳 ＋ 新算的归一化统计</td><td class="warn">改：delta 与归一化</td></tr>
+<tr><td>7</td><td>当前观测三路图：front、wrist 各一路，第三路全零且 mask=False（V2）</td><td>3×224×224</td><td>第 2 跳的 JPEG 解码</td><td>不改</td></tr>
+<tr><td>8</td><td>拼前缀：[当前图像 token | prompt＋离散 state | <code>mem_bos</code> | 记忆 token]</td><td>3×256 图像位（右腕全零、mask）＋ prompt（补齐 200）＋ 641 个记忆位 ≈ 1609 位</td><td>第 5–7 跳；<code>memory_proj_in</code>、<code>mem_bos</code> 初值来自作者权重，继续训</td><td class="warn">改：1152→2048 线性投影</td></tr>
+<tr><td>9</td><td>pi0.5 全参数微调，输出动作</td><td>50×32，输出变换后取 8 维</td><td>整棵树由 <code>NativeMEMWeightLoader</code> 从作者 Stage 1 权重加载（V5）</td><td>损失是 pi0.5 原动作损失，不改</td></tr>
+</table>
+<p class="small">「行」指记忆 token 数（帧数 × 2 视角），这是按 X7 的数字反推的：2304÷8＋首尾 ≈ 289 帧 × 2 = 578。641 = 640 ＋ 1 个 <code>mem_bos</code>。以上两处换算是推断，以第二部分为准。</p>
+<h3>评估时服务器怎么维护记忆</h3>
+<table>
+<tr><th>环节</th><th>做法</th></tr>
+<tr><td>客户端发什么</td><td>复制出来的客户端（X10）：每次推理发当前前视／腕部图、state、prompt；历史帧用 <code>add_buffer</code> 发，<b>前视和腕部都发</b>；新一局发 <code>reset</code></td></tr>
+<tr><td>演示帧</td><td>视频演示任务的 planner 演示、BinFill 的 demo 前缀库（<code>v1-store/demo-prefix/binfill-3b4de03a0b46</code>）由客户端放进第一批 <code>add_buffer</code>。演示帧计入帧号：第 0 帧就是第一帧演示，与训练一致</td></tr>
+<tr><td>动作执行</td><td>模型输出 50 步动作块，客户端执行前 48 步后再请求。演示前缀长 D 时，推理发生在帧号 D、D+48、D+96……</td></tr>
+<tr><td>取哪些帧当记忆</td><td>在帧号 t 推理时取 <code>range(t,-1,-12)</code>，末尾没到 0 就补上第 0 帧（X9）。以当前帧为锚，不要求帧号是 12 的倍数</td></tr>
+<tr><td>缓存</td><td>服务器按需把所需帧号的两路图过同一个作者编码器（预处理照 V4 的在线口径），token 按帧号缓存。因为 48 是 12 的倍数，下一次推理需要的帧号除新增的 4 个外都已在缓存里。<code>reset</code> 时清空；历史不截断（最坏约 528 行，小于 640）</td></tr>
+</table>
+
+<h2>5. P-LINEAGE：本实验是用户开的显式例外</h2>
+<p>仓库硬规则 P-LINEAGE 要求记忆编码器与 VLA 训练库是同一个数据集，且不得豁免。本计划的记忆编码器是作者 tokenizer（<code>Ziyeeee/NativeMEM</code> 的 <code>checkpoints/mem_tokenizer_pretrain/pretrain/49999/params</code>），训练自 RMBench 等数据（其 Stage 1 训练数据没有公开），与我们的 1600 集<b>不同源</b>，按规则属违规。用户是在选项原文明确提示这一点之后选的 A（K4），所以写成「用户对本实验开的显式例外」，不写成通过，也不写成风险项。第二版改用官方加载器后，pi0.5 主干的初值也来自这同一份作者权重，例外的范围没有变小。</p>
+<table>
+<tr><th>核对对象</th><th>结论</th><th>判定行</th></tr>
+<tr><td>编码器与 VLA 库是否同源</td><td class="warn">不同源，用户显式例外</td><td><code>DATA_LINEAGE=EXCEPTION</code>（不是 PASS）</td></tr>
+<tr><td>VLA 侧数据是否与 V17 同一批</td><td>仍然机械核对，不因例外放松</td><td><code>DATA_SAME_AS_V17=PASS members=1600 mismatches=0</code></td></tr>
+<tr><td>用的是不是作者那一份权重</td><td>钉死身份</td><td><code>TOKENIZER_PIN=PASS</code></td></tr>
+</table>
+<p>这条例外只对本实验有效，不改 P-LINEAGE 规则本身。</p>
+
+<h2>6. 每一步怎么判定通过</h2>
+<table>
+<tr><th>#</th><th>查什么</th><th>怎么查</th><th>通过说明什么</th><th>判定行</th></tr>
+<tr><td>G0</td><td>计划自相矛盾</td><td>开工前一个只读审查代理审全文</td><td>照着实施不会两处打架</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS</code></td></tr>
+<tr><td>1</td><td>重抽的数据</td><td>集数、帧数、相机路数；逐集 H5 sha256 对 <code>episode_map</code>，帧数与 demo 长度对 <code>episode_manifest</code></td><td>两路相机＋state＋action 齐全，帧号与 V17 对得上</td><td><code>DATA_V2=PASS episodes=1600 frames=1192918 views=2</code></td></tr>
+<tr><td>2</td><td>血缘</td><td>见 §5</td><td>例外如实登记；VLA 侧与 V17 同一批</td><td><code>TOKENIZER_PIN=PASS</code>、<code>DATA_LINEAGE=EXCEPTION</code>、<code>DATA_SAME_AS_V17=PASS members=1600 mismatches=0</code></td></tr>
+<tr><td>3</td><td>归一化统计</td><td>样本数等于执行帧数，动作窗 50 步</td><td>统计口径与训练样本一致（X3、X6）</td><td><code>NORM_STATS=PASS samples=605611 horizon=50</code></td></tr>
+<tr><td>4</td><td>权重加载</td><td>用官方加载器加载作者权重，逐键核对：模型每个参数都从权重读到（无随机初始化），权重里没被用上的只有 <code>encoder/*</code>（Stage 2 模型不含编码器）</td><td>主干、记忆投影、<code>mem_bos</code> 都来自作者权重，没有静默随机初始化</td><td><code>WEIGHTS_LOAD=PASS loader=NativeMEMWeightLoader src=stage1-49999 random_init=0 unused=encoder</code></td></tr>
+<tr><td>5</td><td>数据集取样</td><td>第 2 步先用合成小 memmap 跑 CPU 单测；token 库出来后（第 4 步之后）用真库取样，核对形状、动作块末尾夹取、记忆采样规则</td><td>数据管线可用</td><td><code>DATASET_SMOKE=PASS</code></td></tr>
+<tr><td>6</td><td>记忆 token 库</td><td>行数、视角数、维度</td><td>每帧每路都抽到了 token</td><td><code>MEMTOKENS=PASS rows=1192918 views=2 dim=1152</code></td></tr>
+<tr><td>7</td><td>试训 20 步</td><td>8 卡训 20 步</td><td>前向、反传、存档正常</td><td><code>SMOKE20=PASS</code></td></tr>
+<tr><td>8</td><td>在线 token</td><td>服务器在线抽的 token 与离线库比，记 max_abs。<b>差异只记录不拦截</b>（在线不做 JPEG，本来就不逐位一致）</td><td>在线编码这条路跑得通，差多少有数；PASS 条件：32 帧都算出、余弦相似度最小值 ≥ 0.99（低于则查原因，按工程故障处理，不改判据）</td><td><code>ONLINE_TOKEN=PASS n=32 max_abs=&lt;x&gt; cos_min=&lt;y&gt;</code></td></tr>
+<tr><td>9</td><td>试评估</td><td>用试训存档起服务器，走完 reset／add_buffer／infer</td><td>评估能加载模型、协议对得上</td><td><code>EVAL_LOAD_SMOKE=PASS</code></td></tr>
+<tr><td>10</td><td>评估并发</td><td>每卡 4 份压测，不行就 3 份</td><td>正式评估的并发能跑</td><td><code>EVAL_CAPACITY=PASS per_gpu=4|3</code></td></tr>
+<tr><td>11</td><td>训练完成</td><td>训满 20000 步，最后一步 19999 的存档可读回（照原版保留策略只留这一份）</td><td>可评估</td><td><code>TRAIN_FINAL=PASS step=19999 ckpts=1</code></td></tr>
+<tr><td>12</td><td>存档备份</td><td>上传 HF 后读回校验</td><td>可当备份</td><td><code>HF_VERIFY=PASS ckpts=1</code></td></tr>
+<tr><td>13</td><td>692 局评估</td><td>与 V11／V16／V17 同一份分片计划、种子 7，执行 48 步</td><td>成功率</td><td><code>EVAL692=PASS episodes=692 success=&lt;k&gt;</code></td></tr>
+</table>
+<p><b>对照基线</b>（只读引用，<b class="warn">都是执行 16 步，与本次 48 步不是同条件，见 X11</b>）：V11 Wan 池化 modulation 本机 298/692 = 43.06%；V16 stage2 modulation 本机 324/692 = 46.82%；原 modulation run 在 GL A40 上 54.62%；V17（context＋motion160）结果待出。</p>
+
+<h2>7. 实施步骤</h2>
+<table>
+<tr><th>步</th><th>内容</th><th>通过条件</th></tr>
+<tr><td>0</td><td>重抽两路相机数据（X8 的每集 H5）</td><td><code>DATA_V2</code>、<code>DATA_SAME_AS_V17</code></td></tr>
+<tr><td>1</td><td><code>PLAN_CONSISTENCY_REVIEW</code>；两个子代理并行写代码（S1 训练侧、S2 评估侧），逐块审查后合入 fork 的 <code>robomme-4task</code> 分支</td><td>G0 与各块审查通过</td></tr>
+<tr><td>2</td><td>CPU 冒烟＋算归一化统计</td><td><code>TOKENIZER_PIN</code>、<code>DATA_LINEAGE=EXCEPTION</code>、<code>NORM_STATS</code>、<code>WEIGHTS_LOAD</code>、单测（合成 memmap）</td></tr>
+<tr><td>3</td><td>等触发：V17 的 692 局评估完成，且 8 卡空闲</td><td>触发条件成立（约美东 11-17 早上 4–5 点）</td></tr>
+<tr><td>4</td><td>抽 token：约 238 万张图过作者编码器</td><td><code>MEMTOKENS=PASS rows=1192918 views=2 dim=1152</code></td></tr>
+<tr><td>5</td><td>试训 20 步；在线 token；试评估；并发压测</td><td><code>DATASET_SMOKE</code>、<code>SMOKE20</code>、<code>ONLINE_TOKEN</code>、<code>EVAL_LOAD_SMOKE</code>、<code>EVAL_CAPACITY</code></td></tr>
+<tr><td>6</td><td>正式训练 20k 步；存档上传并读回</td><td><code>TRAIN_FINAL=PASS step=19999 ckpts=1</code>、<code>HF_VERIFY=PASS ckpts=1</code></td></tr>
+<tr><td>7</td><td>692 局评估，写结果档案</td><td><code>EVAL692=PASS episodes=692 success=&lt;k&gt;</code></td></tr>
+</table>
+<p class="warn">授权边界：本计划获批前什么都不做——不重抽数据、不写代码、不起任何任务。</p>
+<p>第一轮只抽了前视图的帧库（tmux <code>nm-memframes</code>，完成 10/14 组）已停用，产物本版不再使用，是否删除见 §9 第 7 条。用户看完本计划、不改而直接认可后才算开工，从第 0 步做起；同时把开工令登记进 <code>docs/handoff/current.json</code>（<code>kind: go</code>），以「V17 的 692 局评估结束＋8 卡空闲」为触发，自动进入第 4 步，不再回头问（K8）。</p>
+
+<h2>8. 子代理分工与合并（简述）</h2>
+<p>代码拆成两块并行，都写在 fork（<code>/scratch/hongze/NativeMEM</code>，分支 <code>robomme-4task</code>）里，互不碰对方文件；policy 仓只多一个计划 html 的 docs 提交。</p>
+<table>
+<tr><th>谁</th><th>管什么</th></tr>
+<tr><td>S1 训练侧</td><td>抽 token 脚本；RoboMME 数据集类（X8，按 <code>MemLeRobotDataset</code> 语义取样）；8 维输入输出变换（X4）；归一化统计脚本（X6）；Stage 2 多任务配置（V8、X2、X7）；训练启动脚本（含全部起跑前检查）</td></tr>
+<tr><td>S2 评估侧</td><td>NativeMEM 评估服务器（按帧号缓存、X9 的帧号锚点、按需编码）；复制并最小改动的客户端（X10）；692 局并行启动脚本</td></tr>
+<tr><td>主会话</td><td>数据重抽、起 GPU 任务、监控、上传与读回校验、写档案</td></tr>
+</table>
+<p>合并顺序：S1、S2 各自交回后，每块由一个 sonnet 审查代理看固定的 diff，通过才合入；合一块、跑一次 CPU 冒烟。审查不过就交回原子代理续改，不放宽判据。</p>
+
+<h2>9. 需要用户确认的事项</h2>
+<table>
+<tr><th>#</th><th>事项</th><th>推荐</th><th>不这样做的代价</th></tr>
+<tr><td>1</td><td>X2：batch 128，而 lr 等照原版不缩放</td><td>照原版不缩放</td><td>要缩放 lr 就多一处对原版的偏离，且缩放系数同样没有验证过；不缩放的风险是「batch 放大 4 倍、lr 不变」本身没验证过。要调请在开工前说</td></tr>
+<tr><td>2</td><td>X3：训练样本只用执行帧（605,611 帧）</td><td>同意</td><td>照原版每帧都当样本，就有约一半样本（587,307 帧）落在演示帧上，而评估时策略不在这些帧出动作</td></tr>
+<tr><td>3</td><td>X8：换数据容器（每集 H5 ＋ memmap）</td><td>同意，数值不变</td><td>照原版写 LeRobot 数据集预计多花数小时，且转换时要在 GPU 上逐集抽 token，而现在 GPU 被占</td></tr>
+<tr><td>4</td><td>X11：是否另加一个执行 16 步的对照评估</td><td>先不加，正式 48 步结果出来再定</td><td>不加：与 V11／V16／V17 的差异不能单独归因于记忆结构。加：16 步需要另选与 16 兼容的记忆间隔，又是一处偏离原版</td></tr>
+<tr><td>5</td><td>存档照原版保留策略只留最后一份（19999；原版 <code>save_interval</code> 10000、<code>keep_period</code> 20000、<code>max_to_keep=1</code>，已读 <code>checkpoints.py</code> 核实 10000 步存档会被删），传 HF <b>公开</b> bucket 并读回校验</td><td>同意</td><td>想保留第 10000 步存档就要在它被删前另行上传或改保留策略，偏离原版；改私有需另指定 bucket</td></tr>
+<tr><td>6</td><td>登记进 <code>docs/handoff/current.json</code>，V17 评估结束自动起跑</td><td>登记</td><td>不登记就要等用户在 V17 评估结束后（约美东 11-17 早上 4–5 点）手动说开工，显卡空等</td></tr>
+<tr><td>7</td><td>第一轮只有前视图的帧库（约 15 GB）获批后删除</td><td>删除</td><td>不删只多占约 15 GB，本版不会再读它</td></tr>
+</table>
+<p>逐文件、逐函数的实现细节见第二部分。</p>
+
+<h1>第二部分（技术细节，供 agent 追踪）</h1>
+
+<h2>A. 前置声明与红线</h2>
+<table>
+<tr><th>#</th><th>红线</th></tr>
+<tr><td>R1</td><td><b>授权边界</b>：本计划获批前不做任何实施步骤（不重抽数据、不写代码、不起 GPU）。第一轮只抽前视图的帧库（<code>nm-memframes</code>，1463/1600 集）已于美东 11-16 晚停止，产物不再使用，删除需用户同意。用户原话：「先不要写代码 先给我完整方案批准！」</td></tr>
+<tr><td>R2</td><td><b>原版优先</b>：用户原话「尽可能还原paper原版的设计，除了做multi task learning」。凡与原版不同之处必须登记在 X 表并写理由；实施中不得新增 X 表以外的偏离，新增即按 AGENTS.md 第 2 条「执行中调整计划」先派对抗验证、再告知用户。</td></tr>
+<tr><td>R3</td><td><b>P-LINEAGE 例外</b>：只对本 run 有效。runner 固定输出 <code>DATA_LINEAGE=EXCEPTION tokenizer=nativemem-stage1-49999 reason=user-choice-1116</code>；VLA 侧仍机械核对 <code>DATA_SAME_AS_V17</code>，FAIL 即停。</td></tr>
+<tr><td>R4</td><td><b>policy 仓</b>：除本计划文件的 docs 提交外零写入（V17 评估要求工作区干净）。只读使用：V17 训练库 episode_manifest、episode_map、demo 前缀库、评估客户端与其 venv、692 局分片计划。</td></tr>
+<tr><td>R5</td><td><b>代码落点</b>：fork <code>/scratch/hongze/NativeMEM</code> 分支 <code>robomme-4task</code>。写入型子代理用手建 worktree（<code>/scratch/hongze/NativeMEM-wt/&lt;编号&gt;</code>，分支 <code>worktree-agent-&lt;编号&gt;</code>），commit 前缀 <code>sub/&lt;编号&gt;: </code>，主会话 <code>--no-ff</code> 合并；功能提交 <code>commitNM&lt;x&gt;.&lt;y&gt;</code>，起跑前 <code>commitNM&lt;x&gt;.&lt;y&gt;Beta</code>。</td></tr>
+<tr><td>R6</td><td><b>不在 worktree 里跑主数据</b>；worktree 内只跑 CPU 单测（<code>JAX_PLATFORMS=cpu</code>）。</td></tr>
+<tr><td>R7</td><td><b>GPU 互斥</b>：V17 692 局评估结束且 8 卡显存均 &lt; 2 GB 前不起 GPU 进程；不碰 V17 的任何 tmux／进程。</td></tr>
+<tr><td>R8</td><td><b>新名字</b>：正式 run <code>nativemem-4task1600-b128-20k</code>；试训 <code>nm-smoke20</code>；评估 <code>local692-nativemem-20k</code>／<code>nm-g6b</code>／<code>nm-cap4</code>／<code>nm-cap3</code>。</td></tr>
+<tr><td>R9</td><td><b>tmux 清单</b>（只按此清单精确 kill）：<code>nm-data2</code>、<code>nm-memtok</code>、<code>nm-smoke</code>、<code>nm-g6b</code>、<code>nm-cap4</code>、<code>nm-cap3</code>、<code>nm-train</code>、<code>nm-ckptup</code>、<code>nm-eval</code>（第一轮 <code>nm-memframes</code> 已结束）。</td></tr>
+<tr><td>R10</td><td><b>停工判据</b>：改训练数值语义、资源超已批 5 倍、破坏性操作时停；工程故障自行修复验证后继续并汇报。凭据只经 <code>set -a; . v1-store/secrets/hf.env</code> 注入，不打印。</td></tr>
+</table>
+
+<h2>B. 原版锚点（逐条可核）</h2>
+<table>
+<tr><th>项</th><th>原版取值</th><th>出处</th></tr>
+<tr><td>权重加载</td><td><code>NativeMEMWeightLoader("checkpoints/mem_tokenizer_pretrain/pretrain/49999/params")</code>；<code>_merge_params(missing_regex=".*")</code>，Stage1 树含 <code>PaliGemma/img</code>、<code>PaliGemma/llm</code>、动作头、<code>memory_proj_in</code>、<code>mem_bos</code>、<code>encoder</code>（Stage2 模型无 encoder 键，被忽略）</td><td><code>src/openpi/training/config_nativemem.py::_CONFIGS</code>、<code>weight_loaders.py::NativeMEMWeightLoader/_merge_params</code>；Stage1 <code>_METADATA</code>（主会话 11-16 复核）</td></tr>
+<tr><td>可训练</td><td>全参数（<code>TrainConfig.freeze_filter=nnx.Nothing</code>，<code>nativemem_pi05</code> 未覆盖）</td><td><code>config_nativemem.py::TrainConfig</code></td></tr>
+<tr><td>超参</td><td>batch 32、20,000 步、<code>CosineDecaySchedule(1000, 2e-5, 20000, 1e-6)</code>、EMA 0.99、AdamW(0.9, 0.95, 1e-8, wd 1e-10, clip 1.0)、seed 42、save_interval 10000、keep_period 20000、num_workers 8、fsdp 1</td><td><code>config_nativemem.py</code>、<code>optimizer.py::AdamW</code>；论文附录 A</td></tr>
+<tr><td>动作</td><td>action_horizon 50；LeRobot <code>delta_timestamps</code> 取 t..t+49，越界夹到 episode 末帧；模型不读 <code>action_is_pad</code></td><td><code>nativemem_config.py</code>、<code>data_loader_mem.py</code>、lerobot <code>_get_query_indices</code></td></tr>
+<tr><td>数据转换</td><td>每帧所有相机 <code>resize_with_pad_cv2</code> 224 → JPEG q95 → 解码；<code>mem_token</code> (V,1152)；state[t]=vec[t]、action[t]=vec[t+1]；fps 50</td><td><code>examples/robotwin/convert_raw_to_lerobot_mem_tokenizer.py</code>、<code>scripts/prepare_mem_tokenizer_h5.py::read_raw_episode</code></td></tr>
+<tr><td>训练记忆采样</td><td><code>interval=randint(8,16)</code>，<code>range(curr, ep_start-1, -interval)</code>，补 ep_start，反转；展平 (T·V, D)；<code>MemoryTokenizer</code> 超长保留最近、不足补零</td><td><code>data_loader_mem.py::MemLeRobotDataset</code>、<code>models/tokenizer.py::MemoryTokenizer</code></td></tr>
+<tr><td>归一化</td><td>Stage1 数据准备写的 <code>assets/&lt;type&gt;/norm_stats.json</code>：逐帧 state 与未来 horizon 动作窗（末尾补最后一个）过 <code>AlohaInputs</code>→<code>DeltaActions</code> 后 <code>RunningStats</code>；分位数归一化</td><td><code>prepare_mem_tokenizer_h5.py::accumulate_episode_stats</code>、<code>DataConfig.use_quantile_norm</code></td></tr>
+<tr><td>缺失相机</td><td><code>np.zeros_like(base)</code>，<code>image_mask=False</code></td><td><code>policies/aloha_policy.py::AlohaInputs</code></td></tr>
+<tr><td>部署</td><td><code>pi0_step: 48</code>、<code>memory_interval: 12</code>；帧号 <code>range(frame_idx,-1,-12)</code> 补 0；只在 <code>frame%12==0</code> 时编码并按帧号缓存；<code>reset()</code> 清空；在线预处理 openpi <code>image_tools.resize_with_pad(…,224,224)</code>、无 JPEG、RGB；历史不截断</td><td>NativeMEM-RMBench <code>policy/nativemem/{deploy_policy.yml,deploy_policy.py,pi_model.py,memory_tokenizer.py}</code></td></tr>
+</table>
+
+<h2>C. 逐文件改动清单（获批后）</h2>
+<h3>C0 已有（第一轮，commitNM1.0 <code>0ecc55b</code>）</h3>
+<p><code>scripts/robomme/build_memframes.py</code>、<code>run_memframes.sh</code>（只抽前视图）、<code>uv add h5py</code>。第二版由 C1 第 1 行扩展取代。</p>
+
+<h3>C1 S1 训练侧</h3>
+<table>
+<tr><th>文件</th><th>新建／修改</th><th>要点</th></tr>
+<tr><td><code>scripts/robomme/build_data_v2.py</code>＋<code>run_data_v2.sh</code></td><td>新建（由 C0 扩展）</td><td>每集写 <code>data/robomme4task-v2/episodes/ep_&lt;global:04d&gt;.h5</code>：<code>front_jpeg</code>、<code>wrist_jpeg</code>（vlen，<code>resize_with_pad_cv2</code> 224 + JPEG q95，RGB 原样）、<code>state</code> (T,8)=<code>joint_state[t]</code>⊕<code>gripper_state[t][:1]</code>、<code>action</code> (T,8)=<code>joint_action[t]</code>（X5，不移位不丢帧）、<code>is_demo</code>、attrs（task_goal 小写、member、h5_sha256、num_timesteps、exec_start_idx）。三项校验沿用 C0（sha256／帧数与 demo 长度／首执行帧原图对 V17 pkl）。流式解压、组完成即删。末行 <code>DATA_V2=PASS episodes=1600 frames=1192918 views=2</code>。</td></tr>
+<tr><td><code>scripts/robomme/compute_norm_stats_robomme.py</code></td><td>新建</td><td>仿 <code>accumulate_episode_stats</code>（X6）：只遍历执行帧，state 与未来 50 步动作窗（末尾补最后一个）过 <code>RoboMMEInputs</code>→<code>DeltaActions(make_bool_mask(7,-1))</code>，<code>normalize.RunningStats</code>，存 <code>assets/robomme4task/norm_stats.json</code>（mean/std/q01/q99，8 维）。末行 <code>NORM_STATS=PASS samples=605611 horizon=50</code>。</td></tr>
+<tr><td><code>src/openpi/policies/robomme_policy.py</code></td><td>新建</td><td><code>RoboMMEInputs</code>／<code>RoboMMEMemInputs</code>：front→<code>base_0_rgb</code>、wrist→<code>left_wrist_0_rgb</code>、<code>right_wrist_0_rgb</code> 全零 mask False；state 8 维无翻转；透传 <code>memory</code>。<code>RoboMMEOutputs</code>：取前 8 维（X4）。</td></tr>
+<tr><td><code>src/openpi/robomme/dataset.py</code></td><td>新建</td><td><code>RoboMMEMemDataset</code>：样本 = 605,611 个执行帧（X3）；当前帧解码两路 JPEG、state、动作块 = action[t..t+49] 越界夹末帧（原版 LeRobot 行为）、prompt；<code>memory</code> 按 <code>MemLeRobotDataset._get_memory_indices</code> 原样取帧号（含演示帧），查 memmap 得 (T,2,1152)。worker 随机流按 <code>get_worker_info().seed</code> 播种（V7）。</td></tr>
+<tr><td><code>src/openpi/training/data_loader_mem.py</code></td><td>修改</td><td>建数据集入口按配置分支到 <code>RoboMMEMemDataset</code>（X8 容器），其余不变。</td></tr>
+<tr><td><code>src/openpi/training/config_nativemem.py</code></td><td>修改</td><td>新增 <code>nativemem_pi05_robomme4task</code>：模型同 <code>_BASE_MODEL</code>（pi05、<code>memory_insert_type="self"</code>、So400m/14、action_horizon 50），<code>memory_tokenizer_max_len=640</code>（X7）；数据变换照原版链路换成 <code>RoboMMEMemInputs</code>／<code>DeltaActions(make_bool_mask(7,-1))</code>／分位数 Normalize／ResizeImages 224／TokenizePrompt／TokenizeMemory(640)／Pad 32；weight_loader 原样 <code>NativeMEMWeightLoader(".../pretrain/49999/params")</code>；超参照原版只改 <code>batch_size=128</code>（X2）、<code>fsdp_devices=8</code>。</td></tr>
+<tr><td><code>scripts/robomme/extract_mem_tokens.py</code></td><td>新建</td><td>照 <code>_MemTokenExtractor</code> 用 Stage1 <code>encoder</code> 子树；离线输入 = 帧库 JPEG 解码（与原版转换脚本相同：先 cv2 224 + JPEG，再经 <code>image_tools.resize_with_pad</code>（224→224 恒等）/255·2−1）；<code>--init</code>／<code>--num-shards 8 --shard-index i</code>／<code>--finalize</code>，memmap <code>data/robomme4task-v2/mem_tokens.f32.bin</code> [1192918,2,1152]（约 11 GB），末行 <code>MEMTOKENS=PASS rows=1192918 views=2 dim=1152 nonfinite=0</code>。</td></tr>
+<tr><td><code>scripts/robomme/run_train.sh</code></td><td>新建</td><td><code>--check-only|--smoke|--formal</code>；闸门 G2–G6；训练 <code>.venv/bin/python scripts/train_nativemem.py nativemem_pi05_robomme4task --exp_name=&lt;run&gt;</code>，<code>XLA_PYTHON_CLIENT_MEM_FRACTION=0.9</code>、8 卡、缓存指向 <code>/scratch/hongze/.cache</code>、wandb 关；<code>--smoke</code> 20 步第 19 步存档读回。</td></tr>
+<tr><td><code>scripts/robomme/test_robomme_s1.py</code></td><td>新建</td><td>CPU 单测：记忆帧号规则；动作块越界夹取；数据集键与形状；变换链对真实帧跑通；权重加载后缺失键只有模型侧无对应的 <code>encoder/*</code>（反向），打印 <code>WEIGHTS_LOAD</code>。</td></tr>
+</table>
+
+<h3>C2 S2 评估侧</h3>
+<table>
+<tr><th>文件</th><th>新建／修改</th><th>要点</th></tr>
+<tr><td><code>scripts/robomme/client/eval.py</code>、<code>utils.py</code>、<code>env_runner.py</code>、<code>demo_prefix.py</code></td><td>新建（由 policy 仓 <code>examples/robomme/</code>@<code>24d7b8e</code> 复制）</td><td>最小两处改动（X10）：<code>pack_buffer</code> 增加 <code>wrist_images</code>（帧外层、视角内层对齐 V1）；<code>check_args</code> 放开 <code>obs_horizon==16</code>，执行步数参数取 48。其余逐字节不变（diff 只许这两处，审查核对）。</td></tr>
+<tr><td><code>scripts/robomme/serve_nativemem.py</code></td><td>新建</td><td>实现客户端协议（metadata／reset／add_buffer／infer／<code>/healthz</code>，参照 policy 仓 <code>serving/websocket_policy_server.py</code>）；内部逻辑照 RMBench <code>pi_model.py</code>：帧号含演示帧（第 0 帧 = 第一帧）；infer 时 t = 最后一帧号，记忆帧号 <code>range(t,-1,-12)</code> 补 0（X9，锚在当前帧）；所需帧未编码则按需编码并按帧号缓存（前视、腕部各一个 token）；在线预处理照原版 <code>image_tools.resize_with_pad</code> 224、无 JPEG；<code>reset</code> 清空；返回 50 步动作（客户端执行 48）。</td></tr>
+<tr><td><code>scripts/robomme/run_shard_nativemem.sh</code>、<code>local_692_pool_nativemem.sh</code></td><td>新建（由 policy 仓 <code>scripts/evaluation/</code> 同名脚本复制）</td><td>服务器换成 fork venv 的 <code>serve_nativemem.py</code>；客户端换成 C2 第 1 行副本（仍用 policy 仓 <code>v1-store/envs/policy-eval-client</code> 解释器）；去掉 <code>check_checkpoint.py</code> 与 motion 变量，改为检查存档含 <code>params/</code> 与 <code>assets/robomme4task/norm_stats.json</code>；保留端口、healthz、进程树、cleanup trap、demo 前缀库、<code>EXPECT_DEMO_INJECT=1</code>、种子 7、32 片、每卡 <code>EVAL_PER_GPU</code>（默认 4）、<code>--g6b</code> 与 <code>--capacity</code>；分片计划与合并只读调用 policy 仓 <code>make_shard_plan.py</code>／<code>merge_shards.py</code>／<code>check_shard.py</code>。</td></tr>
+<tr><td><code>scripts/robomme/check_online_token.py</code></td><td>新建</td><td>取 32 帧：离线行 vs 在线原版预处理（V17 pkl 256 原图 → <code>resize_with_pad</code> → encoder）；记录 <code>max_abs</code>，只记录不拦截（原版在线与离线本就不同路径），末行 <code>ONLINE_TOKEN=PASS n=32 max_abs=&lt;x&gt; cos_min=&lt;y&gt;</code>（cos_min &lt; 0.99 视为异常，查原因）。</td></tr>
+<tr><td><code>scripts/robomme/test_serve_protocol.py</code></td><td>新建</td><td>CPU 假策略：按客户端顺序发 reset／add_buffer（含演示帧，D 非 12 倍数）／infer，核对记忆帧号（含 0、含 t、间隔 12）与缓存命中。</td></tr>
+</table>
+
+<h2>D. 子代理分配表</h2>
+<table>
+<tr><th>编号</th><th>目标</th><th>可写集合</th><th>禁触</th><th>接口契约</th><th>合并顺序</th><th>验收（worktree、CPU）</th><th>资源</th></tr>
+<tr><td>S1</td><td>训练侧</td><td>C1 全部</td><td>policy 仓；fork 主检出；C2 文件</td><td>提供配置名 <code>nativemem_pi05_robomme4task</code>、<code>robomme_policy.py</code>、encoder 加载函数（S2 import）；推理输入 <code>observation/image</code>、<code>observation/wrist_image</code>（uint8 256×256×3）、<code>observation/state</code>（8）、<code>prompt</code>、<code>memory</code>（f32 [T,2,1152]）；输出 <code>actions</code>（50×8 绝对）</td><td>1</td><td><code>JAX_PLATFORMS=cpu UV_PROJECT_ENVIRONMENT=/scratch/hongze/NativeMEM/.venv PYTHONPATH=$PWD/src uv run --no-sync python -m pytest scripts/robomme/test_robomme_s1.py -q</code>；<code>bash -n</code> 两份 shell</td><td>无 GPU</td></tr>
+<tr><td>S2</td><td>评估侧</td><td>C2 全部</td><td>同上；C1 文件只读</td><td>按 S1 契约；客户端副本对原文件 diff 只许两处</td><td>2</td><td><code>pytest scripts/robomme/test_serve_protocol.py -q</code>；<code>DRY_RUN=1</code> 空跑；<code>diff -r</code> 客户端副本与原文件</td><td>无 GPU</td></tr>
+<tr><td>主会话</td><td>数据重抽、归一化、起跑、监控、上传、档案、状态机</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>8 卡（第 4 步起）</td></tr>
+</table>
+<p>合并：每块 <code>PRE_MERGE_REVIEW</code>（一个 sonnet，钉死 BASE／TIP，核对 X 表外无新偏离）→ <code>git merge --no-ff &lt;TIP&gt;</code> → 主检出复跑验收 → <code>POST_MERGE_REVIEW</code> → push。worktree 清理推迟到第 5 步通过后。</p>
+
+<h2>E. 闸门总表</h2>
+<table>
+<tr><th>#</th><th>判定行</th><th>输入何时存在</th></tr>
+<tr><td>G0</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS base=&lt;sha&gt;</code></td><td>开工令后立即</td></tr>
+<tr><td>G1</td><td><code>DATA_V2=PASS episodes=1600 frames=1192918 views=2</code></td><td>第 0 步后</td></tr>
+<tr><td>G2</td><td><code>TOKENIZER_PIN=PASS files=&lt;n&gt; sha=&lt;8&gt;</code></td><td>已在盘</td></tr>
+<tr><td>G3</td><td><code>DATA_LINEAGE=EXCEPTION …</code>＋<code>DATA_SAME_AS_V17=PASS members=1600 mismatches=0</code></td><td>G1 后</td></tr>
+<tr><td>G4</td><td><code>NORM_STATS=PASS samples=605611 horizon=50</code></td><td>G1、S1 合入后</td></tr>
+<tr><td>G5</td><td><code>WEIGHTS_LOAD=PASS loader=NativeMEMWeightLoader src=stage1-49999 random_init=0 unused=encoder</code></td><td>S1 合入后（CPU）</td></tr>
+<tr><td>G6</td><td><code>DATASET_SMOKE=PASS</code></td><td>G7 后（S1 合入后先跑合成 memmap 单测）</td></tr>
+<tr><td>G7</td><td><code>MEMTOKENS=PASS rows=1192918 views=2 dim=1152 nonfinite=0</code></td><td>第 4 步</td></tr>
+<tr><td>G8</td><td><code>SMOKE20=PASS steps=20 save_load=PASS</code></td><td>G7 后</td></tr>
+<tr><td>G9</td><td><code>ONLINE_TOKEN=PASS n=32 max_abs=&lt;x&gt; cos_min=&lt;y&gt;</code></td><td>G7 后</td></tr>
+<tr><td>G10</td><td><code>EVAL_LOAD_SMOKE=PASS</code></td><td>G8 后</td></tr>
+<tr><td>G11</td><td><code>EVAL_CAPACITY=PASS per_gpu=4|3 peak_mem_gb=&lt;x&gt;</code></td><td>G8 后；3 份也 FAIL 停下交用户</td></tr>
+<tr><td>G12</td><td><code>TRAIN_FINAL=PASS step=19999 ckpts=1</code></td><td>第 6 步结束（原版 save 10000／keep_period 20000／max_to_keep 1：10000 步存档会在 19999 存档后被删，只留 19999）</td></tr>
+<tr><td>G13</td><td><code>HF_VERIFY=PASS ckpts=1</code></td><td>19999 存档出现后</td></tr>
+<tr><td>G14</td><td><code>EVAL692=PASS episodes=692 success=&lt;k&gt; rate=&lt;x&gt;</code></td><td>第 7 步</td></tr>
+</table>
+
+<h2>F. runbook</h2>
+<pre><code># 开工令后
+G0 审查 → 主会话起 nm-data2（下载 14 归档 + 流式 build_data_v2，组完成即删）→ G1
+并行：派 S1、S2 → 审查合并 → 主检出 CPU：compute_norm_stats_robomme.py（G4）、run_train.sh --check-only（G2 G3 G5 G6）
+
+# 触发（Monitor 三条件同时成立）：V17 评估日志 EVAL692=… 与 EXIT_CODE=0；tmux '=v17-eval' 不存在；8 卡 memory.used 均 &lt; 2000 MiB
+
+# 第 4 步 nm-memtok：extract_mem_tokens.py --init；8 卡各一片；--finalize（G7）
+# 第 5 步：run_train.sh --smoke（nm-smoke，G8）；check_online_token.py（G9）；
+#         local_692_pool_nativemem.sh --g6b &lt;nm-smoke20/19&gt; 7（nm-g6b，G10）；--capacity（nm-cap4/3，G11）；清理 nm-smoke20 全部产物
+# 第 6 步：commitNM&lt;x&gt;.&lt;y&gt;Beta、工作区干净 → run_train.sh --formal（nm-train，G12）；19999 存档出现即传 HF 公开 bucket HongzeFu/robomme-vla-4task-nativemem-20k-v1（nm-ckptup，G13）
+# 第 7 步：local_692_pool_nativemem.sh &lt;19999&gt; 7（nm-eval，G14）；写档案、提交推送、更新 current.json
+</code></pre>
+
+<h2>G. 风险登记</h2>
+<table>
+<tr><th>#</th><th>风险</th><th>处置</th></tr>
+<tr><td>F1</td><td>作者编码器训练自 RMBench／真机 ALOHA 数据，对 Panda 两路相机的记忆表达未知</td><td>如实记录；用户已选 A</td></tr>
+<tr><td>F2</td><td>batch 128 而 lr 不缩放（X2）</td><td>交用户确认，不自行改</td></tr>
+<tr><td>F3</td><td>训练速度未实测（前缀约 1609 位，估 2.3–2.8 s/步，20k 步约 13–15 h）</td><td>第 5 步试训测速</td></tr>
+<tr><td>F4</td><td>执行 48 步与基线 16 步不同条件（X11）</td><td>结果表注明；是否加 16 步对照交用户</td></tr>
+<tr><td>F5</td><td>在线（无 JPEG）与离线（JPEG）预处理不同，属原版固有</td><td>G9 记录差异；cos_min 异常时查原因</td></tr>
+<tr><td>F6</td><td>每局首次 add_buffer 含数百演示帧，按需编码延迟与显存</td><td>G10／G11 覆盖</td></tr>
+<tr><td>F7</td><td>磁盘：现剩约 663 GB；第二版数据约 50 GB、token 11 GB、1 份存档约 12 GB；第一轮帧库约 15 GB 与残留归档／解压目录待删</td><td>删除前征得用户同意</td></tr>
+<tr><td>F8</td><td>V17 评估由另一会话管理</td><td>只读判定触发，不动其句柄</td></tr>
+</table>
+
+<h2>H. 盲区诚实清单</h2>
+<ul>
+<li>作者 Stage1 数据与配比未公开；Stage1 里 PaliGemma 是否逐位等于 pi05_base（或经 bf16 转换）未做数值比对，按代码推断为冻结副本。</li>
+<li>论文写「每 10 个控制步更新记忆」，RMBench 代码为 12（48 不是 10 的倍数）；本计划按代码。</li>
+<li>训练速度、显存、每卡并发份数未实测。</li>
+<li>RoboMME 控制频率与 RoboTwin 不同，50 步动作块对应的时间长度不同，未评估其影响（照原版步数）。</li>
+</ul>
+
+<h2>I. 留档、commit 与状态机</h2>
+<ul>
+<li>计划文件：policy 仓根目录 <code>1116-nativemem-4task-stage2-plan.html</code>（用户「计划写在仓库内！」），以单独 <code>docs:</code> 提交，提交后工作区干净；fork 根目录同名副本删除，避免两份。</li>
+<li>训练档案：fork <code>docs/training-doc/nativemem-4task1600-b128-20k/</code>；评估档案 <code>docs/training-doc/local692-nativemem-20k/</code>。</li>
+<li>状态机：获批后在 fork 新建 <code>docs/handoff/current.json</code>，任务 id <code>nm-4task-stage2-train</code>，写 <code>kind: go</code> 原话与 <code>plan.sha</code>；交接前必须完成 G12、G14 与档案提交；长尾 = 存档上传（<code>nm-ckptup</code>，完成行 <code>HF_VERIFY=PASS ckpts=1</code>）；上游依赖 = policy 仓 V17 692 局评估（只读判定）。</li>
+</ul>
+</body></html>
