@@ -29,6 +29,17 @@ other / none / unreached（没走到第 j 步起点）；RS 另 own_swing / dono
   SP_MATRIX=PASS|FAIL model=<m> task=<t> runs=<n> invalid=<k> Bsame_follow=<a/b> Bsame_keep=<a/b> Bcross_follow=…
         Bcross_keep=… Z_correct=… Z_keep=…   PASS 只代表无效局为 0
 另有信息行 SEED_STEPS（seed 1 与 seed 42 的逐步到达格是否相同）。比率只是读数，不设及格线。
+
+--same-episode（计划 1115-4task-routestick-videorepick-steering-plan.html 第二部分 §3、§4.3；不加时上面的旧读数不变）：
+  只读 RouteStick；组 S_swing/S_side/S_both/Z 及 *_core（plan.json 行字段约定见 SAMEP_F_* 常量）。第 j 步读数：
+  swing_follow（标签口径：相对 prev→实际首个触到按钮的叉积符号 = 供体绕向标签，含当场失败的步）、swing_follow_phys
+  （相对原局 prev→原目标有向线 = 供体变体物理弧侧）、button_follow（首个触到的按钮 = 供体侧按钮）、own、unreached
+  （干预未走到第 j 步，按非跟随计入分母）。分母 = 原 N 走到第 j 步起点的 (局, j)。噪声对照：换 seed 不干预（相对原 N
+  按 j 读翻转率）与 Z 组纯扰动翻转率。主分析 j=1 / j≥2 两档，按接收局 bootstrap 2000 次（种子 0）95% 区间；
+  有效应 = 区间下界 > max(Z 翻转率, 换 seed 翻转率)（用与读数同维度的翻转率）；难度 × j 只作描述。主读数：
+  S_swing→swing_follow，S_side→button_follow，S_both→button_follow + swing_follow_phys，其余维度作旁证。
+  判定行：SWAP_SCOPE=…（不比供体键）、NOISE_BASE=PASS|FAIL model=<m> pairs=<n> flip_rate=<x>（flip_any，全部 j）、
+  RS_SAMEP=PASS|FAIL model=<m> groups=<g> invalid=<k>（PASS = g 等于 --expect-groups 且无效为 0）。
 """
 from __future__ import annotations
 
@@ -543,12 +554,347 @@ def readout_intersect(root, models, out=None):
     return 0
 
 
+# ================================================================ 同一局供体读数（--same-episode）
+# 计划 1115-4task-routestick-videorepick-steering-plan.html 第二部分 §2.1、§3、§4.3。只读 RouteStick。
+# plan.json 每行字段约定（S2 写入；字段名集中在此，S2 若改名只改这几个常量）：
+#   group                 "N"（不干预；seed = 主 seed 为原 N，其余 seed 为换 seed 噪声对照）或 SAMEP_GROUPS 之一
+#   ep（或 recv_ep）      接收局 episode_id（干预局与噪声局都写接收局号，find_run 按它找 terminal）
+#   j                     被测步（1 起）；N / 噪声行不需要
+#   seed                  采样 seed；noise_rep（可选）非空即噪声行
+#   donor_side            供体第 j 步相对起点的路线下标增量（±1）；缺省时用 donor_target（格号）反推
+#   donor_swing           供体第 j 步绕向标签（cw/ccw 或 clockwise/counterclockwise）
+#   variant_physical_arc  供体变体第 j 步弧在桌面上的一侧（相对原局 prev→原目标有向线，cw/ccw）；缺省时按共线几何推出
+#   w_starts              计划替换的窗起点（SWAP_SCOPE 用）
+SAMEP_F_GROUP = "group"
+SAMEP_F_RECV = "ep"
+SAMEP_F_RECV_ALIAS = "recv_ep"
+SAMEP_F_J = "j"
+SAMEP_F_SEED = "seed"
+SAMEP_F_NOISE = "noise_rep"
+SAMEP_F_DONOR_SIDE = "donor_side"
+SAMEP_F_DONOR_TARGET = "donor_target"
+SAMEP_F_DONOR_SWING = "donor_swing"
+SAMEP_F_PHYS_ARC = "variant_physical_arc"
+SAMEP_ROW_FIELDS = (SAMEP_F_DONOR_SIDE, SAMEP_F_DONOR_TARGET, SAMEP_F_DONOR_SWING, SAMEP_F_PHYS_ARC, SAMEP_F_NOISE)
+SAMEP_TASK = "RouteStick"
+SAMEP_BASE_GROUPS = ("S_swing", "S_side", "S_both", "Z")
+SAMEP_GROUPS = SAMEP_BASE_GROUPS + ("S_swing_core", "S_side_core", "S_both_core")
+SAMEP_BOOT_N, SAMEP_BOOT_SEED = 2000, 0
+SAMEP_TIERS = ("j1", "j2+", "all")
+SAMEP_READS = ("swing_follow", "swing_follow_phys", "button_follow", "own", "unreached")
+SAMEP_PRIMARY = {"S_swing": ("swing_follow",), "S_side": ("button_follow",),
+                 "S_both": ("button_follow", "swing_follow_phys"), "Z": ()}
+SAMEP_FLIP_OF = {"swing_follow": "flip_swing", "swing_follow_phys": "flip_swing_phys", "button_follow": "flip_button"}
+SAMEP_FLIPS = ("flip_any", "flip_swing", "flip_swing_phys", "flip_button")
+FLIP_SWING = {"cw": "ccw", "ccw": "cw"}
+
+
+def base_group(group):
+    return group[:-5] if str(group).endswith("_core") else group
+
+
+def tier_of(j):
+    return "j1" if int(j) == 1 else "j2+"
+
+
+def norm_swing(x):
+    if x is None:
+        return None
+    x = str(x)
+    return S.SWING_SHORT.get(x, x)
+
+
+def route_side(a, b):
+    """路线格 a→b 的方向（路线下标差的符号）。"""
+    d = S.RS_ROUTE.index(int(b)) - S.RS_ROUTE.index(int(a))
+    return (d > 0) - (d < 0)
+
+
+def phys_swing(step, start, orig_target):
+    """物理弧侧口径：执行轨迹相对原局 prev→原目标有向线的叉积符号。路线格共线，prev→另一侧按钮的有向线与
+    prev→原目标反向，所以触到同侧按钮时等于标签口径、触到另一侧时取反；没触到按钮（标签口径为 None）时为 None。"""
+    sw = step.get("swing")
+    if sw is None or step.get("reached") is None:
+        return None
+    same = route_side(start, step["reached"]) == route_side(start, orig_target)
+    return sw if same else FLIP_SWING.get(sw)
+
+
+def donor_meta(row, e, j):
+    """(供体侧按钮格, 供体绕向标签, 供体物理弧侧)；元数据缺失返回 None。"""
+    start, own = int(e["cells"][j - 1]), int(e["cells"][j])
+    side = row.get(SAMEP_F_DONOR_SIDE)
+    if side is None and row.get(SAMEP_F_DONOR_TARGET) is not None:
+        side = route_side(start, row[SAMEP_F_DONOR_TARGET])
+    dsw = norm_swing(row.get(SAMEP_F_DONOR_SWING))
+    if side is None or dsw is None:
+        return None
+    target = S.rs_target(start, int(side))
+    arc = norm_swing(row.get(SAMEP_F_PHYS_ARC))
+    if arc is None:
+        arc = dsw if route_side(start, own) == int(side) else FLIP_SWING.get(dsw)
+    return target, dsw, arc
+
+
+def reached_start(steps, j):
+    """运行走到第 j 步起点（前 j−1 步全部完成）。"""
+    return S.completed_steps(steps) >= int(j) - 1 and len(steps) >= int(j)
+
+
+def samep_step_view(steps, e, j, donor=None):
+    """一次运行第 j 步（同一局口径）：unreached、到达格、两口径绕向、own 与三项跟随。"""
+    j = int(j)
+    start, own_t, own_sw = int(e["cells"][j - 1]), int(e["cells"][j]), norm_swing(e["swings"][j - 1])
+    if not reached_start(steps, j):
+        return {"unreached": True, "reached": None, "swing": None, "swing_phys": None, "completed": False,
+                "own": False, "swing_follow": False, "swing_follow_phys": False, "button_follow": False}
+    s = steps[j - 1]
+    sw, ph = norm_swing(s["swing"]), phys_swing(s, start, own_t)
+    out = {"unreached": False, "reached": s["reached"], "swing": sw, "swing_phys": ph, "completed": bool(s["completed"]),
+           "own": s["reached"] == own_t and sw == own_sw,
+           "swing_follow": False, "swing_follow_phys": False, "button_follow": False}
+    if donor is not None:
+        dt, dsw, arc = donor
+        out["swing_follow"] = sw is not None and sw == dsw
+        out["swing_follow_phys"] = ph is not None and ph == arc
+        out["button_follow"] = dt is not None and s["reached"] == dt
+    return out
+
+
+def samep_flips(v, nv):
+    """相对原 N 同一 (局, j) 的翻转；干预/噪声未走到第 j 步一律算翻转。"""
+    if v["unreached"]:
+        return {k: True for k in SAMEP_FLIPS}
+    return {"flip_any": (v["reached"], v["swing"], v["completed"]) != (nv["reached"], nv["swing"], nv["completed"]),
+            "flip_swing": v["swing"] != nv["swing"], "flip_swing_phys": v["swing_phys"] != nv["swing_phys"],
+            "flip_button": v["reached"] != nv["reached"]}
+
+
+def is_noise(r, main_seed):
+    return r.get(SAMEP_F_GROUP) == "N" and (r.get(SAMEP_F_NOISE) is not None
+                                             or (r.get(SAMEP_F_SEED) is not None and int(r[SAMEP_F_SEED]) != main_seed))
+
+
+def samep_rows(runs, pool_by_key, main_seed=S.MAIN_SEED):
+    """已载入的运行 → (干预行, 噪声行, 无效计数明细, 未进分母计数)。"""
+    runs = [r for r in runs if r.get("task") == SAMEP_TASK]
+    base = {r["key"]: r for r in runs if r.get(SAMEP_F_GROUP) == "N" and not is_noise(r, main_seed)}
+    invalid = {"n": sum(1 for r in base.values() if r["status"] != "ok")}
+    inter, not_reached, bad_meta = [], 0, 0
+    inv_inter = 0
+    for r in runs:
+        g = r.get(SAMEP_F_GROUP)
+        if g not in SAMEP_GROUPS:
+            continue
+        nrun = base.get(r["key"])
+        if r["status"] != "ok" or nrun is None or nrun["status"] != "ok":
+            inv_inter += 1
+            continue
+        e, j = pool_by_key[r["key"]], int(r[SAMEP_F_J])
+        if not reached_start(nrun["steps"], j):
+            not_reached += 1
+            continue
+        donor = None
+        if base_group(g) != "Z":
+            donor = donor_meta(r, e, j)
+            if donor is None:
+                bad_meta += 1
+                continue
+        v, nv = samep_step_view(r["steps"], e, j, donor), samep_step_view(nrun["steps"], e, j)
+        row = {"recv": r["key"], "j": j, "tier": tier_of(j), "group": g, "base": base_group(g),
+               "difficulty": e.get("difficulty"), **{k: v[k] for k in SAMEP_READS}, **samep_flips(v, nv),
+               "reached": v["reached"], "swing": v["swing"], "swing_phys": v["swing_phys"],
+               "donor_target": None if donor is None else donor[0]}
+        inter.append(row)
+    tested = {(x["recv"], x["j"]) for x in inter}
+    noise = []
+    for r in runs:
+        if not is_noise(r, main_seed):
+            continue
+        nrun = base.get(r["key"])
+        if nrun is None or nrun["status"] != "ok":
+            continue
+        if r["status"] != "ok":
+            invalid["noise"] = invalid.get("noise", 0) + 1
+            continue
+        e = pool_by_key[r["key"]]
+        js = sorted(j for (k, j) in tested if k == r["key"]) if tested else \
+            [j for j in range(1, int(e["m"]) + 1) if reached_start(nrun["steps"], j)]
+        for j in js:
+            if not reached_start(nrun["steps"], j):
+                continue
+            v, nv = samep_step_view(r["steps"], e, j), samep_step_view(nrun["steps"], e, j)
+            noise.append({"recv": r["key"], "j": j, "tier": tier_of(j), "rep": r.get(SAMEP_F_NOISE, r.get("seed")),
+                          **samep_flips(v, nv)})
+    invalid.update(intervention=inv_inter, donor_meta=bad_meta)
+    return inter, noise, invalid, not_reached
+
+
+def in_tier(rows, tier):
+    return rows if tier == "all" else [r for r in rows if r["tier"] == tier]
+
+
+def rate_ci(rows, key, n=SAMEP_BOOT_N, seed=SAMEP_BOOT_SEED):
+    """比率与按接收局重采样的 95% 区间（固定种子，可复现）。"""
+    if not rows:
+        return {"n": 0, "recv": 0, "rate": None, "ci": None}
+    return {"n": len(rows), "recv": len({r["recv"] for r in rows}), "rate": float(np.mean([bool(r[key]) for r in rows])),
+            "ci": bootstrap_diff(rows, key, None, n=n, seed=seed)}
+
+
+def flip_rates(rows):
+    return {t: {f: (float(np.mean([r[f] for r in in_tier(rows, t)])) if in_tier(rows, t) else None) for f in SAMEP_FLIPS}
+            | {"n": len(in_tier(rows, t))} for t in SAMEP_TIERS}
+
+
+def effect_flag(ci, baselines):
+    """有效应 = 区间下界 > max(可得的噪声翻转率)；无区间或无基线时 None。"""
+    vals = [b for b in baselines if b is not None]
+    if ci is None or not vals:
+        return None
+    return bool(ci[0] > max(vals))
+
+
+def samep_summary(inter, noise, invalid, not_reached, model, expect_groups):
+    noise_fr = flip_rates(noise)
+    z_rows = [r for r in inter if r["base"] == "Z"]
+    z_fr = {"all": flip_rates([r for r in z_rows if r["group"] == "Z"]),
+            "core": flip_rates([r for r in z_rows if r["group"] != "Z"])}
+    groups = {}
+    for g in SAMEP_GROUPS:
+        rows = [r for r in inter if r["group"] == g]
+        if not rows:
+            continue
+        bg = base_group(g)
+        zref = z_fr["all"]
+        st = {"n": len(rows), "recv": len({r["recv"] for r in rows}), "primary": list(SAMEP_PRIMARY[bg]), "tiers": {},
+              "strata": {}}
+        for t in SAMEP_TIERS:
+            tr = in_tier(rows, t)
+            reads = {k: rate_ci(tr, k) for k in SAMEP_READS}
+            if bg == "Z":
+                reads.update({f: rate_ci(tr, f) for f in SAMEP_FLIPS})
+            eff = {}
+            for k in SAMEP_PRIMARY[bg] + tuple(x for x in ("swing_follow", "swing_follow_phys", "button_follow")
+                                               if x not in SAMEP_PRIMARY[bg] and bg != "Z"):
+                fk = SAMEP_FLIP_OF[k]
+                zb, nb = zref[t][fk], noise_fr[t][fk]
+                eff[k] = {"z_flip": zb, "noise_flip": nb, "effect": effect_flag(reads[k]["ci"], [zb, nb]),
+                          "primary": k in SAMEP_PRIMARY[bg]}
+            st["tiers"][t] = {"reads": reads, "effect": eff}
+        for d in sorted({str(r["difficulty"]) for r in rows}):
+            for j in sorted({r["j"] for r in rows}):
+                cell = [r for r in rows if str(r["difficulty"]) == d and r["j"] == j]
+                if cell:
+                    st["strata"][f"{d},j={j}"] = {"n": len(cell),
+                                                  **{k: float(np.mean([r[k] for r in cell])) for k in SAMEP_READS}}
+        groups[g] = st
+    n_invalid = sum(invalid.values())
+    noise_line = (f"NOISE_BASE={'PASS' if noise else 'FAIL'} model={model} pairs={len(noise)} "
+                  f"flip_rate={_fmt(noise_fr['all']['flip_any'])}")
+    rs_line = (f"RS_SAMEP={'PASS' if len(groups) == int(expect_groups) and n_invalid == 0 else 'FAIL'} model={model} "
+               f"groups={len(groups)} invalid={n_invalid}")
+    return {"lines": [noise_line, rs_line], "groups": groups, "noise_flip": noise_fr, "z_flip": z_fr,
+            "invalid": invalid, "not_reached_in_n": not_reached, "expect_groups": int(expect_groups)}
+
+
+def _fmt(x, d=3):
+    return "na" if x is None else f"{x:.{d}f}"
+
+
+def samep_scope(runs):
+    """同一局干预行：replace_log 每条 [s,s]、起点集合 = w_starts、n_replaced 计数一致（不比供体键：同局变体无原键）。"""
+    details, bad, mismatch = [], 0, 0
+    for r in runs:
+        if r.get(SAMEP_F_GROUP) not in SAMEP_GROUPS or r["status"] != "ok" or not r.get("motion_content"):
+            continue
+        mc = r["motion_content"]
+        log = [list(x) for x in mc.get("replace_log", [])]
+        starts = {int(x[0]) for x in log}
+        same = all(len(x) == 2 and int(x[0]) == int(x[1]) for x in log)
+        want = {int(s) for s in (r.get("w_starts") or [])}
+        ok = bool(log) and same and starts == want
+        cnt = int(mc.get("n_replaced", -1)) == len(starts) == len(log)
+        bad += 0 if ok else 1
+        mismatch += 0 if cnt else 1
+        details.append({"key": r["key"], "group": r[SAMEP_F_GROUP], "j": r.get(SAMEP_F_J), "scope_ok": ok,
+                        "count_ok": cnt})
+    verdict = "FAIL" if (bad or mismatch or not details) else "PASS"
+    return f"SWAP_SCOPE={verdict} runs={len(details)} scope_bad={bad} count_mismatch={mismatch}", details
+
+
+def load_samep_run(row, pool_by_key):
+    row = dict(row)
+    if row.get(SAMEP_F_RECV) is None and row.get(SAMEP_F_RECV_ALIAS) is not None:
+        row[SAMEP_F_RECV] = row[SAMEP_F_RECV_ALIAS]
+    out = load_run(row, pool_by_key)
+    out.update({k: row.get(k) for k in SAMEP_ROW_FIELDS})
+    return out
+
+
+def write_samep_md(path, title, lines, summ):
+    md = [f"# {title}", "", "## 判定行", ""] + [f"- `{l}`" for l in lines] + [""]
+    md += ["## 噪声对照（换 seed 不干预 / Z 置零，相对原 N 的翻转率）", "",
+           "| 档 | 换 seed pairs | 换 seed flip_any | flip_swing | flip_swing_phys | flip_button | Z n | Z flip_any | "
+           "Z flip_swing | Z flip_swing_phys | Z flip_button |", "|---|---|---|---|---|---|---|---|---|---|---|"]
+    for t in SAMEP_TIERS:
+        nf, zf = summ["noise_flip"][t], summ["z_flip"]["all"][t]
+        md.append(f"| {t} | {nf['n']} | " + " | ".join(_fmt(nf[f]) for f in SAMEP_FLIPS) + f" | {zf['n']} | "
+                  + " | ".join(_fmt(zf[f]) for f in SAMEP_FLIPS) + " |")
+    md += ["", f"- 无效：{summ['invalid']}；原 N 未走到第 j 步、不进分母的干预行：{summ['not_reached_in_n']}", ""]
+    for g, st in summ["groups"].items():
+        md += [f"## {g}（有效 n={st['n']}，{st['recv']} 局；主读数 {','.join(st['primary']) or '翻转率'}）", "",
+               "| 档 | 读数 | n | 比率 | 95% 区间 | Z 翻转 | 换 seed 翻转 | 有效应 |", "|---|---|---|---|---|---|---|---|"]
+        for t in SAMEP_TIERS:
+            tt = st["tiers"][t]
+            for k, rd in tt["reads"].items():
+                ef = tt["effect"].get(k)
+                ci = rd["ci"]
+                md.append(f"| {t} | {k}{'（主）' if ef and ef['primary'] else ''} | {rd['n']} | {_fmt(rd['rate'], 2)} | "
+                          + (f"[{ci[0]:.2f},{ci[1]:.2f}]" if ci else "—") + " | "
+                          + (f"{_fmt(ef['z_flip'], 2)} | {_fmt(ef['noise_flip'], 2)} | "
+                             f"{'是' if ef['effect'] else ('否' if ef['effect'] is False else '—')}" if ef else "— | — | —")
+                          + " |")
+        md += ["", "难度 × j 分层（只作描述）：", "", "| 层 | n | " + " | ".join(SAMEP_READS) + " |",
+               "|---|---|" + "---|" * len(SAMEP_READS)]
+        for k, c in st["strata"].items():
+            md.append(f"| {k} | {c['n']} | " + " | ".join(_fmt(c[x], 2) for x in SAMEP_READS) + " |")
+        md.append("")
+    Path(path).write_text("\n".join(md) + "\n")
+
+
+def readout_samep(root, out=None, expect_groups=7):
+    root = Path(root)
+    plan = read_json(root / "plan.json")
+    pool, pool_by_key = S.load_pool(Path(plan["pool_root"]) if plan.get("pool_root") else root.parent)
+    main_seed = int(plan.get("main_seed", S.MAIN_SEED))
+    runs = [load_samep_run(row, pool_by_key) for row in plan["runs"]]
+    model = plan["model"]
+    inter, noise, invalid, not_reached = samep_rows(runs, pool_by_key, main_seed)
+    summ = samep_summary(inter, noise, invalid, not_reached, model, expect_groups)
+    scope_line, scope = samep_scope(runs)
+    lines = [scope_line] + summ["lines"]
+    out = Path(out) if out else root / "readout"
+    out.mkdir(parents=True, exist_ok=True)
+    payload = {"model": model, "lines": lines, "summary": _jsonable(summ), "scope": scope, "rows": inter,
+               "noise_rows": noise}
+    (out / "readout.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=str) + "\n")
+    write_samep_md(out / "readout.md", f"RouteStick 同一局供体读数（{model}）", lines, summ)
+    for line in lines:
+        print(line, flush=True)
+    return 0 if all("=FAIL" not in l for l in lines) else 1
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--root", required=True)
     parser.add_argument("--intersect", default=None, help="逗号分隔的模型名，如 motion,wan")
     parser.add_argument("--out", default=None)
+    parser.add_argument("--same-episode", action="store_true", help="同一局供体读数（计划 1115 §3）；不加则为旧读数")
+    parser.add_argument("--expect-groups", type=int, default=7, help="RS_SAMEP 期望组数（A=7，B=4）")
     args = parser.parse_args(argv)
+    if args.same_episode:
+        return readout_samep(args.root, args.out, args.expect_groups)
     if args.intersect:
         return readout_intersect(args.root, [m.strip() for m in args.intersect.split(",") if m.strip()], args.out)
     return readout_model(args.root, args.out)

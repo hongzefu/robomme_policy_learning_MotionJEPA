@@ -33,6 +33,12 @@ other / none。回执、轨迹字段统一经 fp_swap_prep.receipt_fields、trac
         Z_k=…（同上） N_blind=<N 中 swap_times=n 且 blind_k≠目标的局里拿到 blind_k 的数>/<这些局数> k_matters=<x>/<接收局>
         swap_blind_k = 若第 k 次交换没发生（其余照常）时目标所在物体（fp_swap_prep.swap_blind_k）；CI 为按接收局重采样
         2000 次的 95% 分位区间（default_rng(0)）。SWAP_SCOPE 对 kswap/kseeds 行按 W_k（plan 行 w_starts）核对。
+
+--same-episode（计划 1115-4task-routestick-videorepick-steering-plan.html 第二部分 §2.2、§3、§4.3；不加时上面不变）：
+  只读 VideoRepick；分母 = 原 N 第一次就拿对的接收局。T_k←k′ 读拿 pred_k←k′ 比例 / 仍拿对 / 拿其他 / 没拿（剔除无区分力格，
+  单列其数）；Z_k 读拿 swap_blind_k / 仍拿对；k 不设上限（按局实际交换数）；换 seed 不干预的首次拿起翻转率作噪声对照；
+  按接收局 bootstrap 2000 次（种子 0）95% 区间；有效应 = 主读数区间下界 > max(Z 翻转率, 换 seed 翻转率)（Z 组只比换 seed）。
+  判定行 NOISE_BASE=PASS|FAIL model=<m> task=VideoRepick pairs=<n> flip_rate=<x>、VR_SAMEP=PASS|FAIL model=<m> invalid=<k>。
 """
 from __future__ import annotations
 
@@ -481,12 +487,219 @@ def write_md(path, title, lines, summaries):
     Path(path).write_text("\n".join(md) + "\n")
 
 
+# ================================================================ 同一局供体读数（--same-episode）
+# 计划 1115-4task-routestick-videorepick-steering-plan.html 第二部分 §2.2、§3、§4.3。只读 VideoRepick。
+# plan.json 每行字段约定（S2 写入；字段名集中在此）：
+#   group        "N"（seed = 主 seed 为原 N，其余 seed 或 noise_rep 非空为换 seed 噪声对照）、VR_T_GROUPS 或 VR_Z_GROUPS 之一
+#   ep           接收局 episode_id；k 被干预的第 k 次交换（1 起，不设上限）；k_src T 组的供体交换序号 k′
+#   pred_index   T 组：位置模拟得到的 pred_k←k′ 物体下标（缺省时本脚本按槽位模拟兜底）
+#   swap_blind_k Z 组：swap_blind_k 物体下标（缺省时取 fp_swap_prep.swap_blind_k）
+#   nondiscrim   该格无区分力（pred 或 swap_blind_k = 真目标）；缺省时由上两项与目标比较得出
+VR_TASK = "VideoRepick"
+VR_T_GROUPS = ("T", "T_k")
+VR_Z_GROUPS = ("Z", "Z_k")
+VR_F_K, VR_F_KSRC, VR_F_PRED, VR_F_BLIND, VR_F_NONDISC, VR_F_NOISE = (
+    "k", "k_src", "pred_index", "swap_blind_k", "nondiscrim", "noise_rep")
+VR_ROW_FIELDS = (VR_F_K, VR_F_KSRC, VR_F_PRED, VR_F_BLIND, VR_F_NONDISC, VR_F_NOISE)
+VR_T_CATS = ("pred", "correct", "other", "none")
+VR_Z_CATS = ("swap_blind_k", "correct", "other", "none")
+
+
+def pred_k_from(n_objects, target_index, schedule, k, k_src):
+    """槽位模拟：把第 k 次交换的那对槽位换成第 k′ 次交换的那对槽位，推算目标的信念槽位，返回实际占着该槽位的物体。
+    k_src == k 时等于真目标。"""
+    sched = F.ordered_schedule(schedule)
+    slot = list(range(int(n_objects)))
+    pairs = []
+    for item in sched:
+        a, b = int(item[0]), int(item[1])
+        pairs.append((slot[a], slot[b]))
+        slot[a], slot[b] = slot[b], slot[a]
+    belief = int(target_index)
+    for i, (p, q) in enumerate(pairs, 1):
+        if i == int(k):
+            p, q = pairs[int(k_src) - 1]
+        belief = q if belief == p else p if belief == q else belief
+    return slot.index(belief)
+
+
+def vr_is_noise(r):
+    return r.get("group") == "N" and (r.get(VR_F_NOISE) is not None
+                                       or (r.get("seed") is not None and int(r["seed"]) != F.MAIN_SEED))
+
+
+def vr_category(picked, target, special, special_name):
+    if picked is None:
+        return "none"
+    if int(picked) == int(target):
+        return "correct"
+    if special is not None and int(special) != int(target) and int(picked) == int(special):
+        return special_name
+    return "other"
+
+
+def vr_rows(runs):
+    """已载入运行 → (干预行, 噪声行, 无效明细, 被选接收局数)。分母 = 原 N 第一次就拿对的接收局。"""
+    runs = [r for r in runs if r.get("task") == VR_TASK]
+    base = {r["key"]: r for r in runs if r.get("group") == "N" and not vr_is_noise(r)}
+    invalid = {"n": sum(1 for r in base.values() if r["status"] not in ("ok", "excluded")), "intervention": 0}
+    chosen = {k for k, r in base.items() if r["status"] == "ok" and r["category"] == "correct"}
+    inter = []
+    for r in runs:
+        g = r.get("group")
+        if g not in VR_T_GROUPS + VR_Z_GROUPS:
+            continue
+        if r["key"] not in chosen:
+            continue
+        if r["status"] not in ("ok", "excluded"):
+            invalid["intervention"] += 1
+            continue
+        if r["status"] != "ok":
+            continue
+        rf, k = r["rf"], int(r[VR_F_K])
+        target = rf["target_index"]
+        n_obj = r["labels"]["n_objects"]
+        if g in VR_T_GROUPS:
+            special = r.get(VR_F_PRED)
+            if special is None:
+                special = pred_k_from(n_obj, target, rf["schedule"], k, int(r[VR_F_KSRC]))
+            name, kind = "pred", "T"
+        else:
+            special = r.get(VR_F_BLIND)
+            if special is None:
+                special = r["labels"]["blind_k"].get(k)
+            name, kind = "swap_blind_k", "Z"
+        nd = r.get(VR_F_NONDISC)
+        nd = bool(nd) if nd is not None else (special is None or int(special) == int(target))
+        cat = vr_category(r.get("picked"), target, None if nd else special, name)
+        inter.append({"recv": r["key"], "kind": kind, "k": k, "k_src": r.get(VR_F_KSRC), "special": special,
+                      "nondiscrim": nd, "category": cat, "flip": cat != "correct",
+                      **{c: cat == c for c in set(VR_T_CATS + VR_Z_CATS)}})
+    noise = []
+    for r in runs:
+        if not vr_is_noise(r) or r["key"] not in chosen:
+            continue
+        if r["status"] not in ("ok", "excluded"):
+            invalid["noise"] = invalid.get("noise", 0) + 1
+            continue
+        if r["status"] != "ok":
+            continue
+        noise.append({"recv": r["key"], "flip": r.get("picked") != base[r["key"]].get("picked")})
+    return inter, noise, invalid, len(chosen)
+
+
+def ratio_ci(rows, key, n_boot=BOOT_N, seed=BOOT_SEED):
+    """比率与按接收局重采样（每局可有多行）的 95% 区间；固定种子可复现。"""
+    import numpy as np
+    if not rows:
+        return {"n": 0, "recv": 0, "rate": None, "ci": None}
+    by = {}
+    for r in rows:
+        by.setdefault(r["recv"], []).append(float(bool(r[key])))
+    keys = sorted(by)
+    sums = np.array([[sum(by[k]), len(by[k])] for k in keys])
+    rng = np.random.default_rng(seed)
+    idx = rng.integers(0, len(keys), size=(int(n_boot), len(keys)))
+    tot = sums[idx].sum(axis=1)
+    vals = tot[:, 0] / tot[:, 1]
+    lo, hi = np.percentile(vals, [2.5, 97.5])
+    return {"n": len(rows), "recv": len(keys), "rate": float(sums[:, 0].sum() / sums[:, 1].sum()),
+            "ci": [float(lo), float(hi)]}
+
+
+def vr_effect(ci, baselines):
+    vals = [b for b in baselines if b is not None]
+    if ci is None or not vals:
+        return None
+    return bool(ci[0] > max(vals))
+
+
+def vr_summary(inter, noise, invalid, chosen, model):
+    noise_flip = (sum(r["flip"] for r in noise) / len(noise)) if noise else None
+    out = {"chosen": chosen, "noise": {"pairs": len(noise), "flip_rate": noise_flip}, "invalid": invalid, "groups": {}}
+    z_all = [r for r in inter if r["kind"] == "Z"]
+    z_flip = (sum(r["flip"] for r in z_all) / len(z_all)) if z_all else None
+    for kind, cats, main in (("T", VR_T_CATS, "pred"), ("Z", VR_Z_CATS, "swap_blind_k")):
+        rows = [r for r in inter if r["kind"] == kind]
+        disc = [r for r in rows if not r["nondiscrim"]]
+        st = {"n_all": len(rows), "nondiscrim": len(rows) - len(disc), "reads": {c: ratio_ci(disc, c) for c in cats},
+              "by_k": {}}
+        base = [noise_flip] + ([z_flip] if kind == "T" else [])
+        st["effect"] = {"read": main, "z_flip": z_flip if kind == "T" else None, "noise_flip": noise_flip,
+                        "effect": vr_effect(st["reads"][main]["ci"], base)}
+        if kind == "Z":
+            st["flip"] = ratio_ci(rows, "flip")
+        for k in sorted({r["k"] for r in rows}):
+            kr = [r for r in disc if r["k"] == k]
+            st["by_k"][k] = {"n": len(kr), "nondiscrim": sum(1 for r in rows if r["k"] == k and r["nondiscrim"]),
+                             **{c: sum(r[c] for r in kr) for c in cats}}
+        out["groups"][kind] = st
+    n_invalid = sum(invalid.values())
+    out["lines"] = [
+        f"NOISE_BASE={'PASS' if noise else 'FAIL'} model={model} task={VR_TASK} pairs={len(noise)} "
+        f"flip_rate={'na' if noise_flip is None else f'{noise_flip:.3f}'}",
+        f"VR_SAMEP={'PASS' if inter and n_invalid == 0 else 'FAIL'} model={model} invalid={n_invalid}"]
+    return out
+
+
+def load_vr_run(row, pool_by_key):
+    out = load_run(row, pool_by_key)
+    out.update({k: row.get(k) for k in VR_ROW_FIELDS})
+    return out
+
+
+def write_vr_md(path, title, lines, s):
+    md = [f"# {title}", "", "## 判定行", ""] + [f"- `{l}`" for l in lines] + [""]
+    md += [f"- 被选接收局（原 N 第一次拿对）：{s['chosen']}；换 seed pairs={s['noise']['pairs']} 翻转率 "
+           f"{'na' if s['noise']['flip_rate'] is None else round(s['noise']['flip_rate'], 3)}（被选局按拿对筛选，存在向均值回归）",
+           f"- 无效：{s['invalid']}", ""]
+    for kind, st in s["groups"].items():
+        ef = st["effect"]
+        md += [f"## {kind} 组（全部 {st['n_all']} 格，无区分力剔除 {st['nondiscrim']} 格）", "",
+               "| 读数 | n | 比率 | 95% 区间 |", "|---|---|---|---|"]
+        for c, rd in st["reads"].items():
+            ci = rd["ci"]
+            md.append(f"| {c} | {rd['n']} | {'—' if rd['rate'] is None else format(rd['rate'], '.2f')} | "
+                      + (f"[{ci[0]:.2f},{ci[1]:.2f}]" if ci else "—") + " |")
+        md += ["", f"- 有效应（{ef['read']} 区间下界 > max(Z 翻转 {ef['z_flip']}, 换 seed 翻转 {ef['noise_flip']})）："
+               f"{'是' if ef['effect'] else ('否' if ef['effect'] is False else '—')}", "",
+               "| k | 有效 n | 无区分力 | " + " | ".join(c for c in st["reads"]) + " |",
+               "|---|---|---|" + "---|" * len(st["reads"])]
+        for k, c in st["by_k"].items():
+            md.append(f"| {k} | {c['n']} | {c['nondiscrim']} | " + " | ".join(str(c[x]) for x in st["reads"]) + " |")
+        md.append("")
+    Path(path).write_text("\n".join(md) + "\n")
+
+
+def readout_vr_samep(root, out=None):
+    root = Path(root)
+    plan = read_json(root / "plan.json")
+    pool, pool_by_key = F.load_pool(Path(plan["pool_root"]) if plan.get("pool_root") else root.parent)
+    runs = [load_vr_run(row, pool_by_key) for row in plan["runs"]]
+    model = plan["model"]
+    inter, noise, invalid, chosen = vr_rows(runs)
+    s = vr_summary(inter, noise, invalid, chosen, model)
+    lines = s["lines"]
+    out = Path(out) if out else root / "readout"
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "readout.json").write_text(json.dumps({"model": model, "lines": lines, "summary": s, "rows": inter,
+                                                  "noise_rows": noise}, ensure_ascii=False, indent=2, default=str)
+                                      + "\n")
+    write_vr_md(out / "readout.md", f"VideoRepick 同一局供体读数（{model}）", lines, s)
+    for line in lines:
+        print(line, flush=True)
+    return 0 if all("=FAIL" not in l for l in lines) else 1
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--root", required=True)
     parser.add_argument("--intersect", default=None, help="逗号分隔的模型名，如 motion,wan")
     parser.add_argument("--out", default=None)
+    parser.add_argument("--same-episode", action="store_true", help="VideoRepick 同一局供体读数（计划 1115 §3）")
     args = parser.parse_args(argv)
+    if args.same_episode:
+        return readout_vr_samep(args.root, args.out)
     if args.intersect:
         return readout_intersect(args.root, [m.strip() for m in args.intersect.split(",") if m.strip()], args.out)
     return readout_model(args.root, args.out)
