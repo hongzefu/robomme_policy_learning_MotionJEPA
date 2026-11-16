@@ -20,226 +20,245 @@ blockquote{border-left:4px solid var(--acc);margin:10px 0;padding:6px 12px;backg
 .new{background:rgba(255,200,0,.18)}
 </style>
 </head><body>
-<p><b>四任务两模型 RouteStick / VideoRepick 同一局 motion token steering 计划</b>　修订 r2（美东 2026-11-15 晚；r1 <code>726e47d</code> 为跨局口径，已按用户要求整体改为同一局）</p>
+<p><b>四任务两模型 RouteStick / VideoRepick 同一局 motion token steering 计划</b>　修订 r3（美东 2026-11-16 凌晨；r1 <code>726e47d</code> 跨局口径、r2 <code>350f3bd</code> 同一局口径）</p>
 <blockquote>
-<p>权威性：本文件是任务 <code>steer-4task-1115</code> 的唯一计划；只规划不实施，开工令按 AGENTS.md 第 2 条（用户对本计划不改而明确同意才开工，含 GL 占位提交与 B 的下载）。</p>
-<p>代码锚点：主检出 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code> 分支 <code>v4.2-plswap-full</code>；整合来源 <code>origin/v17-4task-ctx-motion160-v7-50k</code>@<code>fd20feb</code>；benchmark <code>b4e97f2</code>。外部依赖：A bucket <code>HongzeFu/robomme-vla-modul-motion-80k-v1</code>@50000（GL 已有副本），B bucket <code>HongzeFu/robomme-vla-4task-modul-wantp768-50k-v1</code>@50000。</p>
-<p>写作分工：第一部分由 Fable 子代理按主会话给定事实撰写、主会话逐条核对；第二部分由主会话撰写。spec 能力经 2 个只读子代理核源码，并在 aspen 实测 3 局（脚本与输出 <code>docs/evaluation-doc/steer-4task-1115/records/spec-probe/</code>）。</p>
+<p>权威性：本文件是任务 <code>steer-4task-1115</code> 的唯一计划；只规划不实施，开工令按 AGENTS.md 第 2 条（用户对本计划不改而明确同意才开工，含 GL 占位、B 下载）。开工后一路跑到底、不再问用户（R9）。</p>
+<p>r2→r3 依据：workflow 对抗验证（5 个审查 + 5 个核实，sonnet，锚点 350f3bd）报 39 条、核实全部成立或部分成立（blocking 1 / major 13 / minor 25），本版逐条吸收；用户 11-16 凌晨裁决：混跑 A40 与 aspen 且「暂时不考虑不同硬件的这种情况」、RouteStick 四种走法全测、「可以，A 优先」、登记状态机。主要改动：serve_policy_attn 新增 modulation 用的只换 motion 模式（原 blocking）；截断钩子、xhard 环境入口、kind 路由顺序、合并面写全；新增换 seed 噪声对照与段长闸门；只翻左右/两者都翻标明非单变量并加物理弧侧口径与 core 对照；直接在 v4.2-plswap-full 上做；固定运行树与 GL release；时间线与降级顺序；每卡 worker 数按实测显存定。</p>
+<p>代码锚点：主检出 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code>，分支 <code>v4.2-plswap-full</code>；整合来源 <code>origin/v17-4task-ctx-motion160-v7-50k</code>@<code>fd20feb</code>；benchmark <code>b4e97f2</code>。外部依赖：A bucket <code>HongzeFu/robomme-vla-modul-motion-80k-v1</code>@50000（GL 副本），B bucket <code>HongzeFu/robomme-vla-4task-modul-wantp768-50k-v1</code>@50000。spec 实测见 <code>docs/evaluation-doc/steer-4task-1115/records/spec-probe/</code>。</p>
 </blockquote>
 <h1>第一部分（给人看）</h1>
 
 <h2>1 要做什么</h2>
 <p>在四任务 × 400 训练的两个 modulation 模型上——MotionMem（54.62%，<code>v2-1600ep-m8x8-modul-motion-b128-80k</code>@50000）与 Frozen Wan pooling（43.06%，<code>v2-1600ep-m8x8-modul-wantp768-b128-50k</code>@50000）——在新 benchmark <code>b4e97f2</code> 上测 RouteStick 与 VideoRepick：把示范里某一段的 motion token 换掉，看模型下一步是否跟着变。</p>
-<p><strong>只用同一局做供体</strong>（用户原话：「你先不要做跨局，你先用同一局来给我结论」）：布局、旋转角、颜色、路线等完全相同，只差被测的那一处。</p>
+<p><strong>只用同一局做供体</strong>（用户原话：「你先不要做跨局，你先用同一局来给我结论」）：布局、旋转角、颜色、此前的路线完全相同，只在被测的那一步开始不同。</p>
+<p><strong>模型范围</strong>：MotionMem 两个任务做全；Frozen Wan pooling 只做 RouteStick 前 3 步（不做窗口对照）和 VideoRepick。时间不够先砍 Frozen Wan（用户已同意：「可以，A 优先」）。</p>
+<p class="mut">第一部分按用户点名由 Fable 起草、主会话核对（用户原话：「第一部分用 Fable 来写」）。</p>
 
-<h2>2 RouteStick：第 j 步的四种干预</h2>
-<p>每一步有两个属性：去哪个按钮（左／右）、怎么绕中间柱子（顺／逆时针）；绕向错或碰错按钮当场失败。</p>
+<h2>2 RouteStick：第 j 步的四种走法</h2>
+<p>每一步有两个属性：去哪个按钮（原方向／另一侧）、怎么绕柱子（顺／逆时针）；绕向错或碰错按钮当场失败。两个属性各翻一次，共四种走法：</p>
 <table>
-  <tr><th>干预</th><th>供体（同一局，只改这一处）</th><th>模型若在用这段 token，应看到</th></tr>
-  <tr><td>只翻绕向</td><td>同一局的变体：第 j 步绕向反过来，其余全同</td><td>第 j 步绕向跟着反，去的按钮不变</td></tr>
-  <tr><td>只翻左右</td><td>同一局的变体：第 j 步去另一侧按钮，绕向不变（第 j 步起点在最边上的按钮时无另一侧，不做）</td><td>第 j 步去另一侧按钮，绕向不变</td></tr>
-  <tr><td>两者都翻</td><td>同一局的变体：左右、绕向都反</td><td>两者都跟着变</td></tr>
-  <tr><td>置零</td><td>第 j 段 token 全清零</td><td>看去掉这段信息后是乱走还是照常</td></tr>
+  <tr><th></th><th>原绕向</th><th>反绕向</th></tr>
+  <tr><th>去原方向的按钮</th><td>正确路径（原局，不干预）</td><td>只翻绕向</td></tr>
+  <tr><th>去另一侧的按钮</th><td>只翻左右</td><td>两者都翻</td></tr>
 </table>
+<p>用户原话：「这四种都要，就是它临近的这个往左往右 clockwise counterclockwise 都要测。就是和我们正确的路径相比，应该有其他三种情况。」</p>
+<p>干预就是把第 j 段 token 换成其他三种走法的 token，另加一组置零：</p>
+<table>
+  <tr><th>干预</th><th>供体（同一局的变体）</th><th>模型若在用这段 token，应看到</th></tr>
+  <tr><td>只翻绕向</td><td>第 j 步绕向反过来，其余全同</td><td>第 j 步绕向跟着反，去的按钮不变</td></tr>
+  <tr><td>只翻左右</td><td>第 j 步去另一侧按钮，绕向标签不变（起点在最边上的按钮时无另一侧，不做）</td><td>第 j 步去另一侧按钮。<strong>不是严格只差一处</strong>，见表下说明</td></tr>
+  <tr><td>两者都翻</td><td>第 j 步左右、绕向都反</td><td>两者都跟着变。<strong>不是严格只差一处</strong>，见表下说明</td></tr>
+  <tr><td>置零</td><td>第 j 段 token 全清零</td><td>去掉这段信息后是乱走还是照常；兼作噪声对照</td></tr>
+</table>
+<p><strong>「只翻左右」「两者都翻」的限制</strong>：去另一侧按钮必然绕另一根柱子，弧在桌面上的实际一侧也随之改变，且该步之后的路线不同，所以这两组不是严格只差一处。对策两条：绕向同时按「相对行进方向的标签」与「弧在桌面哪一侧」两种口径读；另做一组只换完全落在第 j 段内窗口的对照。</p>
 <p>读数分两项，各自与不干预对比：「绕向是否跟供体」「按钮是否跟供体」；每个能走到的步 j 都测。</p>
 
 <h2>3 VideoRepick：第 k 次交换的两种干预</h2>
 <p>示范里三个同色方块被交换了 n 次，执行时第一次就要拿对目标块。</p>
 <table>
-  <tr><th>干预</th><th>供体（同一局，只改这一处）</th><th>模型若在用这段 token，应看到</th></tr>
-  <tr><td>换成同局另一次交换</td><td>第 k 次交换那段 token 换成同一局第 k′ 次交换的 token（只适用于交换 ≥2 次的局）</td><td>模型把第 k 次当成「第 k′ 次那两块在换」：第一次拿起改拿按此推算的目标位置</td></tr>
+  <tr><th>干预</th><th>供体（同一局）</th><th>模型若在用这段 token，应看到</th></tr>
+  <tr><td>换成同局另一次交换</td><td>第 k 次交换段的 token 换成同一局第 k′ 次交换的 token（只适用于交换 ≥2 次的局）</td><td>模型把第 k 次当成「第 k′ 次那两块在换」：第一次改拿按此推算的目标位置</td></tr>
   <tr><td>置零</td><td>第 k 次交换段清零</td><td>改拿「假如第 k 次没交换」时目标所在的块，或拿对率下降</td></tr>
 </table>
-<p class="mut">新 benchmark 的交换搭档由距离现场决定、规格接口无法指定，所以不做「改搭档」的变体，改用同局另一次交换的 token。</p>
+<p class="mut">新 benchmark 的交换搭档由距离现场决定、规格接口无法指定，所以不做「改搭档」的变体，改用同局另一次交换的 token。同样对照换 seed 的不干预翻转率（见第 5 节）。</p>
 
-<h2>4 为什么能保证只差一处（已实测）</h2>
+<h2>4 同一局变体的已实测事实</h2>
 <ul>
-  <li>新 benchmark 的 <code>episode_spec</code> 能把 RouteStick 一局完全定死（旋转角、柱色、路线、每步绕向）；从自然局重建 spec 后，示范画面与原局逐帧完全一致（3 局实测：351/351、201/201、101/101 帧）。</li>
-  <li>只翻第 j 步绕向或左右的变体，示范画面在第 j 段之前与原局逐帧相同，从第 j 段第一帧才开始不同。</li>
-  <li>变体示范实际绕的方向与设定一致（3 局 13 段全部一致，翻转段也一致）。</li>
+  <li><strong>原局重建</strong>：新 benchmark 的 <code>episode_spec</code> 能把 RouteStick 一局定死（旋转角、柱色、路线、每步绕向）；从自然局重建 spec 后，示范画面与原局逐帧一致（3 局实测：351/351、201/201、101/101 帧）。</li>
+  <li><strong>「只翻绕向」变体</strong>：已实测 3 局，示范实际绕向与设定一致，第 j 段之前与原局逐帧相同。</li>
+  <li><strong>「只翻左右／两者都翻」变体</strong>：已实测能生成、第 j 段之前与原局逐帧相同；其实际绕向与段长<strong>尚未逐个核对</strong>，由开工后的闸门逐个核对。</li>
+  <li><strong>xhard 每段 50 帧</strong>：尚未实测，由闸门核对。</li>
   <li>easy／medium 本来不允许回头，生成「只翻左右」变体时只对供体局放开这条规则，被测的接收局不受影响。</li>
 </ul>
 
-<h2>5 跑完给出的结论</h2>
+<h2>5 怎么判断是真效应</h2>
+<p>每个被测步另跑 2 次换采样 seed 的不干预，加上置零组，作为噪声对照。只有「翻转组跟随供体的比例」显著高于置零组与换 seed 的翻转率，才算 token 携带该信息。主结论只按「第 1 步」与「第 2 步以后」两档合并给出，难度分层只作描述。</p>
+
+<h2>6 跑完给出的结论</h2>
 <ul>
-  <li>MotionMem 的 token 是否分别携带「绕向」与「左右」两种信息：各自的净跟随率与 95% 区间，按步 j 和难度给出。</li>
-  <li>Frozen Wan pooling 是否同样。</li>
+  <li>MotionMem 的 token 是否分别携带「绕向」与「左右」两种信息：跟随率相对两种噪声对照的差值与 95% 区间。</li>
+  <li>Frozen Wan pooling 在 RouteStick 前 3 步与 VideoRepick 上是否同样（时间不够时此项缺）。</li>
   <li>VideoRepick 交换段 token 是否决定第一次拿哪块。</li>
 </ul>
-<p class="warn">开工后一路跑到底：验收不过只记录不停，只在规则硬停条件下停。用户原话：「确保一次开始之后能一路执行到底」。</p>
+<p class="warn">开工后一路跑到底：验收不过只记录不停，只在规则硬停条件下停。用户原话：「确保一次开始之后能一路执行到底」「开工之后就不要再来问用户了，一路跑到明天早上……十点」。</p>
 
-<p>规模、资源、时间线、代码改动、子代理分工、验收判定行与 runbook 见第二部分。</p>
+<p>规模、资源、时间线与降级、代码改动、子代理分工、闸门与 runbook 见第二部分。</p>
 
 <h1>第二部分（技术细节，供 agent 追踪）</h1>
 
 <h2>〇 前置声明与红线</h2>
 <table>
 <tr><th>编号</th><th>内容</th></tr>
-<tr><td>R1</td><td>环境 A：sled-aspen（2×RTX A6000）+ GreatLakes spgpu A40。不用 Vail；AWS 只发消息。</td></tr>
-<tr><td>R2</td><td>只评估，不训练、不改模型权重与模型代码（<code>models/integration/history_pi0.py</code>、<code>history_gemma.py</code> 相对分叉点 <code>f6915f2</code> 无改动，modulation 注入点已存在）。</td></tr>
-<tr><td>R3</td><td>benchmark 固定 <code>b4e97f22fe007078e297205898c07c1acbc69165</code>，不改第三方源码；episode_spec / sampling_config 只作为 <code>gym.make</code> 参数传入。</td></tr>
-<tr><td>R4</td><td>两模型 checkpoint 固定 step 50000；B 下载到 GL 后逐文件 sha256 对 bucket，<code>VLA_SYNC=PASS model=B sha_mismatch=0</code> 才可用。</td></tr>
+<tr><td>R1</td><td>环境 A：sled-aspen（2×A6000）+ GreatLakes spgpu（A40）<b>混跑</b>（用户 11-15 选择「A40 + aspen 混跑」）。用户 11-15：「我们暂时不考虑不同硬件的这种情况」——不做同卡配对约束、不按硬件分层，任意空闲通道取分片；每次运行的回执仍记录 GPU 型号，便于事后核查。不用 Vail；AWS 只发消息。</td></tr>
+<tr><td>R2</td><td>只评估，不训练、不改权重。模型代码 <code>models/integration/history_pi0.py</code> 在本分支相对 <code>f6915f2</code> 只有入参校验与取整类改动、<code>history_gemma.py</code> 无改动，modulation 数值路径不动；S1 冒烟时 A、B 各加载一次确认校验不触发。</td></tr>
+<tr><td>R3</td><td>benchmark 固定 <code>b4e97f2</code>；第三方源码内容不改，只允许子模块 gitlink 随 MERGE-1 从 <code>856bc3a</code> 更新到 <code>b4e97f2</code>；episode_spec / sampling_config 只作为 <code>gym.make</code> 参数。</td></tr>
+<tr><td>R4</td><td>checkpoint 固定 step 50000。A：GL 副本 <code>/nfs/turbo/…/robomme_policy_learning_MotionJEPA/v1-store/models/robomme-vla-modul-motion-80k-v1/50000</code> 起跑前逐文件 sha256 对 bucket <code>SHA256SUMS.pre.txt</code>（<code>VLA_SYNC=PASS model=A</code>）；encoder <code>wan-full1600-filter2-b176x4-72ep-a/checkpoint_epoch_72.pt</code> 在 GL 的 <code>v1-store/external/motionjepa/</code>（sha256 前缀 0c198629）核 <code>ASSETS=PASS</code>。B：standard CPU job 下载后同样核对（<code>VLA_SYNC=PASS model=B</code>）。</td></tr>
 <tr><td>R5</td><td><b>只用同一局供体，不做任何跨局供体</b>（用户 11-15：「你先不要做跨局，你先用同一局来给我结论」）。</td></tr>
-<tr><td>R6</td><td>局池 seed：RouteStick 从 3100000、VideoRepick 从 3200000 起，与 692 评估表（candidates.jsonl）、<code>env_metadata/test</code>（RouteStick 660000+、VideoRepick 590000+）及 11-10 局池（2200000–2450000）都不重叠。</td></tr>
-<tr><td>R7</td><td>tmux 前缀 <code>s4t-</code>；GL 占位只 <code>scancel</code> 自己的 JobID；清理按清单逐个。</td></tr>
+<tr><td>R6</td><td>局池 seed：RouteStick 从 3100000、VideoRepick 从 3200000 起；与 692 评估表（candidates.jsonl，seed &lt; 500000 的 train 布局段）、<code>env_metadata/test</code>（RouteStick 660000+、VideoRepick 590000+）、11-10 局池（2200000–2450000）都不重叠。</td></tr>
+<tr><td>R7</td><td>tmux 前缀 <code>s4t-</code>；GL 占位作业名 <code>s4t-hold-1..4</code>，只 <code>scancel</code> 清单内 JobID；不动在跑的训练占位 65943150、65943151。</td></tr>
 <tr><td>R8</td><td>不存注意力、不存权重；motion token 只换成同局真实 token 或零，不删 token、不改 token 数。</td></tr>
-<tr><td>R9</td><td><b>一次开工、一路跑到底</b>（用户 11-15：「确保一次开始之后能一路执行到底」）：验收 FAIL 只记录、不改判据、不停；只在第 2 条硬停清单（超已批规模 5 倍、破坏性操作）时停。时间不够按优先级砍，不加保护层。</td></tr>
+<tr><td>R9</td><td><b>开工后一路跑到底</b>（用户 11-15：「确保一次开始之后能一路执行到底」「开工之后就不要再来问用户了，一路跑到明天早上……十点」）：验收 FAIL 只记录、不改判据、不停；只在 AGENTS.md 第 2 条硬停清单（超已批规模 5 倍、破坏性操作、受保护目录）时停；时间不够按 §8 降级顺序砍；执行中如需偏离本计划，按第 2 条先派一个 sonnet 做 <code>ADJUST_REVIEW</code>，规模相同即自行继续并记入留档「实施中调整」，不问用户。</td></tr>
+<tr><td>R10</td><td>分支：<b>直接在 <code>v4.2-plswap-full</code> 上</b>，各子代理在 worktree 分支提交 <code>sub/…</code>，主会话 <code>--no-ff</code> 合并后裸 <code>git push</code>（已有 upstream，免新建分支、免 <code>push -u</code>）。正式运行代码一律取固定 sha：aspen 用 detached clean worktree <code>v1-store/worktrees/s4t-run</code>，GL 用 <code>git archive</code>（含子模块 archive）出 <code>…-eval/releases/&lt;sha&gt;/</code> 并核 <code>GL_RELEASE=PASS</code>（<code>.release_sha</code> 比对）。主检出有用户未跟踪文件，不在主检出起跑。</td></tr>
+<tr><td>R11</td><td>写作与授权：第一部分按用户点名由 Fable 子代理起草（用户 11-15：「第一部分用 Fable 来写」，覆盖第 26 条「Fable 仅限画图」），主会话逐条核对；GL 写 turbo <code>…-eval/</code> 目录、4 个占位超默认规格（8 CPU/96G）、B 下载 CPU job，均由本计划开工令放行，开工后写入 <code>greatlakes.md</code> 项目放行记录。</td></tr>
 </table>
 
 <h2>1 已实测确认的 episode_spec 事实（本计划的前提）</h2>
 <h3>1.1 RouteStick</h3>
 <table>
 <tr><th>项</th><th>结论</th><th>依据</th></tr>
-<tr><td>spec 字段</td><td><code>layout.rotation_deg</code>、<code>layout.obstacle_rgb</code>（4×RGB）、<code>objects.L</code>、<code>actions.nodes</code>（L+1，取 0/2/4/6/8）、<code>actions.node_slots</code>（L+1，0..4）、<code>actions.directions</code>（L 个 clockwise/counterclockwise）</td><td><code>RouteStick._load_scene</code> 的 spec 分支</td></tr>
-<tr><td>给 spec 后是否还随机</td><td>旋转角、柱色、段数、路线、起点、绕向全部取自 spec，不再抽随机数</td><td>同上；子代理核查 + 实测</td></tr>
-<tr><td>能否从自然局重建 spec</td><td>能：按 <code>_load_scene</code> 抽样顺序（theta → 4 柱色 → 段数 → 起点 → 每步邻居 → 每步绕向）复算</td><td>实测 3 局（seed 3100003 hard、3100010 medium、3100011 easy）：自然局与重建 spec 局路线、绕向、按钮坐标 md5 全同，<b>示范帧 351/351、201/201、101/101 逐位一致</b></td></tr>
-<tr><td>只翻第 j 步绕向</td><td>只改 <code>directions[j-1]</code>，路线不动，校验必过</td><td>实测：示范帧从第 j 段第一帧才开始不同（j=2 → 第 51 帧；j=1 → 第 1 帧），之前逐位相同</td></tr>
-<tr><td>只翻第 j 步左右</td><td>第 j 步改去另一侧邻居；之后每步保持原相对方向（出界则反弹）；段数与绕向不变。easy/medium 原规则禁止非端点回头，用 <code>sampling_config.parameters.configs[&lt;难度&gt;].backtrack=True</code> 放开（只用于生成供体，接收局不受影响）。第 j 步起点在端点（0 或 8）时另一侧出界，跳过</td><td>实测：hard（8→6→<b>8</b>…）、medium（4→2→<b>4</b>→6→8）均被接受，示范帧同样从第 j 段才不同；easy 端点起点那局按规则跳过</td></tr>
-<tr><td>翻转后示范是否真按新绕向绕</td><td>是。原样局 13 段（7+4+2）示范绕向全部 = spec；翻转第 j 步后，第 j 段示范绕向随之翻转、其余段不变</td><td>实测：按 <code>direction_fail</code> 同一叉积公式对示范 eef 轨迹逐段算（脚本与输出归档于 <code>records/spec-probe/</code>）</td></tr>
-<tr><td>必须显式传 difficulty</td><td>不传时 <code>__init__</code> 无条件改成 easy；段数超出难度范围抛 <code>ValueError</code></td><td>源码</td></tr>
-<tr><td>示范结构</td><td>第 j 个执行子目标在示范里对应第 50(j−1)+1 至 50j 帧（每段 50 帧）</td><td>实测帧数 101/201/351 = 1+50L</td></tr>
+<tr><td>spec 字段</td><td><code>task</code>="RouteStick"、<code>layout.rotation_deg</code>、<code>layout.obstacle_rgb</code>（4×RGB）、<code>objects.L</code>、<code>actions.nodes</code>（L+1，取 0/2/4/6/8）、<code>actions.node_slots</code>（L+1，0..4）、<code>actions.directions</code>（L 个 clockwise/counterclockwise）；环境不读 <code>spec_sha256</code></td><td><code>RouteStick._load_scene</code> spec 分支（源码）</td></tr>
+<tr><td>环境侧校验</td><td>段数 ∈ 难度 length；nodes/node_slots 长度 = L+1 且一致；相邻 |Δslot|=1；backtrack=False 时非端点不得回头；directions 长度 = L 且取值合法；违反抛 <code>ValueError</code>。⚠ 不校验 node_slots 下界（-1 会被当成 8），变体生成脚本自查 0≤slot≤4</td><td>同上</td></tr>
+<tr><td>给 spec 后是否还随机</td><td>旋转角、柱色、段数、路线、起点、绕向全部取自 spec；示范规划器与物理不受 spec 影响</td><td>源码 + 实测</td></tr>
+<tr><td>从自然局重建 spec</td><td>按 <code>_load_scene</code> 抽样顺序（theta → 4 柱色 → 段数 → 起点 → 每步邻居 → 每步绕向）复算</td><td>实测 3 局（3100003 hard L=7、3100010 medium L=4、3100011 easy L=2）：路线、绕向、按钮坐标 md5 全同，示范帧 351/351、201/201、101/101 逐位一致</td></tr>
+<tr><td>只翻第 j 步绕向（S_swing）</td><td>只改 <code>directions[j-1]</code>，校验必过；示范帧从第 j 段第一帧才开始不同；该段示范实际绕向随之翻转</td><td>实测：首个不同帧 j=2→51、j=1→1；3 局逐段绕向与 spec 一致</td></tr>
+<tr><td>只翻第 j 步左右（S_side）</td><td>第 j 步改去另一侧邻居，之后每步保持原相对方向（出界反弹）；easy/medium 用 <code>sampling_config.parameters.configs[难度].backtrack=True</code> 放开回头（<code>_resolve_sampling_config</code> 以 setdefault 接受调用方 configs，仅用于生成供体）。⚠ <b>不是单变量</b>：同时改变了被绕的立柱（及其颜色）、相对原局有向线的物理弧侧、以及第 j 步之后整条路线</td><td>实测：hard、medium 变体被接受，首个不同帧 = 第 j 段首帧；变体实际绕向尚未实测，由 <code>RS_VARIANT</code> 核对</td></tr>
+<tr><td>段长</td><td>easy/medium/hard 实测每段 50 帧（帧数 = 1+50L）；规划器对 IK 失败路点会跳过（<code>solve_swingonto_withDirection</code> 中 <code>continue</code>），理论上可少于 50 帧；<b>xhard 与变体未实测</b>，由 <code>RS_SEGLEN</code> 逐局核对</td><td>实测 + 源码</td></tr>
+<tr><td>difficulty</td><td>必须显式传；不传时 <code>__init__</code> 无条件改成 easy</td><td>源码</td></tr>
 </table>
 <h3>1.2 VideoRepick</h3>
 <table>
 <tr><th>项</th><th>结论</th><th>依据</th></tr>
-<tr><td>spec 能否指定交换搭档</td><td><b>不能</b>。搭档在每次交换开始时按最近邻现场解析；spec 里的 <code>actions.swap_pairs[k].partner</code> 只是预写期望值，与实际不符时 <code>_verify_swap_binding</code> 抛 <code>SpecBindingError</code>。发起者固定：第 1 次必为目标，后两位是其余两块的排列</td><td><code>VideoRepick._load_scene</code>、<code>_verify_swap_binding</code>（子代理核查）</td></tr>
-<tr><td>因此「只改第 k 次搭档」的变体</td><td>无法在布局完全不变的前提下生成；改发起者只对 k=2、3 可行且会连带改后续交换，不采用</td><td>同上</td></tr>
-<tr><td>本计划的同局做法</td><td>不生成变体：把第 k 次交换段的 token 换成<b>同一局示范里另一次交换（第 k′ 次）</b>的 token。布局、颜色、旋转、目标完全相同，只是「第 k 次交换看起来像第 k′ 次那一对在换」</td><td>不涉及 spec</td></tr>
-<tr><td>第 k 次交换的帧区间</td><td>[S+50(k−1), S+50k]，S 为进入交换阶段的步；与随机路径一致</td><td><code>_refresh_swap_schedule</code></td></tr>
+<tr><td>spec 能否指定交换搭档</td><td><b>不能</b>：搭档在每次交换开始时按最近邻现场解析；spec 的 <code>actions.swap_pairs[k].partner</code> 只是期望值，不符时 <code>_verify_swap_binding</code> 抛 <code>SpecBindingError</code>；第 1 次发起者必为目标，后两位是其余两块的排列</td><td>源码（子代理核查）</td></tr>
+<tr><td>同局做法</td><td>不生成变体：第 k 次交换段 token 换成同一局第 k′ 次交换段 token（k′≠k）；布局、颜色、目标完全相同</td><td>不涉及 spec</td></tr>
+<tr><td>交换帧区间</td><td>[S+50(k−1), S+50k]，S 为进入交换阶段的步；首尾相接，窗口会跨入相邻交换。11-10 已知帧号偏 1（<code>FP_FRAMEMAP=FAIL bad=120</code>：W_k 按 [start+1, end+1]），沿用同一口径并在 result 中写明</td><td><code>_refresh_swap_schedule</code>；sp-swap-1110 result ⑦-8</td></tr>
 </table>
 
 <h2>2 干预定义（全部同一局）</h2>
 <h3>2.1 RouteStick：第 j 步</h3>
-<p>窗口：motion stride 16、window 33；W_j = 真实帧与第 j 段（示范第 50(j−1)+1…50j 帧）相交的全部窗口起点。供体 token 由「供体变体局的示范」在同样起点上编码得到，按起点精确替换（<code>motion_swap_exact</code>）。</p>
+<p>窗口 stride 16、window 33；W_j = 真实帧与第 j 段（示范第 50(j−1)+1…50j 帧，以 <code>RS_SEGLEN</code> 核过的实际段界为准）相交的全部窗口；core 版 = 真实帧完全落在第 j 段内的窗口（每个 j 约 1 个，剂量小于全窗版，只作对照）。供体 token 由供体变体示范在同样起点上编码，按起点精确替换。</p>
 <table>
-<tr><th>组</th><th>供体</th><th>适用位置</th></tr>
-<tr><td>S_swing</td><td>同局变体：第 j 步绕向翻转</td><td>全部 j</td></tr>
-<tr><td>S_side</td><td>同局变体：第 j 步去另一侧，绕向不变</td><td>第 j 步起点不在端点</td></tr>
-<tr><td>S_both</td><td>同局变体：左右、绕向都翻</td><td>同 S_side</td></tr>
-<tr><td>Z</td><td>W_j 置零</td><td>全部 j</td></tr>
+<tr><th>组</th><th>供体</th><th>适用</th><th>单变量？</th></tr>
+<tr><td>S_swing</td><td>同局变体：第 j 步绕向翻转</td><td>全部 j</td><td>是（第 j 段之前逐帧同；之后路线同、仅绕向标签变）</td></tr>
+<tr><td>S_side</td><td>同局变体：第 j 步去另一侧，绕向标签不变</td><td>第 j 步起点不在端点</td><td>否：同时换立柱、物理弧侧、后续路线</td></tr>
+<tr><td>S_both</td><td>同局变体：左右、绕向标签都翻</td><td>同 S_side</td><td>否：同上</td></tr>
+<tr><td>Z</td><td>W_j 置零</td><td>全部 j</td><td>—（纯扰动对照）</td></tr>
+<tr><td>S_swing_core、S_side_core、S_both_core</td><td>同上三组，只换 core 窗口</td><td>同上</td><td>隔离跨界窗口</td></tr>
 </table>
-<p>对照不单列组：重建 spec 的原样局示范与原局逐位一致（1.1），所以「换成原样重建局的 token」恒等于不干预；改用 <code>NOOP_EQ</code> 闸门证明替换通路本身不改动作。</p>
-<p>⚠ 跨界窗口：W_j 首尾窗口会带到第 j−1 段末尾（与供体相同）和第 j+1 段开头（S_swing 相同；S_side/S_both 因后续路线改变而不同）。读数另按「只换完全落在第 j 段内的窗口」做一组 core 版（S_swing_core、S_side_core），两版都报。</p>
-
+<p>不另设「原样重建」组：原样重建示范与原局逐位一致，等价于不干预，由 <code>NOOP_EQ</code> 闸门覆盖。</p>
 <h3>2.2 VideoRepick：第 k 次交换</h3>
 <table>
 <tr><th>组</th><th>供体</th><th>适用</th></tr>
-<tr><td>T_k←k′</td><td>同局第 k′ 次交换段的 token（k′≠k，每个 k 取全部 k′）</td><td>交换次数 n≥2</td></tr>
+<tr><td>T_k←k′</td><td>同局第 k′ 次交换段 token（k′≠k，全部 k′）；窗口数不同时按顺序对齐，不足用 <code>next_start_after</code> 补齐（11-10 同规则）</td><td>交换 ≥2 次的局</td></tr>
 <tr><td>Z_k</td><td>W_k 置零</td><td>全部 k</td></tr>
 </table>
-<p>预测物体：在交换表的位置模拟里把第 k 次交换的那对位置换成第 k′ 次那对位置，算出目标最终所在的方块 pred_k←k′；若 pred 与真实目标相同，该 (局, k, k′) 记为「无区分力」，只报不进主统计。Z_k 的对照物体为 swap_blind_k（假如第 k 次交换没发生，目标所在的方块）。</p>
+<p>预测物体：位置模拟里把第 k 次交换的那对<b>位置（槽）</b>换成第 k′ 次那对位置，得 pred_k←k′；Z_k 的对照物体为 swap_blind_k。pred 或 swap_blind_k 与真目标相同的格记为「无区分力」，只报数、不进主统计。⚠ 交换段首尾相接，W_k 首尾窗口含 k±1 交换内容，k′ 供体同理，result 中作为局限写明。</p>
 
-<h2>3 读数</h2>
+<h2>3 读数（主分析与噪声对照）</h2>
 <ul>
-<li><b>RouteStick</b>（第 j 步，干预后在第 j 步判定完成或失败时截断）：
-  <ul>
-  <li><code>swing_follow</code>：第 j 步实际绕向（执行轨迹叉积符号，含当场失败的步）= 供体绕向；</li>
-  <li><code>button_follow</code>：第 j 步首个触到的按钮 = 供体侧按钮；</li>
-  <li><code>own</code>：仍按原步完成。</li>
-  <li>基线：同一 (局, j) 的不干预运行碰巧与供体一致的比例。净值 = 干预 − 基线，按接收局 bootstrap 2000 次 95% 区间；分组 × j × 难度出表。</li>
-  </ul></li>
-<li><b>VideoRepick</b>（首次拿起后截断）：拿 pred_k←k′ 的比例、仍拿对的比例、拿其他的比例；Z_k 读拿 swap_blind_k 与仍拿对的比例；基线为同局不干预。</li>
-<li>接收位置：只在不干预运行走到第 j 步起点（RouteStick）或第一次就拿对（VideoRepick）的局上做干预。</li>
+<li><b>分母</b>：不干预运行走到第 j 步起点的全部 (局, j)（VideoRepick：不干预第一次就拿对的局）。干预运行未走到第 j 步的记 <code>unreached</code>，按「非跟随」计入分母，并单列 unreached 率。</li>
+<li><b>RouteStick 两个读数</b>（干预运行在第 j 个执行子目标判定完成或失败时截断）：
+ <ul>
+ <li><code>swing_follow</code>：第 j 步实际绕向 = 供体绕向。绕向按执行 TCP 轨迹相对「prev→实际首个触到的按钮」有向线的叉积符号（与 <code>direction_fail</code> 同式，含当场失败的步）；另出「物理弧侧」口径：相对原局 prev→原目标有向线的叉积符号。两种口径都报，S_side/S_both 以物理弧侧口径为主。</li>
+ <li><code>button_follow</code>：第 j 步首个触到的偶数按钮 = 供体侧按钮。</li>
+ <li>各组只对其被改的维度做主读数：S_swing 看 swing_follow、S_side 看 button_follow、S_both 两项都看；未被改的维度作为「是否被连带改变」的旁证。</li>
+ </ul></li>
+<li><b>噪声对照（新增）</b>：对每个接收 (局, j)（RouteStick）或接收局（VideoRepick）额外跑 <b>2 次换采样 seed 的不干预</b>，得「同输入不同采样」翻转率；Z 组给「纯扰动」翻转率。效应只在 <b>S 组净跟随率显著高于 Z 组与换 seed 的翻转率</b>时才算「token 携带该信息」。判定行 <code>NOISE_BASE=PASS model=… pairs=&lt;n&gt; flip_rate=&lt;x&gt;</code>。</li>
+<li><b>主分析口径</b>：按 j=1 与 j≥2 两档合并总体，bootstrap（按接收局，2000 次）95% 区间；难度×j 分层只作描述。事先定义：区间下界 &gt; max(Z 翻转率, 换 seed 翻转率) 记为「有效应」。每组报有效 n。</li>
+<li><b>VideoRepick</b>（首次拿起后截断）：T 组读拿 pred 比例；Z 组读拿 swap_blind_k 与仍拿对比例；都对照被选局换 seed 的翻转率（被选局按「第一次拿对」筛选，存在向均值回归，结果并列写明）。</li>
 </ul>
 
 <h2>4 逐文件改动清单</h2>
-<h3>4.0 MERGE-1：整合</h3>
-<p>新分支 <code>v4.3-4task-steer</code> 自 <code>v4.2-plswap-full</code> 切出，整合子代理在 worktree 内 <code>git merge --no-ff fd20feb</code>（origin/v17-4task-ctx-motion160-v7-50k，含 pool768 代码、两份 modulation yaml、子模块 b4e97f2）。预计冲突 <code>framesamp_memory.py</code>、<code>motion_client.py</code>、<code>policy_config.py</code>、子模块指针、<code>docs/handoff/current.json</code>（取 v4.2 侧）、根目录规则文件（取 v4.2 侧）。验收 <code>MERGE_V17=PASS imports=ok yaml=2</code>，<code>git ls-tree HEAD third_party/robomme_benchmark</code> = b4e97f2。</p>
-<h3>4.1 S1：服务端/客户端认新模型</h3>
-<table>
-<tr><th>文件</th><th>锚点</th><th>改什么</th></tr>
-<tr><td><code>src/mme_vla_suite/policies/policy_config.py</code></td><td>model_kind 推断</td><td>加 <code>modul_v10_768</code>（A：source_run 旧路径 + modulation）与 <code>wan_fixedpool768</code>（B）</td></tr>
-<tr><td><code>scripts/interpret/run_local.py</code></td><td><code>MODEL_KINDS</code>、<code>MOTION_KINDS</code>、<code>WAN_MODEL_KIND</code></td><td>两新 kind 入白名单；Wan 特判扩到 768（sidecar 用 v17 的 <code>scripts/dataset/wan/motion_sidecar.py</code>）</td></tr>
-<tr><td><code>scripts/interpret/serve_policy_attn.py</code></td><td><code>MotionContentClient</code></td><td>逻辑不改，只核 768 维供体形状</td></tr>
-<tr><td><code>scripts/interpret/bin_trace_runner.py</code>、<code>examples/robomme/eval.py</code></td><td>model_kind 校验</td><td>放行两新 kind</td></tr>
-</table>
-<h3>4.2 S2：同局供体生成 + 编码 + spec 组装</h3>
+<h3>4.0 MERGE-1：在 v4.2-plswap-full 上合入 v17（fd20feb）</h3>
+<ul>
+<li>整合子代理 worktree 内 <code>git merge --no-ff fd20feb</code>。冲突与语义合并面以实测为准（先 <code>git merge-tree</code> 列全），至少包括：<code>policies/framesamp_memory.py</code>、<code>policies/motion_client.py</code>、<code>policies/policy_config.py</code>、<code>policies/policy.py</code>、<code>examples/robomme/env_runner.py</code>、<code>examples/robomme/eval.py</code>、子模块 gitlink、<code>docs/handoff/current.json</code> 与根目录规则文件（后两者取本侧）。</li>
+<li>取舍：<code>EnvRunner</code> 保留本侧签名（<code>difficulty=</code>、<code>metadata_dir=</code>）并吸收 v17 的 spec 入口；<code>eval.py</code> 两侧功能都保留；<code>create_trained_policy</code> 分支顺序：先判 <code>wan_fixedpool768</code> → 再判 <code>wan_fixedpool1024</code>/<code>stage2_pool4_concat</code> → 最后 v10；<code>encoder_kind</code> 为 None 与 "v10" 同义；v10 路径丢弃 <code>stage2_python</code>。</li>
+<li>验收 <code>MERGE_V17=PASS imports=ok yaml=2 stub_clients=4 envrunner=ok</code>：import；两份 modulation yaml 建 config；stub 模式实例化 <code>MotionEncoderClient</code>（v10、wan_fixedpool768、stage2、timepool 四种）；<code>EnvRunner(difficulty=, metadata_dir=)</code> 构造；相关 CPU 单测通过；gitlink = b4e97f2。</li>
+</ul>
+<h3>4.1 S1：服务端/客户端支持 modulation 模型</h3>
 <table>
 <tr><th>文件</th><th>改什么</th></tr>
-<tr><td>新增 <code>scripts/interpret/samep_rs_variants.py</code></td><td>按 1.1 的抽样顺序从 (seed, 难度) 重建 RouteStick spec；生成 S_swing / S_side / S_both 变体 spec（S_side 后续路线按「保持原相对方向、出界反弹」，生成时 sampling_config 放开 backtrack）；对每个变体跑一次示范（只 reset，不跑策略）存示范帧与 eef；输出 <code>variants.jsonl</code>（变体 spec、帧区间、示范绕向核对结果）</td></tr>
-<tr><td>新增 <code>scripts/interpret/samep_encode_donors.py</code></td><td>用目标模型同一 motion 编码路径（A：wan-full1600 ep72 encoder；B：wan_fixedpool768）把变体示范在 stride 16 的窗口起点上编码，写成 <code>motion_swap_exact</code> 供体目录格式（起点 → 768 维 token）</td></tr>
-<tr><td><code>scripts/interpret/sp_swap_prep.py</code></td><td><code>MOTION_STRIDE</code> 等从模型 yaml 读（16/33/17）；<code>MAX_STEPS</code> 2000；<code>RS_CONFIGS</code> 补 xhard <code>[8,10], True</code>；新增 <code>--same-episode</code> 供体模式（读 variants/encoded 目录，组 S_swing/S_side/S_both/Z 与 core 版）；干预 spec 加 <code>stop_after_step=j</code></td></tr>
-<tr><td><code>scripts/interpret/fp_swap_prep.py</code></td><td>stride 参数化；难度 <code>easy,medium,xhard</code>；新增 <code>--same-episode</code>：T_k←k′（供体 = 同局第 k′ 次交换窗口，按顺序对齐，不足用 <code>next_start_after</code> 补齐，与 11-10 对齐规则相同）与 Z_k；输出 pred_k←k′</td></tr>
+<tr><td><code>scripts/interpret/serve_policy_attn.py</code></td><td><b>新增「只换 motion、不装 AttnAdapter」模式</b>（现有 AttnAdapter 只支持 context，modulation 起服务即 SystemExit）：保留 <code>MotionContentClient</code>、swap_map/episode_donor、record_motion、reset/add_buffer 钩子，采样走生产 <code>policy.infer</code>；modulation kind 自动选此模式。核 768 维供体形状</td></tr>
+<tr><td><code>src/mme_vla_suite/policies/policy_config.py</code></td><td>model_kind 推断加 <code>modul_v10_768</code>（A）与 <code>wan_fixedpool768</code>（B），分支顺序见 4.0</td></tr>
+<tr><td><code>scripts/interpret/run_local.py</code>（白名单段）</td><td><code>MODEL_KINDS</code>/<code>MOTION_KINDS</code> 加两新 kind；v10 不强制注入 <code>stage2_python</code>；A 的 sidecar 环境变量（<code>MMEVLA_V1_STORE</code>、<code>MMEVLA_MOTION_ONLINE_GPU</code>、<code>MMEVLA_MOTION_PROV_RELAX</code>）与 692 评估同口径；B 的 sidecar 用 v17 <code>scripts/dataset/wan/motion_sidecar.py</code></td></tr>
+<tr><td><code>examples/robomme/env_runner.py</code></td><td>xhard 在 b4e97f2 下走与其他难度相同的 <code>metadata_dir</code> 路径（<code>build_id=env_id</code>），去掉 <code>robomme_xhard</code>/<code>XHARD_METADATA_DIR</code> 依赖，补单测（若 MERGE-1 已处理则只补单测）</td></tr>
+<tr><td><code>scripts/interpret/bin_trace_runner.py</code>、<code>examples/robomme/eval.py</code></td><td>model_kind 校验放行两新 kind</td></tr>
+</table>
+<p>验收（合并后主会话在 GL 单占位上跑）：<code>S1_SMOKE=PASS model=&lt;A|B&gt; eps=1</code>；<code>NOOP_EQ=PASS model=&lt;A|B&gt; differ=0</code>（同服务端：用自身 token 作供体 vs 不干预，动作逐位一致）。</p>
+<h3>4.2 S2：局池、同局供体、截断</h3>
+<table>
+<tr><th>文件</th><th>改什么</th></tr>
+<tr><td>新增 <code>scripts/interpret/samep_rs_variants.py</code></td><td>从 (seed, 难度) 重建 RouteStick spec；生成 S_swing/S_side/S_both 变体（S_side 后续路线「保持相对方向、出界反弹」，0≤slot≤4 自查，生成时放开 backtrack）；每个变体 reset 录示范（不跑策略）；输出 <code>variants.jsonl</code>：变体 spec、实际段界、首个不同帧、示范逐段绕向（标签口径与物理弧侧口径）、被绕立柱序号与柱色</td></tr>
+<tr><td>新增 <code>scripts/interpret/samep_encode_donors.py</code></td><td>在 GL 上用目标模型同一编码路径（A：v10 encoder sidecar；B：wan_fixedpool768 sidecar）对变体示范在 stride 16 起点编码，写成 <code>motion_swap_exact</code> 供体目录（start_frames → 768 维）；同时编码原样重建局，对照在线编码（<code>DONOR_ENC</code>）</td></tr>
+<tr><td><code>scripts/interpret/sp_swap_prep.py</code></td><td>stride/window/demo_min_real 从模型 yaml 读（16/33/17）；<code>MAX_STEPS</code> 2000；<code>RS_CONFIGS</code> 补 xhard <code>[8,10], True</code>；新增 <code>--rs-quota-by-difficulty easy=…,medium=…</code>（现有 pool 按段数 m 配额）；<code>--same-episode</code> 供体模式（组见 2.1）；生成换 seed 噪声对照 spec；队列拆成每片 ≤20 局的小分片，以每局 terminal.json 为完成标记，重排只重发未完成分片</td></tr>
+<tr><td><code>scripts/interpret/subgoal_trace_runner.py</code> + <code>run_local.py</code>（截断段）</td><td>新增 <code>--stop-after-step j</code>：<code>current_task_index</code> 越过第 j 个执行子目标或整局失败即停，回执写 <code>truncated_step</code>；run_local 校验该键只与 <code>subgoal_trace=true</code> 同用并转发</td></tr>
+<tr><td><code>scripts/interpret/fp_swap_prep.py</code></td><td>stride 参数化；<code>--difficulties easy,medium,xhard</code>；<code>donors --same-episode</code>：T_k←k′ 供体从不干预 N 运行的 record_motion npz 取第 k′ 段窗口（start_frames 取接收窗起点），Z_k；输出 pred_k←k′、swap_blind_k、无区分力标记；生成换 seed 噪声对照 spec</td></tr>
 </table>
 <h3>4.3 S3：读数</h3>
 <table>
 <tr><th>文件</th><th>改什么</th></tr>
-<tr><td><code>scripts/interpret/analysis/sp_swap_readout.py</code></td><td><code>step_view</code> 新增 <code>swing_follow</code>、<code>button_follow</code>、<code>own</code>；按组 × j × 难度出表、bootstrap 区间；all 与 core 两版</td></tr>
-<tr><td><code>scripts/interpret/analysis/fp_swap_readout.py</code></td><td>T_k←k′ 读 pred 命中率（剔除无区分力格）；Z_k 读 swap_blind_k；k 到 5</td></tr>
+<tr><td><code>scripts/interpret/analysis/sp_swap_readout.py</code></td><td><code>step_view</code> 加 <code>swing_follow</code>（两种口径）、<code>button_follow</code>、<code>own</code>、<code>unreached</code>；按 3 节主分析口径出表；Z 与换 seed 翻转率；all/core 两版；<code>NOISE_BASE</code>、<code>RS_SAMEP</code> 判定行</td></tr>
+<tr><td><code>scripts/interpret/analysis/fp_swap_readout.py</code></td><td>T_k←k′ 读 pred 命中率（剔除无区分力）；Z_k 读 swap_blind_k；k 到 5；换 seed 翻转率</td></tr>
 </table>
+<p>验收：单测；<code>READOUT_REGRESS=PASS</code>（用 11-10 数据复现旧联合 follow 数字）。</p>
 
 <h2>5 子代理分配表</h2>
 <table>
-<tr><th>编号</th><th>目标</th><th>可写</th><th>禁触</th><th>依赖</th><th>合并顺序</th><th>验收</th><th>资源</th><th>模型</th></tr>
-<tr><td>MERGE-1</td><td>合入 v17</td><td>冲突文件</td><td>models/integration/*、第三方</td><td>—</td><td>1</td><td><code>MERGE_V17</code></td><td>CPU</td><td>opus，worktree</td></tr>
-<tr><td>S1</td><td>认新 model_kind</td><td>4.1 所列</td><td>prep、readout</td><td>MERGE-1</td><td>2</td><td>单测；合并后主会话跑 <code>S1_SMOKE</code>、<code>NOOP_EQ</code></td><td>CPU</td><td>opus，worktree</td></tr>
-<tr><td>S2</td><td>同局供体生成/编码/spec</td><td>4.2 所列 + tests</td><td>serve、readout</td><td>MERGE-1</td><td>3</td><td>单测（spec 重建对 3 个已实测 seed 复现、变体合法性）；合并后主会话跑 <code>RS_VARIANT</code>、<code>DONOR_ENC</code></td><td>CPU（编码在合并后由主会话上 GPU）</td><td>opus，worktree</td></tr>
-<tr><td>S3</td><td>读数</td><td>4.3 所列 + tests</td><td>prep、serve</td><td>MERGE-1</td><td>4</td><td>单测 + <code>READOUT_REGRESS</code>（11-10 数据旧联合 follow 复现）</td><td>CPU</td><td>opus，worktree</td></tr>
-<tr><td>RUN-x</td><td>起跑</td><td>只写 <code>v1-store/evaluation/steer-4task-1115/</code> 与日志</td><td>一切代码</td><td>冒烟过</td><td>—</td><td>首局 terminal.json 落盘</td><td>GL 4×A40、aspen 2×A6000</td><td>opus</td></tr>
-<tr><td>审查</td><td>每块合并前</td><td>无</td><td>—</td><td>—</td><td>—</td><td><code>PRE_MERGE_REVIEW</code></td><td>—</td><td>sonnet</td></tr>
+<tr><th>编号</th><th>目标</th><th>可写</th><th>禁触</th><th>依赖</th><th>合并顺序</th><th>验收</th><th>模型</th></tr>
+<tr><td>MERGE-1</td><td>合入 v17</td><td>4.0 冲突与语义合并文件、子模块 gitlink</td><td>第三方源码内容、models/integration/*</td><td>—</td><td>1</td><td><code>MERGE_V17</code></td><td>opus，worktree</td></tr>
+<tr><td>S1</td><td>modulation 服务与 kind</td><td>4.1 所列</td><td>prep、readout、截断段</td><td>MERGE-1</td><td>2</td><td>单测；合并后 <code>S1_SMOKE</code>、<code>NOOP_EQ</code></td><td>opus，worktree</td></tr>
+<tr><td>S2</td><td>局池、同局供体、截断</td><td>4.2 所列 + tests</td><td>serve、readout、白名单段</td><td>MERGE-1</td><td>3</td><td>单测（3 个已实测 seed 的 spec 重建复现、变体合法性、截断）</td><td>opus，worktree</td></tr>
+<tr><td>S3</td><td>读数</td><td>4.3 所列 + tests</td><td>prep、serve</td><td>MERGE-1</td><td>4</td><td>单测 + <code>READOUT_REGRESS</code></td><td>opus，worktree</td></tr>
+<tr><td>RUN-x</td><td>起跑</td><td>只写 <code>…-eval/v1-store/evaluation/steer-4task-1115/</code> 与日志</td><td>一切代码</td><td>冒烟过</td><td>—</td><td>首局 terminal.json 落盘</td><td>opus</td></tr>
+<tr><td>审查</td><td>每块合并前</td><td>—</td><td>—</td><td>—</td><td>—</td><td><code>PRE_MERGE_REVIEW</code></td><td>sonnet</td></tr>
 </table>
-<p>S1 与 S2 都碰 <code>run_local.py</code>：S1 管白名单段、S2 管截断参数段，冲突由 <code>sub/MERGE-2</code> 整合。</p>
+<p><code>run_local.py</code> 共享：S1 管白名单段、S2 管截断段；冲突由 <code>sub/MERGE-2</code> 整合。</p>
 
 <h2>6 验收闸门</h2>
 <table>
-<tr><th>判定行</th><th>时点</th><th>口径</th></tr>
-<tr><td><code>MERGE_V17=PASS</code></td><td>整合后</td><td>import + 两 yaml 建 config 对象</td></tr>
-<tr><td><code>VLA_SYNC=PASS model=B sha_mismatch=0</code></td><td>下载后</td><td>逐文件对 bucket 清单</td></tr>
-<tr><td><code>RS_SPEC_REBUILD=PASS eps=&lt;n&gt; frame_mismatch=0</code></td><td>局池后</td><td>每局重建 spec 原样示范与自然局逐帧一致</td></tr>
-<tr><td><code>RS_VARIANT=PASS variants=&lt;n&gt; early_diff=0 swing_mismatch=&lt;k&gt;</code></td><td>变体生成后</td><td>变体示范在第 j 段之前与原局逐帧一致（early_diff=0）；变体第 j 段示范绕向 = 变体 spec（swing_mismatch 如实记录，不一致的变体剔除）</td></tr>
-<tr><td><code>DONOR_ENC=PASS model=&lt;A|B&gt; windows=&lt;n&gt;</code></td><td>编码后</td><td>原样重建局编码 = 原局在线编码（逐位或 1e-5 内）</td></tr>
-<tr><td><code>NOOP_EQ=PASS model=&lt;A|B&gt; differ=0</code></td><td>冒烟</td><td>用原局自身 token 作供体，动作逐位等于不干预</td></tr>
-<tr><td><code>SWAP_SCOPE=PASS scope_bad=0</code></td><td>每批</td><td>每次替换 <code>n_replaced</code> = 计划窗口数（stride 16，杜绝半数替换）</td></tr>
-<tr><td><code>EVAL_PARITY model=&lt;A|B&gt; eps=4 agree=&lt;k&gt;</code></td><td>冒烟</td><td>692 表中 RouteStick easy/medium 4 局复跑，只作健康检查、不阻断</td></tr>
-<tr><td><code>RS_SAMEP=PASS model=… groups=4 invalid=0</code>、<code>VR_SAMEP=PASS model=… invalid=0</code></td><td>读数</td><td>组标签与供体来源逐条核对</td></tr>
+<tr><th>判定行</th><th>时点</th><th>口径 / 不过怎么办</th></tr>
+<tr><td><code>MERGE_V17=PASS</code></td><td>整合后</td><td>见 4.0；不过交回续改，两轮不过按 §8 降级</td></tr>
+<tr><td><code>VLA_SYNC=PASS model=A|B</code>、<code>ASSETS=PASS</code></td><td>起跑前</td><td>逐文件 sha256；B 不过则 B 停跑</td></tr>
+<tr><td><code>GL_RELEASE=PASS sha=…</code></td><td>每次部署</td><td><code>.release_sha</code> 与合并 sha 一致</td></tr>
+<tr><td><code>RS_SPEC_REBUILD=PASS eps=&lt;n&gt; frame_mismatch=0</code></td><td>局池后</td><td>重建 spec 原样示范与自然局逐帧一致，不一致局剔除</td></tr>
+<tr><td><code>RS_SEGLEN=PASS eps=&lt;n&gt; variants=&lt;m&gt; bad=&lt;k&gt;</code></td><td>局池与变体后</td><td>每局与每个变体示范帧数 = 1+50L；不符剔除并计数；xhard 先各冒烟 2 局</td></tr>
+<tr><td><code>RS_VARIANT=PASS variants=&lt;n&gt; early_diff=0 swing_mismatch=&lt;k&gt;</code></td><td>变体后</td><td>第 j 段前逐帧同；变体第 j 段示范绕向 = 变体 spec，不一致剔除</td></tr>
+<tr><td><code>DONOR_ENC=PASS model=… windows=&lt;n&gt;</code></td><td>编码后</td><td>原样重建局离线编码 = 在线编码（逐位或 1e-5）</td></tr>
+<tr><td><code>S1_SMOKE</code>、<code>NOOP_EQ=PASS differ=0</code></td><td>冒烟</td><td>NOOP_EQ 不过 = 替换链路错，停该模型修代码</td></tr>
+<tr><td><code>SWAP_SCOPE=PASS scope_bad=0</code></td><td>每批</td><td><code>n_replaced</code> = 计划窗口数；不过的批次重跑</td></tr>
+<tr><td><code>NOISE_BASE</code>、<code>RS_SAMEP groups=7</code>、<code>VR_SAMEP</code>、<code>READOUT_REGRESS</code></td><td>读数</td><td>如实报告</td></tr>
 </table>
+<p>不做 <code>EVAL_PARITY</code>：policy 仓库评估入口只走 env_metadata 自然局，692 表的 spec 注入入口不在本计划改动范围；健康检查由 <code>RS_SPEC_REBUILD</code>、<code>NOOP_EQ</code> 承担。</p>
 
-<h2>7 规模、资源与 runbook</h2>
+<h2>7 规模与资源</h2>
 <ul>
-<li>局池：RouteStick easy 10 / medium 20 / hard 20 / xhard 30 = 80 局；VideoRepick easy 20 / medium 20 / xhard 20 = 60 局；两模型共用。</li>
-<li>供体变体：RouteStick 每个 (局, j) 至多 3 个变体示范（只 reset 录示范，aspen CPU 约数秒/个，实测 easy 局 3 次 reset 合计 1 分钟内）；估计约 900 个变体，编码在 GPU 上批量做。</li>
-<li>运行数估计：A：RouteStick 不干预 80 + 干预约 1300（4 组 + core 2 组，截断）；VideoRepick 不干预 60 + 干预约 200。B：RouteStick 只做 j≤4，约 80 + 700；VideoRepick 60 + 150。合计约 2600；超出 5 倍才停。</li>
-<li>资源：GL 4 个单卡 A40 占位（各 4 CPU、64G、24h）；aspen 两卡被他人占 18.6/14.3 GiB，每卡 1 worker、<code>XLA_PYTHON_CLIENT_MEM_FRACTION=0.30</code>。</li>
-<li>优先级：A-RouteStick → A-VideoRepick → B-RouteStick → B-VideoRepick；时间不够先砍 B 的 j≥3 与 core 版。</li>
+<li>局池：RouteStick easy 8 / medium 16 / hard 16 / xhard 20 = 60 局；VideoRepick easy 10 / medium 20 / xhard 20 = 50 局；两模型共用。</li>
+<li>A（MotionMem，优先）：RouteStick 不干预 60 + 换 seed 120 + 干预（7 组含 core，截断）约 1200；VideoRepick 不干预 50 + 换 seed 约 40 + 干预约 200。</li>
+<li>B（Frozen Wan pooling）：RouteStick 只做 j≤3、组 S_swing/S_side/S_both/Z（不做 core）：不干预 60 + 换 seed 约 80 + 干预约 450；VideoRepick 同 A。</li>
+<li>合计约 2500 次运行（多数截断）；超出 5 倍才停。</li>
+<li>资源：GL 4 个单卡 A40 占位，每占位一个长作业步 <code>srun --jobid=&lt;hold&gt; --overlap --exact --ntasks=1 --gpu_cmode=shared</code>，内含两条通道（错开 45 s），每通道 = 1 模型服务 + 1 仿真客户端，<code>XLA_PYTHON_CLIENT_MEM_FRACTION=0.40</code>；aspen 2×A6000（他人已占 18.6/14.3 GiB）每卡 1 条通道，<code>XLA_PYTHON_CLIENT_MEM_FRACTION=0.30</code>，起跑前 <code>nvidia-smi</code> 复核余量。调度不区分硬件，空闲通道取下一分片。</li>
+<li><b>每卡 worker 数按实测显存定</b>：冒烟时每个模型在 A40 与 A6000 上各起 1 个 worker，读 <code>nvidia-smi</code> 峰值显存 P（模型服务 + 仿真渲染 + A 的 encoder sidecar），每卡 worker 数 = floor((可用显存 − 2 GiB) / P)，上限 4；同时把 <code>XLA_PYTHON_CLIENT_MEM_FRACTION</code> 设为 P/卡显存 + 0.02，避免 XLA 预占吃满。CPU 按每 worker 2 核：占位规格相应提到 <code>--cpus-per-task=8 --mem=96G</code>（由本计划开工令放行）。判定行 <code>WORKER_FIT=PASS model=… gpu=… peak_gib=… workers=…</code>。11-10 一占位 3–4 个进程曾 OOM，原因是 XLA 默认预占，按上式设 fraction 后不再叠加。</li>
 </ul>
-<pre>
-# 0 占位（开工令后立即）
-for i in 1 2 3 4; do ssh greatlakes "sbatch --account=chaijy2 --partition=spgpu --nodes=1 --ntasks-per-node=1 \
-  --gres=gpu:1 --cpus-per-task=4 --mem=64G --time=24:00:00 --job-name=s4t-hold-$i --wrap='sleep infinity'"; done
-# 1 B 下载到 GL turbo（standard CPU job），VLA_SYNC
-# 2 代码：MERGE-1 → S1/S2/S3 并行 → 逐个审查、--no-ff 合并、push；GL 侧 git archive 出 release
-# 3 局池（aspen CPU，sim python v1-store/envs/official-sim/bin/python）
-python -m scripts.interpret.sp_swap_prep scan --out $O --task RouteStick --seed0 3100000 --difficulties easy,medium,hard,xhard
-python -m scripts.interpret.sp_swap_prep pool --out $O --rs-quota easy=10,medium=20,hard=20,xhard=30   # RS_SPEC_REBUILD
-python -m scripts.interpret.fp_swap_prep scan --out $FPO --task VideoRepick --seed0 3200000 --difficulties easy,medium,xhard
-# 4 不干预 N（两模型）→ 确定可干预位置
-# 5 变体与编码
-python -m scripts.interpret.samep_rs_variants --pool $O/pool.json --out $O/variants          # RS_VARIANT
-python -m scripts.interpret.samep_encode_donors --model &lt;A|B&gt; --variants $O/variants --out $O/&lt;M&gt;/donors   # DONOR_ENC
-# 6 冒烟：NOOP_EQ、SWAP_SCOPE、EVAL_PARITY
-# 7 干预（按优先级队列，每占位一个长作业步两通道错开 45 s）
-# 8 读数：sp_swap_readout --same-episode --core、fp_swap_readout --same-episode
-</pre>
-<p>Monitor：每份日志一个，过滤 <code>EXIT_CODE=|Traceback|Error|out of memory|no supported devices|Killed|nan</code>。</p>
 
-<h2>8 风险与盲区</h2>
+<h2>8 时间线（美东）与降级</h2>
+<table>
+<tr><th>时刻（以开工令时刻 T 起算；T≈11-16 00:00）</th><th>事项</th></tr>
+<tr><td>T+0:00</td><td>提交 4 占位（JobID 入清单）、B 下载 CPU job、A 资产核对</td></tr>
+<tr><td>T+0:00 – T+0:45</td><td>MERGE-1（并行：aspen CPU 扫局池 seed，用旧代码只做 spec 重建与示范帧数核对）</td></tr>
+<tr><td>T+0:45 – T+2:30</td><td>S1/S2/S3 并行，逐个审查合并、push</td></tr>
+<tr><td>T+2:30 – T+3:15</td><td>GL release；变体示范生成（aspen CPU）；冒烟：S1_SMOKE、NOOP_EQ、xhard 段长、SWAP_SCOPE</td></tr>
+<tr><td>T+3:15 – 08:45</td><td>正式：A-RouteStick 不干预+换 seed → 编码 → 干预；A-VideoRepick；B-RouteStick；B-VideoRepick（按分片调度）</td></tr>
+<tr><td>08:45</td><td><b>停止发新局</b>，在跑分片跑完</td></tr>
+<tr><td>09:00 – 09:45</td><td>读数、result.md、矩阵图、提交推送</td></tr>
+<tr><td>09:50</td><td>按清单 scancel 4 个占位；交接 commit</td></tr>
+</table>
+<p><b>降级顺序</b>（到点未完成即砍，记入留档）：① B 的 j≥3（已默认不做）→ ② B 的 VideoRepick → ③ core 版（A 的 S_side_core 保留到最后，因其承担跨界窗口对照）→ ④ xhard → ⑤ B 的 RouteStick → 最后才砍 A。若 T+3:30 仍未过冒烟，直接只跑 A。</p>
+<p>耗时依据：新模型单局耗时未实测，按 11-10 约 88 局/卡·小时打 5 折、截断局再打对折估算；A40 8 条通道 + A6000 2 条通道 × 约 5.5 h ≈ 能装下 A 全部与 B 大部分，B 不保证。</p>
+
+<h2>9 风险、盲区与留档</h2>
 <table>
 <tr><th>项</th><th>处置</th></tr>
-<tr><td>MERGE-1 冲突大，关键路径推迟</td><td>02:30 未过冒烟只跑 A，B 顺延</td></tr>
-<tr><td>变体示范规划失败（规划器重试失败只记日志）</td><td><code>RS_VARIANT</code> 剔除并计数</td></tr>
-<tr><td>S_side 后续路线改变 → 跨界窗不同</td><td>core 版对照</td></tr>
-<tr><td>VideoRepick n=1 的局只能做 Z_k</td><td>如实报告</td></tr>
-<tr><td>首个执行子目标的轨迹缓冲可能混入示范阶段点（代码推断）</td><td>读数自算叉积复核</td></tr>
-<tr><td>新模型单局耗时未实测</td><td>按 11-10 吞吐打 5 折估算</td></tr>
-<tr><td>spgpu 全局只空 3 张</td><td>第 4 占位排队时 aspen 照跑</td></tr>
+<tr><td>MERGE-1 语义冲突比预期大</td><td>按 §8 降级只跑 A</td></tr>
+<tr><td>变体规划失败 / 段长不足</td><td><code>RS_SEGLEN</code>、<code>RS_VARIANT</code> 剔除计数</td></tr>
+<tr><td>S_side/S_both 非单变量</td><td>物理弧侧口径 + 立柱分层 + core 版；结论措辞限定</td></tr>
+<tr><td>统计功效：60/50 局分层后每格 n 小</td><td>主分析只用合并两档；分层只描述</td></tr>
+<tr><td>首个执行子目标轨迹缓冲可能混入示范阶段点（代码推断）</td><td>读数自算叉积复核</td></tr>
+<tr><td>分片中断</td><td>以 terminal.json 为完成标记只重发未完成分片</td></tr>
+<tr><td>spgpu 全局只空 3 张</td><td>第 4 占位排队时 3 占位照跑</td></tr>
 </table>
-
-<h2>9 留档与 commit 纪律</h2>
 <ul>
-<li>代码：<code>sub/MERGE-1|S1|S2|S3: …</code>；主会话合并 <code>commitV4.7.x</code>，起跑前 <code>commitV4.7.nBeta</code>（clean HEAD）。</li>
-<li>留档 <code>docs/evaluation-doc/steer-4task-1115/</code>：launch.md（起跑时）、result.md（结束后）、records/。</li>
-<li>spec 实测脚本 <code>rs_spec_probe.py</code> 与输出归档进 <code>docs/evaluation-doc/steer-4task-1115/records/spec-probe/</code>（第 32 条）。</li>
-<li>若用户同意登记，任务 id <code>steer-4task-1115</code> 以 <code>planned</code> 写入 <code>docs/handoff/current.json</code>。</li>
+<li>代码：<code>sub/MERGE-1|S1|S2|S3: …</code>；合并提交 <code>commitV4.7.x</code>（接续 commitV4.6.5Beta），起跑前 <code>commitV4.7.nBeta</code> 并以其 sha 作运行树（clean detached worktree / GL release）。</li>
+<li>留档 <code>docs/evaluation-doc/steer-4task-1115/</code>：launch.md（起跑时：版本、命令、JobID 与 tmux 清单、放行记录）、result.md（结束后，含「实施中调整」）、records/（readout、图、清洗日志、spec-probe）。</li>
+<li>交接：本任务登记 <code>docs/handoff/current.json</code>（任务 id <code>steer-4task-1115</code>，开工令写入 <code>authorizations</code>，中途快照写 running_handles），收尾写 <code>handoff:</code> commit。</li>
 </ul>
 
 </body></html>

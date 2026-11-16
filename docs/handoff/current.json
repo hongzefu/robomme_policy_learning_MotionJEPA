@@ -2538,6 +2538,54 @@
           "verdict_line": "TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10；EXIT_CODE=0"
         }
       ]
+    },
+    "steer-4task-1115": {
+      "plan": {
+        "file": "1115-4task-routestick-videorepick-steering-plan.html",
+        "sha": null
+      },
+      "state": "planned",
+      "state_changed_at": {
+        "utc": "2026-11-16T04:50:00Z",
+        "america_new_york": "2026-11-15T23:50:00-05:00"
+      },
+      "state_reason": "计划 r3 已写，等用户开工令",
+      "owner": {
+        "session": "aspen 会话「VLA steering with motion models testing」",
+        "host": "sled-aspen"
+      },
+      "depends_on": [],
+      "pre_handoff": [
+        {
+          "what": "MotionMem RouteStick/VideoRepick 同一局干预读数与 result.md 已提交",
+          "evidence": "",
+          "where": "docs/evaluation-doc/steer-4task-1115/",
+          "status": "pending"
+        },
+        {
+          "what": "Frozen Wan pooling 读数（可按降级缺项，如实记录）",
+          "evidence": "",
+          "where": "docs/evaluation-doc/steer-4task-1115/",
+          "status": "pending"
+        },
+        {
+          "what": "GL 占位 s4t-hold-1..4 已 scancel",
+          "evidence": "",
+          "where": "GreatLakes",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [],
+      "pending_decisions": [],
+      "next_steps": [
+        {
+          "what": "用户开工令后：提交占位、B 下载、MERGE-1",
+          "command": "见计划第二部分 §8",
+          "verdict_line": "MERGE_V17=PASS"
+        }
+      ]
     }
   }
 }
