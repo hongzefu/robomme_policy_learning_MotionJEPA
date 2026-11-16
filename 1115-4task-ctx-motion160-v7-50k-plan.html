@@ -140,7 +140,7 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
 <tr><td>5</td><td>起跑前置</td><td><code>preflight_train_launch.py</code>（运动表在帧库同级 <code>motion/</code>）＋显卡空闲＋磁盘≥400G＋代码与 Beta 一致且工作区干净</td><td>环境与路径就绪</td><td><code>PREFLIGHT=PASS n=&lt;n&gt;</code></td></tr>
 <tr><td>6</td><td>训 20 步试跑</td><td>20 步、存 1 份档（第 19 步）、正常退出、读回存档</td><td>context 前向反传、存档、恢复、退出都正常</td><td><code>SMOKE20=PASS steps=20 save_load=PASS</code></td></tr>
 <tr><td>7</td><td>试评估（训练前的硬前置）</td><td>用第 6 步的存档：GPU0 单份 1 局，再同卡 2 份各 1 局</td><td>评估能加载 context 模型、编码进程握手通过</td><td><code>EVAL_LOAD_SMOKE=PASS episodes=1 handshake=PASS share2=PASS peak_mem_gb=&lt;x&gt;</code>（脚本真实输出，落盘 <code>EVAL_LOAD_SMOKE.txt</code>）</td></tr>
-<tr><td>8</td><td>每卡 4 份显存压测</td><td>同一存档，GPU0 同卡 4 份、显存比例 0.2、各跑 1 局，记录 <code>nvidia-smi</code> 峰值</td><td>正式评估的并发能跑；峰值余量 &lt;4 GB 或 OOM 则正式评估改每卡 3 份（K5）</td><td><code>EVAL_CAPACITY=PASS per_gpu=&lt;4|3&gt; peak_mem_gb=&lt;x&gt;</code></td></tr>
+<tr><td>8</td><td>每卡 4 份显存压测</td><td>同一存档，GPU0 同卡 4 份、显存比例 0.2、各跑 1 局，记录 <code>nvidia-smi</code> 峰值</td><td>正式评估的并发能跑；4 份峰值余量 &lt;4 GB 或 OOM 判 FAIL，再以 <code>EVAL_PER_GPU=3</code> 压一次，PASS 则正式评估用每卡 3 份（K5）；3 份也 FAIL 则停下交用户</td><td><code>EVAL_CAPACITY=PASS per_gpu=&lt;4|3&gt; peak_mem_gb=&lt;x&gt;</code>（4 份的 FAIL 行属预期内分支，照实记录）</td></tr>
 <tr><td>9</td><td>正式训练前 300 步</td><td>loss 有限且下降、记忆投影梯度非零、稳态 1.9–2.2 s/步</td><td>与 0928 实测吻合</td><td>只记录不拦截</td></tr>
 <tr><td>10</td><td>训练完成</td><td>日志 <code>EXIT_CODE=0</code>；10 份存档齐；第 50000 步可读回、含运动参数、配置快照为 context</td><td>可评估</td><td><code>TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10</code>、<code>CKPT_LOAD=PASS step=50000 integration=context motion=1</code></td></tr>
 <tr><td>11</td><td>存档备份</td><td>逐份上传公开存储后读回比 sha、字节、对象数</td><td>可当备份</td><td><code>HF_VERIFY=PASS ckpts=10</code></td></tr>
@@ -154,10 +154,10 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
 <tr><td>0</td><td>开工令后派 1 个审查代理通读第二版找自相矛盾</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS</code></td></tr>
 <tr><td>1</td><td>并行派 S1（训练侧）、S2（评估侧）写代码</td><td>各自验收行（C 节）</td></tr>
 <tr><td>2</td><td>逐个审查 → 合并进 v17 → 合并后检查 → 推送</td><td><code>PRE_MERGE_REVIEW=PASS</code>、<code>POST_MERGE_REVIEW=PASS</code></td></tr>
-<tr><td>3</td><td>释放写计划的工作树（确认干净且已推送后 <code>git worktree remove</code>）；确认 v16 上传会话已结束；主检出切到 v17；打 Beta commit</td><td>主检出在 v17、<code>git status --short</code> 为空</td></tr>
-<tr><td>4</td><td>备份 <code>venvs/wan</code> 包清单 → 按 v17 锁文件修复</td><td>第 4 道检查 <code>WAN_ENV=PASS</code></td></tr>
-<tr><td>5</td><td>起跑前检查</td><td>第 1、2、3、5 道 PASS</td></tr>
-<tr><td>6</td><td>训 20 步试跑 → 试评估 → 每卡 4 份压测 → 清理试跑产物</td><td>第 6、7、8 道 PASS（第 7 道不过就停在这里修评估侧，不起正式训练）</td></tr>
+<tr><td>3</td><td>释放写计划的工作树（确认干净且已推送后 <code>git worktree remove</code>）；确认 v16 上传会话已结束；主检出切到 v17</td><td>主检出在 v17、<code>git status --short</code> 为空</td></tr>
+<tr><td>4</td><td>备份 <code>venvs/wan</code> 包清单 → 按 v17 锁文件修复；在主检出用 <code>check_checkpoint.py --resolved-sha256 &lt;B1&gt;</code> 复算并回填登记表，单独提交推送</td><td>回填提交已推送</td></tr>
+<tr><td>5</td><td>打 Beta commit；<code>run_4task_ctxmotion160_50k.sh $TRAIN_HEAD --check-only</code> 只跑起跑前检查（不训练）</td><td>第 1–5 道 PASS</td></tr>
+<tr><td>6</td><td>训 20 步试跑 → 试评估（等它结束）→ 每卡 4 份压测（不过就再按每卡 3 份压一次）→ 清理试跑产物。这一步里若因试评估失败改了评估侧代码，修复合入后<b>重打 Beta</b> 并重跑 <code>--check-only</code></td><td>第 6、7、8 道 PASS（第 7 道不过就停在这里修评估侧，不起正式训练；每卡 3 份也不过则停下交用户）</td></tr>
 <tr><td>7</td><td>正式训练；第 5000 步存档出现后起上传</td><td>第 9、10、11 道</td></tr>
 <tr><td>8</td><td>正式评估</td><td>第 12 道</td></tr>
 <tr><td>9</td><td>还原编码环境；写结果档案、提交推送</td><td>第 13 道</td></tr>
@@ -190,7 +190,7 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
 <li><b>R4 新名字</b>：正式 run、试跑 run（<code>v17-smoke20</code>）、评估目录（<code>local692-ctx-motion160-50k</code>、<code>v17-g6b</code>、<code>v17-cap4</code>）全新；试跑重跑前一次清完全部产物位置。</li>
 <li><b>R5 Beta 锚点</b>：正式训练从干净的 <code>commitV17.&lt;n&gt;Beta</code> 起跑。</li>
 <li><b>R6 不用工作树脚本跑主数据</b>：合并进主检出后才跑第 3 步起的一切。评估脚本按自身位置推仓库根（环境、前缀库路径都相对它），所以 S2 的验收只做语法检查与 <code>DRY_RUN=1</code> 空跑，真实验收在主检出做。</li>
-<li><b>R7 tmux 清单</b>：<code>v17-wanenv</code>、<code>v17-smoke</code>、<code>v17-g6b</code>、<code>v17-cap4</code>、<code>v17-train</code>、<code>v17-ckptup</code>、<code>v17-eval</code>、<code>v17-wanrestore</code>；只按此清单 <code>kill-session -t '=名'</code>。</li>
+<li><b>R7 tmux 清单</b>：<code>v17-wanenv</code>、<code>v17-smoke</code>、<code>v17-g6b</code>、<code>v17-cap4</code>、<code>v17-cap3</code>（仅 4 份不过时）、<code>v17-train</code>、<code>v17-ckptup</code>、<code>v17-eval</code>、<code>v17-wanrestore</code>；只按此清单 <code>kill-session -t '=名'</code>。</li>
 <li><b>R8 停工判据</b>：只在改训练数值语义、资源超 5 倍、破坏性操作、血缘 FAIL 时停；OOM、NaN、掉卡先查根因，属工程故障就修复重跑并汇报，要改 batch／卡数／模型才能过即停。</li>
 <li><b>R9 切主检出</b>：先确认写计划工作树干净且已推送并 <code>git worktree remove</code>（不用 <code>--ignore-other-worktrees</code>）；确认 <code>v16-up-eval-m</code> 已结束（它运行中按需 import 主检出的 v16 代码）；主检出 <code>git status --short</code> 为空。</li>
 <li><b>R10 凭据</b>：上传沿用上传脚本自带机制（脚本内 <code>HF_HOME=v1-store/cache/hf</code>、从 <code>v1-store/secrets/hf.env</code> 读 HongzeFu 令牌，v11 用它传成功过）；不打印令牌。</li>
@@ -233,6 +233,7 @@ memory_token_dim: 2048           # 原 1024
 <tr><td>新增编码环境检查</td><td>—</td><td>读 <code>v1-store/venvs/wan</code> 内 <code>motion_jepa/models/wan_latent_encoder.py</code> sha 与 <code>direct_url.json</code> 的 commit，比离线表 <code>vae.encoder_src_sha256</code>、<code>module_sha256</code>；输出第 4 道判定行（训练本身不用这个环境，放在 runner 里是为了起跑前一次拦住）</td></tr>
 <tr><td>preflight</td><td>注释「不走 --motion-*」</td><td>改为带 motion 参数（表在帧库同级 <code>motion/</code>，与原 <code>mv2-prod-runner.sh</code> 相同）；参数名按 <code>c55a6bc:scripts/training/preflight_train_launch.py</code> 的 argparse 定义写死</td></tr>
 <tr><td>训练后读回</td><td>池化 kind 断言</td><td>断言快照 <code>integration_type=="context"</code>、<code>memory_token_dim==2048</code>、motion 开、无 <code>encoder_kind</code>；<code>motion_provenance.json</code> 的 encoder sha == <code>0c198629…</code> 且有 vae；最后一份存档含运动参数</td></tr>
+<tr><td>新增 <code>--check-only</code> 模式</td><td>—（原脚本 <code>--dry-run</code> 在全部检查之前退出，检查又在训练前一刻才跑）</td><td>执行 HEAD／clean 检查与第 1–5 道全部检查后输出 <code>CHECK_ONLY=PASS</code> 并退出，不检查显卡空闲、不训练；正式与试训照常在起跑前再跑一遍同样的检查</td></tr>
 <tr><td>不变</td><td colspan="2"><code>CONFIG=mme_vla_suite_b128_80k</code>、<code>NORM_SHA</code>、<code>MANIFEST_ID=4cd5a170…</code>、<code>STEPS=50001</code>、<code>EXPECT_CKPTS=5000…50000</code>、<code>TRAIN_TIMING_STEPS=300</code>、8 卡、wandb、JAX 缓存目录按 run 名、HEAD／clean／显卡空闲检查</td></tr>
 </table>
 
@@ -265,7 +266,7 @@ UV_PROJECT_ENVIRONMENT=$PWD/v1-store/venvs/wan UV_CACHE_DIR=/scratch/hongze/.cac
 <h2>C. 子代理分配表</h2>
 <table>
 <tr><th>编号</th><th>目标</th><th>可写文件</th><th>禁触</th><th>验收（工作树内，CPU，≤5 min）</th></tr>
-<tr><td>S1</td><td>训练侧</td><td>B1、B2（含单测）、B3、B4</td><td><code>src/</code> 下除 B1 外一切、<code>scripts/evaluation/</code>、主检出任何路径</td><td><code>bash -n</code> 两个脚本；B3 <code>--dry-run</code> 打印 TRAIN_ARGS 含 B1 与 <code>--num_train_steps=50001</code>；B1 与 <code>git show 2f10473:…</code> 的键差集 == 两键；B2 单测（篡改一条成员 → FAIL）；<code>grep -c wan_pool768</code> B3 == 0；<code>grep TRAIN_LOG</code> B4 指向 v17-train.log。判定行 <code>S1_VERIFY=PASS</code></td></tr>
+<tr><td>S1</td><td>训练侧</td><td>B1、B2（含单测）、B3、B4</td><td><code>src/</code> 下除 B1 外一切、<code>scripts/evaluation/</code>、主检出任何路径</td><td><code>bash -n</code> 两个脚本；B3 <code>--dry-run</code> 打印 TRAIN_ARGS 含 B1 与 <code>--num_train_steps=50001</code>；B1 与 <code>git show 2f10473:…</code> 的键差集 == 两键；B2 单测（篡改一条成员 → FAIL）；<code>grep -c wan_pool768</code> B3 == 0；<code>grep TRAIN_LOG</code> B4 指向 v17-train.log；B3 有 <code>--check-only</code> 分支且在训练命令之前退出。判定行 <code>S1_VERIFY=PASS</code></td></tr>
 <tr><td>S2</td><td>评估侧</td><td>B5 四个文件</td><td><code>src/</code>、<code>scripts/training/</code>、主检出任何路径</td><td><code>bash -n</code>；<code>DRY_RUN=1 bash scripts/evaluation/local_692_pool.sh &lt;假存档路径&gt; 7</code> 打印 <code>PLAN_OK shards=32 total=692</code> 与新 POLICY；check_checkpoint 对一个 context 快照字典与一个 modulation 快照字典各跑一次断言逻辑的单测；<code>git diff c0826be -- &lt;三个原样文件&gt;</code> 只含 RUN_NAME/POLICY 默认值与新模式。判定行 <code>S2_VERIFY=PASS shards=32 per_gpu=4</code></td></tr>
 <tr><td>主会话</td><td>审查合并、B6、B7、起跑、监控</td><td>B7、计划文件</td><td>—</td><td>§5 全部</td></tr>
 </table>
@@ -276,11 +277,10 @@ UV_PROJECT_ENVIRONMENT=$PWD/v1-store/venvs/wan UV_CACHE_DIR=/scratch/hongze/.cac
 <tr><th>闸门</th><th>输入何时有</th><th>步</th><th>失败处置</th></tr>
 <tr><td>计划自洽审查</td><td>本版 commit</td><td>0</td><td>blocking 交用户</td></tr>
 <tr><td>S1/S2 验收与两次审查</td><td>子代理交回</td><td>1–2</td><td>交原子代理续改</td></tr>
-<tr><td>第 4 道（环境）</td><td>B6 修复后</td><td>4</td><td>修环境（工程）</td></tr>
-<tr><td>第 1、2、3、5 道</td><td>盘上已有</td><td>5</td><td>第 1 道 FAIL 停工交用户；其余先查是否脚本缺陷</td></tr>
+<tr><td>第 1–5 道（<code>--check-only</code>）</td><td>B6 修复、回填提交、Beta 之后</td><td>5</td><td>第 1 道 FAIL 停工交用户；其余先查是否脚本缺陷</td></tr>
 <tr><td>第 6 道 试训</td><td>Beta 后</td><td>6</td><td>修复后重跑（先清产物）</td></tr>
-<tr><td>第 7 道 试评估</td><td>第 6 道的存档</td><td>6</td><td><b>正式训练的硬前置</b>：不过就修评估侧后重跑，期间不起正式训练</td></tr>
-<tr><td>第 8 道 压测</td><td>第 6 道的存档</td><td>6</td><td>FAIL 则正式评估 <code>EVAL_PER_GPU=3</code>，记录，不停</td></tr>
+<tr><td>第 7 道 试评估</td><td>第 6 道的存档</td><td>6</td><td><b>正式训练的硬前置</b>：不过就修评估侧后重跑，期间不起正式训练；修复合入后重打 Beta、重跑 <code>--check-only</code></td></tr>
+<tr><td>第 8 道 压测</td><td>第 6 道的存档，且第 7 道已结束（同用 GPU0，不能并发）</td><td>6</td><td>4 份 FAIL 则以 3 份再压；3 份 PASS 则正式评估 <code>EVAL_PER_GPU=3</code>，记录不停；3 份也 FAIL 停下交用户</td></tr>
 <tr><td>第 9–11 道</td><td>训练中／后</td><td>7</td><td>按 R8</td></tr>
 <tr><td>第 12 道</td><td>第 50000 步存档</td><td>8</td><td>基础设施错误有限次重试并记录</td></tr>
 <tr><td>第 13 道</td><td>评估结束</td><td>9</td><td>工程修复</td></tr>
@@ -293,19 +293,21 @@ git -C /scratch/hongze/robomme_policy_learning_MotionJEPA worktree remove .claud
 tmux has-session -t '=v16-up-eval-m' || echo v16上传已结束
 cd /scratch/hongze/robomme_policy_learning_MotionJEPA &amp;&amp; git status --short &amp;&amp; git fetch origin &amp;&amp; git switch v17-4task-ctx-motion160-v7-50k &amp;&amp; git merge --ff-only origin/v17-4task-ctx-motion160-v7-50k
 
-# E2 Beta：写 launch.md 前两节 → commitV17.&lt;n&gt;Beta → push；TRAIN_HEAD=$(git rev-parse HEAD)
-
-# E3 修复编码环境（B6）后，dry-run 看 TRAIN_ARGS（第 1–5 道在 runner 内）
-bash scripts/training/run_4task_ctxmotion160_50k.sh $TRAIN_HEAD --dry-run
+# E2 修复编码环境（B6 前半）；回填 check_checkpoint 登记表的 resolved_sha256 → 单独提交推送
+# E3 Beta：写 launch.md 前两节 → commitV17.&lt;n&gt;Beta → push；TRAIN_HEAD=$(git rev-parse HEAD)
+bash scripts/training/run_4task_ctxmotion160_50k.sh $TRAIN_HEAD --dry-run      # 只看 TRAIN_ARGS
+bash scripts/training/run_4task_ctxmotion160_50k.sh $TRAIN_HEAD --check-only   # 第 1–5 道，末行 CHECK_ONLY=PASS
 
 # E4 试训
 tmux new-session -d -s v17-smoke "cd /scratch/hongze/robomme_policy_learning_MotionJEPA &amp;&amp; set -o pipefail; PYTHONUNBUFFERED=1 bash scripts/training/run_4task_ctxmotion160_50k.sh $TRAIN_HEAD --smoke20 --run-name v17-smoke20 2&gt;&amp;1 | tee v1-store/logs/v17-smoke.log; echo \"EXIT_CODE=\$?\" &gt;&gt; v1-store/logs/v17-smoke.log"
 
-# E5 试评估，然后压测（都用试训存档）
+# E5 试评估 → 等 v17-g6b 日志出现 EXIT_CODE= 且 EVAL_LOAD_SMOKE=PASS → 再起压测（两者都用 GPU0，严禁并发）
 S=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v17-smoke20/19
 tmux new-session -d -s v17-g6b "cd /scratch/hongze/robomme_policy_learning_MotionJEPA &amp;&amp; set -o pipefail; PYTHONUNBUFFERED=1 bash scripts/evaluation/local_692_pool.sh --g6b $S 7 2&gt;&amp;1 | tee v1-store/logs/v17-g6b.log; echo \"EXIT_CODE=\$?\" &gt;&gt; v1-store/logs/v17-g6b.log"
+# ……v17-g6b 结束后：
 tmux new-session -d -s v17-cap4 "cd /scratch/hongze/robomme_policy_learning_MotionJEPA &amp;&amp; set -o pipefail; PYTHONUNBUFFERED=1 RUN_NAME=v17-cap4 bash scripts/evaluation/local_692_pool.sh --g6b-capacity $S 7 2&gt;&amp;1 | tee v1-store/logs/v17-cap4.log; echo \"EXIT_CODE=\$?\" &gt;&gt; v1-store/logs/v17-cap4.log"
-# 两者通过后删除试训 run 目录与其记录目录（R4 清单），再起 E6
+# 若 EVAL_CAPACITY=FAIL per_gpu=4：v17-cap4 结束后以 EVAL_PER_GPU=3 RUN_NAME=v17-cap3 再起一次（会话 v17-cap3，日志 v1-store/logs/v17-cap3.log）
+# 压测通过后删除试训 run 目录与其记录目录（R4 清单），再起 E6
 
 # E6 正式训练
 tmux new-session -d -s v17-train "cd /scratch/hongze/robomme_policy_learning_MotionJEPA &amp;&amp; set -o pipefail; PYTHONUNBUFFERED=1 bash scripts/training/run_4task_ctxmotion160_50k.sh $TRAIN_HEAD 2&gt;&amp;1 | tee v1-store/logs/v17-train.log; echo \"EXIT_CODE=\$?\" &gt;&gt; v1-store/logs/v17-train.log"
@@ -376,6 +378,7 @@ tmux new-session -d -s v17-eval "cd /scratch/hongze/robomme_policy_learning_Moti
 <tr><td>workflow</td><td>mixed8 先例描述不实</td><td>删除该旁证（两键约束由第 3 道直接保证）</td></tr>
 <tr><td>workflow</td><td>「src/ 零改动」与新增 yaml 冲突</td><td>R3 改为「只新增一个 yaml、不改 .py」</td></tr>
 <tr><td>workflow 驳回 6 条</td><td>措辞与实现细节</td><td>不改</td></tr>
+<tr><td>开工前自洽审查（<code>PLAN_CONSISTENCY_REVIEW=FAIL base=fe646be findings=4 blocking=1</code>）</td><td>①试评估与压测在 GPU0 并发（blocking）；②第 1–5 道无独立入口；③Beta 早于回填与评估修复；④降 3 份未经验证</td><td>①E5 改为先后执行；②B3 新增 <code>--check-only</code>；③§6 第 4、5 步把回填放在 Beta 前，评估侧修复后重打 Beta；④4 份 FAIL 再以 3 份压测，3 份也 FAIL 停下交用户。均为顺序与缺步补齐，不改用户口径</td></tr>
 </table>
 
 </body>
