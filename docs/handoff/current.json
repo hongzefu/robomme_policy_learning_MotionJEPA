@@ -2544,12 +2544,12 @@
         "file": "1115-4task-routestick-videorepick-steering-plan.html",
         "sha": "96d016f"
       },
-      "state": "running",
+      "state": "done",
       "state_changed_at": {
-        "utc": "2026-11-16T04:47:00Z",
-        "america_new_york": "2026-11-15T23:47:00-05:00"
+        "utc": "2026-11-16T14:05:00Z",
+        "america_new_york": "2026-11-16T09:05:00-05:00"
       },
-      "state_reason": "2026-11-16 04:45 美东：MotionMem RouteStick 干预（949 次，四主组）在 GL 4 占位×3 通道运行；aspen 跑噪声对照；Frozen Wan 与 core 组按降级不跑",
+      "state_reason": "MotionMem RouteStick 同局干预读数完成（S_swing 0.89、S_side 0.85、S_both 0.87/0.90，噪声 0.083）；Frozen Wan、VideoRepick、core 组按降级未跑；GL 4 占位已 scancel",
       "owner": {
         "session": "aspen 会话「VLA steering with motion models testing」",
         "host": "sled-aspen"
@@ -2557,81 +2557,26 @@
       "depends_on": [],
       "pre_handoff": [
         {
-          "what": "MotionMem RouteStick/VideoRepick 同一局干预读数与 result.md 已提交",
-          "evidence": "",
-          "where": "docs/evaluation-doc/steer-4task-1115/",
-          "status": "pending"
+          "what": "MotionMem RouteStick/VideoRepick 同局干预读数与 result.md 已提交",
+          "evidence": "SWAP_SCOPE=PASS runs=923 scope_bad=0；NOISE_BASE=PASS model=motion pairs=448 flip_rate=0.083；RS_SAMEP=FAIL groups=4 invalid=51（未跑完的尾部，如实记录）；VideoRepick 未跑（降级）",
+          "where": "docs/evaluation-doc/steer-4task-1115/result.md",
+          "status": "pass"
         },
         {
           "what": "Frozen Wan pooling 读数（可按降级缺项，如实记录）",
-          "evidence": "",
-          "where": "docs/evaluation-doc/steer-4task-1115/",
-          "status": "pending"
+          "evidence": "按计划 §8 降级未跑，result.md ⑥-6 记录",
+          "where": "docs/evaluation-doc/steer-4task-1115/result.md",
+          "status": "pass"
         },
         {
           "what": "GL 占位 s4t-hold-1..4 已 scancel",
-          "evidence": "",
+          "evidence": "squeue 仅剩训练占位 65943150、65943151",
           "where": "GreatLakes",
-          "status": "pending"
+          "status": "pass"
         }
       ],
       "long_tail": [],
-      "running_handles": [
-        {
-          "jobid": "66195002",
-          "tmux": null,
-          "log": null,
-          "done_line": "scancel"
-        },
-        {
-          "jobid": "66195003",
-          "tmux": null,
-          "log": null,
-          "done_line": "scancel"
-        },
-        {
-          "jobid": "66195004",
-          "tmux": null,
-          "log": null,
-          "done_line": "scancel"
-        },
-        {
-          "jobid": "66195005",
-          "tmux": null,
-          "log": null,
-          "done_line": "scancel"
-        },
-        {
-          "tmux": "s4t-h0-chain2X",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/steer-4task-1115/motion/s4t-h0-chain2X.log",
-          "done_line": "HOLD_RUNNER_DONE"
-        },
-        {
-          "tmux": "s4t-h1-chain2X",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/steer-4task-1115/motion/s4t-h1-chain2X.log",
-          "done_line": "HOLD_RUNNER_DONE"
-        },
-        {
-          "tmux": "s4t-h2-chain2X",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/steer-4task-1115/motion/s4t-h2-chain2X.log",
-          "done_line": "HOLD_RUNNER_DONE"
-        },
-        {
-          "tmux": "s4t-h3-chain2X",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/steer-4task-1115/motion/s4t-h3-chain2X.log",
-          "done_line": "HOLD_RUNNER_DONE"
-        },
-        {
-          "tmux": "s4t-m1-aspen0",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/steer-4task-1115/motion/s4t-m1-aspen0.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "s4t-m1-aspen1",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/steer-4task-1115/motion/s4t-m1-aspen1.log",
-          "done_line": "EXIT_CODE="
-        }
-      ],
+      "running_handles": [],
       "authorizations": [
         {
           "kind": "go",
@@ -2654,9 +2599,9 @@
       ],
       "next_steps": [
         {
-          "what": "08:45 停发新局；读数 sp_swap_readout --same-episode --expect-groups 4；写 result.md；scancel 4 占位",
-          "command": "sp_swap_readout --root rs/motion --same-episode",
-          "verdict_line": "RS_SAMEP / NOISE_BASE"
+          "what": "用户决定是否跑 Frozen Wan 同口径对照、MotionMem VideoRepick、core 组（spec 已生成：rs/wan、vr/motion、vr/wan）",
+          "command": "见 launch.md 与 result.md ⑧",
+          "verdict_line": "RS_SAMEP / VR_SAMEP"
         }
       ]
     }

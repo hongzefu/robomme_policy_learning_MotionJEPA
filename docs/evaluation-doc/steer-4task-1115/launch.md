@@ -71,3 +71,4 @@ aspen：`s4t-dl`、`s4t-prep-rs`、`s4t-prep-vr`、`s4t-smokeA`、`s4t-smokeA2`�
 16. 降级（计划 §8 顺序）：Frozen Wan 本轮不跑；MotionMem 的 core 组未生成（`--no-core`）。
 17. aspen 名下 20 个干预 spec 改写为 GL 版（`*.gl.json`：换运行树/解释器/checkpoint/v1_store/显存比例，run_root 不变），全部 68 个干预 spec 重排到 GL 12 条队列（`queues/samepX-*.sh`：只翻绕向与置零在前，按 j 升序），第二链 `chains/chain2X-*.sh`（samepX → noise）。aspen 两卡改跑其 4 个噪声 spec（约 78 局）。GL 的 g0a、g0b 噪声 spec 排在 samepX 之后。
 18. 噪声对照阶段原 `.hold` 暂存后恢复；GL 占位 2 最后一个 worker 的变体录制在供体生成后停掉（不再使用）。
+19. 08:45 停发新局：干预 923/949、噪声 94/118 时按清单停掉 GL `s4t-h0-chain2X`、`s4t-h1-chain2X`（aspen 通道已自行结束），先后 scancel 66195005、66195004（各自完工后提前释放）与 66195002、66195003；GL 只剩训练占位 65943150、65943151（未动）。
