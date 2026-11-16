@@ -64,3 +64,10 @@ aspen：`s4t-dl`、`s4t-prep-rs`、`s4t-prep-vr`、`s4t-smokeA`、`s4t-smokeA2`�
 9. **GL 作业步结束把 GPU 重置回独占模式**（11-10 已知）：c 通道被停、冒烟作业步结束、用 srun 查 nvidia-smi 后，同占位其他作业步第二局起 Vulkan `ErrorInitializationFailed` / sidecar `CUDA-capable device(s) is/are busy or unavailable`。处置：停掉全部 GL 通道（按确切名，日志移入 `failed-cmode/`），`sp_swap_prep requeue` 重排 n/vrec/noise 未完成 spec，改为**每占位一个长 srun 作业步**（`rs/motion/chains/hold_runner.sh`：a、b 并行，a 结束后接 c；启动器 `rs/motion/gl_holds.sh`，tmux `s4t-h{0..3}-chain1`），此后不再对占位起其他 srun。之后无新增 Vulkan/busy 错误。
 10. aspen spec 的 `motion_prov_relax` 加 `driver`（aspen 驱动 570.195.03 vs checkpoint 记录 595.71.05；用户「暂时不考虑不同硬件」），只改 aspen spec，GL 不变；该字段不进运行身份。
 11. 阶段顺序：噪声对照队列暂存（`noise-*.sh.hold`），第一链只跑 n → vrec；第二链 samep → noise → samepcore（`chains/chain2-*.sh`），让干预尽早开始。
+12. 显存比例 0.22 在 aspen 1 号卡实测 1 局 xhard 无 OOM 后，GL 改为每卡 3 通道、0.22（GL spec 与队列同步改，`xla_mem_fraction` 不进运行身份），停掉 4 个长作业步、`requeue` n/vrec 后用 `chains/hold_runner3.sh`（a、b、c 并行）重起。
+13. 追加 4 个 GL 占位的请求被权限拦截（超出计划批准的 4 个），未提交，留待用户早上决定。
+14. MotionMem 不干预 RouteStick（本局池 60 局）：easy 8/8、medium 12/16、hard 10/16、xhard 7/20，合计 37/60；N 可达干预位置 291/361。
+15. 变体录制慢（约 100–130 s/段，每 chunk 重载模型），落盘 882/941 时（美东 04:35）即生成供体，未等最后一个 worker 与失败 spec 补录：`SAMEP_VREC entries=941 records=882 missing=59`；`DONOR_ENC=FAIL windows=1029 bad=456 maxabs=0.03125`（原样重建局录制编码 vs 自然局在线编码，差值在 bf16 量级，按 R9 记录不停）；`SP_SAMEP_GROUPS S_swing=265 S_side=198 S_both=201 Z=285 no_record=191 excluded=1`；`DONORS_SAMEP=PASS runs=949 specs=68`。
+16. 降级（计划 §8 顺序）：Frozen Wan 本轮不跑；MotionMem 的 core 组未生成（`--no-core`）。
+17. aspen 名下 20 个干预 spec 改写为 GL 版（`*.gl.json`：换运行树/解释器/checkpoint/v1_store/显存比例，run_root 不变），全部 68 个干预 spec 重排到 GL 12 条队列（`queues/samepX-*.sh`：只翻绕向与置零在前，按 j 升序），第二链 `chains/chain2X-*.sh`（samepX → noise）。aspen 两卡改跑其 4 个噪声 spec（约 78 局）。GL 的 g0a、g0b 噪声 spec 排在 samepX 之后。
+18. 噪声对照阶段原 `.hold` 暂存后恢复；GL 占位 2 最后一个 worker 的变体录制在供体生成后停掉（不再使用）。
