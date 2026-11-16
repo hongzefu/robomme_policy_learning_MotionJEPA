@@ -381,5 +381,15 @@ tmux new-session -d -s v17-eval "cd /scratch/hongze/robomme_policy_learning_Moti
 <tr><td>开工前自洽审查（<code>PLAN_CONSISTENCY_REVIEW=FAIL base=fe646be findings=4 blocking=1</code>）</td><td>①试评估与压测在 GPU0 并发（blocking）；②第 1–5 道无独立入口；③Beta 早于回填与评估修复；④降 3 份未经验证</td><td>①E5 改为先后执行；②B3 新增 <code>--check-only</code>；③§6 第 4、5 步把回填放在 Beta 前，评估侧修复后重打 Beta；④4 份 FAIL 再以 3 份压测，3 份也 FAIL 停下交用户。均为顺序与缺步补齐，不改用户口径</td></tr>
 </table>
 
+<h2>K. 实施中调整（开工后追加，不改写上文）</h2>
+<table>
+<tr><th>#</th><th>旧 → 新</th><th>理由与证据</th><th>审查</th></tr>
+<tr><td>1</td><td>第 7 道判定：<code>EVAL_LOAD_SMOKE=PASS … share2=PASS</code> → 「单份 g1 通过（模型加载、编码进程握手、整局完成）＋第 8 道按正式并发参数压测 PASS」；share2 子项改由第 8 道承担</td><td>试评估实测 <code>EVAL_LOAD_SMOKE=FAIL episodes=1 handshake=PASS share2=FAIL peak_mem_gb=78.9</code>：g1 单份 <code>SHARD_EXIT_CODE=0</code>（486 s）；g2b 为 SAPIEN 渲染器 <code>CUDA error … buffer.cpp 251: out of memory</code>。原因是 <code>--g6b</code> 模式写死每份 XLA 预占 0.45（v11 modulation 时代参数），2×0.45≈73 GB＋2×≈4 GB 渲染器与编码进程必超 80 GB，与正式配置无关（v11 的 w768-g6b 同样 FAIL，峰值 76.6 GB）。不改代码、不改参数，只换判定依据</td><td><code>ADJUST_REVIEW=PASS scale=same findings=3</code>（sonnet 一名）</td></tr>
+<tr><td>2</td><td>正式评估并发：每卡 4 份／32 片 → <b>每卡 3 份／24 片</b>（<code>EVAL_PER_GPU=3 EVAL_SHARDS=24</code>）</td><td>第 8 道：<code>EVAL_CAPACITY=FAIL per_gpu=4 peak_mem_gb=79.0 free_gb=1.0</code>（cap2 渲染器 OOM）；再压 3 份 <code>EVAL_CAPACITY=PASS per_gpu=3 peak_mem_gb=59.6 free_gb=20.4</code>。按 K5 用户原话「如果不行的话就每卡三份」执行。评估池同时起全部分片、每卡槽位满即 <code>SLOT_REFUSED</code> 不排队，所以片数须同步降为 8×3=24（每片约 29 局，评估时长约多三分之一）</td><td>用户事先授权（K5）</td></tr>
+<tr><td>3</td><td>回填 resolved_sha256 的位置：主检出 → v17 工作树（同一提交树）</td><td>主检出当时须等 v16 上传结束才能切；该值只由配置与代码决定。试训读回 <code>CKPT_LOAD=PASS step=19 integration=context motion=1 leaves=59 resolved_sha256=21791b29…</code> 与回填值逐字相同</td><td>不改口径，无需审查</td></tr>
+<tr><td>4</td><td>主检出切换时点：等 v16 上传结束 → 用户选「a」提前切</td><td>v16 会话事后报告其上传 <code>EVAL_HF_VERIFY=PASS … mismatches=0</code>、<code>EXIT_CODE=0</code>，未受影响（req=a47a2e-11152205-1）</td><td>用户决定</td></tr>
+</table>
+<p class="small">实测时间线（美东 11-15）：21:50 编码环境修复 <code>WAN_ENV</code> 对上；22:12 <code>CHECK_ONLY=PASS head=fd20feb</code>；22:13–22:20 试训 <code>SMOKE20=PASS steps=20 save_load=PASS</code>（Step 0 loss 0.6635，与 0928 同组合 0.663759 吻合）；22:21–22:37 试评估；22:38–22:53 压测 4 份 FAIL；22:55–23:10 压测 3 份 PASS；23:12 正式训练起跑（tmux <code>v17-train</code>）。</p>
+
 </body>
 </html>
