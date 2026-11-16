@@ -211,11 +211,11 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
 <tr><th>#</th><th>事项</th><th>推荐</th><th>不这样做的代价</th></tr>
 <tr><td>1</td><td>X2：batch 128，而 lr 等照原版不缩放</td><td class="ok">用户 11-16 已定：「1同意」</td><td>要缩放 lr 就多一处对原版的偏离，且缩放系数同样没有验证过；不缩放的风险是「batch 放大 4 倍、lr 不变」本身没验证过。要调请在开工前说</td></tr>
 <tr><td>2</td><td>X3：训练样本只用执行帧（605,611 帧）</td><td class="ok">用户 11-16 已定：「2同意」</td><td>照原版每帧都当样本，就有约一半样本（587,307 帧）落在演示帧上，而评估时策略不在这些帧出动作</td></tr>
-<tr><td>3</td><td>X8：换数据容器（每集 H5 ＋ memmap）</td><td>同意，数值不变</td><td>照原版写 LeRobot 数据集预计多花数小时，且转换时要在 GPU 上逐集抽 token，而现在 GPU 被占</td></tr>
+<tr><td>3</td><td>X8：换数据容器（每集 H5 ＋ memmap）</td><td class="ok">用户 11-16 已定：「3567都同意」</td><td>照原版写 LeRobot 数据集预计多花数小时，且转换时要在 GPU 上逐集抽 token，而现在 GPU 被占</td></tr>
 <tr><td>4</td><td>X11：是否另加一个执行 16 步的对照评估</td><td class="ok">用户 11-16 已定：不加，以后也不考虑 16 步（「4之后都不考虑16」）</td><td>不加：与 V11／V16／V17 的差异不能单独归因于记忆结构。加：16 步需要另选与 16 兼容的记忆间隔，又是一处偏离原版</td></tr>
-<tr><td>5</td><td>存档照原版保留策略只留最后一份（19999；原版 <code>save_interval</code> 10000、<code>keep_period</code> 20000、<code>max_to_keep=1</code>，已读 <code>checkpoints.py</code> 核实 10000 步存档会被删），传 HF <b>公开</b> bucket 并读回校验</td><td>同意</td><td>想保留第 10000 步存档就要在它被删前另行上传或改保留策略，偏离原版；改私有需另指定 bucket</td></tr>
-<tr><td>6</td><td>登记进 <code>docs/handoff/current.json</code>，V17 评估结束自动起跑</td><td>登记</td><td>不登记就要等用户在 V17 评估结束后（约美东 11-17 早上 4–5 点）手动说开工，显卡空等</td></tr>
-<tr><td>7</td><td>第一轮只有前视图的帧库（约 15 GB）获批后删除</td><td>删除</td><td>不删只多占约 15 GB，本版不会再读它</td></tr>
+<tr><td>5</td><td>存档照原版保留策略只留最后一份（19999；原版 <code>save_interval</code> 10000、<code>keep_period</code> 20000、<code>max_to_keep=1</code>，已读 <code>checkpoints.py</code> 核实 10000 步存档会被删），传 HF <b>公开</b> bucket 并读回校验</td><td><span class="ok">用户 11-16 已定：「3567都同意」</span></td><td>想保留第 10000 步存档就要在它被删前另行上传或改保留策略，偏离原版；改私有需另指定 bucket</td></tr>
+<tr><td>6</td><td>登记进 <code>docs/handoff/current.json</code>，V17 评估结束自动起跑</td><td class="ok">用户 11-16 已定：「3567都同意」</td><td>不登记就要等用户在 V17 评估结束后（约美东 11-17 早上 4–5 点）手动说开工，显卡空等</td></tr>
+<tr><td>7</td><td>第一轮只有前视图的帧库（约 15 GB）获批后删除</td><td class="ok">用户 11-16 已定：「3567都同意」</td><td>不删只多占约 15 GB，本版不会再读它</td></tr>
 </table>
 <p>逐文件、逐函数的实现细节见第二部分。</p>
 
