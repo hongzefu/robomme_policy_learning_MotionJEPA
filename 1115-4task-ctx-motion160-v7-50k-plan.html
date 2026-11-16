@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4task context 运动记忆计划</title>
+<style>
+:root{--bg:#fff;--fg:#1d1d1f;--muted:#5f6368;--line:#d7dbe0;--code:#f4f5f7;--accent:#1a5fb4;--warn:#9a3412;--ok:#166534}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#15171a;--fg:#e6e6e6;--muted:#a0a4aa;--line:#33373d;--code:#1f2227;--accent:#7fb2ff;--warn:#f0a36b;--ok:#7bd88f}}
+:root[data-theme="dark"]{--bg:#15171a;--fg:#e6e6e6;--muted:#a0a4aa;--line:#33373d;--code:#1f2227;--accent:#7fb2ff;--warn:#f0a36b;--ok:#7bd88f}
+body{background:var(--bg);color:var(--fg);font:15px/1.7 -apple-system,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;max-width:1100px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:1.6em;border-bottom:2px solid var(--line);padding-bottom:.3em;margin-top:2em}
+h2{font-size:1.25em;margin-top:1.8em;border-left:4px solid var(--accent);padding-left:.5em}
+h3{font-size:1.05em;margin-top:1.4em}
+table{border-collapse:collapse;width:100%;margin:.8em 0;font-size:.92em;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:6px 8px;vertical-align:top;text-align:left}
+th{background:var(--code)}
+code{background:var(--code);padding:1px 4px;border-radius:3px;font-size:.9em;word-break:break-all}
+pre{background:var(--code);padding:10px 12px;border-radius:6px;overflow-x:auto;font-size:.86em;line-height:1.5}
+pre code{background:none;padding:0}
+blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color:var(--muted)}
+.warn{color:var(--warn);font-weight:600}
+.ok{color:var(--ok);font-weight:600}
+.small{font-size:.88em;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<h1 style="margin-top:0">1115 4task 512 帧记忆＋motion160（旧 v7 encoder ep72）context 版 50k 训练与本机 692 局评估计划（第二版：按两轮对抗审查修订）</h1>
+
+<blockquote>
+<p><b>权威性与授权边界</b>：本文件是「把 54.62% 那条 512+motion modulation run 换成 context 模式、其余一致再训一个」的唯一现行计划。<b>只规划不实施</b>：写代码、修环境、起 GPU、上传都要等用户对本文件第二版给出开工令（AGENTS.md 第 2 条）。写计划期间只做了只读核实。</p>
+<p><b>版本</b>：第一版 <code>5f55b5e</code>（11-15 美东 21 点）。第二版按两轮对抗审查修订：本会话 workflow（26 个 sonnet，18 条 finding，成立 12、驳回 6）＋用户贴来的独立审计（4 项 P1、5 项 P2，锚点 <code>5f55b5e</code>）。逐条处置见 J 节。用户 11-15 已对 8 项待确认事项全部表态（§8）。</p>
+<p><b>代码锚点</b>：policy 仓分支 <code>v17-4task-ctx-motion160-v7-50k</code>，从 <code>v11-4task-modul-wantp768-50k@c55a6bc</code> 切出（理由见 §2.2）。写计划的工作树 <code>/scratch/hongze/robomme_policy_learning_MotionJEPA/.claude/worktrees/v17-plan</code> 只用于写计划；切主检出前释放（§6 第 3 步）。</p>
+<p><b>被对照的原 run</b>：<code>v2-1600ep-m8x8-modul-motion-b128-80k</code>，TRAIN_HEAD <code>2f10473161b760f16d9240d3c2959ff326cde66b</code>（commitV10.2Beta），档案在 v16 分支 <code>docs/training-doc/v2-1600ep-m8x8-modul-motion-b128-80k/</code>。GL A40 692 局：@50000 <b>54.62%</b>。</p>
+<p><b>外部依赖锚点（P-LINEAGE）</b></p>
+<ul>
+<li>encoder ckpt：<code>v1-store/external/motionjepa/wan-full1600-filter2-b176x4-72ep-a/checkpoint_epoch_72.pt</code>，477432433 字节，sha256 <code>0c1986297ccc0ab1913910f33a09ec74ba4c208844d0f5d72dd7ba59e0d9e3ca</code>。</li>
+<li>encoder 训练源：同目录 <code>config.yaml</code> 的 <code>data.data_root=/scratch/hongze/dataset-local-a100-4task-full1600</code>；其 <code>control/source_pin.json</code>：<code>revision=604f16da36d6b6d175884df8fb687dc08e0a36eb</code>、<code>manifest_sha256=df992cdf5a768ae0f368e520b0d7be28a68ed4ce6ca6201967cf5d6654cf2bb9</code>、<code>episodes=1600</code>、<code>status=PASS</code>；<code>control/scope.json</code>：revision 同上、episodes 1600、entries 2800。</li>
+<li>VLA 库源：<code>v1-store/datasets/4task-v2-1600ep-604f16da/meta/input_manifest.json</code>（文件 sha256 <code>655e64b4fd033aea1ff79a1e5ad47f886a148592496759ed2a667fe167c57d86</code>，4 个合并 H5）；合并记录 <code>docs/dataset-build-doc/4task-v2-1600ep-604f16da/records/MERGE_DONE.json</code>：<code>source_pin={repo_id: HongzeFu/robomme-4task-h5-20260912-v2, revision: 604f16da…, manifest_sha256: df992cdf…}</code>；同目录 4 份 <code>record_dataset_&lt;任务&gt;_episode_map.json</code>（每行含 member、h5_sha256）。</li>
+<li>相等的证据：encoder 侧与 VLA 侧的 <code>revision</code>、<code>manifest_sha256</code> 逐字相同；motion 表 <code>provenance.input_manifest_sha256</code> 恰等于 VLA 库 input_manifest 的文件 sha256。独立审计只读比对 1600 份原始 H5 记录与 4 份合并 H5 摘要，均一致。起跑前由新闸门（§5 第 1 道）把这条四环链机械复核一遍。</li>
+</ul>
+<p><b>commit 体例</b>：功能 <code>commitV17.&lt;n&gt;</code>，起跑前 <code>commitV17.&lt;n&gt;Beta</code>，子代理 <code>sub/&lt;编号&gt;: </code>。tmux 前缀 <code>v17-</code>。</p>
+</blockquote>
+
+<h1>第一部分（给人看）</h1>
+
+<h2>0. 白话总览（先读这一节）</h2>
+<p><b>要做什么</b>：54.62% 那个模型，是把「历史画面记忆」和「旧 encoder 算出的运动记忆」用 modulation 方式喂给动作网络训出来的。这次只换喂法，改成 context 方式：把记忆直接放进大模型的输入序列最前面，和当前画面、语言指令一起处理。其余东西全部照抄原模型：同一份数据、同一份运动记忆表、同一个 encoder、同样的训练设置，也是训 5 万步。训完在这台机器上跑 692 局仿真评估，看成功率。</p>
+<p><b>这个组合以前没训过</b>，只在 9 月 28 日测过速度：8 张卡每步约 2 秒，每张卡用约 42 GB 显存。按这个速度，训满 5 万步约 28–29 小时。</p>
+<p><b>整个流程分 6 步</b>：</p>
+<ol>
+<li><b>改代码</b>（约 2–3 小时，不占显卡）：新建配置文件；把上一条训练的启动脚本复制一份并改对；把评估脚本升级到每卡同时跑 4 份的版本，并让它认识 context 模型。</li>
+<li><b>修复评估用的运动编码环境</b>（约 10–20 分钟，不占显卡）：评估时要现场把仿真画面算成运动记忆，这套软件环境 10 月 21 日被别的任务换成了新版，和当初建运动记忆表的版本对不上。按仓库自己锁定的版本装回去，评估完再装回新版，不影响别的任务。</li>
+<li><b>起跑前检查</b>（约 15 分钟）：核对数据确实同源、输入文件逐字节和原模型一致、配置和原模型只差两处。</li>
+<li><b>小规模试跑</b>（约 40–60 分钟）：先训 20 步，确认训练、存档、退出都正常；再拿这 20 步的存档试评估几局，确认评估能加载模型、现场算运动记忆；同时按「每卡 4 份」压测一次显存。试评估通过，才开始正式训练。</li>
+<li><b>正式训练 5 万步</b>（约 28–29 小时，占满 8 张卡）：每 5000 步存一次档，边训边传到 HuggingFace 公开存储并读回校验。</li>
+<li><b>正式评估 692 局</b>（约 75–100 分钟）：用第 5 万步的存档，随机种子 7，每卡同时跑 4 份；压测时显存不够就每卡 3 份。</li>
+</ol>
+<p><b>开工后约 1.5 天出结果</b>。最大的不确定是评估那一侧：这套旧 encoder 的现场计算从没在这台机器的评估流程里跑过，所以第 4 步专门先试评估。</p>
+
+<h2>1. 已定口径（含用户原话）</h2>
+<table>
+<tr><th>#</th><th>已定口径</th><th>依据</th></tr>
+<tr><td>K1</td><td>context 模式，其余与 54.62% 那条 run 一致</td><td>用户原话（11-15）：「给出方案 54.62% 那条 学习型 encoder wan-full1600-filter2-b176x4-72ep-a（旧 4task v7 encoder，ep72），每窗输出 1×768 训练配置 512 帧记忆 + motion，modulation，50k 给出方案再训一个 但是用context模式其他保持一致」</td></tr>
+<tr><td>K2</td><td>训 5 万步：<code>--num_train_steps=50001</code>，最后存档为第 50000 步，共 10 份；学习率与原 run 前 5 万步逐步相同（warmup 后恒定 5e-5）</td><td>同上「50k」</td></tr>
+<tr><td>K3</td><td>每帧 8×8，帧记忆 8 帧共 512 个</td><td>用户原话（11-14）：「我们以后都约定，就是对于四 task 都用八乘八的每帧。」</td></tr>
+<tr><td>K4</td><td>encoder 与训练数据必须同源，血缘闸门不通过就停，不得豁免</td><td>用户原话（10-27）：「加入一个强约束，以后 encoder 和 VI 必须是同一个数据集，不可以出现混用的情况。」</td></tr>
+<tr><td>K5</td><td>评估每卡同时 4 份；压测显存不够就每卡 3 份，不再问</td><td>用户原话（11-15）：「然后每卡四份同意，如果不行的话就每卡三份。」</td></tr>
+<tr><td>K6</td><td>存档传 HuggingFace <b>公开</b>存储，读回校验通过才算备份</td><td>用户原话（11-15）：「上传还是公开的 Hugging Face。」</td></tr>
+<tr><td>K7</td><td>评估用的运动编码环境原地修复（方案 A），评估完还原</td><td>用户原话（11-15）：「同意选 A」</td></tr>
+<tr><td>K8</td><td>工程故障自己修、事后汇报；只有改训练数值语义、资源超 5 倍、破坏性操作、血缘不通过才停</td><td>用户原话（11-12）：「以后这种工程问题你都要自己解决，不要再来问我，不要停止」</td></tr>
+<tr><td>K9</td><td>54.62% 是学校集群 A40 上测的，只作跨环境参考；不在本机重测原 modulation 模型</td><td>原模型存档所在私有存储当前账号不可见；用户 11-15「同意」（§8 第 6 项）</td></tr>
+</table>
+
+<h2>2. 已核实的事实</h2>
+<h3>2.1 输入与资源</h3>
+<table>
+<tr><th>#</th><th>事实</th><th>证据</th></tr>
+<tr><td>1</td><td>训练设置 <code>mme_vla_suite_b128_80k</code> 与原 run 逐字段相同</td><td><code>git show c55a6bc:src/mme_vla_suite/training/config.py</code>：batch 128；<code>CosineDecaySchedule(warmup_steps=5_000, peak_lr=5e-5, decay_steps=80_000, decay_lr=5e-5)</code>；clip 1.0；save_interval 5000；keep_period 5000；ema 0.999；<code>fsdp_devices=8</code>；<code>num_workers=16</code>；pi05_base。与 <code>2f10473</code> 同名条目对比零差异（两轮审查均确认）</td></tr>
+<tr><td>2</td><td>原 run 的记忆配置</td><td><code>git show 2f10473:src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-8frame-8x8-motion.yaml</code>：budget 512、token_per_image 64、modulation／1024、motion dim 768／budget 160／stride 16／33 帧窗／demo ≥17 真实帧 repeat_last／store_path …/motion／source_run wan-full1600…ep72／online_gpu 4</td></tr>
+<tr><td>3</td><td>现成的 <code>perceptual-framesamp-context-8frame-8x8-motion.yaml</code> 不能用</td><td>它指向旧 40ep 库、旧 encoder <code>wan-v8-filter10-72ep-a</code>、budget 96</td></tr>
+<tr><td>4</td><td>输入文件在盘且与原 run 逐字节相同</td><td>本机 sha256：motion 表 <code>motion_token.f32.bin</code> = <code>03fb46e150dd9015f264f9bd8f08b35883d84da40e9e8080147d2af5fef9b6c5</code>（219082752 字节 = 71316×768×4）；<code>store_meta.json</code> = <code>d3a518011c80a115f7b398458a510a6f128f47e76c03fc251e59dab4c9c56268</code>（layout <code>motion-768-grid16-demopad17-v1</code>、71316 行）；norm = <code>856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173</code>；encoder = <code>0c1986297ccc0ab1913910f33a09ec74ba4c208844d0f5d72dd7ba59e0d9e3ca</code>。与原 launch.md 逐字相同。<code>framesamp-8x8</code> 292G 在盘</td></tr>
+<tr><td>5</td><td>速度与显存</td><td>0928 <code>ctx-stock-scaling-20260928</code>（v16 分支档案）：同库同 encoder、context＋motion160、8 卡 FSDP8 b128，<b>1.979 s/步</b>，每卡显存峰值 41769–41787 MiB，跑在 commit <code>6db0e0a</code>；该档案 <code>history-crosscheck.json</code>：与原 run 只差融合方式与输出宽度</td></tr>
+<tr><td>6</td><td>资源</td><td>8 卡空闲；<code>/scratch</code> 剩 883G；本 run 10 份存档约 126 GB</td></tr>
+</table>
+
+<h3>2.2 为什么用 11 月 9 日 v11 的代码</h3>
+<p><code>git diff --stat 2f10473 c55a6bc -- src/mme_vla_suite/{models,training,datastore,shared,policies}</code>：8 文件 +379/−19，全是 Wan 池化那条新增的分支，<b>模型目录零改动</b>。对比 v16 HEAD：<code>2f10473..b5bdccf</code> 同范围 37 文件 +2544/−100，其中 <code>motion_store.py</code> 写入布局改成了 <code>motion-v10-8x256-…</code>，dataloader 换了契约检查，离原 run 更远。（第一版误写为「128 文件 +22440」，已更正。）注意 <code>2f10473</code> 不是 <code>c55a6bc</code> 的祖先，两者只是代码树相近。</p>
+
+<h3>2.3 评估一侧</h3>
+<table>
+<tr><th>#</th><th>事实</th><th>证据</th></tr>
+<tr><td>1</td><td>评估时运动记忆必须现场算</td><td>训练读离线表；仿真每局都是新画面，表里没有。评估进程每满一个 33 帧窗，就让一个单独的编码进程（sidecar）用 Wan VAE＋v7 encoder 算出 1×768。54.62% 在 GL 上评估时同样如此</td></tr>
+<tr><td>2</td><td>编码进程启动时会核对软件指纹</td><td><code>c55a6bc:src/mme_vla_suite/policies/motion_client.py</code> 的比对键清单含 <code>encoder_src_sha256</code>、<code>module_sha256</code> 等，与离线表 <code>store_meta.json</code> 逐项比，不等即拒绝；<code>MMEVLA_MOTION_PROV_RELAX</code> 只用于硬件键</td></tr>
+<tr><td>3</td><td class="warn">编码环境已被改过，现状下握手会失败</td><td>环境位置写死为 <code>$V1_STORE/venvs/wan</code>（<code>motion_client.py</code>：<code>UV_PROJECT_ENVIRONMENT=v1/"venvs"/"wan"</code>）。离线表要求 <code>encoder_src_sha256=d00267e1…</code>；现场 <code>motion_jepa/models/wan_latent_encoder.py</code> 为 <code>40d8a33b…</code>，安装来源 <code>direct_url.json</code> 记 <code>commit_id=ee719fb…</code>，目录时间 10-21 02:20。v16 分支 10-21 起把 <code>scripts/dataset/wan/pyproject.toml</code> 的钉版改为 <code>MotionJEPA@ee719fb</code>（v10 八槽配对冒烟，commit <code>51e62a5</code> 一带）</td></tr>
+<tr><td>4</td><td>仓库自己锁定的版本就是对的</td><td><code>c55a6bc:scripts/dataset/wan/uv.lock</code> 钉 <code>motion-jepa … rev=2a484ad960ed6155321dc34def9011eb119f857f</code>；MotionJEPA 仓 <code>git show 2a484ad:src/motion_jepa/models/wan_latent_encoder.py | sha256sum</code> = <code>d00267e1…</code>，与离线表一致。所以「原地修复」= 在 v17 主检出按该锁文件把 <code>venvs/wan</code> 重装一遍</td></tr>
+<tr><td>5</td><td>评估检查脚本只认 modulation</td><td><code>c0826be:scripts/evaluation/check_checkpoint.py</code>：<code>assert cfg.token_per_image == 64 and cfg.integration_type == 'modulation'</code>，在登记表外；<code>run_shard.sh</code>（<code>set -euo pipefail</code>）起推理服务前必跑它，所以必须改</td></tr>
+<tr><td>6</td><td>每卡 4 份的评估栈来源</td><td>v15 <code>c0826be</code> 的 <code>local_692_pool.sh</code>：<code>EVAL_SHARDS</code> 默认 32、<code>EVAL_PER_GPU</code> 默认 4、<code>EVAL_MEM_FRACTION</code> 默认 0.2；试评估模式 <code>--g6b</code> 固定 10 片／每卡 2／0.45，输出 <code>EVAL_LOAD_SMOKE=PASS …</code>；空跑接口是环境变量 <code>DRY_RUN=1</code>。<code>c55a6bc..c0826be</code> 在 <code>scripts/evaluation</code> 只改 4 个文件</td></tr>
+<tr><td>7</td><td>其他在盘</td><td>BinFill 演示前缀库 <code>v1-store/demo-prefix/binfill-3b4de03a0b46</code>；预标错误清单在 c55a6bc 的 <code>docs/training-doc/finalckpt-nomotion59999-gl/records/preseeded-errors.json</code></td></tr>
+</table>
+
+<h2>3. 机制：context 与 modulation 只差记忆从哪里进动作网络</h2>
+<p>两种方式共用同一套记忆：帧记忆 512 个＋运动记忆最多 160 个 = 672 个记忆位置，按时刻排序。差别只在后面：</p>
+<ul>
+<li><b>modulation（原模型）</b>：记忆投到 1024 维，<b>不进</b>大模型输入，只给动作网络；动作网络 18 层每层多一个专门读记忆的注意力模块。大模型输入仍是 576 位（当前画面＋语言）。</li>
+<li><b>context（本次）</b>：记忆投到 2048 维，排在大模型输入最前面：[记忆 672 ‖ 当前画面 ‖ 语言]，输入变成 1248 位。记忆和画面、语言一起过 18 层；动作网络在每层原有的联合注意力里直接读到它。<b>每层不新增参数</b>。推理时这部分在去噪循环外算一次、缓存复用。</li>
+</ul>
+<table>
+<tr><th>环节</th><th>形状</th><th>modulation（原）</th><th>context（本次）</th><th>改不改</th></tr>
+<tr><td>读帧记忆</td><td>(B,512,2048)</td><td colspan="2">同一个 <code>framesamp-8x8</code> 库、同一采样</td><td>不改</td></tr>
+<tr><td>读运动记忆</td><td>(B,160,768)＋时间码＋mask</td><td colspan="2">同一个 <code>motion/</code> 表、同一网格与 demo 补帧</td><td>不改</td></tr>
+<tr><td>记忆投影</td><td>(B,672,D)</td><td>D=1024</td><td>D=2048</td><td class="warn">改宽度（两边都从零训投影层）</td></tr>
+<tr><td>进入位置</td><td>—</td><td>单独传给动作网络</td><td>大模型输入 (B,1248,2048)</td><td class="warn">改</td></tr>
+<tr><td>每层读取</td><td>动作 (B,20,1024)</td><td>18 层专用记忆注意力（新参数）</td><td>18 层原联合注意力（无新参数）</td><td class="warn">改</td></tr>
+<tr><td>损失</td><td>flow matching</td><td colspan="2">同一输出头、同一损失</td><td>不改</td></tr>
+</table>
+<p class="small">代码锚点（c55a6bc）：<code>models/integration/history_pi0.py::HistoryPi0.embed_memory／embed_prefix／compute_loss／sample_actions</code>、<code>history_gemma.py::HistoryBlock.__call__</code>、<code>models/representation/percep_mem.py</code>。逐层详解见 v16 分支 <code>1027-motion-memory-injection.md</code> 第 6、11 节。context 比 modulation 慢约一倍（672 位记忆要过大模型并反传），所以 5 万步约 28 小时，不是异常。</p>
+
+<h2>4. 时间线</h2>
+<table>
+<tr><th>步</th><th>内容</th><th>资源</th><th>估时</th></tr>
+<tr><td>1</td><td>改代码（两个子代理并行），审查、合并</td><td>CPU</td><td>2–3 h</td></tr>
+<tr><td>2</td><td>修复评估编码环境（先备份清单）</td><td>CPU＋网络</td><td>10–20 min</td></tr>
+<tr><td>3</td><td>起跑前检查：血缘、输入、配置、环境指纹、前置项</td><td>CPU</td><td>约 15 min</td></tr>
+<tr><td>4</td><td>小规模试跑：训 20 步 → 试评估 → 每卡 4 份显存压测 → 清理试跑产物</td><td>8 卡（试训）＋1 卡（试评估）</td><td>40–60 min</td></tr>
+<tr><td>5</td><td>正式训练，边训边传</td><td>8 卡</td><td>28–29 h</td></tr>
+<tr><td>6</td><td>正式评估 692 局</td><td>8 卡</td><td>75–100 min（每卡 3 份时约多 25 min）</td></tr>
+<tr><td>7</td><td>评估完把编码环境还原成 10-21 的版本；写结果档案</td><td>CPU</td><td>约 20 min</td></tr>
+</table>
+<p><b>对照基线</b>（只读引用）：原 modulation run @50000 54.62%（GL A40）；v11 Wan 池化 modulation 298/692 = 43.06%（本机）；v16 stage2 modulation 324/692 = 46.82%（本机，每卡 4 份）；无运动记忆 512 modulation 30.49%（GL）。本次是本机评估，与 54.62% 的差值要连同环境差异一起看。</p>
+
+<h2>5. 每一步怎么判定通过</h2>
+<table>
+<tr><th>#</th><th>检查什么</th><th>怎么查</th><th>通过说明什么</th><th>判定行</th></tr>
+<tr><td>1</td><td>encoder 与训练数据同源</td><td>新脚本按四环链比对：①VLA 库 input_manifest 的 4 个合并 H5 sha 与 <code>MERGE_DONE.files</code> 恰好相等；②4 份 episode_map 的文件 sha 等于 <code>MERGE_DONE.maps_sha256</code>、行数与任务对得上；③<code>MERGE_DONE.source_pin</code> 的 revision、manifest_sha256 与 encoder 侧 <code>source_pin.json</code>、<code>scope.json</code> 相等；④episode_map 的 1600 个成员与 encoder 侧 <code>scope.json</code> 的 1600 集逐条对上</td><td>encoder 训练用的和本次训练用的是同一批 1600 集</td><td><code>DATA_LINEAGE=PASS mode=v7-4ring encoder_ckpt=0c198629 encoder_source_pin=df992cdf vla_input_pin=655e64b4 files=4 members=1600 mismatches=0</code></td></tr>
+<tr><td>2</td><td>输入逐字节同原 run</td><td>四个 sha（§2.1 第 4 行，完整 64 位）＋表的 layout、行数、encoder 指纹</td><td>喂给模型的离线运动记忆与原 run 完全相同</td><td><code>INPUT_SHA=PASS motion_bin=03fb46e1 store_meta=d3a51801 norm=856c75ea encoder=0c198629 rows=71316</code></td></tr>
+<tr><td>3</td><td>配置只差两处</td><td>新配置与 <code>2f10473</code> 的原配置解析后逐键比，差集只能是 <code>integration_type</code>、<code>memory_token_dim</code></td><td>没有意外差异</td><td><code>CONFIG_CROSSCHECK=PASS yaml_diff=integration_type,memory_token_dim</code></td></tr>
+<tr><td>4</td><td>编码环境已修复</td><td><code>venvs/wan</code> 里 <code>wan_latent_encoder.py</code> sha == <code>d00267e1…</code>、安装来源 commit == <code>2a484ad</code>、<code>motion_inference</code> 模块 sha == 离线表 <code>module_sha256</code></td><td>评估现场算的运动记忆与建表时同一份代码</td><td><code>WAN_ENV=PASS motion_jepa=2a484ad encoder_src=d00267e1 module=af67fdd9</code></td></tr>
+<tr><td>5</td><td>起跑前置</td><td><code>preflight_train_launch.py</code>（运动表在帧库同级 <code>motion/</code>）＋显卡空闲＋磁盘≥400G＋代码与 Beta 一致且工作区干净</td><td>环境与路径就绪</td><td><code>PREFLIGHT=PASS n=&lt;n&gt;</code></td></tr>
+<tr><td>6</td><td>训 20 步试跑</td><td>20 步、存 1 份档（第 19 步）、正常退出、读回存档</td><td>context 前向反传、存档、恢复、退出都正常</td><td><code>SMOKE20=PASS steps=20 save_load=PASS</code></td></tr>
+<tr><td>7</td><td>试评估（训练前的硬前置）</td><td>用第 6 步的存档：GPU0 单份 1 局，再同卡 2 份各 1 局</td><td>评估能加载 context 模型、编码进程握手通过</td><td><code>EVAL_LOAD_SMOKE=PASS episodes=1 handshake=PASS share2=PASS peak_mem_gb=&lt;x&gt;</code>（脚本真实输出，落盘 <code>EVAL_LOAD_SMOKE.txt</code>）</td></tr>
+<tr><td>8</td><td>每卡 4 份显存压测</td><td>同一存档，GPU0 同卡 4 份、显存比例 0.2、各跑 1 局，记录 <code>nvidia-smi</code> 峰值</td><td>正式评估的并发能跑；4 份峰值余量 &lt;4 GB 或 OOM 判 FAIL，再以 <code>EVAL_PER_GPU=3</code> 压一次，PASS 则正式评估用每卡 3 份（K5）；3 份也 FAIL 则停下交用户</td><td><code>EVAL_CAPACITY=PASS per_gpu=&lt;4|3&gt; peak_mem_gb=&lt;x&gt;</code>（4 份的 FAIL 行属预期内分支，照实记录）</td></tr>
+<tr><td>9</td><td>正式训练前 300 步</td><td>loss 有限且下降、记忆投影梯度非零、稳态 1.9–2.2 s/步</td><td>与 0928 实测吻合</td><td>只记录不拦截</td></tr>
+<tr><td>10</td><td>训练完成</td><td>日志 <code>EXIT_CODE=0</code>；10 份存档齐；第 50000 步可读回、含运动参数、配置快照为 context</td><td>可评估</td><td><code>TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10</code>、<code>CKPT_LOAD=PASS step=50000 integration=context motion=1</code></td></tr>
+<tr><td>11</td><td>存档备份</td><td>逐份上传公开存储后读回比 sha、字节、对象数</td><td>可当备份</td><td><code>HF_VERIFY=PASS ckpts=10</code></td></tr>
+<tr><td>12</td><td>692 局评估</td><td>32 份汇总（或每卡 3 份时同样 32 份）</td><td>成功率</td><td><code>EVAL692=PASS episodes=692 success=&lt;k&gt; rate=&lt;x&gt; preseeded_errors=9 new_errors=&lt;n&gt;</code></td></tr>
+<tr><td>13</td><td>编码环境还原</td><td>按 v16 <code>b5bdccf</code> 的 <code>scripts/dataset/wan/uv.lock</code> 装回</td><td>v16 那条线照常可用</td><td><code>WAN_ENV_RESTORED=PASS motion_jepa=ee719fb</code></td></tr>
+</table>
+
+<h2>6. 实施步骤</h2>
+<table>
+<tr><th>步</th><th>内容</th><th>通过条件</th></tr>
+<tr><td>0</td><td>开工令后派 1 个审查代理通读第二版找自相矛盾</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS</code></td></tr>
+<tr><td>1</td><td>并行派 S1（训练侧）、S2（评估侧）写代码</td><td>各自验收行（C 节）</td></tr>
+<tr><td>2</td><td>逐个审查 → 合并进 v17 → 合并后检查 → 推送</td><td><code>PRE_MERGE_REVIEW=PASS</code>、<code>POST_MERGE_REVIEW=PASS</code></td></tr>
+<tr><td>3</td><td>释放写计划的工作树（确认干净且已推送后 <code>git worktree remove</code>）；确认 v16 上传会话已结束；主检出切到 v17</td><td>主检出在 v17、<code>git status --short</code> 为空</td></tr>
+<tr><td>4</td><td>备份 <code>venvs/wan</code> 包清单 → 按 v17 锁文件修复；在主检出用 <code>check_checkpoint.py --resolved-sha256 &lt;B1&gt;</code> 复算并回填登记表，单独提交推送</td><td>回填提交已推送</td></tr>
+<tr><td>5</td><td>打 Beta commit；<code>run_4task_ctxmotion160_50k.sh $TRAIN_HEAD --check-only</code> 只跑起跑前检查（不训练）</td><td>第 1–5 道 PASS</td></tr>
+<tr><td>6</td><td>训 20 步试跑 → 试评估（等它结束）→ 每卡 4 份压测（不过就再按每卡 3 份压一次）→ 清理试跑产物。这一步里若因试评估失败改了评估侧代码，修复合入后<b>重打 Beta</b> 并重跑 <code>--check-only</code></td><td>第 6、7、8 道 PASS（第 7 道不过就停在这里修评估侧，不起正式训练；每卡 3 份也不过则停下交用户）</td></tr>
+<tr><td>7</td><td>正式训练；第 5000 步存档出现后起上传</td><td>第 9、10、11 道</td></tr>
+<tr><td>8</td><td>正式评估</td><td>第 12 道</td></tr>
+<tr><td>9</td><td>还原编码环境；写结果档案、提交推送</td><td>第 13 道</td></tr>
+</table>
+
+<h2>7. 子代理分工与合并（简述）</h2>
+<p>两块并行，互不碰对方文件。<b>S1 训练侧</b>：新配置文件、新训练启动脚本（含血缘四环检查）、上传脚本。<b>S2 评估侧</b>：<code>scripts/evaluation/</code> 下 4 个文件，从 v15 移植每卡 4 份的版本，让检查脚本按每个 run 登记的模式核对（不再写死 modulation），登记正式和试跑两份存档，并给试评估加一个按正式并发压测的模式。每块合并前由一个审查代理看 diff，合并后跑语法检查和空跑。修环境、起跑、监控、写档案由主会话做。</p>
+
+<h2>8. 用户已确认的事项（11-15）</h2>
+<table>
+<tr><th>#</th><th>事项</th><th>结论</th></tr>
+<tr><td>1</td><td>按两轮审查修订计划</td><td>同意（本版）</td></tr>
+<tr><td>2</td><td>编码环境</td><td>方案 A：原地按仓库锁文件修复，评估完还原。「同意选 A」</td></tr>
+<tr><td>3</td><td>试评估是正式训练的硬前置</td><td>同意</td></tr>
+<tr><td>4</td><td>评估并发</td><td>每卡 4 份，不行就 3 份。「然后每卡四份同意，如果不行的话就每卡三份。」</td></tr>
+<tr><td>5</td><td>上传</td><td>沿用上传脚本已验证的凭据机制，传公开存储。「上传还是公开的 Hugging Face。」</td></tr>
+<tr><td>6</td><td>基线 v11、run 名 <code>v2-1600ep-m8x8-ctx-motion-b128-50k</code>、不在本机重测原模型、只跑种子 7</td><td>同意</td></tr>
+<tr><td>7</td><td>追认 v17 分支首推</td><td>同意（11-15「同意。」）</td></tr>
+<tr><td>8</td><td>主检出等 v16 上传结束再切</td><td>同意</td></tr>
+<tr><td>—</td><td>是否登记跨会话状态文件</td><td>用户未表态，按不登记处理；用户要登记时再写</td></tr>
+</table>
+
+<h1>第二部分（技术细节，供 agent 追踪）</h1>
+
+<h2>A. 前置声明与红线</h2>
+<ul>
+<li><b>R1 P-LINEAGE</b>：<code>DATA_LINEAGE</code> 由 runner 调用的四环脚本产生，FAIL 或缺行即退出，不得豁免。</li>
+<li><b>R2 只改两键</b>：新配置相对原 run 配置只许 <code>integration_type</code>、<code>memory_token_dim</code> 不同（第 3 道机械判）。</li>
+<li><b>R3 训练代码不动</b>：<code>src/</code> 下只新增一个 yaml，不改任何 <code>.py</code>；TrainConfig 只用启动覆盖 <code>--num_train_steps=50001</code>。</li>
+<li><b>R4 新名字</b>：正式 run、试跑 run（<code>v17-smoke20</code>）、评估目录（<code>local692-ctx-motion160-50k</code>、<code>v17-g6b</code>、<code>v17-cap4</code>）全新；试跑重跑前一次清完全部产物位置。</li>
+<li><b>R5 Beta 锚点</b>：正式训练从干净的 <code>commitV17.&lt;n&gt;Beta</code> 起跑。</li>
+<li><b>R6 不用工作树脚本跑主数据</b>：合并进主检出后才跑第 3 步起的一切。评估脚本按自身位置推仓库根（环境、前缀库路径都相对它），所以 S2 的验收只做语法检查与 <code>DRY_RUN=1</code> 空跑，真实验收在主检出做。</li>
+<li><b>R7 tmux 清单</b>：<code>v17-wanenv</code>、<code>v17-smoke</code>、<code>v17-g6b</code>、<code>v17-cap4</code>、<code>v17-cap3</code>（仅 4 份不过时）、<code>v17-train</code>、<code>v17-ckptup</code>、<code>v17-eval</code>、<code>v17-wanrestore</code>；只按此清单 <code>kill-session -t '=名'</code>。</li>
+<li><b>R8 停工判据</b>：只在改训练数值语义、资源超 5 倍、破坏性操作、血缘 FAIL 时停；OOM、NaN、掉卡先查根因，属工程故障就修复重跑并汇报，要改 batch／卡数／模型才能过即停。</li>
+<li><b>R9 切主检出</b>：先确认写计划工作树干净且已推送并 <code>git worktree remove</code>（不用 <code>--ignore-other-worktrees</code>）；确认 <code>v16-up-eval-m</code> 已结束（它运行中按需 import 主检出的 v16 代码）；主检出 <code>git status --short</code> 为空。</li>
+<li><b>R10 凭据</b>：上传沿用上传脚本自带机制（脚本内 <code>HF_HOME=v1-store/cache/hf</code>、从 <code>v1-store/secrets/hf.env</code> 读 HongzeFu 令牌，v11 用它传成功过）；不打印令牌。</li>
+<li><b>R11 编码环境修复可逆</b>：修复前把 <code>venvs/wan</code> 的包清单（<code>uv pip freeze</code>）与 <code>motion_jepa*.dist-info/direct_url.json</code> 存到 <code>v1-store/logs/v17-wanenv-before.txt</code>；修复前确认没有进程在用该环境（只读 <code>ps</code> 查 <code>venvs/wan</code>，排除 <code>wan-stage2-rgbstate</code>）；评估完按 v16 锁文件还原。</li>
+</ul>
+
+<h2>B. 逐文件改动清单</h2>
+
+<h3>B1 新建 <code>src/mme_vla_suite/models/config/robomme/perceptual-framesamp-ctx-8frame-8x8-motion-v7ep72.yaml</code>（S1）</h3>
+<p>由 <code>git show 2f10473:…/perceptual-framesamp-modul-8frame-8x8-motion.yaml</code> 逐字节复制，只改首行注释与两键：</p>
+<pre><code># context 8×8 开启 motion（4task 原库、v7 ep72 encoder）：由 54.62% 那条 modul run 的 YAML 派生，只改接入方式与输出宽（1115 计划 R2）。
+…（与原文件逐行相同）…
+integration_type: context        # 原 modulation
+memory_token_dim: 2048           # 原 1024
+…（motion 节与原文件逐行相同：dim 768、budget 160、stride 16、store_path …/motion、source_run wan-full1600-filter2-b176x4-72ep-a/checkpoint_epoch_72.pt#encoder、online_gpu 4）…</code></pre>
+
+<h3>B2 新建 <code>scripts/training/check_lineage_v7_4task.py</code>（S1）</h3>
+<p>v16 的 <code>check_data_lineage.py member-pin</code> 要求 encoder 数据根有 <code>control/build_spec.json</code>、<code>source_manifest.json</code>，这个 9 月的旧数据根没有（只有 <code>source_pin.json</code>、<code>scope.json</code> 等），所以写一个适配版，结构照 member-pin 的四环：</p>
+<table>
+<tr><th>环</th><th>比对</th></tr>
+<tr><td>0</td><td>encoder ckpt sha 复算 == 期望值；由同目录 <code>config.yaml</code> 的 <code>data.data_root</code> 定位 encoder 数据根</td></tr>
+<tr><td>1</td><td>VLA <code>meta/input_manifest.json</code> 的逐文件 sha 与 <code>MERGE_DONE.json</code> 的 <code>files</code> 恰好相等（4 个合并 H5）</td></tr>
+<tr><td>2</td><td>4 份 <code>record_dataset_&lt;任务&gt;_episode_map.json</code> 的文件 sha 等于 <code>MERGE_DONE.maps_sha256</code>，任务集合与行数等于合并记录</td></tr>
+<tr><td>3</td><td><code>MERGE_DONE.source_pin.{revision, manifest_sha256}</code> == encoder 侧 <code>control/source_pin.json</code> 的同名键，且 == <code>scope.json.revision</code>；<code>source_pin.status==PASS</code>、<code>episodes==1600</code></td></tr>
+<tr><td>4</td><td>episode_map 的 1600 个成员（task、difficulty、episode、seed，及有的 h5 sha）与 encoder 侧 <code>scope.json.entries</code> 去重后的 1600 集逐条相等；任何一边多或少即 FAIL</td></tr>
+</table>
+<p>输入路径全部用绝对路径参数传入（R6）；输出 JSON 证据＋末行判定行（§5 第 1 道），FAIL 退出码非 0。附一个 CPU 单测：把一个成员的 seed 改掉应得 FAIL（环 4）。</p>
+
+<h3>B3 新建 <code>scripts/training/run_4task_ctxmotion160_50k.sh</code>（S1）</h3>
+<p>由 <code>c55a6bc:scripts/training/run_4task_wantp768_50k.sh</code>（270 行）复制后改：</p>
+<table>
+<tr><th>位置</th><th>原值</th><th>新值</th></tr>
+<tr><td><code>FORMAL_RUN／SMOKE_RUN</code></td><td>wantp768 名</td><td><code>v2-1600ep-m8x8-ctx-motion-b128-50k</code>／<code>v17-smoke20</code></td></tr>
+<tr><td><code>HC／HC_SHA</code></td><td>wantp768 yaml</td><td>B1 文件名与其 sha256</td></tr>
+<tr><td><code>MOTION</code></td><td><code>$DS/motion-wan-pool768</code></td><td><code>$DS/motion</code></td></tr>
+<tr><td><code>LATENTS_META_SHA</code> 与 G0 环 3（wan-latents）</td><td>池化表依赖</td><td>删除常量与环 3 及其参数传递</td></tr>
+<tr><td><b>G0 环 4（第一版漏改）</b></td><td>断言 <code>encoder_kind==wan_fixedpool768</code>、<code>readout</code>、<code>encoder_ckpt is None</code>、<code>parameter_count==0</code>、<code>pool_source_sha256</code>、<code>latent_root</code> 含 latents 摘要</td><td>整环重写为第 2 道检查：表根是 <code>$DS/motion</code> 实体目录、<code>store_meta.json</code> sha == <code>d3a51801…c268</code>、<code>motion_token.f32.bin</code> sha == <code>03fb46e1…b6c5</code>（写完整 64 位）、<code>layout=="motion-768-grid16-demopad17-v1"</code>（注意 c55a6bc 的 <code>ms.LAYOUT</code> 常量值需核对，与表不同时比字面量）、<code>num_rows==71316</code>、<code>provenance.encoder.checkpoint_sha256 == sha(encoder ckpt)</code>、<code>provenance.manifest_sha256==MANIFEST_ID</code>、<code>provenance.input_manifest_sha256 == sha(meta/input_manifest.json)</code>、<code>provenance.raw_dir == input_manifest.raw_dir</code>、<code>MMEVLA_MOTION_STORE</code> 未设置；去掉 <code>wan_pool768</code> 的 import。输出 <code>INPUT_SHA=PASS …</code></td></tr>
+<tr><td>G0 环 5（血缘）</td><td>池化表口径</td><td>调用 B2 脚本，传绝对路径；FAIL 即 <code>exit 4</code></td></tr>
+<tr><td>新增配置交叉核对</td><td>—</td><td>preflight 前：<code>git show 2f10473:&lt;原 yaml&gt;</code> 与 B1 都 <code>yaml.safe_load</code>，差集键必须恰为两键；输出 <code>CONFIG_CROSSCHECK=PASS …</code>（TrainConfig 不变已由两轮审查确认，runner 内不再做源文本比对）</td></tr>
+<tr><td>新增编码环境检查</td><td>—</td><td>读 <code>v1-store/venvs/wan</code> 内 <code>motion_jepa/models/wan_latent_encoder.py</code> sha 与 <code>direct_url.json</code> 的 commit，比离线表 <code>vae.encoder_src_sha256</code>、<code>module_sha256</code>；输出第 4 道判定行（训练本身不用这个环境，放在 runner 里是为了起跑前一次拦住）</td></tr>
+<tr><td>preflight</td><td>注释「不走 --motion-*」</td><td>改为带 motion 参数（表在帧库同级 <code>motion/</code>，与原 <code>mv2-prod-runner.sh</code> 相同）；参数名按 <code>c55a6bc:scripts/training/preflight_train_launch.py</code> 的 argparse 定义写死</td></tr>
+<tr><td>训练后读回</td><td>池化 kind 断言</td><td>断言快照 <code>integration_type=="context"</code>、<code>memory_token_dim==2048</code>、motion 开、无 <code>encoder_kind</code>；<code>motion_provenance.json</code> 的 encoder sha == <code>0c198629…</code> 且有 vae；最后一份存档含运动参数</td></tr>
+<tr><td>新增 <code>--check-only</code> 模式</td><td>—（原脚本 <code>--dry-run</code> 在全部检查之前退出，检查又在训练前一刻才跑）</td><td>执行 HEAD／clean 检查与第 1–5 道全部检查后输出 <code>CHECK_ONLY=PASS</code> 并退出，不检查显卡空闲、不训练；正式与试训照常在起跑前再跑一遍同样的检查</td></tr>
+<tr><td>不变</td><td colspan="2"><code>CONFIG=mme_vla_suite_b128_80k</code>、<code>NORM_SHA</code>、<code>MANIFEST_ID=4cd5a170…</code>、<code>STEPS=50001</code>、<code>EXPECT_CKPTS=5000…50000</code>、<code>TRAIN_TIMING_STEPS=300</code>、8 卡、wandb、JAX 缓存目录按 run 名、HEAD／clean／显卡空闲检查</td></tr>
+</table>
+
+<h3>B4 新建 <code>scripts/dataset/hf_export/run_ctxmotion160_ckpt_export.sh</code>（S1）</h3>
+<p>由 <code>c55a6bc:…/run_wantp768_ckpt_export.sh</code> 复制：bucket <code>HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1</code>，<b>去掉 <code>--private</code></b>；run 根改为本 run；<b><code>TRAIN_LOG</code> 默认改为 <code>$REPO/v1-store/logs/v17-train.log</code></b>（第一版漏改，旧值 <code>w768-train.log</code> 已有 <code>EXIT_CODE=0</code>，会让上传在等下一份存档时提前退出）；凭据机制保持脚本原样（R10）；保留逐份 <code>verified/&lt;step&gt;.done</code> 续传与末行 <code>HF_VERIFY=PASS ckpts=10</code>。</p>
+
+<h3>B5 评估栈（S2）</h3>
+<table>
+<tr><th>文件</th><th>改什么</th></tr>
+<tr><td><code>scripts/evaluation/local_692_pool.sh</code>、<code>run_shard.sh</code>、<code>check_shard.py</code></td><td>从 <code>c0826be</code> 原样取（每卡 4 份并行）。<code>local_692_pool.sh</code> 再改：默认 <code>RUN_NAME</code>（正式 <code>local692-ctx-motion160-50k</code>，试评估 <code>v17-g6b</code>）、默认 <code>POLICY=perceptual-framesamp-ctx-8frame-8x8-motion-v7ep72</code>（保留环境变量覆盖）；新增 <code>--g6b-capacity &lt;存档&gt; &lt;seed&gt;</code> 模式：GPU0 同卡起 <code>EVAL_PER_GPU</code>（默认 4）份、<code>EVAL_MEM_FRACTION</code>（默认 0.2）、各 1 局，期间 <code>nvidia-smi</code> 采样峰值，末行 <code>EVAL_CAPACITY=PASS|FAIL per_gpu=&lt;n&gt; peak_mem_gb=&lt;x&gt; free_gb=&lt;y&gt;</code>（余量 &lt;4 GB 或任一份 OOM 判 FAIL）。v15 里 raw9 专属分支保持其关闭态行为</td></tr>
+<tr><td><code>scripts/evaluation/check_checkpoint.py</code></td><td>从 <code>c0826be</code> 取，再改：RUNS 每条加 <code>integration</code> 字段（缺省视为 <code>'modulation'</code>，已有条目行为不变）；把 <code>assert cfg.token_per_image == 64 and cfg.integration_type == 'modulation'</code> 改为 <code>assert cfg.token_per_image == 64 and cfg.integration_type == run.get('integration', 'modulation')</code>；登记两项：<code>v2-1600ep-m8x8-ctx-motion-b128-50k</code>（steps <code>('50000',)</code>）与 <code>v17-smoke20</code>（steps <code>('19',)</code>），<code>integration='context'</code>、config <code>mme_vla_suite_b128_80k</code>、budget 512、motion 开、motion_budget 160、motion_source_run 同原 run、norm sha 同上、<code>resolved_sha256</code> 用 <code>check_checkpoint.py --resolved-sha256 &lt;B1&gt;</code> 在主检出复算后回填</td></tr>
+<tr><td>评估环境变量（沿用 v11/v15）</td><td><code>MMEVLA_MOTION_OVERFLOW=resample EXPECT_MOTION_STATS=1 EXPECT_DEMO_INJECT=1 CHUNK_EPISODES=20 EPISODE_WALL_S=2400 EVAL_TIMEOUT=14400 POLICY_CONFIG=mme_vla_suite_b128_80k</code>；max_steps 2000；编码进程卡号由 <code>run_shard.sh</code> 设为本片的卡</td></tr>
+</table>
+
+<h3>B6 编码环境修复与还原（主会话，不改仓库文件）</h3>
+<pre><code># 修复（主检出已在 v17，scripts/dataset/wan/uv.lock 钉 2a484ad）
+cd /scratch/hongze/robomme_policy_learning_MotionJEPA
+UV_PROJECT_ENVIRONMENT=$PWD/v1-store/venvs/wan uv pip freeze --python v1-store/venvs/wan/bin/python &gt; v1-store/logs/v17-wanenv-before.txt
+cp v1-store/venvs/wan/lib/python3.11/site-packages/motion_jepa-0.1.0.dist-info/direct_url.json v1-store/logs/v17-wanenv-before.direct_url.json
+UV_PROJECT_ENVIRONMENT=$PWD/v1-store/venvs/wan UV_CACHE_DIR=/scratch/hongze/.cache/uv uv sync --project scripts/dataset/wan --frozen
+# 还原（评估完）：用 v16 的锁文件装回 ee719fb
+git show b5bdccf:scripts/dataset/wan/pyproject.toml &gt; /scratch/hongze/.cache/v17-wan-restore/pyproject.toml
+git show b5bdccf:scripts/dataset/wan/uv.lock &gt; /scratch/hongze/.cache/v17-wan-restore/uv.lock
+UV_PROJECT_ENVIRONMENT=$PWD/v1-store/venvs/wan UV_CACHE_DIR=/scratch/hongze/.cache/uv uv sync --project /scratch/hongze/.cache/v17-wan-restore --frozen</code></pre>
+<p class="small">两步都超过 5 分钟时放 tmux（<code>v17-wanenv</code>、<code>v17-wanrestore</code>）；修复后跑第 4 道检查，还原后核对 <code>direct_url.json</code> 回到 <code>ee719fb</code>。</p>
+
+<h3>B7 留档（主会话）</h3>
+<p><code>docs/training-doc/v2-1600ep-m8x8-ctx-motion-b128-50k/</code>、<code>docs/training-doc/local692-ctx-motion160-50k/</code>（launch.md、result.md、records/），总索引加行。</p>
+
+<h2>C. 子代理分配表</h2>
+<table>
+<tr><th>编号</th><th>目标</th><th>可写文件</th><th>禁触</th><th>验收（工作树内，CPU，≤5 min）</th></tr>
+<tr><td>S1</td><td>训练侧</td><td>B1、B2（含单测）、B3、B4</td><td><code>src/</code> 下除 B1 外一切、<code>scripts/evaluation/</code>、主检出任何路径</td><td><code>bash -n</code> 两个脚本；B3 <code>--dry-run</code> 打印 TRAIN_ARGS 含 B1 与 <code>--num_train_steps=50001</code>；B1 与 <code>git show 2f10473:…</code> 的键差集 == 两键；B2 单测（篡改一条成员 → FAIL）；<code>grep -c wan_pool768</code> B3 == 0；<code>grep TRAIN_LOG</code> B4 指向 v17-train.log；B3 有 <code>--check-only</code> 分支且在训练命令之前退出。判定行 <code>S1_VERIFY=PASS</code></td></tr>
+<tr><td>S2</td><td>评估侧</td><td>B5 四个文件</td><td><code>src/</code>、<code>scripts/training/</code>、主检出任何路径</td><td><code>bash -n</code>；<code>DRY_RUN=1 bash scripts/evaluation/local_692_pool.sh &lt;假存档路径&gt; 7</code> 打印 <code>PLAN_OK shards=32 total=692</code> 与新 POLICY；check_checkpoint 对一个 context 快照字典与一个 modulation 快照字典各跑一次断言逻辑的单测；<code>git diff c0826be -- &lt;三个原样文件&gt;</code> 只含 RUN_NAME/POLICY 默认值与新模式。判定行 <code>S2_VERIFY=PASS shards=32 per_gpu=4</code></td></tr>
+<tr><td>主会话</td><td>审查合并、B6、B7、起跑、监控</td><td>B7、计划文件</td><td>—</td><td>§5 全部</td></tr>
+</table>
+<p>环境取法：<code>UV_PROJECT_ENVIRONMENT=/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv PYTHONPATH=&lt;工作树&gt;/src uv run --no-sync …</code>。审查各一个 sonnet，钉死 BASE/TIP，额外核对 B3 里血缘闸门存在且 FAIL 即退出。</p>
+
+<h2>D. 闸门顺序</h2>
+<table>
+<tr><th>闸门</th><th>输入何时有</th><th>步</th><th>失败处置</th></tr>
+<tr><td>计划自洽审查</td><td>本版 commit</td><td>0</td><td>blocking 交用户</td></tr>
+<tr><td>S1/S2 验收与两次审查</td><td>子代理交回</td><td>1–2</td><td>交原子代理续改</td></tr>
+<tr><td>第 1–5 道（<code>--check-only</code>）</td><td>B6 修复、回填提交、Beta 之后</td><td>5</td><td>第 1 道 FAIL 停工交用户；其余先查是否脚本缺陷</td></tr>
+<tr><td>第 6 道 试训</td><td>Beta 后</td><td>6</td><td>修复后重跑（先清产物）</td></tr>
+<tr><td>第 7 道 试评估</td><td>第 6 道的存档</td><td>6</td><td><b>正式训练的硬前置</b>：不过就修评估侧后重跑，期间不起正式训练；修复合入后重打 Beta、重跑 <code>--check-only</code></td></tr>
+<tr><td>第 8 道 压测</td><td>第 6 道的存档，且第 7 道已结束（同用 GPU0，不能并发）</td><td>6</td><td>4 份 FAIL 则以 3 份再压；3 份 PASS 则正式评估 <code>EVAL_PER_GPU=3</code>，记录不停；3 份也 FAIL 停下交用户</td></tr>
+<tr><td>第 9–11 道</td><td>训练中／后</td><td>7</td><td>按 R8</td></tr>
+<tr><td>第 12 道</td><td>第 50000 步存档</td><td>8</td><td>基础设施错误有限次重试并记录</td></tr>
+<tr><td>第 13 道</td><td>评估结束</td><td>9</td><td>工程修复</td></tr>
+</table>
+
+<h2>E. runbook（开工令后，主检出 <code>/scratch/hongze/robomme_policy_learning_MotionJEPA</code>）</h2>
+<pre><code># E1 释放工作树、切主检出（R9）
+git -C /scratch/hongze/robomme_policy_learning_MotionJEPA/.claude/worktrees/v17-plan status --short   # 必须为空
+git -C /scratch/hongze/robomme_policy_learning_MotionJEPA worktree remove .claude/worktrees/v17-plan
+tmux has-session -t '=v16-up-eval-m' || echo v16上传已结束
+cd /scratch/hongze/robomme_policy_learning_MotionJEPA &amp;&amp; git status --short &amp;&amp; git fetch origin &amp;&amp; git switch v17-4task-ctx-motion160-v7-50k &amp;&amp; git merge --ff-only origin/v17-4task-ctx-motion160-v7-50k
+
+# E2 修复编码环境（B6 前半）；回填 check_checkpoint 登记表的 resolved_sha256 → 单独提交推送
+# E3 Beta：写 launch.md 前两节 → commitV17.&lt;n&gt;Beta → push；TRAIN_HEAD=$(git rev-parse HEAD)
+bash scripts/training/run_4task_ctxmotion160_50k.sh $TRAIN_HEAD --dry-run      # 只看 TRAIN_ARGS
+bash scripts/training/run_4task_ctxmotion160_50k.sh $TRAIN_HEAD --check-only   # 第 1–5 道，末行 CHECK_ONLY=PASS
+
+# E4 试训
+tmux new-session -d -s v17-smoke "cd /scratch/hongze/robomme_policy_learning_MotionJEPA &amp;&amp; set -o pipefail; PYTHONUNBUFFERED=1 bash scripts/training/run_4task_ctxmotion160_50k.sh $TRAIN_HEAD --smoke20 --run-name v17-smoke20 2&gt;&amp;1 | tee v1-store/logs/v17-smoke.log; echo \"EXIT_CODE=\$?\" &gt;&gt; v1-store/logs/v17-smoke.log"
+
+# E5 试评估 → 等 v17-g6b 日志出现 EXIT_CODE= 且 EVAL_LOAD_SMOKE=PASS → 再起压测（两者都用 GPU0，严禁并发）
+S=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v17-smoke20/19
+tmux new-session -d -s v17-g6b "cd /scratch/hongze/robomme_policy_learning_MotionJEPA &amp;&amp; set -o pipefail; PYTHONUNBUFFERED=1 bash scripts/evaluation/local_692_pool.sh --g6b $S 7 2&gt;&amp;1 | tee v1-store/logs/v17-g6b.log; echo \"EXIT_CODE=\$?\" &gt;&gt; v1-store/logs/v17-g6b.log"
+# ……v17-g6b 结束后：
+tmux new-session -d -s v17-cap4 "cd /scratch/hongze/robomme_policy_learning_MotionJEPA &amp;&amp; set -o pipefail; PYTHONUNBUFFERED=1 RUN_NAME=v17-cap4 bash scripts/evaluation/local_692_pool.sh --g6b-capacity $S 7 2&gt;&amp;1 | tee v1-store/logs/v17-cap4.log; echo \"EXIT_CODE=\$?\" &gt;&gt; v1-store/logs/v17-cap4.log"
+# 若 EVAL_CAPACITY=FAIL per_gpu=4：v17-cap4 结束后以 EVAL_PER_GPU=3 RUN_NAME=v17-cap3 再起一次（会话 v17-cap3，日志 v1-store/logs/v17-cap3.log）
+# 压测通过后删除试训 run 目录与其记录目录（R4 清单），再起 E6
+
+# E6 正式训练
+tmux new-session -d -s v17-train "cd /scratch/hongze/robomme_policy_learning_MotionJEPA &amp;&amp; set -o pipefail; PYTHONUNBUFFERED=1 bash scripts/training/run_4task_ctxmotion160_50k.sh $TRAIN_HEAD 2&gt;&amp;1 | tee v1-store/logs/v17-train.log; echo \"EXIT_CODE=\$?\" &gt;&gt; v1-store/logs/v17-train.log"
+
+# E7 上传（第 5000 步存档出现后起）
+tmux new-session -d -s v17-ckptup "cd /scratch/hongze/robomme_policy_learning_MotionJEPA &amp;&amp; set -o pipefail; PYTHONUNBUFFERED=1 bash scripts/dataset/hf_export/run_ctxmotion160_ckpt_export.sh 2&gt;&amp;1 | tee v1-store/logs/v17-ckptup.log; echo \"EXIT_CODE=\$?\" &gt;&gt; v1-store/logs/v17-ckptup.log"
+
+# E8 正式评估（压测 FAIL 时前面加 EVAL_PER_GPU=3）
+tmux new-session -d -s v17-eval "cd /scratch/hongze/robomme_policy_learning_MotionJEPA &amp;&amp; set -o pipefail; PYTHONUNBUFFERED=1 bash scripts/evaluation/local_692_pool.sh /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/50000 7 2&gt;&amp;1 | tee v1-store/logs/v17-eval.log; echo \"EXIT_CODE=\$?\" &gt;&gt; v1-store/logs/v17-eval.log"
+
+# E9 还原编码环境（B6 后半）</code></pre>
+<p>每份日志各挂一个监听，过滤词：</p>
+<pre><code>tail -n +1 -F &lt;日志&gt; | stdbuf -oL tr '\r' '\n' | grep --line-buffered -E "EXIT_CODE=|=PASS|=FAIL|EVAL_LOAD_SMOKE|EVAL_CAPACITY|DATA_LINEAGE|拒绝|失败|错误|找不到|Error|Traceback|nan|NaN|out of memory|Killed"</code></pre>
+
+<h2>F. 风险登记</h2>
+<table>
+<tr><th>#</th><th>风险</th><th>处置</th></tr>
+<tr><td>F1</td><td>训练 OOM（0928 实测每卡约 42 GB，概率低）</td><td>按 R8 先查残留进程，不改 batch／卡数</td></tr>
+<tr><td>F2</td><td>步时偏离 0928（0928 在 <code>6db0e0a</code>，与 c55a6bc 在 models/、training/、policies/ 有少量校验与新增分支差异）</td><td>只记录；超 2.5 s/步查数据等待</td></tr>
+<tr><td>F3</td><td>编码环境修复后仍握手失败（还有别的指纹键不等）</td><td>第 4、7 道拦住；逐键对比 <code>store_meta.provenance.vae</code> 与 sidecar 上报值，属软件版本就继续按锁文件对齐</td></tr>
+<tr><td>F4</td><td>修复编码环境影响别的任务</td><td>修复前查无进程在用；评估完按 v16 锁文件还原（第 13 道）</td></tr>
+<tr><td>F5</td><td>评估每卡 4 份显存不够</td><td>第 8 道压测，FAIL 降 3 份（K5）</td></tr>
+<tr><td>F6</td><td>评估运动窗超预算（budget 160 按 1300 步定标，max_steps 2000）</td><td>沿用 <code>MMEVLA_MOTION_OVERFLOW=resample</code>，次数记入 motion_stats</td></tr>
+<tr><td>F7</td><td>磁盘（剩 883G，本 run 约 126G＋试训 13G＋评估视频）</td><td>够用；试训产物在压测后删</td></tr>
+<tr><td>F8</td><td>c55a6bc 的 <code>motion_store.LAYOUT</code> 常量与表的 layout 字面量是否一致</td><td>S1 落实，B3 环 4 比字面量</td></tr>
+</table>
+
+<h2>G. 盲区诚实清单</h2>
+<ol>
+<li>旧 v7 encoder 的现场编码从没在本机评估流程里跑过；修好环境后能否一次握手成功，要第 7 道验证。</li>
+<li>encoder 侧 <code>scope.json.entries</code>（2800 条）去重到 1600 集的键，要 S1 读结构后定（独立审计已只读比对过两侧 1600 份记录一致）。</li>
+<li>context 推理每局耗时没实测，评估 75–100 min 是估计。</li>
+<li>本机与 GL 评估环境差异对成功率的影响量未知。</li>
+</ol>
+
+<h2>H. 留档与 commit 纪律</h2>
+<ul>
+<li>本版提交：<code>docs: 1115 计划第二版——按两轮对抗审查修订</code>。</li>
+<li>子代理 <code>sub/S1: …</code>、<code>sub/S2: …</code>；合并提交 <code>commitV17.&lt;n&gt;</code>，body 按第 11 条六项。</li>
+<li>起跑前 <code>commitV17.&lt;n&gt;Beta</code>；训练结论同号；评估结论下一号。</li>
+<li>分支已有 upstream（首推已获用户追认），每次 commit 后裸 <code>git push</code>。</li>
+</ul>
+
+<h2>I. 交接顺序</h2>
+<table>
+<tr><th>项</th><th>内容</th></tr>
+<tr><td>任务</td><td>训练 → 评估（评估依赖训练第 10 道通过）</td></tr>
+<tr><td>交接前必须完成</td><td>训练：第 1–8、10 道；评估：第 12 道；环境还原：第 13 道</td></tr>
+<tr><td>长尾</td><td>上传 <code>v17-ckptup</code>，日志 <code>v1-store/logs/v17-ckptup.log</code>，完成行 <code>HF_VERIFY=PASS ckpts=10</code></td></tr>
+<tr><td>状态文件</td><td>不登记（用户未表态，按不登记）</td></tr>
+</table>
+
+<h2>J. 第一版 → 第二版修订对照</h2>
+<table>
+<tr><th>来源</th><th>问题</th><th>处置</th></tr>
+<tr><td>独立审计 P1-1</td><td>runner 的 G0 环 4 仍是池化专属断言</td><td>B3 环 4 整环重写</td></tr>
+<tr><td>独立审计 P1-2／workflow</td><td><code>check_checkpoint.py</code> 写死 modulation</td><td>B5 按 run 登记 integration，登记正式与试跑两项</td></tr>
+<tr><td>独立审计 P1-3／workflow</td><td>编码环境已漂移，握手必失败</td><td>B6 原地修复（用户选 A）＋第 4 道检查＋第 13 道还原；§2.3 第 3、4 行</td></tr>
+<tr><td>独立审计 P1-4</td><td>血缘闸门只比 revision，证明不了同源</td><td>B2 新四环脚本，§5 第 1 道</td></tr>
+<tr><td>独立审计 P2-5</td><td>上传脚本读旧 v11 日志；覆盖 HF_HOME</td><td>B4 改 TRAIN_LOG；R10 改为沿用脚本机制</td></tr>
+<tr><td>独立审计 P2-6／workflow</td><td>先清试跑存档再试评估；试评估是否阻塞训练前后矛盾</td><td>§6 第 6 步、D 表统一：试训 → 试评估 → 压测 → 清理 → 正式训练，试评估为硬前置</td></tr>
+<tr><td>独立审计 P2-7／workflow</td><td>切分支被工作树占用</td><td>R9、E1 先 <code>git worktree remove</code></td></tr>
+<tr><td>独立审计 P2-8</td><td>motion 表 sha 尾值写错（f5c8）</td><td>改为完整 <code>…b6c5</code></td></tr>
+<tr><td>独立审计 P2-9／workflow</td><td>空跑接口、试评估判定行、验收位置不对</td><td><code>DRY_RUN=1</code>、<code>EVAL_LOAD_SMOKE</code>、R6 真实验收在主检出</td></tr>
+<tr><td>独立审计容量缺口／workflow</td><td>试评估不覆盖每卡 4 份</td><td>B5 新增压测模式、§5 第 8 道</td></tr>
+<tr><td>workflow</td><td>首推违反「无 upstream 先问」</td><td>用户已追认；H 节</td></tr>
+<tr><td>workflow</td><td>v16 diff 规模数字错</td><td>§2.2 改为 37 文件 +2544/−100</td></tr>
+<tr><td>workflow</td><td>mixed8 先例描述不实</td><td>删除该旁证（两键约束由第 3 道直接保证）</td></tr>
+<tr><td>workflow</td><td>「src/ 零改动」与新增 yaml 冲突</td><td>R3 改为「只新增一个 yaml、不改 .py」</td></tr>
+<tr><td>workflow 驳回 6 条</td><td>措辞与实现细节</td><td>不改</td></tr>
+<tr><td>开工前自洽审查（<code>PLAN_CONSISTENCY_REVIEW=FAIL base=fe646be findings=4 blocking=1</code>）</td><td>①试评估与压测在 GPU0 并发（blocking）；②第 1–5 道无独立入口；③Beta 早于回填与评估修复；④降 3 份未经验证</td><td>①E5 改为先后执行；②B3 新增 <code>--check-only</code>；③§6 第 4、5 步把回填放在 Beta 前，评估侧修复后重打 Beta；④4 份 FAIL 再以 3 份压测，3 份也 FAIL 停下交用户。均为顺序与缺步补齐，不改用户口径</td></tr>
+</table>
+
+</body>
+</html>

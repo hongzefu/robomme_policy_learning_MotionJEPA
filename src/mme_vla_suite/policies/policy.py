@@ -19,9 +19,10 @@ from mme_vla_suite.policies.framesamp_memory import FrameSampMemory
 from mme_vla_suite.shared.sampling import memory_order, pad_times   # 与训练侧 FrameSampDataset 同一份排序函数（R20）
 
 
-def motion_overflow_from_env() -> str:
-    """motion 超预算口径只从环境变量 MMEVLA_MOTION_OVERFLOW 读（缺省 raise）；不碰 resolved yaml 及其 sha。"""
-    overflow = os.environ.get("MMEVLA_MOTION_OVERFLOW", "raise")
+def motion_overflow_from_env(default: str = "raise") -> str:
+    """motion 超预算口径：环境变量 MMEVLA_MOTION_OVERFLOW 优先，未设或为空时取 default（缺省 raise）；不碰 resolved yaml 及其 sha。
+    合入 v17 后 default 由调用方传 resolved 快照的可选键 motion.overflow（v17 口径：环境变量 > 快照可选键 > raise）。"""
+    overflow = os.environ.get("MMEVLA_MOTION_OVERFLOW", "").strip() or str(default)
     if overflow not in ("raise", "resample"):
         raise ValueError(f"MMEVLA_MOTION_OVERFLOW 只能是 raise / resample，得到 {overflow!r}")
     return overflow
@@ -77,8 +78,11 @@ class MME_VLA_Policy:
                 # 底层仍缓存每窗一个 1024 维编码；策略组包时才拆分，容量按完整窗口计。
                 self._motion_cfg.update(budget=spec.window_budget, dim=1024)
             # 只在 resample 时写键；缺省 raise 不加键，motion_cfg 与改动前逐键相同（FrameSampMemory 缺省即 raise）
-            if motion_overflow_from_env() == "resample":
+            overflow = motion_overflow_from_env(mcfg.get("overflow", "raise"))
+            if overflow == "resample":
                 self._motion_cfg["overflow"] = "resample"
+            print(f"MOTION_OVERFLOW={overflow} budget={self._motion_cfg['budget']} "
+                  f"stride={self._motion_cfg['stride']} window_frames={self._motion_cfg['window_frames']}", flush=True)
         
         self.reset()
         
@@ -121,9 +125,13 @@ class MME_VLA_Policy:
         outputs = jax.tree.map(lambda x: np.asarray(x[0, ...]), outputs)      
         outputs = self._output_transform(outputs)
         outputs["infer_time_ms"] = model_time * 1000
-        # 只有 resample 口径附带本局累计降级步数；官方缺省响应字典与改动前相同
-        if self.motion_enabled and self._motion_cfg.get("overflow") == "resample":
+        if self.motion_enabled:
+            # 合入 v17：随 infer_time_ms 一并回传，客户端累计成 motion_stats.json，供 check_shard.py 的 MOTION_WINDOWS 闸
+            # 用闭式公式独立复核；budget 与 overflow 一并回传，验收端不用硬编码这两个值。
+            outputs["motion_k"] = int(self.mem_buffer.motion_last_k)
             outputs["motion_downsample_steps"] = int(self.mem_buffer.motion_downsample_steps)
+            outputs["motion_budget"] = int(self.mem_buffer.motion_budget)
+            outputs["motion_overflow"] = str(getattr(self.mem_buffer, "motion_overflow", "raise"))
 
         return outputs
     

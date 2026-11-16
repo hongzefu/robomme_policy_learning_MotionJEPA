@@ -1,0 +1,78 @@
+{
+  "success_rate": {
+    "BinFill/easy": 0.8979591836734694,
+    "BinFill/hard": 0.5227272727272727,
+    "BinFill/medium": 0.8979591836734694
+  },
+  "macro_success_rate": 0.7728818800247371,
+  "micro_success_rate": 0.7816901408450704,
+  "episodes": 142,
+  "successes": 111,
+  "errors": 0,
+  "by_task": {
+    "BinFill": {
+      "successes": 111,
+      "episodes": 142,
+      "success_rate": 0.7816901408450704
+    }
+  },
+  "by_difficulty": {
+    "easy": {
+      "successes": 44,
+      "episodes": 49,
+      "success_rate": 0.8979591836734694
+    },
+    "hard": {
+      "successes": 23,
+      "episodes": 44,
+      "success_rate": 0.5227272727272727
+    },
+    "medium": {
+      "successes": 44,
+      "episodes": 49,
+      "success_rate": 0.8979591836734694
+    }
+  },
+  "groups": {
+    "BinFill/easy": {
+      "episodes": 49,
+      "evaluated": 49,
+      "successes": 44,
+      "errors": 0,
+      "success_rate": 0.8979591836734694
+    },
+    "BinFill/hard": {
+      "episodes": 44,
+      "evaluated": 44,
+      "successes": 23,
+      "errors": 0,
+      "success_rate": 0.5227272727272727
+    },
+    "BinFill/medium": {
+      "episodes": 49,
+      "evaluated": 49,
+      "successes": 44,
+      "errors": 0,
+      "success_rate": 0.8979591836734694
+    }
+  },
+  "motion": {
+    "episodes": 142,
+    "budget": [
+      160
+    ],
+    "overflow": [
+      "resample"
+    ],
+    "k_max": 175,
+    "exec_start_idx_max": 1107,
+    "episodes_downsampled": 1,
+    "downsample_steps_total": 15,
+    "downsampled_n": 1,
+    "downsampled_successes": 0,
+    "downsampled_errors": 0,
+    "not_downsampled_n": 141,
+    "not_downsampled_successes": 111,
+    "not_downsampled_errors": 0
+  }
+}

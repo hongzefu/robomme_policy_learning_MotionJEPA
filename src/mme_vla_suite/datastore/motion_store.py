@@ -55,6 +55,10 @@ logger = logging.getLogger(__name__)
 
 # ── 布局常量 ──────────────────────────────────────────────────────────────────
 LAYOUT = "motion-v10-8x256-grid16-demopad17-v1"
+# 历史 768 维 demopad 布局（v17 合入前的 LAYOUT）；v17 的 Wan 零参数池化 768 表（export_wan_pool768.py）沿用此布局。
+LEGACY768_DEMOPAD_LAYOUT = "motion-768-grid16-demopad17-v1"
+LEGACY768_ROW_SHAPE = (768,)
+LEGACY768_ROW_BYTES = 768 * 4               # 3,072
 STAGE2_LAYOUT = "motion-stage2-1x1024-grid32-demopad17-v1"
 STAGE2_ARCH = "wan-latent-stage2-blockwise-pool4-three-decoder"
 STAGE2_GROUPS = ("encoder", "encoder_state_sha256", "source_pin", "numerics", "stage2_compat", "vae")
@@ -1176,6 +1180,28 @@ def check_index_against_manifest(entries: list[IndexEntry], manifest: dict) -> N
             raise ValueError(f"motion index 与清单身份不符 g={e.g}: index={mine} manifest={ident}")
 
 
+# ── 池化表 provenance（1108 计划 1.1 第 3 行）────────────────────────────────────
+
+
+def check_pool_provenance(provenance: dict, ctx: str = "store_meta.json") -> None:
+    """零参数池化表的来源闸：kind 已知、encoder_ckpt 为 null、参数量 0、readout 与池化源码 sha256 同现行实现。"""
+    from mme_vla_suite.shared import wan_pool768 as wp
+
+    kind = provenance.get("encoder_kind")
+    if kind != wp.POOL768_ENCODER_KIND:
+        raise ValueError(f"{ctx} provenance.encoder_kind={kind!r} 未知（只支持 {wp.POOL768_ENCODER_KIND!r}）")
+    if "encoder_ckpt" not in provenance or provenance["encoder_ckpt"] is not None:
+        raise ValueError(f"{ctx} 池化表 provenance.encoder_ckpt 必须显式为 null")
+    count = provenance.get("parameter_count")
+    if type(count) is not int or count != wp.POOL768_PARAMETER_COUNT:
+        raise ValueError(f"{ctx} 池化表 provenance.parameter_count={count!r} != {wp.POOL768_PARAMETER_COUNT}")
+    if provenance.get("readout") != wp.POOL768_READOUT:
+        raise ValueError(f"{ctx} 池化表 provenance.readout={provenance.get('readout')!r} != {wp.POOL768_READOUT!r}")
+    want = wp.pool_source_sha256()
+    if provenance.get("pool_source_sha256") != want:
+        raise ValueError(f"{ctx} 池化表 provenance.pool_source_sha256 与现行 wan_pool768.py（{want[:16]}…）不符")
+
+
 # ── MotionMeta ────────────────────────────────────────────────────────────────
 
 
@@ -1279,6 +1305,8 @@ class MotionMeta:
             validate_timepool_provenance(provenance, status=status, manifest_sha256=need("manifest_sha256"),
                                          table_sha256=require_sha256(t.get("sha256"), "tables.motion_token.sha256"),
                                          index_sha256=raw["motion_index_sha256"], num_rows=num_rows)
+        elif "encoder_kind" in provenance:                  # 无该键 = 旧 encoder 表，走原路径不变
+            check_pool_provenance(provenance, ctx=str(meta_path))
         return cls(root=root, raw=raw, status=status, num_rows=num_rows,
                    manifest_sha256=need("manifest_sha256"), manifest_path=need("manifest_path"),
                    motion_index_sha256=raw["motion_index_sha256"], table_sha256=t.get("sha256"),

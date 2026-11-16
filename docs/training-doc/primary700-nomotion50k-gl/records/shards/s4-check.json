@@ -1,0 +1,562 @@
+{
+  "pipeline_pass": true,
+  "shard_tag": "s4",
+  "identity_sha256": "3b4de03a0b4639181f9c68086aea11e9b51ffcb65bbed701a44f573e74e0beb7",
+  "episodes": 70,
+  "evaluated": 66,
+  "successes": 14,
+  "errors": [
+    {
+      "group": "VideoRepick/easy",
+      "episode": 189
+    },
+    {
+      "group": "VideoRepick/medium",
+      "episode": 167
+    },
+    {
+      "group": "VideoRepick/xhard",
+      "episode": 197
+    },
+    {
+      "group": "VideoUnmaskSwap/xhard",
+      "episode": 139
+    }
+  ],
+  "groups": {
+    "BinFill/easy": {
+      "episodes": 5,
+      "successes": 1,
+      "errors": 0
+    },
+    "BinFill/hard": {
+      "episodes": 5,
+      "successes": 1,
+      "errors": 0
+    },
+    "BinFill/medium": {
+      "episodes": 5,
+      "successes": 3,
+      "errors": 0
+    },
+    "RouteStick/easy": {
+      "episodes": 5,
+      "successes": 4,
+      "errors": 0
+    },
+    "RouteStick/hard": {
+      "episodes": 5,
+      "successes": 0,
+      "errors": 0
+    },
+    "RouteStick/medium": {
+      "episodes": 5,
+      "successes": 1,
+      "errors": 0
+    },
+    "RouteStick/xhard": {
+      "episodes": 5,
+      "successes": 0,
+      "errors": 0
+    },
+    "VideoRepick/easy": {
+      "episodes": 5,
+      "successes": 1,
+      "errors": 1
+    },
+    "VideoRepick/medium": {
+      "episodes": 5,
+      "successes": 1,
+      "errors": 1
+    },
+    "VideoRepick/xhard": {
+      "episodes": 5,
+      "successes": 1,
+      "errors": 1
+    },
+    "VideoUnmaskSwap/easy": {
+      "episodes": 5,
+      "successes": 0,
+      "errors": 0
+    },
+    "VideoUnmaskSwap/hard": {
+      "episodes": 5,
+      "successes": 0,
+      "errors": 0
+    },
+    "VideoUnmaskSwap/medium": {
+      "episodes": 5,
+      "successes": 1,
+      "errors": 0
+    },
+    "VideoUnmaskSwap/xhard": {
+      "episodes": 5,
+      "successes": 0,
+      "errors": 1
+    }
+  },
+  "videos": [
+    {
+      "group": "BinFill/easy",
+      "episode": 159,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/BinFill_ep159_success_put two red cubes into the bin, then press the button to stop_easy.mp4",
+      "frames": 474,
+      "bytes": 1569561
+    },
+    {
+      "group": "BinFill/easy",
+      "episode": 169,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/BinFill_ep169_fail_put three green cubes into the bin, then press the button to stop_easy.mp4",
+      "frames": 804,
+      "bytes": 2589332
+    },
+    {
+      "group": "BinFill/easy",
+      "episode": 179,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/BinFill_ep179_fail_put three blue cubes into the bin, then press the button to stop_easy.mp4",
+      "frames": 526,
+      "bytes": 1659798
+    },
+    {
+      "group": "BinFill/easy",
+      "episode": 189,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/BinFill_ep189_timeout_put three red cubes into the bin, then press the button to stop_easy.mp4",
+      "frames": 2001,
+      "bytes": 5668143
+    },
+    {
+      "group": "BinFill/easy",
+      "episode": 199,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/BinFill_ep199_fail_put one blue cube into the bin, then press the button to stop_easy.mp4",
+      "frames": 368,
+      "bytes": 1211389
+    },
+    {
+      "group": "BinFill/hard",
+      "episode": 157,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/BinFill_ep157_fail_put two blue cubes and two green cubes into the bin, then press the button to stop_hard.mp4",
+      "frames": 957,
+      "bytes": 3060641
+    },
+    {
+      "group": "BinFill/hard",
+      "episode": 167,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/BinFill_ep167_fail_put two red cubes, one blue cube and one green cube into the bin, then press the button to stop_hard.mp4",
+      "frames": 485,
+      "bytes": 1494717
+    },
+    {
+      "group": "BinFill/hard",
+      "episode": 177,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/BinFill_ep177_fail_put four red cubes and one blue cube into the bin, then press the button to stop_hard.mp4",
+      "frames": 537,
+      "bytes": 1717131
+    },
+    {
+      "group": "BinFill/hard",
+      "episode": 187,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/BinFill_ep187_success_put one red cube, two blue cubes and two green cubes into the bin, then press the button to stop_hard.mp4",
+      "frames": 1082,
+      "bytes": 3400106
+    },
+    {
+      "group": "BinFill/hard",
+      "episode": 197,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/BinFill_ep197_fail_put three red cubes and two blue cubes into the bin, then press the button to stop_hard.mp4",
+      "frames": 958,
+      "bytes": 3076544
+    },
+    {
+      "group": "BinFill/medium",
+      "episode": 157,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/BinFill_ep157_success_put one red cube and one blue cube into the bin, then press the button to stop_medium.mp4",
+      "frames": 541,
+      "bytes": 1762058
+    },
+    {
+      "group": "BinFill/medium",
+      "episode": 167,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/BinFill_ep167_success_put two green cubes into the bin, then press the button to stop_medium.mp4",
+      "frames": 526,
+      "bytes": 1763512
+    },
+    {
+      "group": "BinFill/medium",
+      "episode": 177,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/BinFill_ep177_fail_put one red cube and one green cube into the bin, then press the button to stop_medium.mp4",
+      "frames": 368,
+      "bytes": 1203393
+    },
+    {
+      "group": "BinFill/medium",
+      "episode": 187,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/BinFill_ep187_success_put one red cube and one blue cube into the bin, then press the button to stop_medium.mp4",
+      "frames": 424,
+      "bytes": 1316780
+    },
+    {
+      "group": "BinFill/medium",
+      "episode": 197,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/BinFill_ep197_fail_put one red cube and two blue cubes into the bin, then press the button to stop_medium.mp4",
+      "frames": 97,
+      "bytes": 360011
+    },
+    {
+      "group": "RouteStick/easy",
+      "episode": 119,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/RouteStick_ep119_success_watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path_easy.mp4",
+      "frames": 303,
+      "bytes": 890112
+    },
+    {
+      "group": "RouteStick/easy",
+      "episode": 129,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/RouteStick_ep129_fail_watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path_easy.mp4",
+      "frames": 201,
+      "bytes": 574947
+    },
+    {
+      "group": "RouteStick/easy",
+      "episode": 139,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/RouteStick_ep139_success_watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path_easy.mp4",
+      "frames": 200,
+      "bytes": 565540
+    },
+    {
+      "group": "RouteStick/easy",
+      "episode": 149,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/RouteStick_ep149_success_watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path_easy.mp4",
+      "frames": 303,
+      "bytes": 894010
+    },
+    {
+      "group": "RouteStick/easy",
+      "episode": 159,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/RouteStick_ep159_success_watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path_easy.mp4",
+      "frames": 305,
+      "bytes": 919256
+    },
+    {
+      "group": "RouteStick/hard",
+      "episode": 119,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/RouteStick_ep119_fail_watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path_hard.mp4",
+      "frames": 404,
+      "bytes": 1088795
+    },
+    {
+      "group": "RouteStick/hard",
+      "episode": 129,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/RouteStick_ep129_fail_watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path_hard.mp4",
+      "frames": 514,
+      "bytes": 1482576
+    },
+    {
+      "group": "RouteStick/hard",
+      "episode": 139,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/RouteStick_ep139_fail_watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path_hard.mp4",
+      "frames": 396,
+      "bytes": 1053734
+    },
+    {
+      "group": "RouteStick/hard",
+      "episode": 149,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/RouteStick_ep149_fail_watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path_hard.mp4",
+      "frames": 555,
+      "bytes": 1539308
+    },
+    {
+      "group": "RouteStick/hard",
+      "episode": 159,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/RouteStick_ep159_fail_watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path_hard.mp4",
+      "frames": 618,
+      "bytes": 1805770
+    },
+    {
+      "group": "RouteStick/medium",
+      "episode": 119,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/RouteStick_ep119_fail_watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path_medium.mp4",
+      "frames": 407,
+      "bytes": 1159387
+    },
+    {
+      "group": "RouteStick/medium",
+      "episode": 129,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/RouteStick_ep129_fail_watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path_medium.mp4",
+      "frames": 407,
+      "bytes": 1182615
+    },
+    {
+      "group": "RouteStick/medium",
+      "episode": 139,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/RouteStick_ep139_success_watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path_medium.mp4",
+      "frames": 408,
+      "bytes": 1203524
+    },
+    {
+      "group": "RouteStick/medium",
+      "episode": 149,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/RouteStick_ep149_fail_watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path_medium.mp4",
+      "frames": 405,
+      "bytes": 1134159
+    },
+    {
+      "group": "RouteStick/medium",
+      "episode": 159,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/RouteStick_ep159_fail_watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path_medium.mp4",
+      "frames": 512,
+      "bytes": 1494401
+    },
+    {
+      "group": "RouteStick/xhard",
+      "episode": 119,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/RouteStick_ep119_fail_watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path_xhard.mp4",
+      "frames": 497,
+      "bytes": 1266037
+    },
+    {
+      "group": "RouteStick/xhard",
+      "episode": 129,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/RouteStick_ep129_fail_watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path_xhard.mp4",
+      "frames": 547,
+      "bytes": 1429563
+    },
+    {
+      "group": "RouteStick/xhard",
+      "episode": 139,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/RouteStick_ep139_fail_watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path_xhard.mp4",
+      "frames": 447,
+      "bytes": 1146691
+    },
+    {
+      "group": "RouteStick/xhard",
+      "episode": 149,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/RouteStick_ep149_fail_watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path_xhard.mp4",
+      "frames": 445,
+      "bytes": 1151251
+    },
+    {
+      "group": "RouteStick/xhard",
+      "episode": 159,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/RouteStick_ep159_fail_watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path_xhard.mp4",
+      "frames": 547,
+      "bytes": 1409492
+    },
+    {
+      "group": "VideoRepick/easy",
+      "episode": 159,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoRepick_ep159_success_watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop_easy.mp4",
+      "frames": 760,
+      "bytes": 2145042
+    },
+    {
+      "group": "VideoRepick/easy",
+      "episode": 169,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoRepick_ep169_fail_watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop_easy.mp4",
+      "frames": 429,
+      "bytes": 1037273
+    },
+    {
+      "group": "VideoRepick/easy",
+      "episode": 179,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoRepick_ep179_fail_watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop_easy.mp4",
+      "frames": 428,
+      "bytes": 972405
+    },
+    {
+      "group": "VideoRepick/easy",
+      "episode": 199,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoRepick_ep199_fail_watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop_easy.mp4",
+      "frames": 376,
+      "bytes": 980805
+    },
+    {
+      "group": "VideoRepick/medium",
+      "episode": 157,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoRepick_ep157_fail_watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop_medium.mp4",
+      "frames": 417,
+      "bytes": 881116
+    },
+    {
+      "group": "VideoRepick/medium",
+      "episode": 177,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoRepick_ep177_fail_watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop_medium.mp4",
+      "frames": 485,
+      "bytes": 957094
+    },
+    {
+      "group": "VideoRepick/medium",
+      "episode": 187,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoRepick_ep187_success_watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop_medium.mp4",
+      "frames": 598,
+      "bytes": 1367724
+    },
+    {
+      "group": "VideoRepick/medium",
+      "episode": 197,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoRepick_ep197_fail_watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop_medium.mp4",
+      "frames": 483,
+      "bytes": 964356
+    },
+    {
+      "group": "VideoRepick/xhard",
+      "episode": 157,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoRepick_ep157_fail_watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop_xhard.mp4",
+      "frames": 545,
+      "bytes": 1109160
+    },
+    {
+      "group": "VideoRepick/xhard",
+      "episode": 167,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoRepick_ep167_fail_watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop_xhard.mp4",
+      "frames": 597,
+      "bytes": 1098856
+    },
+    {
+      "group": "VideoRepick/xhard",
+      "episode": 177,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoRepick_ep177_success_watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop_xhard.mp4",
+      "frames": 998,
+      "bytes": 2417841
+    },
+    {
+      "group": "VideoRepick/xhard",
+      "episode": 187,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoRepick_ep187_fail_watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop_xhard.mp4",
+      "frames": 553,
+      "bytes": 1114878
+    },
+    {
+      "group": "VideoUnmaskSwap/easy",
+      "episode": 119,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoUnmaskSwap_ep119_fail_watch the video carefully, then pick up the container hiding the red cube_easy.mp4",
+      "frames": 224,
+      "bytes": 409958
+    },
+    {
+      "group": "VideoUnmaskSwap/easy",
+      "episode": 129,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoUnmaskSwap_ep129_fail_watch the video carefully, then pick up the container hiding the blue cube_easy.mp4",
+      "frames": 276,
+      "bytes": 478402
+    },
+    {
+      "group": "VideoUnmaskSwap/easy",
+      "episode": 139,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoUnmaskSwap_ep139_fail_watch the video carefully, then pick up the container hiding the green cube_easy.mp4",
+      "frames": 210,
+      "bytes": 382348
+    },
+    {
+      "group": "VideoUnmaskSwap/easy",
+      "episode": 149,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoUnmaskSwap_ep149_fail_watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the green cube_easy.mp4",
+      "frames": 439,
+      "bytes": 1061350
+    },
+    {
+      "group": "VideoUnmaskSwap/easy",
+      "episode": 159,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoUnmaskSwap_ep159_fail_watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the red cube_easy.mp4",
+      "frames": 276,
+      "bytes": 504811
+    },
+    {
+      "group": "VideoUnmaskSwap/hard",
+      "episode": 119,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoUnmaskSwap_ep119_fail_watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube_hard.mp4",
+      "frames": 327,
+      "bytes": 499151
+    },
+    {
+      "group": "VideoUnmaskSwap/hard",
+      "episode": 129,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoUnmaskSwap_ep129_fail_watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube_hard.mp4",
+      "frames": 275,
+      "bytes": 481144
+    },
+    {
+      "group": "VideoUnmaskSwap/hard",
+      "episode": 139,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoUnmaskSwap_ep139_fail_watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube_hard.mp4",
+      "frames": 411,
+      "bytes": 752482
+    },
+    {
+      "group": "VideoUnmaskSwap/hard",
+      "episode": 149,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoUnmaskSwap_ep149_fail_watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the green cube_hard.mp4",
+      "frames": 279,
+      "bytes": 489971
+    },
+    {
+      "group": "VideoUnmaskSwap/hard",
+      "episode": 159,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoUnmaskSwap_ep159_fail_watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube_hard.mp4",
+      "frames": 278,
+      "bytes": 481111
+    },
+    {
+      "group": "VideoUnmaskSwap/medium",
+      "episode": 119,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoUnmaskSwap_ep119_success_watch the video carefully, then pick up the container hiding the green cube_medium.mp4",
+      "frames": 208,
+      "bytes": 369176
+    },
+    {
+      "group": "VideoUnmaskSwap/medium",
+      "episode": 129,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoUnmaskSwap_ep129_fail_watch the video carefully, then pick up the container hiding the blue cube_medium.mp4",
+      "frames": 225,
+      "bytes": 380987
+    },
+    {
+      "group": "VideoUnmaskSwap/medium",
+      "episode": 139,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoUnmaskSwap_ep139_fail_watch the video carefully, then pick up the container hiding the green cube_medium.mp4",
+      "frames": 272,
+      "bytes": 471902
+    },
+    {
+      "group": "VideoUnmaskSwap/medium",
+      "episode": 149,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoUnmaskSwap_ep149_fail_watch the video carefully, then pick up the container hiding the green cube_medium.mp4",
+      "frames": 278,
+      "bytes": 481825
+    },
+    {
+      "group": "VideoUnmaskSwap/medium",
+      "episode": 159,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoUnmaskSwap_ep159_fail_watch the video carefully, then pick up the container hiding the blue cube_medium.mp4",
+      "frames": 220,
+      "bytes": 413675
+    },
+    {
+      "group": "VideoUnmaskSwap/xhard",
+      "episode": 119,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoUnmaskSwap_ep119_fail_watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube_xhard.mp4",
+      "frames": 367,
+      "bytes": 550182
+    },
+    {
+      "group": "VideoUnmaskSwap/xhard",
+      "episode": 129,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoUnmaskSwap_ep129_fail_watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube_xhard.mp4",
+      "frames": 556,
+      "bytes": 1078450
+    },
+    {
+      "group": "VideoUnmaskSwap/xhard",
+      "episode": 149,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoUnmaskSwap_ep149_fail_watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the green cube_xhard.mp4",
+      "frames": 426,
+      "bytes": 578997
+    },
+    {
+      "group": "VideoUnmaskSwap/xhard",
+      "episode": 159,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/s4/perceptual-framesamp-modul-8frame-8x8/ckpt50000/seed7/videos/VideoUnmaskSwap_ep159_fail_watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube_xhard.mp4",
+      "frames": 428,
+      "bytes": 600827
+    }
+  ]
+}

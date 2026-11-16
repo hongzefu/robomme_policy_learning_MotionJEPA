@@ -1,0 +1,8 @@
+SERVER_SOURCE /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-server/bin/python3 /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/policies/policy_config.py /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/src/openpi/models/model.py
+BUDGET_CONSISTENT=PASS budget=160 source_run=wan-full1600-filter2-b176x4-72ep-a/checkpoint_epoch_72.pt#encoder
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+
+PARAM_TREE_EXACT=PASS n_model=65 n_ckpt=65 missing=0 extra=0 shape_mismatch=0 motion_leaves=4
+HISTORY_CONFIG=PASS NORM_STATS=PASS MOTION_ENABLED=PASS config=mme_vla_suite_b128_80k step=50000

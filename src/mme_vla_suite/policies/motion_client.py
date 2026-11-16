@@ -7,6 +7,10 @@
 - 握手：子进程上报 provenance（VAE / encoder / flags / 协议 sha）；与离线库 `store_meta.provenance` 逐键比对（排除 hostname / pid / 路径），任一不等 raise。
 - 接口契约：`motion_enc_fn(frames: (33,256,256,3) uint8 C 连续) -> (768,) float32`；请求同步、一次一窗、`threading.Lock` 互斥。
 - 只依赖 numpy 与标准库。
+- 池化 kind（`encoder_kind="wan_fixedpool768"`，合入 v17）：argv 加 `--encoder-kind`，不传 encoder 参数；握手比 encoder_kind / readout /
+  pool_source_sha256 与 vae 段，不比 encoder 段。`encoder_kind=None` 与 `"v10"` 同义，启动参数与握手比对逐字不变。
+- 跨硬件放行（v10 / 池化 768 两条单进程路径）：`MMEVLA_MOTION_PROV_RELAX=gpu_name,compute_cap,sm_count` 时这三个硬件键不等只记 WARN
+  （见 `check_provenance`）。阶段二与固定池化 1024 的会话握手不受影响。
 """
 
 from __future__ import annotations
@@ -57,6 +61,10 @@ TIMEPOOL_SNAPSHOT_PROV_KEYS = frozenset((
     "history_config_name", "motion_enabled", "resolved_sha256", "framesamp_root", "framesamp_manifest_sha256",
     "framesamp_store_meta_sha256", "motion_root", "motion_manifest_sha256", "motion_index_sha256",
     "motion_store_meta_sha256", "motion_table_sha256", "vae", "encoder", "timepool"))
+# 零参数池化 768 kind（v17，计划 1108-4task-modul-wantp768-50k-plan.html 第二部分 1.1 第 8 行）：sidecar 只跑 Wan VAE 再池化，
+# 不加载 encoder；与 v10 共用单进程 sidecar 与 768 维响应。值与 shared/wan_pool768.py 的 POOL768_ENCODER_KIND 相同。
+POOL768_KIND = "wan_fixedpool768"
+POOL_ENCODER_KINDS = (POOL768_KIND,)
 _ENCODER_FIELD = re.compile(r"(^|_)(encoder|ckpt|checkpoint)(_|$)")
 
 
@@ -286,9 +294,12 @@ class MotionEncoderClient:
     def __init__(self, *, online_gpu: int | str, encoder_run_dir: str | None = None, checkpoint: str = "checkpoint_epoch_72.pt",
                  expected_ckpt_sha256: str | None = None, store_provenance: dict | None = None, stub: bool = False,
                  v1_store: str | pathlib.Path | None = None, handshake_timeout: float = P.HANDSHAKE_TIMEOUT_S,
-                 source_run: str | None = None, encoder_kind: str = "v10",
+                 source_run: str | None = None, encoder_kind: str | None = "v10",
                  provenance_root: str | pathlib.Path | None = None,
-                 stage2_python: str | None = None, eval_target_contract: str | pathlib.Path | None = None):
+                 stage2_python: str | None = None, eval_target_contract: str | pathlib.Path | None = None,
+                 readout: str | None = None, expected_pool_sha256: str | None = None):
+        if encoder_kind is None:                             # None 与 "v10" 同义
+            encoder_kind = "v10"
         self.encoder_kind = encoder_kind
         self._eval_target_contract = eval_target_contract
         # stage2_python 名字不改以免破坏旧调用方，在固定池化下同样表示 sidecar 解释器。
@@ -306,8 +317,15 @@ class MotionEncoderClient:
                              stub=stub, v1_store=v1_store, handshake_timeout=handshake_timeout,
                              source_run=source_run, provenance_root=provenance_root, stage2_python=stage2_python)
             return
-        if encoder_kind != "v10":
+        if encoder_kind not in ("v10", *POOL_ENCODER_KINDS):
             raise ValueError(f"未知 motion.encoder_kind: {encoder_kind}")
+        if encoder_kind in POOL_ENCODER_KINDS:
+            if source_run is not None or encoder_run_dir is not None or expected_ckpt_sha256 is not None:
+                raise ValueError("池化 kind 不使用 source_run / encoder_run_dir / expected_ckpt_sha256")
+            if not readout or not expected_pool_sha256:
+                raise ValueError("池化 kind 必须给出 readout 与 expected_pool_sha256")
+        self.readout = readout
+        self.expected_pool_sha256 = expected_pool_sha256
         self._lock = threading.Lock()
         self.stub = bool(stub)
         # v1-store 根：显式参数 > MMEVLA_V1_STORE（worktree 开发时指到主树）> 仓库内 v1-store
@@ -333,7 +351,9 @@ class MotionEncoderClient:
                 "--fd", str(child_sock.fileno())]
         if self.stub:
             argv.append("--stub")
-        else:
+        if encoder_kind in POOL_ENCODER_KINDS:
+            argv += ["--encoder-kind", encoder_kind]
+        elif not self.stub:
             argv += ["--encoder-run-dir", str(encoder_run_dir or v1 / "external/motionjepa/wan-full1600-filter2-b176x4-72ep-a"),
                      "--checkpoint", checkpoint]
             if expected_ckpt_sha256:
@@ -359,6 +379,8 @@ class MotionEncoderClient:
         if bool(self.provenance.get("stub")) != self.stub:
             self.close()
             raise RuntimeError("sidecar 的 stub 标记与客户端不一致")
+        if encoder_kind in POOL_ENCODER_KINDS:
+            self.check_pool_handshake()
         if not self.stub:
             if store_provenance is None:
                 self.close()
@@ -605,10 +627,27 @@ class MotionEncoderClient:
             raise ValueError("固定池化握手缺环境指纹")
         self._check_session_worker()
 
+    def check_pool_handshake(self) -> None:
+        """池化 768 kind 的握手比对：sidecar 上报的 encoder_kind / readout / pool_source_sha256 与 run 快照逐值相等。"""
+        diffs = []
+        for key, want in (("encoder_kind", self.encoder_kind), ("readout", self.readout),
+                          ("pool_source_sha256", self.expected_pool_sha256)):
+            got = self.provenance.get(key)
+            if got != want:
+                diffs.append(f"{key}: sidecar={got!r} 期望={want!r}")
+        if diffs:
+            self.close()
+            raise RuntimeError("sidecar 池化身份与 run 快照不符:\n  " + "\n  ".join(diffs))
+
     def check_provenance(self, store_prov: dict) -> None:
-        if self.encoder_kind in SESSION_KINDS:
+        """v10 / 池化 768：逐键比对 sidecar 与离线库 provenance。
+        环境变量 `MMEVLA_MOTION_PROV_RELAX`（逗号分隔键名，如 `gpu_name,compute_cap,sm_count`）里列出的键
+        不等时只打印 `MOTION_PROV_RELAXED …` 到 stderr 并记入 `self.relaxed_diffs`，不 raise；其余键不等仍 raise。
+        池化 768 只比 vae 段（没有 encoder），且 vae 段排除 `encoder_src_sha256`。阶段二 / 固定池化 1024 走各自会话核对。"""
+        kind = getattr(self, "encoder_kind", "v10")          # 用 __new__ 绕过构造的测试夹具视为旧路径
+        if kind in SESSION_KINDS:
             try:
-                if self.encoder_kind == STAGE2_KIND:
+                if kind == STAGE2_KIND:
                     self._check_stage2_provenance(store_prov)
                 else:
                     self._check_timepool_provenance(store_prov)
@@ -616,12 +655,20 @@ class MotionEncoderClient:
                 self.close()
                 raise
             return
-        diffs = []
-        for section, keys in (("vae", PROV_SAME_VAE), ("encoder", PROV_SAME_ENC)):
+        relax = {k.strip() for k in os.environ.get("MMEVLA_MOTION_PROV_RELAX", "").split(",") if k.strip()}
+        diffs, relaxed = [], []
+        sections = (("vae", tuple(k for k in PROV_SAME_VAE if k != "encoder_src_sha256")),) \
+            if kind in POOL_ENCODER_KINDS \
+            else (("vae", PROV_SAME_VAE), ("encoder", PROV_SAME_ENC))
+        for section, keys in sections:
             a, b = self.provenance.get(section, {}), store_prov.get(section, {})
             for k in keys:
                 if a.get(k) != b.get(k):
-                    diffs.append(f"{section}.{k}: sidecar={a.get(k)!r} store={b.get(k)!r}")
+                    line = f"{section}.{k}: sidecar={a.get(k)!r} store={b.get(k)!r}"
+                    (relaxed if k in relax else diffs).append(line)
+        for line in relaxed:
+            print("MOTION_PROV_RELAXED", line, file=sys.stderr, flush=True)
+        self.relaxed_diffs = relaxed
         if diffs:
             self.close()
             raise RuntimeError("sidecar 与离线库 provenance 不同源:\n  " + "\n  ".join(diffs))

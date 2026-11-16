@@ -1,0 +1,53 @@
+/home/hongzefu/.local/bin/uv
+LOCAL_GPU_IDLE=PASS device=1
+START_UTC=2026-09-18T04:45:24Z
+sled-vail
+e3e5dd398f182fdd0d10305f47ffbff3b363c4fd
+ 856bc3a189d4172f3f47dbee4424d585f8d78db3 third_party/robomme_benchmark (remotes/origin/docker_setup-2-g856bc3a)
+uv 0.10.2
+name, uuid, memory.used [MiB], compute_mode
+NVIDIA RTX 6000 Ada Generation, GPU-590b693c-56db-a2b6-c4e3-5e20108f92d7, 1017 MiB, Default
+NVIDIA RTX 6000 Ada Generation, GPU-c58b7cba-c0e5-971b-e77a-0dd73bf26a9e, 9 MiB, Default
+REPO=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA SLURM_JOB_ID=local SLURM_STEP_ID=local CUDA_VISIBLE_DEVICES=1
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+SOURCES_PASS {"python": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/bin/python3", "benchmark": "856bc3a189d4172f3f47dbee4424d585f8d78db3", "robomme": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/third_party/robomme_benchmark/src/robomme/__init__.py", "openpi_client": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/packages/openpi-client/src/openpi_client/__init__.py", "episode": {"task": "RouteStick", "episode": 0, "seed": 660000, "difficulty": "easy"}}
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+RENDER_PASS {"render_pass": true, "task": "RouteStick", "episode": 0, "status": "ongoing", "frames": [{"shape": [256, 256, 3], "std": 53.01340892167135}, {"shape": [256, 256, 3], "std": 55.320238363790374}, {"shape": [256, 256, 3], "std": 53.01341870721266}, {"shape": [256, 256, 3], "std": 55.31981467272769}]}
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+SERVER_SOURCE /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-server/bin/python3 /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/policies/policy_config.py /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/src/openpi/models/model.py
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+
+PARAM_TREE_EXACT=PASS n_model=61 n_ckpt=61 missing=0 extra=0 shape_mismatch=0
+HISTORY_CONFIG=PASS NORM_STATS=PASS MOTION_DISABLED=PASS
+LOCAL_GPU_IDLE=PASS device=1
+SERVER_READY port=18011 pid=793860
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+
+[robomme] env for task RouteStick episode 0 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 150
+EVAL_PASS {"pipeline_pass": true, "task_successes": 1, "episodes": 1, "videos": [{"path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/vail-eval-local-20260918T0425Z/perceptual-framesamp-modul-8frame-8x8/ckpt59999/seed7/videos/RouteStick_ep0_success_watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path_easy.mp4", "frames": 321, "bytes": 967126}]}
+END_UTC=2026-09-18T04:50:59Z
+EXIT_CODE=0
+EXIT_CODE=0

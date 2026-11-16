@@ -1,0 +1,44 @@
+{
+  "task": "BinFill",
+  "identity_sha256": "3b4de03a0b4639181f9c68086aea11e9b51ffcb65bbed701a44f573e74e0beb7",
+  "candidates": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/third_party/robomme_benchmark/artifacts/injection/20260912-contract-v3-10/candidates/candidates.jsonl",
+  "repo_head": "215279e83a89b4e5aae04a0f1005013ef144e8b7",
+  "benchmark_head": "b4e97f22fe007078e297205898c07c1acbc69165",
+  "max_steps": 2000,
+  "gates": {
+    "max_d": 1296,
+    "max_d_pos_table": 2095,
+    "max_d_demo_window": 1296,
+    "demo_window_cap": 80
+  },
+  "planned": 150,
+  "ok": 142,
+  "failed": 8,
+  "failed_keys": [
+    "BinFill/easy/186",
+    "BinFill/hard/159",
+    "BinFill/hard/166",
+    "BinFill/hard/181",
+    "BinFill/hard/189",
+    "BinFill/hard/190",
+    "BinFill/hard/196",
+    "BinFill/medium/189"
+  ],
+  "used_rrt": 6,
+  "by_difficulty": {
+    "easy": 49,
+    "hard": 44,
+    "medium": 49
+  },
+  "D": {
+    "min": 261,
+    "mean": 631.8,
+    "max": 1107
+  },
+  "k_demo": {
+    "min": 16,
+    "mean": 38.9,
+    "max": 69
+  },
+  "bytes": 11173453704
+}
