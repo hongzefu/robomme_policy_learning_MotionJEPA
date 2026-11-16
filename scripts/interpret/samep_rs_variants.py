@@ -25,6 +25,16 @@
 S_side 规则：第 j 步改去另一侧邻居，之后每步保持原相对方向（槽位差），出界则反弹；第 j 步起点在端点（槽 0 或 4）
 不生成 S_side / S_both。生成时用 sampling_config.parameters.configs[难度].backtrack=True 放开回头（只影响校验，
 示范规划与物理不受影响）；环境不校验槽位下界（-1 会被当成 8），这里自查 0 ≤ slot ≤ 4。
+
+存窗帧（计划 1116-steer-speedup-fix-plan.html 第二部分 1 节 S-B、7 节契约 C1；缺省关闭，行为不变）：
+  build … --save-window-frames --history-yaml <模型 history yaml 或 checkpoint 目录>
+  按与在线 framesamp_memory.FrameSampMemory._encode_window 完全相同的切片规则（stride、window_frames、
+  demo_min_real_frames、demo_tail_pad=repeat_last 时尾窗用第 es−1 帧补齐；es = reset 返回帧数 − 1，
+  帧 = front_rgb_list，即 eval.py pack_buffer 送入的唯一视角）存窗口原始帧：
+    <out>/vframes/<variant_key>.npz：start_frames int64[W]、frames uint8[W, window, H, W, 3]、meta（json 字符串）。
+  可用变体存与第 j 段（内容段）相交的窗（scope=all），meta.window_scope 逐窗标 core（真实帧全落在段内）或 all；
+  可用的原样重建局存全部示范窗（scope=demo_full，供 ENC_TOL）。文件名主干见 variant_key()。
+  另加判定行 VFRAMES=PASS|FAIL files=<n> windows=<n> errors=<e> missing=<k>。
 """
 from __future__ import annotations
 
@@ -35,6 +45,7 @@ import hashlib
 import json
 import math
 import multiprocessing as mp
+import os
 from pathlib import Path
 import sys
 
@@ -209,6 +220,147 @@ def demo_swings(eef_xy, segs, cells, ref_cells, cell_xy):
     return lab, phys
 
 
+# ---------------------------------------------------------------- 窗口帧（契约 C1）
+def window_grid_from_yaml(path):
+    """模型 history yaml（或含 history_config(.resolved).yaml 的 checkpoint 目录 / 其上级）→ 在线窗口网格
+    {"stride", "window", "demo_min_real", "demo_tail_pad", "source"}；缺省值与合法性同 FrameSampMemory.__init__。"""
+    import yaml
+    p = Path(path)
+    if p.is_dir():
+        for cand in (p, *p.parents):
+            hit = next((cand / n for n in ("history_config.resolved.yaml", "history_config.yaml")
+                        if (cand / n).is_file()), None)
+            if hit is not None:
+                p = hit
+                break
+    if not p.is_file():
+        raise SystemExit(f"找不到 history yaml：{path}")
+    motion = (yaml.safe_load(p.read_text()) or {}).get("motion") or {}
+    missing = [k for k in ("stride", "window_frames") if k not in motion]
+    if missing:
+        raise SystemExit(f"{p} 的 motion 节缺 {missing}")
+    if ("demo_min_real_frames" in motion) != ("demo_tail_pad" in motion):
+        raise SystemExit("demo_min_real_frames 与 demo_tail_pad 必须同时提供或同时缺省")
+    if (str(motion.get("window_direction", "forward")) != "forward"
+            or str(motion.get("grid_origin", "segment_start")) != "segment_start"):
+        raise SystemExit("只实现 forward + segment_start 口径")
+    grid = {"stride": int(motion["stride"]), "window": int(motion["window_frames"]),
+            "demo_min_real": motion.get("demo_min_real_frames", 33), "demo_tail_pad": motion.get("demo_tail_pad", "none"),
+            "source": str(p.resolve())}
+    check_grid(grid)
+    return grid
+
+
+def check_grid(grid):
+    """FrameSampMemory.__init__ 的 demo 窗口契约。"""
+    W, dmr, pad = grid["window"], grid["demo_min_real"], grid["demo_tail_pad"]
+    if type(dmr) is not int or not ((dmr == W and pad == "none") or (1 <= dmr <= W and pad == "repeat_last")):
+        raise ValueError(f"在线 demo 窗口契约不合法: {dmr}, {pad!r}")
+    if int(grid["stride"]) < 1:
+        raise ValueError(f"stride 非法 {grid['stride']}")
+
+
+def demo_window_starts(es, grid):
+    """示范窗起点（FrameSampMemory._encode_ready_windows demo 段同式）：s = 0, stride, … 且 s + dmr − 1 ≤ es − 1。"""
+    out, s = [], 0
+    while s + (grid["demo_min_real"] - 1) <= int(es) - 1:
+        out.append(s)
+        s += grid["stride"]
+    return out
+
+
+def window_frame_ids(f, es, grid):
+    """起点 f 的窗口帧号（FrameSampMemory._encode_window 同式）：真实帧 f..f+real−1，不足 window 时补 es−1。"""
+    W, f, es = grid["window"], int(f), int(es)
+    real = min(W, es - f) if f < es else W
+    if real < (grid["demo_min_real"] if f < es else W):
+        raise RuntimeError(f"起点 {f} 的真实帧数 {real} 不满足段契约")
+    if real < W and grid["demo_tail_pad"] != "repeat_last":
+        raise RuntimeError("当前 demo 契约不允许尾部补帧")
+    return [f + k for k in range(real)] + [es - 1] * (W - real)
+
+
+def window_real_range(f, es, grid):
+    """示范窗真实帧闭区间 [f, min(f+W−1, es−1)]（sp_swap_prep.real_range 同式）。"""
+    return int(f), min(int(f) + grid["window"] - 1, int(es) - 1)
+
+
+def segment_windows(seg, es, grid):
+    """内容段 [a, b] → (all, core) 示范窗起点：all 与段相交，core 真实帧全落在段内（sp_swap_prep.window_sets 同式）。"""
+    a, b = int(seg[0]), int(seg[1])
+    w_all, w_core = [], []
+    for s in demo_window_starts(es, grid):
+        lo, hi = window_real_range(s, es, grid)
+        if lo <= b and hi >= a:
+            w_all.append(s)
+            if lo >= a and hi <= b:
+                w_core.append(s)
+    return w_all, w_core
+
+
+def variant_key(seed, difficulty, j=None, group=None):
+    """C1 / C2 文件名主干：变体 RouteStick_s<seed>_<难度>_j<j>_<组>；原样重建局 RouteStick_s<seed>_<难度>_demo_full。"""
+    base = f"{TASK}_s{int(seed)}_{difficulty}"
+    if j is None:
+        return base + "_demo_full"
+    if group not in GROUPS:
+        raise ValueError(f"未知组 {group}")
+    return f"{base}_j{int(j)}_{group}"
+
+
+def save_window_frames(folder, key, front, starts, es, grid, meta):
+    """按起点切窗写 <folder>/<key>.npz（压缩、原子替换）；返回 (路径, 窗数)。front 为 reset 的全部 front 帧（含 exec 首帧）。"""
+    import numpy as np
+    front = np.asarray(front)
+    if front.dtype != np.uint8 or front.ndim != 4 or front.shape[0] != int(es) + 1:
+        raise ValueError(f"front 须为 (es+1, H, W, 3) uint8，得到 {front.shape} {front.dtype}（es={es}）")
+    ids = [window_frame_ids(s, es, grid) for s in starts]
+    frames = (np.stack([front[i] for i in ids]) if ids
+              else np.zeros((0, grid["window"], *front.shape[1:]), np.uint8))
+    meta = dict(meta, key=key, es=int(es), window_frame_ids=ids,
+                grid={k: grid[k] for k in ("stride", "window", "demo_min_real", "demo_tail_pad")})
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / f"{key}.npz"
+    tmp = folder / f".{key}.{os.getpid()}.tmp"
+    with tmp.open("wb") as stream:
+        np.savez_compressed(stream, start_frames=np.asarray(starts, np.int64), frames=np.ascontiguousarray(frames),
+                            meta=np.asarray(json.dumps(meta, ensure_ascii=False)))
+    tmp.replace(path)
+    return path, len(starts)
+
+
+def _save_variant_frames(vf, row, front, segs):
+    """可用变体：存第 j 段相交窗（scope=all，逐窗标 core/all）。失败记 vframes_error。"""
+    try:
+        j = int(row["j"])
+        es = len(front) - 1
+        w_all, w_core = segment_windows(segs[j - 1], es, vf["grid"])
+        key = variant_key(row["seed"], row["difficulty"], j, row["group"])
+        meta = {"seed": int(row["seed"]), "difficulty": row["difficulty"], "j": j, "group": row["group"],
+                "scope": "all", "segment": list(segs[j - 1]), "all_starts": w_all, "core_starts": w_core,
+                "window_scope": ["core" if s in w_core else "all" for s in w_all]}
+        path, n = save_window_frames(vf["dir"], key, front, w_all, es, vf["grid"], meta)
+        row.update(vframes=str(path), vframes_windows=n)
+    except Exception as error:   # 记原因继续，判定行计 errors
+        row["vframes_error"] = f"{type(error).__name__}: {error}"
+
+
+def _save_base_frames(vf, base, front, segs):
+    """可用原样重建局：存全部示范窗（scope=demo_full）。"""
+    try:
+        es = len(front) - 1
+        starts = demo_window_starts(es, vf["grid"])
+        key = variant_key(base["seed"], base["difficulty"])
+        meta = {"seed": int(base["seed"]), "difficulty": base["difficulty"], "j": None, "group": None,
+                "scope": "demo_full", "segments": [list(x) for x in segs or []],
+                "window_scope": ["demo_full"] * len(starts)}
+        path, n = save_window_frames(vf["dir"], key, front, starts, es, vf["grid"], meta)
+        base.update(vframes=str(path), vframes_windows=n)
+    except Exception as error:
+        base["vframes_error"] = f"{type(error).__name__}: {error}"
+
+
 # ---------------------------------------------------------------- 仿真
 def native_sampling(difficulty=None, backtrack=False):
     """b4e97f2 的 NATIVE_SAMPLING 副本；backtrack=True 时在 configs 里放开该难度回头（_resolve_sampling_config 用 setdefault 接受）。"""
@@ -223,8 +375,9 @@ def native_sampling(difficulty=None, backtrack=False):
     return samp
 
 
-def reset_demo(seed, difficulty, spec=None, sampling=None):
-    """建环境并 reset，返回示范摘要。spec=None 为自然局（gym.make 显式传难度，同 probe）。"""
+def reset_demo(seed, difficulty, spec=None, sampling=None, return_front=False):
+    """建环境并 reset，返回示范摘要。spec=None 为自然局（gym.make 显式传难度，同 probe）。
+    return_front=True 时另返回 "front"：reset 的全部 front 帧 (n, H, W, 3) uint8（存窗帧用）。"""
     import gymnasium as gym
     import numpy as np
     import robomme.robomme_env  # noqa: F401  注册环境
@@ -260,15 +413,20 @@ def reset_demo(seed, difficulty, spec=None, sampling=None):
         eef = np.asarray(obs["eef_state_list"], dtype=np.float64)[:, :2]
         cell_xy = {i: tuple(float(x) for x in np.asarray(b.pose.p).reshape(-1)[:2]) for i, b in enumerate(u.buttons_grid)}
         ids = {id(b): i for i, b in enumerate(u.buttons_grid)}
-        return {"hashes": hashes, "labels": labels, "eef": eef, "cell_xy": cell_xy,
-                "cells": [ids[id(b)] for b in u.selected_buttons], "dirs": list(u.swing_directions),
-                "difficulty": str(u.difficulty), "n_frames": len(hashes)}
+        out = {"hashes": hashes, "labels": labels, "eef": eef, "cell_xy": cell_xy,
+               "cells": [ids[id(b)] for b in u.selected_buttons], "dirs": list(u.swing_directions),
+               "difficulty": str(u.difficulty), "n_frames": len(hashes)}
+        if return_front:
+            out["front"] = np.stack([np.asarray(f, dtype=np.uint8) for f in front])
+        return out
     finally:
         env.close()
 
 
-def process_episode(item, groups=GROUPS):
-    """一局：自然局、原样重建、每 (j, 组) 变体；返回 jsonl 行列表（第一行 kind=base）。"""
+def process_episode(item, groups=GROUPS, vframes=None):
+    """一局：自然局、原样重建、每 (j, 组) 变体；返回 jsonl 行列表（第一行 kind=base）。
+    vframes={"dir", "grid"} 时按契约 C1 存窗帧（可用的原样重建局与可用变体）。"""
+    keep = vframes is not None
     seed, diff, ep = int(item["seed"]), item["difficulty"], item.get("episode_id")
     base = {"kind": "base", "seed": seed, "difficulty": diff, "episode_id": ep, "status": "ok"}
     rows = [base]
@@ -277,7 +435,7 @@ def process_episode(item, groups=GROUPS):
         L = int(spec["objects"]["L"])
         base.update(spec=spec, L=L, sampling_config=native_sampling())
         nat = reset_demo(seed, diff)
-        reb = reset_demo(seed, diff, spec, base["sampling_config"])
+        reb = reset_demo(seed, diff, spec, base["sampling_config"], return_front=keep)
         segs, why = segments_from_labels(reb["labels"], L)
         base.update(n_frames=reb["n_frames"], natural_n_frames=nat["n_frames"], segments=segs, segment_problem=why,
                     frame_first_diff=first_diff(nat["hashes"], reb["hashes"]),
@@ -291,6 +449,9 @@ def process_episode(item, groups=GROUPS):
             lab, _ = demo_swings(reb["eef"], segs, reb["cells"], reb["cells"], reb["cell_xy"])
             base["demo_swings_label"] = lab
         base["usable"] = not base["frame_mismatch"] and base["seglen_ok"]
+        if keep and base["usable"]:
+            _save_base_frames(vframes, base, reb["front"], segs)
+        reb.pop("front", None)
     except Exception as error:   # 记原因继续，判定行计 errors
         base.update(status="error", reason=f"{type(error).__name__}: {error}", usable=False)
         return rows
@@ -312,7 +473,7 @@ def process_episode(item, groups=GROUPS):
                 row.update(status="invalid", reason="; ".join(problems), usable=False)
                 continue
             try:
-                var = reset_demo(seed, diff, vspec, sampling)
+                var = reset_demo(seed, diff, vspec, sampling, return_front=keep)
             except Exception as error:
                 row.update(status="error", reason=f"{type(error).__name__}: {error}", usable=False)
                 continue
@@ -340,13 +501,19 @@ def process_episode(item, groups=GROUPS):
                 row["swing_mismatch"] = True
             row["usable"] = bool(base["usable"] and row["seglen_ok"] and not row["early_diff"] and not row["no_diff"]
                                  and not row["swing_mismatch"] and row["route_match"] and row["dirs_match"])
+            if keep and row["usable"]:
+                _save_variant_frames(vframes, row, var["front"], vsegs)
+            var.pop("front", None)
     return rows
 
 
 def _process(args):
-    item, groups, bench_src, repo = args
+    item, groups, bench_src, repo = args[:4]
+    vframes = args[4] if len(args) > 4 else None
     _setup_path(bench_src, repo)
-    return process_episode(item, groups)
+    if vframes is None:
+        return process_episode(item, groups)
+    return process_episode(item, groups, vframes=vframes)
 
 
 def _setup_path(bench_src, repo):
@@ -378,6 +545,17 @@ def verdicts(rows):
     ]
 
 
+def vframes_verdict(rows):
+    """VFRAMES：可用的原样重建局与可用变体都应写出窗帧文件。"""
+    want = [r for r in rows if r.get("usable")]
+    files = sum(1 for r in want if r.get("vframes"))
+    windows = sum(int(r.get("vframes_windows") or 0) for r in want)
+    errors = sum(1 for r in rows if r.get("vframes_error"))
+    missing = len(want) - files
+    return (f"VFRAMES={'PASS' if want and errors == 0 and missing == 0 else 'FAIL'} files={files} windows={windows} "
+            f"errors={errors} missing={missing}")
+
+
 def load_items(args):
     if args.pool:
         pool = json.loads(Path(args.pool).read_text())
@@ -404,9 +582,15 @@ def cmd_build(args):
     path = out / "variants.jsonl"
     if path.exists() and not args.overwrite:
         raise SystemExit(f"{path} 已存在；确需重写加 --overwrite")
+    vframes = None
+    if getattr(args, "save_window_frames", False):
+        if not args.history_yaml:
+            raise SystemExit("--save-window-frames 须同时给 --history-yaml（窗口网格从模型 yaml 读）")
+        vframes = {"dir": str((out / "vframes").resolve()), "grid": window_grid_from_yaml(args.history_yaml)}
+        print(f"VFRAMES_GRID {json.dumps(vframes['grid'], ensure_ascii=False)} dir={vframes['dir']}", flush=True)
     rows = []
     workers = max(1, int(args.workers))
-    jobs = [(it, groups, args.bench_src, args.repo) for it in items]
+    jobs = [(it, groups, args.bench_src, args.repo) + ((vframes,) if vframes else ()) for it in items]
     if workers == 1:
         parts = map(_process, jobs)
     else:
@@ -425,6 +609,8 @@ def cmd_build(args):
     if workers > 1:
         pool.shutdown()
     lines = verdicts(rows)
+    if vframes is not None:
+        lines.append(vframes_verdict(rows))
     (out / "verdicts.txt").write_text("\n".join(lines) + "\n")
     for line in lines:
         print(line, flush=True)
@@ -458,6 +644,9 @@ def main(argv=None):
     p.add_argument("--workers", type=int, default=1)
     p.add_argument("--groups", default=",".join(GROUPS))
     p.add_argument("--overwrite", action="store_true")
+    p.add_argument("--save-window-frames", action="store_true",
+                   help="按在线窗口切片规则存第 j 段相关窗口原始帧到 <out>/vframes/（契约 C1；须给 --history-yaml）")
+    p.add_argument("--history-yaml", default=None, help="模型 history yaml 或 checkpoint 目录（motion 节的窗口网格）")
     args = parser.parse_args(argv)
     return {"build": cmd_build}[args.cmd](args)
 

@@ -51,6 +51,17 @@
         donor_side（±1）、donor_target、donor_swing（cw/ccw）、variant_physical_arc、w_starts。
   requeue --out <O>/<M> --stage <阶段>：以每局 accepted/<键>.*.terminal.json 为完成标记，重写该阶段队列只留未完成 spec。
 
+计划 1116（steer-speedup-1116）第二部分 1 节 S-B、7 节契约 C1–C3（新增，缺省不启用，缺参数时 spec 与 plan 逐字节不变）：
+  specs --same-episode … --no-vrec：不生成 vrec 阶段（供体改由 samep_rs_variants --save-window-frames 存窗帧、
+        samep_offline_encode.py 离线编码）；plan["samep"]["vrec"] 仍写条目索引（record=None，供 donors 取组元数据），
+        另记 plan["samep"]["no_vrec"]=true。
+  specs / donors 的 --demo-cache-from <N record 目录>：noise、samep、samepcore spec 写 demo_cache_map
+        {接收局 episode 键（与 swap_map 同键）: <目录>/<task>_ep<局号>.npz 绝对路径}；--resident-server：写
+        resident_server: true（契约 C3，由 run_local / serve_policy_attn 消费）。
+  donors --same-episode --offline-donors <目录>：S 组与 *_core 供体直接读离线编码目录（契约 C2：
+        <目录>/<variant_key>.npz，start_frames + embs float32；variant_key 见 samep_rs_variants.variant_key），
+        不需要 vrec 录制；DONOR_ENC 换成非闸门的 DONOR_ENC_OFFLINE（离线 bf16 对在线 fp32 的偏差由 ENC_TOL 把关）。
+
 路径根参数（〇′ F5）：所有写死路径都可覆盖，默认 aspen 值。aspen 端 --repo（运行工作树，默认主检出下
 v1-store/worktrees/sp-swap-run）、--store、--bench-src、--sim-python、--policy-python、--stage2-python、--mmevla-store、
 --checkpoint、--target-contract、--log-dir；GL 端 --gl-jobs/--gl-per-job 给 worker 数，--gl-release（GL 仓库 = release
@@ -1098,12 +1109,22 @@ def cmd_specs(args):
     gl_first = next((w[0] for w in workers if w[1] == "gl"), None)
     build_stage_specs(b, pool_by_key, gl_first)
     samep = None
+    no_vrec = bool(getattr(args, "no_vrec", False))
+    c3 = {"demo_cache_from": getattr(args, "demo_cache_from", None), "resident": bool(getattr(args, "resident_server", False))}
+    if (no_vrec or c3["demo_cache_from"] or c3["resident"]) and not getattr(args, "same_episode", None):
+        raise SystemExit("--no-vrec / --demo-cache-from / --resident-server 只用于 --same-episode")
     if getattr(args, "same_episode", None):
         entries, excluded = samep_entries(args.same_episode, pool_by_key)
-        vrec_index = build_samep_specs(b, pool_by_key, entries)
+        vrec_index = build_samep_specs(b, pool_by_key, entries, vrec=not no_vrec, c3=c3)
         samep = {"variants": str(Path(args.same_episode).resolve()), "excluded": excluded, "vrec": vrec_index}
-        print(f"SPS_SAMEP_VREC entries={len(entries)} shards={len({r['shard'] for r in vrec_index})} "
-              f"excluded={len(excluded)}", flush=True)
+        if no_vrec:
+            samep["no_vrec"] = True
+        if c3["demo_cache_from"] or c3["resident"]:
+            samep["c3"] = {"demo_cache_from": str(Path(c3["demo_cache_from"]).resolve()) if c3["demo_cache_from"] else None,
+                           "resident_server": c3["resident"]}
+        shards = len({r['shard'] for r in vrec_index if r['shard'] is not None})
+        print(f"SPS_SAMEP_VREC entries={len(entries)} shards={shards} "
+              f"excluded={len(excluded)}" + (" no_vrec=1" if no_vrec else ""), flush=True)
     for site, r in roots.items():
         if r is None:
             continue
@@ -1662,6 +1683,8 @@ def cmd_donors(args):
         return cmd_donors_smoke(out)
     if getattr(args, "same_episode", False):
         return cmd_donors_samep(args, out)
+    if getattr(args, "offline_donors", None) or getattr(args, "demo_cache_from", None) or getattr(args, "resident_server", False):
+        raise SystemExit("--offline-donors / --demo-cache-from / --resident-server 只用于 --same-episode")
     plan = P._read_json(out / "plan.json")
     apply_grid(plan.get("motion"))
     pool, pool_by_key = load_pool(out.parent)
@@ -1776,12 +1799,26 @@ def samep_entries(variants_path, pool_by_key):
     return entries, excluded
 
 
-def build_samep_specs(b, pool_by_key, entries, main_seed=MAIN_SEED):
+def samep_index_rows(entries):
+    """--no-vrec：不建 vrec 阶段，只出与 vrec 索引同字段的条目行（ep/shard/record 为 None），供 donors 取组元数据。"""
+    rows = []
+    for e in entries:
+        row = {"group": "vrec", "task": "RouteStick", "ep": None, "recv": e["recv"], "recv_ep": split_key(e["recv"])[1],
+               "j": e["j"], "vgroup": e["vgroup"], "shard": None}
+        row.update({k: e.get(k) for k in ("donor_side", "donor_target", "donor_swing", "variant_physical_arc")})
+        row["record"] = None
+        rows.append(row)
+    return rows
+
+
+def build_samep_specs(b, pool_by_key, entries, main_seed=MAIN_SEED, vrec=True, c3=None):
     """vrec（变体与原样重建录 motion，首次推理即停）与 noise（每接收局换 seed 全长不干预）两阶段 spec。
-    vrec 每片 ≤ SPEC_MAX 局，自带 metadata（局号 0..n−1 → seed/难度）与 episode_specs 表。返回 vrec 索引。"""
+    vrec 每片 ≤ SPEC_MAX 局，自带 metadata（局号 0..n−1 → seed/难度）与 episode_specs 表。返回 vrec 索引。
+    vrec=False（--no-vrec）只建 noise，返回 samep_index_rows；c3={"demo_cache_from", "resident"} 给 noise spec 写契约 C3 键。"""
     out = b.out
-    shards = [entries[i:i + SPEC_MAX] for i in range(0, len(entries), SPEC_MAX)]
-    vrec_index = []
+    entries_for_vrec = entries if vrec else []
+    shards = [entries_for_vrec[i:i + SPEC_MAX] for i in range(0, len(entries_for_vrec), SPEC_MAX)]
+    vrec_index = [] if vrec else samep_index_rows(entries)
     for si, shard in enumerate(shards):
         worker = b.order[si % len(b.order)]
         name = f"s{si:03d}"
@@ -1811,9 +1848,48 @@ def build_samep_specs(b, pool_by_key, entries, main_seed=MAIN_SEED):
     for i, (seed, members) in enumerate(bins):
         worker = b.order[i % len(b.order)]
         eps = [pool_by_key[m[1]] for m in members]
-        b.add(f"noise-{worker}-s{seed}-{i:02d}", "noise", worker, eps, seed=seed,
+        extra = c3_extra([m[1] for m in members], **(c3 or {})) or None
+        b.add(f"noise-{worker}-s{seed}-{i:02d}", "noise", worker, eps, seed=seed, extra=extra,
               rows=[n_row(e, recv_ep=int(e["episode_id"]), noise_rep=NOISE_SEEDS.index(seed) + 1) for e in eps])
     return vrec_index
+
+
+def c3_extra(keys, demo_cache_from=None, resident=False):
+    """契约 C3 两个 spec 键：demo_cache_map {接收局键: N 录制 npz 绝对路径}、resident_server。都不给时返回 {}。"""
+    extra = {}
+    if demo_cache_from:
+        root = Path(demo_cache_from).resolve()
+        extra["demo_cache_map"] = {k: str(root / record_name(*split_key(k))) for k in keys}
+    if resident:
+        extra["resident_server"] = True
+    return extra
+
+
+def load_offline_record(path, key=None):
+    """契约 C2 离线供体 npz → {起点: emb}；有 meta 时核对 key。缺文件返回 None。"""
+    rec = load_record(path)
+    if rec is None or key is None:
+        return rec
+    with np.load(path) as z:
+        if "meta" in z.files:
+            got = json.loads(str(z["meta"])).get("key")
+            if got is not None and got != key:
+                raise SystemExit(f"{path} 的 meta.key={got!r} 与文件名主干 {key!r} 不符")
+    return rec
+
+
+def load_offline_donors(folder, index, pool_by_key):
+    """离线编码目录 → 与 load_vrec_records 同形的 {(接收局键, j, vgroup): {起点: emb}}；j=None 读 demo_full。"""
+    from scripts.interpret.samep_rs_variants import variant_key
+    folder = Path(folder)
+    out = {}
+    for r in index:
+        e = pool_by_key[r["recv"]]
+        name = variant_key(e["env_seed"], e["difficulty"], r["j"], None if r["j"] is None else r["vgroup"])
+        rec = load_offline_record(folder / f"{name}.npz", name)
+        if rec is not None:
+            out[(r["recv"], r["j"], r["vgroup"])] = rec
+    return out
 
 
 def load_vrec_records(vrec_index):
@@ -1826,7 +1902,7 @@ def load_vrec_records(vrec_index):
     return out
 
 
-def donor_enc_line(infos, vrec, model, tol=1e-5):
+def donor_enc_line(infos, vrec, model, tol=1e-5, name="DONOR_ENC"):
     """DONOR_ENC：原样重建局录到的示范窗编码 vs 自然局 N 在线编码（同起点逐位或 ≤ tol）。"""
     n = bad = 0
     maxabs = 0.0
@@ -1841,7 +1917,7 @@ def donor_enc_line(infos, vrec, model, tol=1e-5):
                 maxabs = max(maxabs, dev)
                 n += 1
                 bad += int(dev > tol)
-    return f"DONOR_ENC={'PASS' if n and not bad else 'FAIL'} model={model} windows={n} bad={bad} maxabs={maxabs:g}"
+    return f"{name}={'PASS' if n and not bad else 'FAIL'} model={model} windows={n} bad={bad} maxabs={maxabs:g}"
 
 
 def assign_samep(infos, vrec, excluded, groups=SAMEP_GROUPS, core=True, max_j=None, vrec_meta=None):
@@ -1920,9 +1996,9 @@ def samep_row(run):
     return row
 
 
-def build_samep_swap_specs(b, pool_by_key, done, seed=MAIN_SEED):
+def build_samep_swap_specs(b, pool_by_key, done, seed=MAIN_SEED, c3=None):
     """samep（S/Z 组）与 samepcore（*_core）：同 (j, 组) 的接收局进同一 spec（≤ SPEC_MAX、接收局唯一），
-    spec 带 stop_after_step=j。"""
+    spec 带 stop_after_step=j；c3 给出时另写契约 C3 键（demo_cache_map 与 swap_map 同键）。"""
     ablate = f"motion_swap_exact:{b.out / SAMEP_DONOR_DIR}"
     for stage, members in (("samep", [r for r in done if r["variant"] == "all"]),
                            ("samepcore", [r for r in done if r["variant"] == "core"])):
@@ -1932,7 +2008,8 @@ def build_samep_swap_specs(b, pool_by_key, done, seed=MAIN_SEED):
             b.add(f"{stage}-{worker}-j{j}-{group.replace('_', '')}-{i:03d}", stage, worker,
                   [pool_by_key[r["recv"]] for r in runs], seed=seed, ablate=ablate,
                   swap_map={r["recv"]: episode_key("RouteStick", r["donor"]) for r in runs},
-                  extra={"stop_after_step": int(j)}, rows=[samep_row(r) for r in runs])
+                  extra=dict({"stop_after_step": int(j)}, **c3_extra([r["recv"] for r in runs], **(c3 or {}))),
+                  rows=[samep_row(r) for r in runs])
 
 
 def cmd_donors_samep(args, out):
@@ -1945,10 +2022,24 @@ def cmd_donors_samep(args, out):
     for line in segment_line(infos)[0]:
         print(line, flush=True)
     index = plan["samep"]["vrec"]
-    vrec = load_vrec_records(index)
     meta = {(r["recv"], r["j"], r["vgroup"]): r for r in index}
-    print(f"SAMEP_VREC entries={len(index)} records={len(vrec)} missing={len(index) - len(vrec)}", flush=True)
-    print(donor_enc_line(infos, vrec, plan["model"]), flush=True)
+    offline = getattr(args, "offline_donors", None)
+    if plan["samep"].get("no_vrec") and not offline:
+        raise SystemExit("plan 为 --no-vrec：donors 须给 --offline-donors <离线编码目录>")
+    if offline:
+        vrec = load_offline_donors(offline, index, pool_by_key)
+        print(f"SAMEP_OFFLINE dir={Path(offline).resolve()} entries={len(index)} records={len(vrec)} "
+              f"missing={len(index) - len(vrec)}", flush=True)
+        enc = Path(offline) / "OFFLINE_ENC.txt"
+        if enc.is_file():
+            for line in enc.read_text().splitlines():
+                if line.startswith("OFFLINE_ENC="):
+                    print(line, flush=True)
+        print(donor_enc_line(infos, vrec, plan["model"], tol=0.1, name="DONOR_ENC_OFFLINE"), flush=True)
+    else:
+        vrec = load_vrec_records(index)
+        print(f"SAMEP_VREC entries={len(index)} records={len(vrec)} missing={len(index) - len(vrec)}", flush=True)
+        print(donor_enc_line(infos, vrec, plan["model"]), flush=True)
     groups = tuple(g for g in (args.groups or ",".join(SAMEP_GROUPS)).split(",") if g)
     bad = [g for g in groups if g not in SAMEP_GROUPS]
     if bad:
@@ -1964,10 +2055,20 @@ def cmd_donors_samep(args, out):
           + f" no_record={len(notes['no_record'])} missing={len(notes['missing'])}"
           + f" same_as_recv={len(notes['same_as_recv'])} excluded={len(notes['excluded'])}", flush=True)
     b = builder_from_plan(out, plan, pool)
-    build_samep_swap_specs(b, pool_by_key, done, plan.get("main_seed", MAIN_SEED))
+    c3 = {"demo_cache_from": getattr(args, "demo_cache_from", None), "resident": bool(getattr(args, "resident_server", False))}
+    if c3["demo_cache_from"]:
+        absent = [r["recv"] for r in done if not (Path(c3["demo_cache_from"]) / record_name(*split_key(r["recv"]))).is_file()]
+        if absent:
+            raise SystemExit(f"--demo-cache-from 缺接收局 N 录制 {sorted(set(absent))[:5]}…（共 {len(set(absent))} 局）")
+    build_samep_swap_specs(b, pool_by_key, done, plan.get("main_seed", MAIN_SEED), c3=c3)
     b.write(("samep", "samepcore"))
     plan["runs"] = [r for r in plan["runs"] if r["stage"] not in ("samep", "samepcore")] + b.rows
     plan["samep"].update(notes=notes, donors=len(done))
+    if offline:
+        plan["samep"]["offline_donors"] = str(Path(offline).resolve())
+    if c3["demo_cache_from"] or c3["resident"]:
+        plan["samep"]["c3_donors"] = {"demo_cache_from": str(Path(c3["demo_cache_from"]).resolve())
+                                      if c3["demo_cache_from"] else None, "resident_server": c3["resident"]}
     plan.setdefault("eligibility", {})
     for k, v in infos.items():
         plan["eligibility"][k] = {kk: v.get(kk) for kk in ("status", "m", "es", "segments", "segments_content", "W_all",
@@ -2038,6 +2139,12 @@ def add_root_args(p):
     p.add_argument("--gl-extra", default=None, help="GL spec 的额外键（JSON；缺省按路径前缀换算 --extra）")
 
 
+def add_c3_args(p):
+    p.add_argument("--demo-cache-from", default=None,
+                   help="N 录制目录：同一局 noise/samep/samepcore spec 写 demo_cache_map（契约 C3）")
+    p.add_argument("--resident-server", action="store_true", help="同一局 spec 写 resident_server: true（契约 C3）")
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -2075,6 +2182,8 @@ def main(argv=None):
                    help="模型 history yaml 或 checkpoint 目录：motion 节的 stride/window_frames/demo_min_real_frames 写进 plan")
     p.add_argument("--max-steps", type=int, default=None, help=f"执行窗枚举上限（给 --history-yaml 时缺省 {MAX_STEPS_SAMEP}）")
     p.add_argument("--same-episode", default=None, help="samep_rs_variants 的 variants.jsonl：另生成 vrec、noise 两阶段")
+    p.add_argument("--no-vrec", action="store_true", help="同一局不生成 vrec 阶段（供体走离线编码，计划 1116）")
+    add_c3_args(p)
     add_root_args(p)
     p = sub.add_parser("donors")
     p.add_argument("--out", required=True, help="<O>/<M>")
@@ -2085,6 +2194,9 @@ def main(argv=None):
     p.add_argument("--groups", default=None, help=f"同一局组（缺省 {','.join(SAMEP_GROUPS)}）")
     p.add_argument("--no-core", action="store_true", help="同一局不生成 *_core")
     p.add_argument("--max-j", type=int, default=None, help="同一局只做 j ≤ 此值")
+    p.add_argument("--offline-donors", default=None,
+                   help="同一局供体读离线编码目录（契约 C2，samep_offline_encode.py 输出），不需要 vrec 录制")
+    add_c3_args(p)
     p = sub.add_parser("requeue")
     p.add_argument("--out", required=True, help="<O>/<M>")
     p.add_argument("--stage", required=True, choices=STAGES)
