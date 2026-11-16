@@ -16,6 +16,11 @@
 `<repo>/src/mme_vla_suite/shared/wan_pool768.py::pool_raw_wan_latent_768`（同样按文件加载）得 (1,768)，再 `reshape(768)`
 满足协议 (768,)；握手 info 另回 `encoder_kind`、`readout`、`pool_source_sha256`。`--stub` 与它同用时只在握手里带这三键，
 编码仍是 stub 约定。缺省 `--encoder-kind` 即 encoder 分支，逐字不变。
+
+快速模式（steer-speedup-1116 F3）：环境变量 `MMEVLA_MOTION_FAST=1` 时两条真实分支改用同目录 `wan_motion_fast.py`
+（`pin_numerics_fast` 代替 `pin_numerics`：VAE bf16 autocast、TF32 开、cudnn.benchmark 开；encoder 仍 bf16 autocast），
+握手另带 `fast` 标记（`fast.enabled=True`），`vae` / `encoder` 段的 amp / tf32 / batch / flags 改为如实的快速值；
+`MMEVLA_MOTION_FAST_VAE_FP32=1` 为回退档（VAE fp32、TF32 关）。缺省（不设或非 "1"）不加载该文件，逐字不变。
 """
 
 from __future__ import annotations
@@ -62,6 +67,15 @@ def pool_encode(W, PL, vae, window: np.ndarray, device) -> np.ndarray:
     return PL.pool_raw_wan_latent_768(z).reshape(768)
 
 
+def fast_numerics(W):
+    """`MMEVLA_MOTION_FAST=1` 时返回 (F, fp32_vae)，否则 None（缺省路径不加载 wan_motion_fast.py）。"""
+    if os.environ.get("MMEVLA_MOTION_FAST") != "1":
+        return None
+    F = _load(_HERE / "wan_motion_fast.py", "wan_motion_fast")
+    F._W = W                                                # 与 sidecar 共用同一份已核 SOURCE_PIN 的 W
+    return F, F.vae_fp32()
+
+
 def log(msg: str) -> None:
     print(f"[sidecar pid={os.getpid()}] {msg}", file=sys.stderr, flush=True)
 
@@ -105,22 +119,32 @@ def main() -> int:
             if W.sha256_file(str(_HERE / "wan_motion_infer.py")) != pin["source_sha256"]:
                 raise RuntimeError("复制件 wan_motion_infer.py 与 SOURCE_PIN 不符")
             W.check_env()
-            flags = W.pin_numerics()
+            fast = fast_numerics(W)
+            flags = fast[0].pin_numerics_fast(fast[1]) if fast else W.pin_numerics()
             W.check_versions(strict=True, with_diffusers=True)
             torch.manual_seed(0)
             if not torch.cuda.is_available():
                 raise RuntimeError("sidecar 需要 CUDA")
             device = torch.device("cuda")
             vae, vinfo = W.load_vae(VAE_ID, device, expected_state_sha256=(args.expected_vae_sha256 or W.VAE_STATE_SHA256_EXPECTED))
+            if fast:
+                vinfo = fast[0].fast_vae_info(vinfo, flags, fast[1])
             # 池化分支：不加载 encoder；VAE 之后零参数池化（pool_encode），握手回 kind / readout / 池化源码 sha256
             PL = _load(_POOL768_PATH, "wan_pool768")
             info = {"stub": False, "protocol_sha256": P.protocol_sha256(), "protocol_path": str(_PROTO_PATH), "pid": os.getpid(),
                     "vae": vinfo, "flags": flags, "source_pin": pin,
                     "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES"), **pool_info(PL, args.encoder_kind)}
+            if fast:
+                info["fast"] = fast[0].fast_info(fast[1], flags)
 
-            def encode(start: int, window: np.ndarray) -> np.ndarray:
-                W.pin_numerics()
-                return pool_encode(W, PL, vae, window, device)      # 🔒 33 帧一次喂、B=1、fp32、关 TF32，再池化
+                def encode(start: int, window: np.ndarray) -> np.ndarray:
+                    fast[0].pin_numerics_fast(fast[1])
+                    lat = fast[0].encode_chunks(vae, window, device, fast[1])[0]
+                    return PL.pool_raw_wan_latent_768(lat.detach().float().cpu().numpy()).reshape(768)
+            else:
+                def encode(start: int, window: np.ndarray) -> np.ndarray:
+                    W.pin_numerics()
+                    return pool_encode(W, PL, vae, window, device)      # 🔒 33 帧一次喂、B=1、fp32、关 TF32，再池化
 
             t0 = time.perf_counter()
             encode(0, np.zeros((P.WINDOW_FRAMES, P.FRAME_SIZE, P.FRAME_SIZE, 3), np.uint8))
@@ -135,7 +159,8 @@ def main() -> int:
             if W.sha256_file(str(_HERE / "wan_motion_infer.py")) != pin["source_sha256"]:
                 raise RuntimeError("复制件 wan_motion_infer.py 与 SOURCE_PIN 不符")
             W.check_env()
-            flags = W.pin_numerics()
+            fast = fast_numerics(W)
+            flags = fast[0].pin_numerics_fast(fast[1]) if fast else W.pin_numerics()
             W.check_versions(strict=True, with_diffusers=True)
             torch.manual_seed(0)
             if not torch.cuda.is_available():
@@ -153,14 +178,24 @@ def main() -> int:
                                  f"在线推理与离线建库不同源")
             encoder, einfo, use_amp = W.load_encoder(args.encoder_run_dir, args.checkpoint, device,
                                                      expected_sha256=(args.expected_ckpt_sha256 or lock_ckpt))
+            if fast:
+                vinfo = fast[0].fast_vae_info(vinfo, flags, fast[1])
+                einfo = fast[0].fast_encoder_info(einfo, flags, fast[1])
             info = {"stub": False, "protocol_sha256": P.protocol_sha256(), "protocol_path": str(_PROTO_PATH), "pid": os.getpid(),
                     "vae": vinfo, "encoder": einfo, "flags": flags, "source_pin": pin,
                     "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES")}
+            if fast:
+                info["fast"] = fast[0].fast_info(fast[1], flags)
 
-            def encode(start: int, window: np.ndarray) -> np.ndarray:
-                W.pin_numerics()
-                lat = W.encode_chunk(vae, window, device)        # 🔒 33 帧一次喂、B=1、fp32、关 TF32
-                return W.motion_token(encoder, lat, use_amp, device).astype(np.float32)
+                def encode(start: int, window: np.ndarray) -> np.ndarray:
+                    fast[0].pin_numerics_fast(fast[1])
+                    lat = fast[0].encode_chunks(vae, window, device, fast[1])[0]
+                    return W.motion_token(encoder, lat, use_amp, device).astype(np.float32)
+            else:
+                def encode(start: int, window: np.ndarray) -> np.ndarray:
+                    W.pin_numerics()
+                    lat = W.encode_chunk(vae, window, device)        # 🔒 33 帧一次喂、B=1、fp32、关 TF32
+                    return W.motion_token(encoder, lat, use_amp, device).astype(np.float32)
 
             # 预热：一窗全零帧，结果丢弃（pin_numerics 已关 benchmark，预热不改后续数值）
             t0 = time.perf_counter()

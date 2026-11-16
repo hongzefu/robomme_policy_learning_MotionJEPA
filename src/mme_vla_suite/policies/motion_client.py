@@ -11,6 +11,10 @@
   pool_source_sha256 与 vae 段，不比 encoder 段。`encoder_kind=None` 与 `"v10"` 同义，启动参数与握手比对逐字不变。
 - 跨硬件放行（v10 / 池化 768 两条单进程路径）：`MMEVLA_MOTION_PROV_RELAX=gpu_name,compute_cap,sm_count` 时这三个硬件键不等只记 WARN
   （见 `check_provenance`）。阶段二与固定池化 1024 的会话握手不受影响。
+- 快速数值模式（steer-speedup-1116 F3，`MMEVLA_MOTION_FAST=1`）：仅当 sidecar 握手带 `fast.enabled=True` 且本进程也设
+  `MMEVLA_MOTION_FAST=1` 时，numerics 字段（dtype / amp / autocast / TF32 / batch / benchmark / flags）不比，只打 `MOTION_PROV_FAST`；
+  模型身份（VAE 权重 sha、encoder checkpoint sha / epoch / arch、readout、池化源码 sha、模块与源码 sha、软件版本）照比。
+  sidecar 报 fast 而本进程未设、或本进程设了而 sidecar 未报 fast，一律按不同源拒绝。缺省（两侧都不设）逐字不变。
 """
 
 from __future__ import annotations
@@ -65,6 +69,12 @@ TIMEPOOL_SNAPSHOT_PROV_KEYS = frozenset((
 # 不加载 encoder；与 v10 共用单进程 sidecar 与 768 维响应。值与 shared/wan_pool768.py 的 POOL768_ENCODER_KIND 相同。
 POOL768_KIND = "wan_fixedpool768"
 POOL_ENCODER_KINDS = (POOL768_KIND,)
+# 快速模式下放行的 numerics 字段（模型身份键不在此列）
+FAST_ENV = "MMEVLA_MOTION_FAST"
+FAST_RELAX_VAE = ("vae_dtype", "batch", "tf32", "amp", "flags")
+FAST_RELAX_ENC = ("amp", "tf32", "batch", "flags")
+# 阶段二 online_vae 中属于 numerics 的键；其余（vae_id、权重 sha、latent_mode、adapter、preprocess）照比
+FAST_RELAX_ONLINE_VAE = ("vae_dtype", "batch", "tf32", "amp", "numerics")
 _ENCODER_FIELD = re.compile(r"(^|_)(encoder|ckpt|checkpoint)(_|$)")
 
 
@@ -78,6 +88,18 @@ def _reject_encoder_fields(value, path: str = "握手") -> None:
     elif isinstance(value, list):
         for item in value:
             _reject_encoder_fields(item, path)
+
+
+def fast_mode_agreed(provenance: dict | None, env=None) -> bool:
+    """快速模式放行判定：sidecar 握手 `fast.enabled is True` 且客户端 `MMEVLA_MOTION_FAST=1` 才放行 numerics。
+
+    两侧不一致（只一侧开）raise ValueError——数值口径不能单方面切换；两侧都不开返回 False（缺省逐字比对）。"""
+    marker = (provenance or {}).get("fast")
+    sidecar_fast = isinstance(marker, dict) and marker.get("enabled") is True
+    client_fast = (os.environ if env is None else env).get(FAST_ENV) == "1"
+    if sidecar_fast != client_fast:
+        raise ValueError(f"快速模式两侧不一致: sidecar fast={sidecar_fast} 客户端 {FAST_ENV}={client_fast}")
+    return sidecar_fast
 
 
 def _live_process(pid: int) -> tuple[int, int]:
@@ -572,6 +594,22 @@ class MotionEncoderClient:
         from mme_vla_suite.datastore.motion_store import validate_stage2_provenance
         validate_stage2_provenance(store_prov)
         validate_stage2_evidence(store_prov, self._provenance_root)
+        if fast_mode_agreed(self.provenance):
+            # 快速模式：numerics 组与 online_vae 的数值键放行，encoder / 权重 / source_pin 与 VAE 身份照比
+            for group in ("encoder", "encoder_state_sha256", "source_pin"):
+                actual, expected = self.provenance.get(group), store_prov[group]
+                if group == "encoder" and isinstance(actual, dict):
+                    actual = {key: value for key, value in actual.items() if key != "run_dir"}
+                    expected = {key: value for key, value in expected.items() if key != "run_dir"}
+                if actual != expected:
+                    raise ValueError(f"阶段二真实握手的 {group} 与离线来源不同")
+            online, want = self.provenance.get("online_vae") or {}, store_prov["stage2_compat"]["online_vae"]
+            for key in sorted(set(online) | set(want)):
+                if key not in FAST_RELAX_ONLINE_VAE and online.get(key) != want.get(key):
+                    raise ValueError(f"阶段二真实 VAE 与兼容合同的 online_vae.{key} 不同")
+            print("MOTION_PROV_FAST stage2 numerics released", file=sys.stderr, flush=True)
+            self._check_session_worker()
+            return
         target = None
         if getattr(self, "_eval_target_contract", None) is not None:
             from scripts.evaluation.runtime_contract import validate_eval_runtime_contract
@@ -619,7 +657,10 @@ class MotionEncoderClient:
                 raise ValueError(f"固定池化握手的 wan.{key} 与离线来源不同")
         numerics = identity.get("numerics")
         flags = numerics.get("flags") if isinstance(numerics, dict) else None
-        if (not isinstance(flags, dict) or numerics.get("dtype") != "float32" or numerics.get("autocast") is not False
+        if fast_mode_agreed(identity):
+            # 快速模式：dtype / autocast / batch / TF32 放行，pool 与 wan 身份已在上面照比
+            print("MOTION_PROV_FAST timepool numerics released", file=sys.stderr, flush=True)
+        elif (not isinstance(flags, dict) or numerics.get("dtype") != "float32" or numerics.get("autocast") is not False
                 or numerics.get("batch") != 1 or flags.get("matmul_allow_tf32") is not False
                 or flags.get("cudnn_allow_tf32") is not False):
             raise ValueError("固定池化握手的数值开关不是 fp32、B=1、TF32=false")
@@ -656,7 +697,13 @@ class MotionEncoderClient:
                 raise
             return
         relax = {k.strip() for k in os.environ.get("MMEVLA_MOTION_PROV_RELAX", "").split(",") if k.strip()}
-        diffs, relaxed = [], []
+        diffs, relaxed, fast_released = [], [], []
+        try:
+            fast = fast_mode_agreed(self.provenance)
+        except ValueError as exc:
+            self.close()
+            raise RuntimeError(f"sidecar 与离线库 provenance 不同源:\n  {exc}") from exc
+        fast_keys = {"vae": FAST_RELAX_VAE, "encoder": FAST_RELAX_ENC} if fast else {}
         sections = (("vae", tuple(k for k in PROV_SAME_VAE if k != "encoder_src_sha256")),) \
             if kind in POOL_ENCODER_KINDS \
             else (("vae", PROV_SAME_VAE), ("encoder", PROV_SAME_ENC))
@@ -665,10 +712,16 @@ class MotionEncoderClient:
             for k in keys:
                 if a.get(k) != b.get(k):
                     line = f"{section}.{k}: sidecar={a.get(k)!r} store={b.get(k)!r}"
-                    (relaxed if k in relax else diffs).append(line)
+                    if k in fast_keys.get(section, ()):
+                        fast_released.append(line)
+                    else:
+                        (relaxed if k in relax else diffs).append(line)
         for line in relaxed:
             print("MOTION_PROV_RELAXED", line, file=sys.stderr, flush=True)
+        for line in fast_released:
+            print("MOTION_PROV_FAST", line, file=sys.stderr, flush=True)
         self.relaxed_diffs = relaxed
+        self.fast_released = fast_released
         if diffs:
             self.close()
             raise RuntimeError("sidecar 与离线库 provenance 不同源:\n  " + "\n  ".join(diffs))
