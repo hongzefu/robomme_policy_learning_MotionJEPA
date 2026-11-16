@@ -150,7 +150,7 @@ need(lat.get("raw_dir") is not None and lat.get("raw_dir") == im.get("raw_dir"),
 need(motion.is_dir() and not motion.is_symlink() and motion.resolve().parent == ds.resolve(), 4, f"motion 根={motion}")
 mm = ms.MotionMeta.load(motion)
 prov = mm.provenance
-need(mm.raw.get("layout") == ms.LAYOUT and mm.num_rows == 71316, 4, f"layout={mm.raw.get('layout')} rows={mm.num_rows}")
+need(mm.raw.get("layout") == ms.LEGACY768_DEMOPAD_LAYOUT and mm.num_rows == 71316, 4, f"layout={mm.raw.get('layout')} rows={mm.num_rows}")
 need("MMEVLA_MOTION_STORE" not in os.environ, 4, "MMEVLA_MOTION_STORE 未设置")
 need(prov.get("encoder_kind") == wp.POOL768_ENCODER_KIND and prov.get("readout") == wp.POOL768_READOUT, 4,
      f"encoder_kind={prov.get('encoder_kind')} readout={prov.get('readout')}")

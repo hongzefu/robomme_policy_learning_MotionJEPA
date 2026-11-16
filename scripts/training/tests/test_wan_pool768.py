@@ -135,11 +135,11 @@ def build_lib(tmp: pathlib.Path, seed: int = 0) -> SimpleNamespace:
     man_path = lib / "meta/episode_manifest.json"
     _write_json(man_path, manifest)
 
-    spec = ms.LAYOUT_SPECS[ms.LAYOUT]
+    spec = ms.LAYOUT_SPECS[ms.LEGACY768_DEMOPAD_LAYOUT]
     entries = ms.build_index_entries(manifest, spec)
     totals = ms.index_totals(entries)
     ref = lib / "motion"
-    index = ms.index_payload(manifest, entries, spec=spec, layout=ms.LAYOUT, mj_repo_commit="mjc")
+    index = ms.index_payload(manifest, entries, spec=spec, layout=ms.LEGACY768_DEMOPAD_LAYOUT, mj_repo_commit="mjc")
     index_bytes = (json.dumps(index, ensure_ascii=False, indent=1) + "\n").encode()
     (ref / "meta").mkdir(parents=True)
     (ref / ms.INDEX_RELPATH).write_bytes(index_bytes)
@@ -147,13 +147,13 @@ def build_lib(tmp: pathlib.Path, seed: int = 0) -> SimpleNamespace:
     table = rng.standard_normal((rows, 768)).astype(np.float32)
     (ref / ms.MOTION_TABLE_RELPATH).write_bytes(table.tobytes())
     meta = {
-        "schema": ms.META_SCHEMA, "layout": ms.LAYOUT, "status": "verified", **spec.fields(),
+        "schema": ms.META_SCHEMA, "layout": ms.LEGACY768_DEMOPAD_LAYOUT, "status": "verified", **spec.fields(),
         "byte_order": ms.BYTE_ORDER, "array_order": ms.ARRAY_ORDER, "grid_stride": ms.GRID_STRIDE,
         "window_frames": ms.WINDOW_FRAMES, "grid_origin": ms.GRID_ORIGIN, "window_direction": ms.WINDOW_DIRECTION,
         "truncation_policy": ms.TRUNCATION_POLICY, "frame_size": ms.FRAME_SIZE,
-        "tables": {ms.MOTION_KEY: {"row_shape": [768], "dtype": "float32", "row_bytes": ms.MOTION_ROW_BYTES,
+        "tables": {ms.MOTION_KEY: {"row_shape": [768], "dtype": "float32", "row_bytes": ms.LEGACY768_ROW_BYTES,
                                    "num_rows": rows, "relpath": ms.MOTION_TABLE_RELPATH,
-                                   "byte_count": rows * ms.MOTION_ROW_BYTES,
+                                   "byte_count": rows * ms.LEGACY768_ROW_BYTES,
                                    "sha256": hashlib.sha256(table.tobytes()).hexdigest()}},
         "num_rows": rows, "totals": totals, "row_order": index["row_order"],
         "manifest_sha256": manifest["sha256"], "manifest_path": str(man_path),

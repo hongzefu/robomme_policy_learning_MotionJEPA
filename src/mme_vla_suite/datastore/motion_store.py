@@ -55,6 +55,10 @@ logger = logging.getLogger(__name__)
 
 # ── 布局常量 ──────────────────────────────────────────────────────────────────
 LAYOUT = "motion-v10-8x256-grid16-demopad17-v1"
+# 历史 768 维 demopad 布局（v17 合入前的 LAYOUT）；v17 的 Wan 零参数池化 768 表（export_wan_pool768.py）沿用此布局。
+LEGACY768_DEMOPAD_LAYOUT = "motion-768-grid16-demopad17-v1"
+LEGACY768_ROW_SHAPE = (768,)
+LEGACY768_ROW_BYTES = 768 * 4               # 3,072
 STAGE2_LAYOUT = "motion-stage2-1x1024-grid32-demopad17-v1"
 STAGE2_ARCH = "wan-latent-stage2-blockwise-pool4-three-decoder"
 STAGE2_GROUPS = ("encoder", "encoder_state_sha256", "source_pin", "numerics", "stage2_compat", "vae")

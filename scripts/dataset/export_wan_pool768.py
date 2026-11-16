@@ -202,8 +202,8 @@ def main() -> None:
         raise SystemExit(f"错误: motion-ref 绑定清单 {ref.manifest_sha256[:16]}… != --manifest {manifest['sha256'][:16]}…")
     entries = list(ref.entries)
     ms.check_index_against_manifest(entries, manifest)
-    if ref.spec != ms.LAYOUT_SPECS[ms.LAYOUT] or ref.raw["layout"] != ms.LAYOUT:
-        raise SystemExit(f"错误: motion-ref 布局 {ref.raw['layout']} != {ms.LAYOUT}")
+    if ref.spec != ms.LAYOUT_SPECS[ms.LEGACY768_DEMOPAD_LAYOUT] or ref.raw["layout"] != ms.LEGACY768_DEMOPAD_LAYOUT:
+        raise SystemExit(f"错误: motion-ref 布局 {ref.raw['layout']} != {ms.LEGACY768_DEMOPAD_LAYOUT}")
     index_bytes = (ref_root / ms.INDEX_RELPATH).read_bytes()
     totals = ms.index_totals(entries)
     ref_vae = ref.provenance.get("vae")
@@ -232,8 +232,8 @@ def main() -> None:
     with open(tmp, "wb") as f, mp.Pool(args.workers) as pool:
         for n, res in enumerate(pool.imap(pool_segment, jobs, chunksize=1)):
             key = res["key"]
-            if res["row_base"] * ms.MOTION_ROW_BYTES != offset:
-                raise RuntimeError(f"{key} row_base={res['row_base']} 与写游标 {offset // ms.MOTION_ROW_BYTES} 不符")
+            if res["row_base"] * ms.LEGACY768_ROW_BYTES != offset:
+                raise RuntimeError(f"{key} row_base={res['row_base']} 与写游标 {offset // ms.LEGACY768_ROW_BYTES} 不符")
             for name, got in ((f"{LATENT_ARC_PREFIX}/{key}.bin", res["bin_sha256"]),
                               (f"{LATENT_ARC_PREFIX}/{key}.metadata.json", res["metadata_sha256"])):
                 if members.get(name) != got:
@@ -246,17 +246,17 @@ def main() -> None:
             sha.update(rows)
             for m in range(res["num_grid"]):
                 h = hashlib.blake2b(digest_size=ms.ROW_DIGEST_BYTES)
-                h.update(rows[m * ms.MOTION_ROW_BYTES:(m + 1) * ms.MOTION_ROW_BYTES])
+                h.update(rows[m * ms.LEGACY768_ROW_BYTES:(m + 1) * ms.LEGACY768_ROW_BYTES])
                 digests += h.digest()
             offset += len(rows)
             padded += res["padded"]
             seg_rows[res["segment"]] += res["num_grid"]
             if (n + 1) % 500 == 0:
-                print(f"[export] {n + 1}/{len(jobs)} 段 {offset // ms.MOTION_ROW_BYTES} 行", flush=True)
+                print(f"[export] {n + 1}/{len(jobs)} 段 {offset // ms.LEGACY768_ROW_BYTES} 行", flush=True)
         f.flush()
         os.fsync(f.fileno())
-    if offset != totals["rows"] * ms.MOTION_ROW_BYTES:
-        raise RuntimeError(f"表字节数 {offset} != rows × {ms.MOTION_ROW_BYTES}")
+    if offset != totals["rows"] * ms.LEGACY768_ROW_BYTES:
+        raise RuntimeError(f"表字节数 {offset} != rows × {ms.LEGACY768_ROW_BYTES}")
     if seg_rows != {"demo": totals["demo_rows"], "exec": totals["exec_rows"]}:
         raise RuntimeError(f"分段行数 {seg_rows} 与 index totals 不符")
     os.replace(tmp, table_path)
@@ -266,7 +266,7 @@ def main() -> None:
 
     atomic_write_bytes(out / ms.INDEX_RELPATH, index_bytes)
     atomic_write_bytes(out / ms.ROW_DIGESTS_RELPATH, bytes(digests))
-    spec = ms.LAYOUT_SPECS[ms.LAYOUT]
+    spec = ms.LAYOUT_SPECS[ms.LEGACY768_DEMOPAD_LAYOUT]
     old_prov = ref.provenance
     git_head = subprocess.run(["git", "-C", str(_REPO_ROOT), "rev-parse", "HEAD"],
                               capture_output=True, text=True, check=False).stdout.strip()
@@ -305,14 +305,14 @@ def main() -> None:
     }
     import importlib.metadata as md
     meta = {
-        "schema": ms.META_SCHEMA, "layout": ms.LAYOUT, "status": "packed",
+        "schema": ms.META_SCHEMA, "layout": ms.LEGACY768_DEMOPAD_LAYOUT, "status": "packed",
         **spec.fields(),
         "byte_order": ms.BYTE_ORDER, "array_order": ms.ARRAY_ORDER,
         "grid_stride": ms.GRID_STRIDE, "window_frames": ms.WINDOW_FRAMES, "grid_origin": ms.GRID_ORIGIN,
         "window_direction": ms.WINDOW_DIRECTION, "truncation_policy": ms.TRUNCATION_POLICY,
         "frame_size": ms.FRAME_SIZE,
-        "tables": {ms.MOTION_KEY: {"row_shape": list(ms.MOTION_ROW_SHAPE), "dtype": "float32",
-                                   "row_bytes": ms.MOTION_ROW_BYTES, "num_rows": totals["rows"],
+        "tables": {ms.MOTION_KEY: {"row_shape": list(ms.LEGACY768_ROW_SHAPE), "dtype": "float32",
+                                   "row_bytes": ms.LEGACY768_ROW_BYTES, "num_rows": totals["rows"],
                                    "relpath": ms.MOTION_TABLE_RELPATH, "byte_count": offset,
                                    "sha256": table_sha}},
         "num_rows": totals["rows"], "totals": totals,

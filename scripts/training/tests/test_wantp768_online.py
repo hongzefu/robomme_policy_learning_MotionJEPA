@@ -350,9 +350,9 @@ def _build_lib(root: pathlib.Path, PL, specs, with_frames=True):
     manifest["sha256"] = manifest_sha256(manifest)
     (root / "meta").mkdir(parents=True)
     (root / "meta/episode_manifest.json").write_text(json.dumps(manifest))
-    spec = ms.LAYOUT_SPECS[ms.LAYOUT]
+    spec = ms.LAYOUT_SPECS[ms.LEGACY768_DEMOPAD_LAYOUT]
     entries = ms.build_index_entries(manifest, spec)
-    idx_bytes = json.dumps(ms.index_payload(manifest, entries, spec=spec, layout=ms.LAYOUT, mj_repo_commit="t")).encode()
+    idx_bytes = json.dumps(ms.index_payload(manifest, entries, spec=spec, layout=ms.LEGACY768_DEMOPAD_LAYOUT, mj_repo_commit="t")).encode()
     table = root / "motion-wan-pool768"
     (table / "meta").mkdir(parents=True)
     (table / ms.INDEX_RELPATH).write_bytes(idx_bytes)
@@ -400,7 +400,7 @@ def _build_lib(root: pathlib.Path, PL, specs, with_frames=True):
                 with open(root / "source/data" / f"{ep['exec_sample_offset'] + t - es}.pkl", "wb") as f:
                     pickle.dump(d, f)
     (table / ms.MOTION_TABLE_RELPATH).write_bytes(tab.tobytes())
-    meta = {"schema": ms.META_SCHEMA, "layout": ms.LAYOUT, "status": "verified", **spec.fields(),
+    meta = {"schema": ms.META_SCHEMA, "layout": ms.LEGACY768_DEMOPAD_LAYOUT, "status": "verified", **spec.fields(),
             "byte_order": ms.BYTE_ORDER, "array_order": ms.ARRAY_ORDER, "grid_stride": ms.GRID_STRIDE,
             "window_frames": ms.WINDOW_FRAMES, "grid_origin": ms.GRID_ORIGIN, "window_direction": ms.WINDOW_DIRECTION,
             "truncation_policy": ms.TRUNCATION_POLICY, "frame_size": ms.FRAME_SIZE,
