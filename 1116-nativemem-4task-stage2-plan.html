@@ -98,7 +98,7 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
 <tr><td>X8</td><td>数据容器：每集一个 H5（两路 224 JPEG q95 字节、state、action、is_demo、task_goal）＋ 一个 mem_token memmap（形状 [1192918, 2, 1152]）；数据集类按 <code>MemLeRobotDataset</code> 的语义取样</td><td>原版把 224 图像（PNG 嵌 parquet）、mem_token、state、action 写进一个 LeRobot 数据集，转换时还要在 GPU 上逐集抽 token。1600 集、119 万帧 × 2 路相机单线程写 LeRobot 预计数小时，且现在 GPU 被占。张量数值与原版一致（JPEG 解码出的像素就是 LeRobot 存的像素），只换容器</td></tr>
 <tr><td>X9</td><td>评估帧号锚点：推理帧号为 D+48k（D 是演示前缀长度）；记忆帧号仍用 <code>range(t,-1,-12)</code> 补 0；服务器改为按需编码所需帧号；帧号含演示帧（第 0 帧 = 第一帧演示）</td><td>原版 RMBench 从第 0 帧开始、48 是 12 的倍数，推理帧号恒为 12 的倍数，所以服务器只编码 <code>frame%12==0</code> 的帧。RoboMME 的 D 一般不是 12 的倍数。以当前帧为锚与训练采样「从当前帧往回」一致，且 48%12=0 保证缓存可增量复用</td></tr>
 <tr><td>X10</td><td>在新代码目录复制一份评估客户端，最小改两处：<code>add_buffer</code> 同时发腕部历史；执行步数改 48。环境、692 局分片计划、种子 7、demo 前缀库、成功判定不变</td><td>policy 仓 <code>examples/robomme/eval.py</code> 只发前视历史，<code>utils.py::check_args</code> 强制执行 16 步</td></tr>
-<tr><td>X11</td><td class="warn">可比性：与基线不是同条件对照</td><td>现有 V11／V16／V17 都是执行 16 步，本次 48 步（推理次数约 1/3、开环更长），成功率差异不能单独归因于记忆结构。是否另加 16 步对照评估交用户决定（§9 第 4 条）</td></tr>
+<tr><td>X11</td><td class="warn">可比性：与基线不是同条件对照</td><td>现有 V11／V16／V17 都是执行 16 步，本次 48 步（推理次数约 1/3、开环更长），成功率差异不能单独归因于记忆结构。用户 11-16 定：只评原版 48 步，以后都不考虑 16 步（「4之后都不考虑16」），结果表注明与 16 步基线不同条件</td></tr>
 </table>
 
 <h2>2. 第一版到第二版改了什么</h2>
@@ -209,10 +209,10 @@ blockquote{border-left:4px solid var(--line);margin:1em 0;padding:.4em 1em;color
 <h2>9. 需要用户确认的事项</h2>
 <table>
 <tr><th>#</th><th>事项</th><th>推荐</th><th>不这样做的代价</th></tr>
-<tr><td>1</td><td>X2：batch 128，而 lr 等照原版不缩放</td><td>照原版不缩放</td><td>要缩放 lr 就多一处对原版的偏离，且缩放系数同样没有验证过；不缩放的风险是「batch 放大 4 倍、lr 不变」本身没验证过。要调请在开工前说</td></tr>
-<tr><td>2</td><td>X3：训练样本只用执行帧（605,611 帧）</td><td>同意</td><td>照原版每帧都当样本，就有约一半样本（587,307 帧）落在演示帧上，而评估时策略不在这些帧出动作</td></tr>
+<tr><td>1</td><td>X2：batch 128，而 lr 等照原版不缩放</td><td class="ok">用户 11-16 已定：「1同意」</td><td>要缩放 lr 就多一处对原版的偏离，且缩放系数同样没有验证过；不缩放的风险是「batch 放大 4 倍、lr 不变」本身没验证过。要调请在开工前说</td></tr>
+<tr><td>2</td><td>X3：训练样本只用执行帧（605,611 帧）</td><td class="ok">用户 11-16 已定：「2同意」</td><td>照原版每帧都当样本，就有约一半样本（587,307 帧）落在演示帧上，而评估时策略不在这些帧出动作</td></tr>
 <tr><td>3</td><td>X8：换数据容器（每集 H5 ＋ memmap）</td><td>同意，数值不变</td><td>照原版写 LeRobot 数据集预计多花数小时，且转换时要在 GPU 上逐集抽 token，而现在 GPU 被占</td></tr>
-<tr><td>4</td><td>X11：是否另加一个执行 16 步的对照评估</td><td>先不加，正式 48 步结果出来再定</td><td>不加：与 V11／V16／V17 的差异不能单独归因于记忆结构。加：16 步需要另选与 16 兼容的记忆间隔，又是一处偏离原版</td></tr>
+<tr><td>4</td><td>X11：是否另加一个执行 16 步的对照评估</td><td class="ok">用户 11-16 已定：不加，以后也不考虑 16 步（「4之后都不考虑16」）</td><td>不加：与 V11／V16／V17 的差异不能单独归因于记忆结构。加：16 步需要另选与 16 兼容的记忆间隔，又是一处偏离原版</td></tr>
 <tr><td>5</td><td>存档照原版保留策略只留最后一份（19999；原版 <code>save_interval</code> 10000、<code>keep_period</code> 20000、<code>max_to_keep=1</code>，已读 <code>checkpoints.py</code> 核实 10000 步存档会被删），传 HF <b>公开</b> bucket 并读回校验</td><td>同意</td><td>想保留第 10000 步存档就要在它被删前另行上传或改保留策略，偏离原版；改私有需另指定 bucket</td></tr>
 <tr><td>6</td><td>登记进 <code>docs/handoff/current.json</code>，V17 评估结束自动起跑</td><td>登记</td><td>不登记就要等用户在 V17 评估结束后（约美东 11-17 早上 4–5 点）手动说开工，显卡空等</td></tr>
 <tr><td>7</td><td>第一轮只有前视图的帧库（约 15 GB）获批后删除</td><td>删除</td><td>不删只多占约 15 GB，本版不会再读它</td></tr>
@@ -327,7 +327,7 @@ G0 审查 → 主会话起 nm-data2（下载 14 归档 + 流式 build_data_v2，
 <tr><td>F1</td><td>作者编码器训练自 RMBench／真机 ALOHA 数据，对 Panda 两路相机的记忆表达未知</td><td>如实记录；用户已选 A</td></tr>
 <tr><td>F2</td><td>batch 128 而 lr 不缩放（X2）</td><td>交用户确认，不自行改</td></tr>
 <tr><td>F3</td><td>训练速度未实测（前缀约 1609 位，估 2.3–2.8 s/步，20k 步约 13–15 h）</td><td>第 5 步试训测速</td></tr>
-<tr><td>F4</td><td>执行 48 步与基线 16 步不同条件（X11）</td><td>结果表注明；是否加 16 步对照交用户</td></tr>
+<tr><td>F4</td><td>执行 48 步与基线 16 步不同条件（X11）</td><td>结果表注明；用户已定不加 16 步对照</td></tr>
 <tr><td>F5</td><td>在线（无 JPEG）与离线（JPEG）预处理不同，属原版固有</td><td>G9 记录差异；cos_min 异常时查原因</td></tr>
 <tr><td>F6</td><td>每局首次 add_buffer 含数百演示帧，按需编码延迟与显存</td><td>G10／G11 覆盖</td></tr>
 <tr><td>F7</td><td>磁盘：现剩约 663 GB；第二版数据约 50 GB、token 11 GB、1 份存档约 12 GB；第一轮帧库约 15 GB 与残留归档／解压目录待删</td><td>删除前征得用户同意</td></tr>
