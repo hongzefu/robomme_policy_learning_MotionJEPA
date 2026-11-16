@@ -2542,14 +2542,14 @@
     "steer-4task-1115": {
       "plan": {
         "file": "1115-4task-routestick-videorepick-steering-plan.html",
-        "sha": null
+        "sha": "96d016f"
       },
-      "state": "planned",
+      "state": "running",
       "state_changed_at": {
-        "utc": "2026-11-16T04:50:00Z",
-        "america_new_york": "2026-11-15T23:50:00-05:00"
+        "utc": "2026-11-16T04:47:00Z",
+        "america_new_york": "2026-11-15T23:47:00-05:00"
       },
-      "state_reason": "计划 r3 已写，等用户开工令",
+      "state_reason": "用户开工令已下；GL 占位 66195002-66195005 排队中",
       "owner": {
         "session": "aspen 会话「VLA steering with motion models testing」",
         "host": "sled-aspen"
@@ -2576,8 +2576,40 @@
         }
       ],
       "long_tail": [],
-      "running_handles": [],
-      "authorizations": [],
+      "running_handles": [
+        {
+          "jobid": "66195002",
+          "tmux": null,
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/steer-4task-1115/s4t-hold-1-66195002.log",
+          "done_line": "scancel"
+        },
+        {
+          "jobid": "66195003",
+          "tmux": null,
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/steer-4task-1115/s4t-hold-2-66195003.log",
+          "done_line": "scancel"
+        },
+        {
+          "jobid": "66195004",
+          "tmux": null,
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/steer-4task-1115/s4t-hold-3-66195004.log",
+          "done_line": "scancel"
+        },
+        {
+          "jobid": "66195005",
+          "tmux": null,
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/steer-4task-1115/s4t-hold-4-66195005.log",
+          "done_line": "scancel"
+        }
+      ],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-11-15",
+          "quote": "好的，开工吧，开工吧，然后尽可能不要再阻塞了，然后有问题尽可能留到明天早上。",
+          "scope": "计划 1115-4task-routestick-videorepick-steering-plan.html r3.1 @96d016f 全部步骤，含 4 个 GL 占位（8 CPU/96G/48h）、B 下载、写 turbo -eval 目录；一路跑到美东 11-16 10:00"
+        }
+      ],
       "pending_decisions": [],
       "next_steps": [
         {
