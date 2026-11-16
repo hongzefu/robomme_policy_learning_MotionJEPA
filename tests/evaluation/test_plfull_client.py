@@ -126,11 +126,20 @@ def test_plfull_metadata_route(tmp_path, fake_sim, capsys):  # noqa: F811
         runner.make_env(61)
 
 
-@pytest.mark.parametrize("difficulty, sub", [(None, None), ("xhard12", None), ("easy", "missing")])
+@pytest.mark.parametrize("difficulty, sub", [(None, None), ("easy", "missing")])
 def test_plfull_metadata_route_rejects(tmp_path, fake_sim, difficulty, sub):  # noqa: F811
     meta = metadata_dir(tmp_path) if sub is None else str(tmp_path / sub)
     with pytest.raises(ValueError, match="metadata_dir"):
         runner_module.EnvRunner("PatternLock", str(tmp_path), difficulty=difficulty, metadata_dir=meta)
+
+
+def test_plfull_metadata_route_accepts_xhard(tmp_path, fake_sim, monkeypatch):  # noqa: F811
+    """合入 v17 后 xhard 在 metadata_dir 下与其他难度同一路径：原任务类、不依赖 robomme_xhard / XHARD_METADATA_DIR。"""
+    monkeypatch.delenv("XHARD_METADATA_DIR", raising=False)
+    meta = metadata_dir(tmp_path)
+    runner = runner_module.EnvRunner("PatternLock", str(tmp_path), difficulty="xhard12", metadata_dir=meta)
+    assert runner.route == "plfull" and runner.build_id == "PatternLock"
+    assert fake_sim.instances[-1].kwargs["env_id"] == "PatternLock"
 
 
 def test_subgoal_trace_runner_accepts_plfull(tmp_path, monkeypatch):
