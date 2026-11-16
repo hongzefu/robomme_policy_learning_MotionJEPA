@@ -31,7 +31,7 @@ blockquote{border-left:4px solid var(--acc);margin:10px 0;padding:6px 12px;backg
 <h2>1 要做什么</h2>
 <p>在四任务 × 400 训练的两个 modulation 模型上——MotionMem（54.62%，<code>v2-1600ep-m8x8-modul-motion-b128-80k</code>@50000）与 Frozen Wan pooling（43.06%，<code>v2-1600ep-m8x8-modul-wantp768-b128-50k</code>@50000）——在新 benchmark <code>b4e97f2</code> 上测 RouteStick 与 VideoRepick：把示范里某一段的 motion token 换掉，看模型下一步是否跟着变。</p>
 <p><strong>只用同一局做供体</strong>（用户原话：「你先不要做跨局，你先用同一局来给我结论」）：布局、旋转角、颜色、此前的路线完全相同，只在被测的那一步开始不同。</p>
-<p><strong>模型范围</strong>：MotionMem 两个任务做全；Frozen Wan pooling 只做 RouteStick 前 3 步（不做窗口对照）和 VideoRepick。时间不够先砍 Frozen Wan（用户已同意：「可以，A 优先」）。</p>
+<p><strong>模型范围</strong>：MotionMem 两个任务做全；Frozen Wan pooling 先做 RouteStick 前 3 步（不做窗口对照）和 VideoRepick，<b>有时间再继续测第 4 步及之后</b>（用户 11-16：「有时间就继续测这第四步之后」）；时间不够先砍 Frozen Wan（用户已同意：「可以，A 优先」）。</p>
 <p class="mut">第一部分按用户点名由 Fable 起草、主会话核对（用户原话：「第一部分用 Fable 来写」）。</p>
 
 <h2>2 RouteStick：第 j 步的四种走法</h2>
@@ -77,7 +77,7 @@ blockquote{border-left:4px solid var(--acc);margin:10px 0;padding:6px 12px;backg
 <h2>6 跑完给出的结论</h2>
 <ul>
   <li>MotionMem 的 token 是否分别携带「绕向」与「左右」两种信息：跟随率相对两种噪声对照的差值与 95% 区间。</li>
-  <li>Frozen Wan pooling 在 RouteStick 前 3 步与 VideoRepick 上是否同样（时间不够时此项缺）。</li>
+  <li>Frozen Wan pooling 在 RouteStick（前 3 步必做，第 4 步之后视时间）与 VideoRepick 上是否同样（时间不够时缺项如实写明）。</li>
   <li>VideoRepick 交换段 token 是否决定第一次拿哪块。</li>
 </ul>
 <p class="warn">开工后一路跑到底：验收不过只记录不停，只在规则硬停条件下停。用户原话：「确保一次开始之后能一路执行到底」「开工之后就不要再来问用户了，一路跑到明天早上……十点」。</p>
@@ -223,7 +223,7 @@ blockquote{border-left:4px solid var(--acc);margin:10px 0;padding:6px 12px;backg
 <ul>
 <li>局池：RouteStick easy 8 / medium 16 / hard 16 / xhard 20 = 60 局；VideoRepick easy 10 / medium 20 / xhard 20 = 50 局；两模型共用。</li>
 <li>A（MotionMem，优先）：RouteStick 不干预 60 + 换 seed 120 + 干预（7 组含 core，截断）约 1200；VideoRepick 不干预 50 + 换 seed 约 40 + 干预约 200。</li>
-<li>B（Frozen Wan pooling）：RouteStick 只做 j≤3、组 S_swing/S_side/S_both/Z（不做 core）：不干预 60 + 换 seed 约 80 + 干预约 450；VideoRepick 同 A。</li>
+<li>B（Frozen Wan pooling）：第一轮 RouteStick j≤3、组 S_swing/S_side/S_both/Z（不做 core）：不干预 60 + 换 seed 约 80 + 干预约 450；VideoRepick 同 A。<b>第二轮（有时间才跑）</b>：B 的 RouteStick j≥4，同四组，另约 300（用户 11-16：「有时间就继续测这第四步之后」）；排在 A 全部与 B 第一轮之后、08:45 停发新局之前。</li>
 <li>合计约 2500 次运行（多数截断）；超出 5 倍才停。</li>
 <li>资源：GL 4 个单卡 A40 占位，每占位一个长作业步 <code>srun --jobid=&lt;hold&gt; --overlap --exact --ntasks=1 --gpu_cmode=shared</code>，内含两条通道（错开 45 s），每通道 = 1 模型服务 + 1 仿真客户端，<code>XLA_PYTHON_CLIENT_MEM_FRACTION=0.40</code>；aspen 2×A6000（他人已占 18.6/14.3 GiB）每卡 1 条通道，<code>XLA_PYTHON_CLIENT_MEM_FRACTION=0.30</code>，起跑前 <code>nvidia-smi</code> 复核余量。调度不区分硬件，空闲通道取下一分片。</li>
 <li><b>每卡 worker 数按实测显存定</b>：冒烟时每个模型在 A40 与 A6000 上各起 1 个 worker，读 <code>nvidia-smi</code> 峰值显存 P（模型服务 + 仿真渲染 + A 的 encoder sidecar），每卡 worker 数 = floor((可用显存 − 2 GiB) / P)，上限 4；同时把 <code>XLA_PYTHON_CLIENT_MEM_FRACTION</code> 设为 P/卡显存 + 0.02，避免 XLA 预占吃满。CPU 按每 worker 2 核：占位规格相应提到 <code>--cpus-per-task=8 --mem=96G</code>（由本计划开工令放行）。判定行 <code>WORKER_FIT=PASS model=… gpu=… peak_gib=… workers=…</code>。11-10 一占位 3–4 个进程曾 OOM，原因是 XLA 默认预占，按上式设 fraction 后不再叠加。</li>
@@ -241,7 +241,7 @@ blockquote{border-left:4px solid var(--acc);margin:10px 0;padding:6px 12px;backg
 <tr><td>09:00 – 09:45</td><td>读数、result.md、矩阵图、提交推送</td></tr>
 <tr><td>09:50</td><td>按清单 scancel 4 个占位；交接 commit</td></tr>
 </table>
-<p><b>降级顺序</b>（到点未完成即砍，记入留档）：① B 的 j≥3（已默认不做）→ ② B 的 VideoRepick → ③ core 版（A 的 S_side_core 保留到最后，因其承担跨界窗口对照）→ ④ xhard → ⑤ B 的 RouteStick → 最后才砍 A。若 T+3:30 仍未过冒烟，直接只跑 A。</p>
+<p><b>降级顺序</b>（到点未完成即砍，记入留档）：① B 的第二轮（j≥4）→ ② B 的 VideoRepick → ③ core 版（A 的 S_side_core 保留到最后，因其承担跨界窗口对照）→ ④ xhard → ⑤ B 的 RouteStick → 最后才砍 A。若 T+3:30 仍未过冒烟，直接只跑 A。</p>
 <p>耗时依据：新模型单局耗时未实测，按 11-10 约 88 局/卡·小时打 5 折、截断局再打对折估算；A40 8 条通道 + A6000 2 条通道 × 约 5.5 h ≈ 能装下 A 全部与 B 大部分，B 不保证。</p>
 
 <h2>9 风险、盲区与留档</h2>
