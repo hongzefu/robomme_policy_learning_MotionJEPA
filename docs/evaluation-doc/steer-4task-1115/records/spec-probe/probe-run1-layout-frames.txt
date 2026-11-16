@@ -1,0 +1,35 @@
+=== 3100003 hard 2
+SPEC {"nodes": [8, 6, 4, 2, 4, 2, 0, 2], "node_slots": [4, 3, 2, 1, 2, 1, 0, 1], "directions": ["counterclockwise", "clockwise", "clockwise", "counterclockwise", "clockwise", "counterclockwise", "clockwise"]} theta 6.686
+{"tag": "natural", "route": [8, 6, 4, 2, 4, 2, 0, 2], "dirs": ["counterclockwise", "clockwise", "clockwise", "counterclockwise", "clockwise", "counterclockwise", "clockwise"], "btn_md5": "8c122478037d64b41f2ca1e85a5aadb0", "obs_keys": ["front_rgb_list", "wrist_rgb_list", "joint_state_list", "eef_state_list", "gripper_state_list"], "n_frames": 351}
+{"tag": "spec_same", "route": [8, 6, 4, 2, 4, 2, 0, 2], "dirs": ["counterclockwise", "clockwise", "clockwise", "counterclockwise", "clockwise", "counterclockwise", "clockwise"], "btn_md5": "8c122478037d64b41f2ca1e85a5aadb0", "obs_keys": ["front_rgb_list", "wrist_rgb_list", "joint_state_list", "eef_state_list", "gripper_state_list"], "n_frames": 351}
+{"tag": "flip_swing_j", "route": [8, 6, 4, 2, 4, 2, 0, 2], "dirs": ["counterclockwise", "counterclockwise", "clockwise", "counterclockwise", "clockwise", "counterclockwise", "clockwise"], "btn_md5": "8c122478037d64b41f2ca1e85a5aadb0", "obs_keys": ["front_rgb_list", "wrist_rgb_list", "joint_state_list", "eef_state_list", "gripper_state_list"], "n_frames": 351}
+{"tag": "flip_side_j", "route": [8, 6, 8, 6, 8, 6, 4, 6], "dirs": ["counterclockwise", "clockwise", "clockwise", "counterclockwise", "clockwise", "counterclockwise", "clockwise"], "btn_md5": "8c122478037d64b41f2ca1e85a5aadb0", "obs_keys": ["front_rgb_list", "wrist_rgb_list", "joint_state_list", "eef_state_list", "gripper_state_list"], "n_frames": 351}
+FRAMES natural==spec_same: 351 / 351
+FRAMES spec_same vs flip_swing first diff frame: 51
+FRAMES spec_same vs flip_side first diff frame: 51
+DEMO swings same : ['clockwise', 'clockwise', 'clockwise', 'counterclockwise', 'counterclockwise', 'counterclockwise', 'counterclockwise'] spec: ['counterclockwise', 'clockwise', 'clockwise', 'counterclockwise', 'clockwise', 'counterclockwise', 'clockwise']
+DEMO swings flipJ: ['counterclockwise', 'clockwise', 'clockwise', 'counterclockwise', 'counterclockwise', 'counterclockwise', 'counterclockwise'] spec: ['counterclockwise', 'counterclockwise', 'clockwise', 'counterclockwise', 'clockwise', 'counterclockwise', 'clockwise']
+=== 3100010 medium 2
+SPEC {"nodes": [4, 2, 0, 2, 4], "node_slots": [2, 1, 0, 1, 2], "directions": ["clockwise", "counterclockwise", "counterclockwise", "counterclockwise"]} theta -4.074
+{"tag": "natural", "route": [4, 2, 0, 2, 4], "dirs": ["clockwise", "counterclockwise", "counterclockwise", "counterclockwise"], "btn_md5": "9b386db7b49b2ef0527a77eb36aaaed0", "obs_keys": ["front_rgb_list", "wrist_rgb_list", "joint_state_list", "eef_state_list", "gripper_state_list"], "n_frames": 201}
+{"tag": "spec_same", "route": [4, 2, 0, 2, 4], "dirs": ["clockwise", "counterclockwise", "counterclockwise", "counterclockwise"], "btn_md5": "9b386db7b49b2ef0527a77eb36aaaed0", "obs_keys": ["front_rgb_list", "wrist_rgb_list", "joint_state_list", "eef_state_list", "gripper_state_list"], "n_frames": 201}
+{"tag": "flip_swing_j", "route": [4, 2, 0, 2, 4], "dirs": ["clockwise", "clockwise", "counterclockwise", "counterclockwise"], "btn_md5": "9b386db7b49b2ef0527a77eb36aaaed0", "obs_keys": ["front_rgb_list", "wrist_rgb_list", "joint_state_list", "eef_state_list", "gripper_state_list"], "n_frames": 201}
+{"tag": "flip_side_j", "route": [4, 2, 4, 6, 8], "dirs": ["clockwise", "counterclockwise", "counterclockwise", "counterclockwise"], "btn_md5": "9b386db7b49b2ef0527a77eb36aaaed0", "obs_keys": ["front_rgb_list", "wrist_rgb_list", "joint_state_list", "eef_state_list", "gripper_state_list"], "n_frames": 201}
+FRAMES natural==spec_same: 201 / 201
+FRAMES spec_same vs flip_swing first diff frame: 51
+FRAMES spec_same vs flip_side first diff frame: 51
+DEMO swings same : ['counterclockwise', 'clockwise', 'counterclockwise', 'counterclockwise'] spec: ['clockwise', 'counterclockwise', 'counterclockwise', 'counterclockwise']
+DEMO swings flipJ: ['clockwise', 'clockwise', 'counterclockwise', 'counterclockwise'] spec: ['clockwise', 'clockwise', 'counterclockwise', 'counterclockwise']
+=== 3100011 easy 1
+SPEC {"nodes": [8, 6, 4], "node_slots": [4, 3, 2], "directions": ["clockwise", "clockwise"]} theta 24.25
+{"tag": "natural", "route": [8, 6, 4], "dirs": ["clockwise", "clockwise"], "btn_md5": "de3a60fa690c9cee57046b2ceded4d8a", "obs_keys": ["front_rgb_list", "wrist_rgb_list", "joint_state_list", "eef_state_list", "gripper_state_list"], "n_frames": 101}
+{"tag": "spec_same", "route": [8, 6, 4], "dirs": ["clockwise", "clockwise"], "btn_md5": "de3a60fa690c9cee57046b2ceded4d8a", "obs_keys": ["front_rgb_list", "wrist_rgb_list", "joint_state_list", "eef_state_list", "gripper_state_list"], "n_frames": 101}
+{"tag": "flip_swing_j", "route": [8, 6, 4], "dirs": ["counterclockwise", "clockwise"], "btn_md5": "de3a60fa690c9cee57046b2ceded4d8a", "obs_keys": ["front_rgb_list", "wrist_rgb_list", "joint_state_list", "eef_state_list", "gripper_state_list"], "n_frames": 101}
+{"tag": "flip_side_j", "skipped": "端点出界"}
+FRAMES natural==spec_same: 101 / 101
+FRAMES spec_same vs flip_swing first diff frame: 1
+FRAMES spec_same vs flip_side first diff frame: None
+DEMO swings same : ['clockwise', 'counterclockwise'] spec: ['clockwise', 'clockwise']
+DEMO swings flipJ: ['clockwise', 'counterclockwise'] spec: ['counterclockwise', 'clockwise']
+
+[exited with code 0]
