@@ -720,3 +720,48 @@ def test_bootstrap_ci():
     lo, hi = R.bootstrap_ci([0, 1] * 20)
     assert 0.25 < lo < 0.5 < hi < 0.75
     assert R.bootstrap_ci([0, 1] * 20) == (lo, hi)                        # 固定 seed，可复现
+
+
+# ---------------------------------------------------------------- 计划 1116 S-C：demo_cache_map / resident_server
+def _specs_tree(root, *extra):
+    root.mkdir()
+    fake_scan(root)
+    assert F.main(["pool", "--out", str(root), "--per-task", str(PER_TASK)]) == 0
+    mdir = root / "motion"
+    assert F.main(["specs", "--out", str(mdir), "--model", "motion", "--commit", COMMIT,
+                   "--run-tree", "/tree", "--noise", *extra]) == 0
+    return mdir
+
+
+def test_speedup_flags_default_unchanged_and_noise_samep(tmp_path):
+    from types import SimpleNamespace
+    plain = _specs_tree(tmp_path / "a")
+    rec = tmp_path / "nrec"
+    fast = _specs_tree(tmp_path / "b", "--demo-cache-from", str(rec), "--resident-server")
+    names = sorted(p.name for p in (plain / "specs").glob("*.json"))
+    assert names == sorted(p.name for p in (fast / "specs").glob("*.json")) and any(n.startswith("noise-") for n in names)
+    for name in names:
+        a = json.loads((plain / "specs" / name).read_text().replace(str(tmp_path / "a"), str(tmp_path / "b")))
+        b = json.loads((fast / "specs" / name).read_text())
+        assert "demo_cache_map" not in a and "resident_server" not in a      # 缺省不写
+        if name.startswith("noise-"):
+            manifest = json.loads((fast / "manifests" / name).read_text())
+            keys = [e["episode_key"] for e in manifest["episodes"]]
+            assert b.pop("resident_server") is True
+            assert b.pop("demo_cache_map") == {k: str(rec.resolve() / F.record_name(*F.split_key(k))) for k in keys}
+        assert a == b                                                         # smoke / n 原样，noise 只多两键
+    # samep：同一 Builder 路径（donors --same-episode 用 build_samep_specs）
+    plan = json.loads((fast / "plan.json").read_text())
+    pool, pool_by_key = F.load_pool(fast.parent)
+    key = sorted(pool_by_key)[0]
+    task, ep = F.split_key(key)
+    done = [{"k": 1, "k_src": None, "group": "Z_k", "recv": key, "task": task, "ep": ep, "donor": F.samep_ep(ep, 1, 0)}]
+    for flags, expect in ((None, False), (SimpleNamespace(demo_cache_from=str(rec), resident_server=True), True)):
+        b = F.make_builder(fast, plan["model"], plan["model_entry"], plan["run_tree"], plan["frac"], pool)
+        F.apply_speedup(b, flags)
+        F.build_samep_specs(b, pool_by_key, done)
+        (spec, _, stage, _), = b.specs.values()
+        assert stage == "samep" and ("demo_cache_map" in spec) == expect and ("resident_server" in spec) == expect
+        if expect:
+            assert spec["demo_cache_map"] == {key: str(rec.resolve() / F.record_name(task, ep))}
+            assert set(spec["demo_cache_map"]) == set(spec["swap_map"])

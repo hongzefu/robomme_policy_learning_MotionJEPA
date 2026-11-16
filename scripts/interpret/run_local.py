@@ -76,6 +76,12 @@ swap_map 给出时也并入身份；record_motion 只记录不改行为，不并
 逐局打印 EPISODE_RESULT task=<t> ep=<i> success=<0|1> npz=<n>，末行
 RUN_LOCAL=PASS|FAIL model=<model_kind> episodes=<n> success=<k> npz=<n>。
 不写注意力时判定改为：终局存在、episode.json 的 infers > 0，且 infer_*.npz 数为 0。
+计划 1116 提速键（契约 C3；缺键时命令、身份与进程组织完全不变）：
+  demo_cache_map   {接收局 task:ep（与 swap_map 同键）: 该局 N 录制 npz 绝对路径}，只用于 motion 模型与 profile=plfull；
+                   服务端加 --demo-cache-map <本服务局的内联 JSON>，示范窗直接取 N 录制、不在线编码（F2）；并入身份。
+                   选中的局必须都在 map 里且录制文件存在，否则启动前报错。
+  resident_server  bool；true 时整份 spec 只起一次策略服务（与 Oracle 常驻同一路径 run_oracle_chunks），服务端 swap_map /
+                   demo_cache_map 取全 spec 局并集，客户端每批至多 5 局；服务端每局 reset 重置局状态。不并入身份。
 """
 from __future__ import annotations
 
@@ -255,6 +261,23 @@ def load_spec(path):
             raise SystemExit("spec: save_prefix 需要存注意力，与不存注意力（save_attn=false 或 motion 替换实验）互斥")
         if spec.get("rollout_record") or str(spec.get("stopcube_mode")).startswith("oracle_"):
             raise SystemExit("spec: 不存注意力只作用于注意力记录路径，与 rollout_record、Oracle 模式互斥")
+    if spec.get("demo_cache_map") is not None:
+        spec["demo_cache_map"] = parse_demo_cache_map(spec["demo_cache_map"])
+        if spec["model_kind"] not in MOTION_KINDS:
+            raise SystemExit(f"spec: demo_cache_map 只适用于 {MOTION_KINDS}")
+        if not is_plfull(spec):
+            raise SystemExit("spec: demo_cache_map 需要 profile=plfull（服务端按 reset 的 episode_key 逐局取缓存）")
+        if (spec.get("rollout_record") or spec.get("movecube_force")
+                or str(spec.get("stopcube_mode")).startswith("oracle_")):
+            raise SystemExit("spec: demo_cache_map 与 rollout_record、movecube_force、Oracle 模式互斥")
+    if "resident_server" in spec:
+        if type(spec["resident_server"]) is not bool:
+            raise SystemExit("spec: resident_server 须为 true / false")
+        if spec["resident_server"]:
+            if spec.get("movecube_force") or str(spec.get("stopcube_mode")).startswith("oracle_"):
+                raise SystemExit("spec: Oracle 与 movecube_force 本就共用一个服务，不接受 resident_server")
+            if spec.get("swap_map") and not is_plfull(spec):
+                raise SystemExit("spec: resident_server 配 swap_map 需要 profile=plfull（旧口径每局一个 --swap-donor 服务）")
     return spec
 
 
@@ -325,6 +348,22 @@ def parse_swap_map(value):
     return out
 
 
+def parse_demo_cache_map(value):
+    """spec.demo_cache_map（契约 C3）：{接收局 task:ep: N 录制 npz 路径} → 规范键、绝对路径；空、非对象、键重复即 SystemExit。
+    文件是否存在在 main 里只对选中的局核（N 录制可能晚于 spec 生成）。"""
+    if not isinstance(value, dict) or not value:
+        raise SystemExit("spec: demo_cache_map 须为非空对象 {task:ep: N 录制 npz 路径}")
+    out = {}
+    for key, path in value.items():
+        norm = _episode_key(key)
+        if norm in out:
+            raise SystemExit(f"demo_cache_map 局重复: {norm}")
+        if not isinstance(path, str) or not path:
+            raise SystemExit(f"demo_cache_map 局 {norm} 的路径须为非空字符串")
+        out[norm] = str(Path(path).resolve())
+    return out
+
+
 def run_identity(spec, manifest):
     """本地评估身份：清单封签 + checkpoint 绝对路径 + 配置名 + model_kind + seed（bind_model 只接受 20k/60k 步，不能用）。"""
     ident = {"manifest_seal": manifest["sha256"], "checkpoint": str(Path(spec["checkpoint"]).resolve()),
@@ -334,6 +373,9 @@ def run_identity(spec, manifest):
         ident["ablate"] = ablate_of(spec)
     if spec.get("swap_map"):
         ident["swap_map"] = dict(sorted(parse_swap_map(spec["swap_map"]).items()))
+    if spec.get("demo_cache_map"):
+        # 示范窗改取 N 录制（F2），并入身份；resident_server 只改进程组织、不改行为，不并入
+        ident["demo_cache_map"] = dict(sorted(parse_demo_cache_map(spec["demo_cache_map"]).items()))
     if spec.get("stopcube_mode") is not None:
         ident["stopcube_mode"] = spec["stopcube_mode"]
         ident["stopcube_config_sha256"] = hashlib.sha256(Path(spec["stopcube_config"]).read_bytes()).hexdigest()
@@ -491,6 +533,17 @@ def build_server_command(spec, nonce, port, episodes=None):
         if donor is None:
             raise ValueError(f"swap_map 没有局 {key}")
         extra += ["--swap-donor", donor]
+    if spec.get("demo_cache_map"):
+        # 契约 C3：只传本服务要跑的局（常驻服务 = 全 spec 局），内联 JSON；缺局即报错，不静默回退在线编码
+        cache = parse_demo_cache_map(spec["demo_cache_map"])
+        if not episodes:
+            raise ValueError("demo_cache_map 需要本服务的局清单")
+        keys = [_episode_key(e["episode_key"]) for e in episodes]
+        missing = [k for k in keys if k not in cache]
+        if missing:
+            raise ValueError(f"demo_cache_map 没有局 {missing}")
+        extra += ["--demo-cache-map", json.dumps({k: cache[k] for k in sorted(set(keys))}, sort_keys=True,
+                                                 separators=(",", ":"), ensure_ascii=False)]
     index = command.index("policy:checkpoint")
     return command[:index] + extra + command[index:]
 
@@ -614,16 +667,22 @@ def run_chunk(spec, index, chunk_id, episodes, popen=subprocess.Popen):
 
 
 def run_oracle_chunks(spec, chunks, popen=subprocess.Popen):
-    """Oracle 与 movecube_force 清单共用一个服务；每个客户端至多5局、独立授权与输出。"""
+    """Oracle 与 movecube_force 清单共用一个服务；每个客户端至多5局、独立授权与输出。
+    resident_server=true（计划 1116 F5）同走此路：整份 spec 只起一次服务，服务端拿全部局（swap_map / demo_cache_map
+    取全 spec 局并集），每局由 reset 重置服务端局状态；客户端失败（非 -1）不停后续批次。"""
     if not chunks:
         return
     nonce = uuid.uuid4().hex
-    prefix = "force-service" if spec.get("movecube_force") else "oracle-service"
+    resident = bool(spec.get("resident_server"))
+    prefix = "force-service" if spec.get("movecube_force") else "resident-service" if resident else "oracle-service"
     root = Path(spec["run_root"]) / "attempts" / f"{prefix}-{nonce[:8]}"
     root.mkdir(parents=True, exist_ok=False)
     port = pick_port(int(spec.get("port", 0)))
     environment = build_environment(spec)
-    server_cmd = build_server_command(spec, nonce, port)
+    if resident:
+        server_cmd = build_server_command(spec, nonce, port, [e for _, eps in chunks for e in eps])
+    else:
+        server_cmd = build_server_command(spec, nonce, port)
     write_json(root / "server-command.json", {"server": server_cmd, "nonce": nonce, "port": port})
     server = client = None
     try:
@@ -664,7 +723,7 @@ def run_oracle_chunks(spec, chunks, popen=subprocess.Popen):
                 client = None
             print(f"CHUNK_END index={index} client_exit={code}", flush=True)
             yield attempt, output, code, episodes
-            if code != 0:
+            if code != 0 and not (resident and code != -1):
                 return
     finally:
         RW.stop_process_tree(client)
@@ -847,8 +906,19 @@ def main(argv=None, popen=subprocess.Popen):
         missing = [e["episode_key"] for _, eps in chunks for e in eps if _episode_key(e["episode_key"]) not in spec["swap_map"]]
         if missing:
             raise SystemExit(f"swap_map 缺这些局的供体: {missing}")
+    if spec.get("demo_cache_map"):
+        cache = spec["demo_cache_map"]
+        missing = [e["episode_key"] for _, eps in chunks for e in eps if _episode_key(e["episode_key"]) not in cache]
+        if missing:
+            raise SystemExit(f"demo_cache_map 缺这些局的 N 录制: {missing}")
+        absent = sorted({cache[_episode_key(e["episode_key"])] for _, eps in chunks for e in eps
+                         if not Path(cache[_episode_key(e["episode_key"])]).is_file()})
+        if absent:
+            raise SystemExit(f"demo_cache_map 的 N 录制文件不存在: {absent[:4]}（共 {len(absent)} 个）")
     print(f"RUN_LOCAL_BEGIN model={spec['model_kind']} run_identity={spec['run_identity_sha256']} "
-          f"manifest_seal={manifest['sha256']} chunks={len(chunks)} cuda={spec['cuda']} ablate={ablate_of(spec)}",
+          f"manifest_seal={manifest['sha256']} chunks={len(chunks)} cuda={spec['cuda']} ablate={ablate_of(spec)}"
+          + (f" demo_cache_map={len(spec['demo_cache_map'])}" if spec.get("demo_cache_map") else "")
+          + (" resident_server=1" if spec.get("resident_server") else ""),
           flush=True)
 
     def stop(signum, _frame):
@@ -858,7 +928,7 @@ def main(argv=None, popen=subprocess.Popen):
         signal.signal(sig, stop)
     results, codes = [], []
     oracle_mode = spec.get("stopcube_mode") in ("oracle_query", "oracle_calibrate")
-    if oracle_mode or spec.get("movecube_force"):
+    if oracle_mode or spec.get("movecube_force") or spec.get("resident_server"):
         attempts = run_oracle_chunks(spec, chunks, popen=popen)
     else:
         attempts = ((*run_chunk(spec, index, chunk_id, episodes, popen=popen), episodes)

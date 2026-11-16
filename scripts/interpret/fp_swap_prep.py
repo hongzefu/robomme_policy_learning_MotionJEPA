@@ -56,6 +56,11 @@
         swap_blind_k、nondiscrim；合成号 20000000+接收局×100+k×10+k′（Z_k 的 k′=0）；生成 samep 阶段。
   requeue --out <O>/<M> --stage <阶段>：只重发未完成 spec。
 
+计划 1116（steer-speedup-1116）S-C 提速键（契约 C3，缺省不启用，spec 逐字节不变）：
+  specs --noise 与 donors --same-episode 另接 --demo-cache-from <N record 目录>（noise、samep 阶段 spec 写
+        demo_cache_map：接收局 → <目录>/<task>_ep<id>.npz，示范窗复用 N 录制、不在线编码）与 --resident-server（写
+        resident_server: true，一个 spec 只起一次策略服务）。smoke、n 阶段不受影响（N 本身是录制源）。
+
 trace 与回执字段（FP-W1 提供）只在 receipt_fields、trace_row_fields 两个函数里读，合并后按实际字段名在这里改。
 窗口与帧号（F1）：帧 k = 第 k 步之后的观测（帧 0 为 reset）；示范窗起点 s=0,32,… 满足 s+16 ≤ es−1，真实帧
 [s, min(s+32, es−1)]；执行窗起点 es+32u，真实帧 [f, f+32]，最多到 es+MAX_STEPS；交换帧区间 [第一次 start+1, 最后 end+1]
@@ -1009,6 +1014,9 @@ class Builder(P.Builder):
         self.roots = dict(roots or default_roots())
         order, assign, cuda = workers or (list(P.WORKERS), list(P.ASSIGN_ORDER), dict(P.WORKER_CUDA))
         self.workers, self.assign_order, self.worker_cuda = list(order), list(assign), dict(cuda)
+        # 计划 1116 契约 C3：只对 CACHE_STAGES（samep、noise）写 demo_cache_map / resident_server；缺省 None / False 不写
+        self.demo_cache_from: Path | None = None
+        self.resident_server = False
 
     def round_robin(self, items):
         return [(self.assign_order[i % len(self.assign_order)], item) for i, item in enumerate(items)]
@@ -1054,6 +1062,14 @@ class Builder(P.Builder):
             spec[key] = reroot(spec[key], self.roots)
         spec.update(policy_python=self.roots["policy_python"], sim_python=self.roots["sim_python"],
                     stage2_python=self.roots["stage2_python"])
+        if stage in CACHE_STAGES:
+            if self.demo_cache_from is not None:
+                # 接收局 → 该局 N 录制（与 swap_map 同键）；路径不在此核实（noise spec 先于 N 录制生成），由 run_local 起跑前核
+                spec["demo_cache_map"] = {episode_key(e["task_name"], e["episode_id"]):
+                                          str(self.demo_cache_from / record_name(e["task_name"], e["episode_id"]))
+                                          for e in episodes}
+            if self.resident_server:
+                spec["resident_server"] = True
         return spec
 
     def write(self, stages):
@@ -1075,6 +1091,20 @@ class Builder(P.Builder):
                 path.chmod(0o755)
                 written.append(path)
         return written
+
+
+# 计划 1116 F2/F5：--demo-cache-from / --resident-server 只作用于这些阶段（同一局 T_k←k′、Z_k 与噪声对照）
+CACHE_STAGES = ("samep", "noise")
+
+
+def apply_speedup(b, args):
+    """--demo-cache-from <N record 目录> / --resident-server → Builder；缺省不改 spec。"""
+    src = getattr(args, "demo_cache_from", None) if args is not None else None
+    if src:
+        b.demo_cache_from = Path(src).resolve()
+    if args is not None and getattr(args, "resident_server", False):
+        b.resident_server = True
+    return b
 
 
 def make_builder(out, model_name, model, run_tree, frac, pool, roots=None, workers=None):
@@ -1169,6 +1199,7 @@ def cmd_specs(args):
     roots = resolve_roots(args)
     workers = parse_workers(args.workers, gl=bool(args.gl_store))
     b = make_builder(out, args.model, model, args.run_tree, args.frac, pool, roots=roots, workers=workers)
+    apply_speedup(b, args)
     motion = None
     if getattr(args, "history_yaml", None):
         from scripts.interpret.sp_swap_prep import MAX_STEPS_SAMEP, motion_from_yaml
@@ -1945,6 +1976,7 @@ def cmd_donors_samep(out, args=None):
               f"recv={len({r['recv'] for r in mine})} k_max={max([r['k'] for r in mine] or [0])}", flush=True)
     b = make_builder(out, plan["model"], plan["model_entry"], plan["run_tree"], plan.get("frac", XLA_MEM_FRACTION), pool,
                      roots=plan.get("roots"), workers=plan_workers(plan))
+    apply_speedup(b, args)
     build_samep_specs(b, pool_by_key, done, plan.get("main_seed", MAIN_SEED))
     b.write(("samep",))
     plan["runs"] = [r for r in plan["runs"] if r["stage"] != "samep"] + b.rows
@@ -2005,6 +2037,14 @@ def add_root_args(p):
                    help="GreatLakes 预设：store/解释器/MMEVLA_V1_STORE 取该目录，--release，16 worker，bench_src 取运行树")
 
 
+def add_speedup_args(p):
+    """计划 1116 F2 / F5（只作用于 samep、noise 阶段 spec；缺省 spec 逐字节不变）。"""
+    p.add_argument("--demo-cache-from", default=None,
+                   help="N 录制目录：samep / noise spec 写 demo_cache_map（接收局 → <目录>/<task>_ep<id>.npz）")
+    p.add_argument("--resident-server", action="store_true",
+                   help="samep / noise spec 写 resident_server: true（一个 spec 只起一次策略服务）")
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -2043,6 +2083,7 @@ def main(argv=None):
     p.add_argument("--history-yaml", default=None, help="模型 history yaml 或 checkpoint 目录：motion 网格写进 plan")
     p.add_argument("--max-steps", type=int, default=None, help="执行窗枚举上限（给 --history-yaml 时缺省 2000）")
     p.add_argument("--noise", action="store_true", help="另生成 noise 阶段：每局 seed 1、2 各一次不干预")
+    add_speedup_args(p)
     add_root_args(p)
     p = sub.add_parser("donors")
     p.add_argument("--by-k", action="store_true", help="按第 k 次交换生成 Bsame_k / Z_k 与 kswap、kseeds 阶段")
@@ -2051,6 +2092,7 @@ def main(argv=None):
                    help="某任务接收局 < 该值（缺省 8）时该任务只跑 N、Z、S0、Zall")
     p.add_argument("--smoke", action="store_true", help="只处理 smoke 阶段录制")
     p.add_argument("--same-episode", action="store_true", help="同一局供体 T_k←k′ 与 Z_k（计划 1115 §2.2）")
+    add_speedup_args(p)
     p = sub.add_parser("requeue")
     p.add_argument("--out", required=True, help="<O>/<M>")
     p.add_argument("--stage", required=True, choices=STAGES)

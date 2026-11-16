@@ -55,6 +55,12 @@ motion 内容替换（S8；只换 motion 编码内容，motion token 个数、�
   另存 call_start_frames int32 (c,)、call_embs f32 (c, dim)、call_seq int64 (c,)，按调用顺序保留重复起点的全部原编码；
   每次 add_buffer / infer 后有新窗口即重写（先写临时文件再 os.replace），进程被杀也不丢已完成窗口；
   记录的永远是原 client 的编码（替换前）。run_local 收尾时按 terminal 记录的局身份把 <nonce>.npz 改名为 <task>_ep<id>.npz。
+--demo-cache-map <内联 JSON 或 JSON 文件>（计划 1116 F2，契约 C3）：{接收局 task:ep: 该局不干预运行 N 的录制 npz}；
+  每局 reset 按 eval_rpc 的 episode_key 载入该局录制，示范窗（起点 < FrameSampMemory.exec_start_idx）直接取录制里的原编码、
+  不调原 client（sidecar 不编码）；执行窗照常在线编码；zero / swap / swap_exact / shift 在其后照常处理（供体替换优先于缓存）。
+  启用时局不在 map、示范窗起点不在录制、调用缺起点即报错，不静默回退在线编码。episode.json 的 motion_content 另记
+  demo_cache_file、n_cache_hits、n_inner_calls、cache_hit_starts；--record-motion 文件另存 cache_hit、call_cache_hit、demo_cache_file。
+  不给时行为与输出逐字节不变。
 
 不存注意力（只要轨迹、终局与 episode.json 时）：
   ablate 含 motion_swap: / motion_swap_exact: / motion_shift 时一律不写 infer_<seq>.npz，不需要配置，也没有存注意力的路径；
@@ -252,6 +258,43 @@ def donor_exact_index(donor_starts, start_frame: int) -> int | None:
     return int(exact[0]) if exact.size else None
 
 
+def parse_demo_cache_map(text) -> dict:
+    """--demo-cache-map：内联 JSON 对象（以 "{" 开头）或 JSON 文件路径 → {"task:ep": N 录制 npz 绝对路径}。
+    键按 parse_episode 规范；空、非对象、键重复、路径不存在即 ValueError（不静默回退到在线编码）。"""
+    raw = str(text or "").strip()
+    if not raw:
+        raise ValueError("--demo-cache-map 为空")
+    try:
+        value = json.loads(raw) if raw.startswith("{") else json.loads(Path(raw).read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"--demo-cache-map 读不了: {exc}") from exc
+    if not isinstance(value, dict) or not value:
+        raise ValueError("--demo-cache-map 须为非空 JSON 对象 {task:ep: npz 路径}")
+    out = {}
+    for key, path in value.items():
+        task, ep = parse_episode(key)
+        norm = f"{task}:{ep}"
+        if norm in out:
+            raise ValueError(f"--demo-cache-map 局重复: {norm}")
+        if not isinstance(path, str) or not Path(path).is_file():
+            raise ValueError(f"--demo-cache-map 局 {norm} 的录制文件不存在: {path!r}")
+        out[norm] = str(Path(path).resolve())
+    return out
+
+
+def load_demo_cache(path) -> dict:
+    """N 录制 npz（--record-motion 写出、run_local 改名）→ {起点: emb float32}；同起点只取首次（与 flush 的 start_frames 同口径）。"""
+    with np.load(path) as z:
+        starts = np.asarray(z["start_frames"], np.int64).reshape(-1)
+        embs = np.asarray(z["embs"], np.float32)
+    if starts.size == 0 or embs.ndim != 2 or embs.shape[0] != starts.size:
+        raise RuntimeError(f"示范窗缓存 {path} 无窗口或 start_frames / embs 不对齐")
+    cache = {}
+    for i, f in enumerate(starts.tolist()):
+        cache.setdefault(int(f), embs[i])
+    return cache
+
+
 def _accepts_start(fn) -> bool:
     """与 framesamp_memory._accepts_start 同判据：接受第二个位置参数才传起点帧号。"""
     import inspect
@@ -270,10 +313,13 @@ class MotionContentClient:
     swap 换成供体同起点窗口（donor_lookup）、swap_exact 只换供体中起点精确存在的窗口、
     shift 换成上一个窗口的原编码。record_dir 给出时同时记录原编码的完整调用轨迹；
     旧字段同起点只留首次，counts 计次，以保持供体替换接口兼容。
+    demo_cache_map 给出时（计划 1116 F2）：每局 begin_episode 按局键载入该局不干预运行（N）的录制，
+    示范窗（起点 < exec_start_fn() 返回的段边界）直接取缓存原编码、不调原 client；执行窗照常在线编码；
+    之后的 zero / swap / swap_exact / shift 处理不变（供体替换优先于缓存）。不给时行为逐字节不变。
     其余属性（provenance、close 等）透传原 client。"""
 
     def __init__(self, inner, *, mode: str = "none", donor: dict | None = None, record_dir=None,
-                 per_episode_donor: bool = False):
+                 per_episode_donor: bool = False, demo_cache_map: dict | None = None, exec_start_fn=None):
         if mode not in ("none", "zero", "swap", "swap_exact", "shift"):
             raise ValueError(f"未知 motion 替换模式 {mode!r}")
         if per_episode_donor and (mode not in ("swap", "swap_exact") or donor is not None):
@@ -286,6 +332,11 @@ class MotionContentClient:
         self.record_dir = Path(record_dir) if record_dir is not None else None
         self._inner_accepts_start = _accepts_start(inner)
         self.episode_nonce = None
+        # 示范窗缓存（F2）：局键 → N 录制路径；exec_start_fn 返回本局段边界（FrameSampMemory.exec_start_idx）
+        self.demo_cache_map = dict(demo_cache_map) if demo_cache_map else None
+        self.exec_start_fn = exec_start_fn
+        self.demo_cache: dict[int, np.ndarray] | None = None
+        self.demo_cache_file: str | None = None
         self._reset_state()
 
     def __getattr__(self, name):
@@ -301,6 +352,10 @@ class MotionContentClient:
         self.replaced = 0
         self.shift_last: tuple[int, np.ndarray] | None = None   # shift：上一个新窗口的 (起点, 原编码)
         self.shift_out: dict[int, tuple[np.ndarray, int]] = {}  # shift：起点 → (返回值, 来源起点；-1 为未替换)
+        self.cache_hits: list[bool] = []       # 与 starts 同序：该起点首次调用是否取自示范窗缓存
+        self.call_cache_hits: list[bool] = []  # 与 call_starts 同序
+        self.n_cache_hits = 0                  # 取自缓存的调用次数（未调原 client）
+        self.n_inner_calls = 0                 # 调原 client 的次数
         self.dirty = False
 
     def _shift_window(self, emb, start: int) -> tuple[np.ndarray, int]:
@@ -315,9 +370,33 @@ class MotionContentClient:
         out, source = self.shift_out[start]
         return out.copy(), source
 
+    def _cached_demo(self, start_frame) -> np.ndarray | None:
+        """示范窗命中缓存时返回缓存原编码的副本；执行窗返回 None。缓存启用时缺起点、段边界未知或示范窗未录即报错。"""
+        if self.demo_cache_map is None:
+            return None
+        if self.demo_cache is None:
+            raise RuntimeError("示范窗缓存已启用，但本局未载入缓存（begin_episode 须给局键）")
+        if start_frame is None:
+            raise RuntimeError("示范窗缓存需要起点帧号，但 motion_enc_fn 调用未传 start_frame")
+        es = self.exec_start_fn() if self.exec_start_fn is not None else None
+        if es is None:
+            raise RuntimeError("示范窗缓存需要段边界 exec_start_idx，但当前取不到")
+        if int(start_frame) >= int(es):
+            return None
+        emb = self.demo_cache.get(int(start_frame))
+        if emb is None:
+            raise RuntimeError(f"示范窗起点 {int(start_frame)} 不在缓存 {self.demo_cache_file} 中（es={int(es)}）")
+        return np.array(emb, dtype=np.float32, copy=True)
+
     def __call__(self, frames, start_frame=None):
-        emb = self.inner(frames, start_frame) if self._inner_accepts_start else self.inner(frames)
-        emb = np.asarray(emb, dtype=np.float32)
+        emb = self._cached_demo(start_frame)
+        cache_hit = emb is not None
+        if cache_hit:
+            self.n_cache_hits += 1
+        else:
+            emb = self.inner(frames, start_frame) if self._inner_accepts_start else self.inner(frames)
+            emb = np.asarray(emb, dtype=np.float32)
+            self.n_inner_calls += 1
         donor_start = -1
         if self.mode in ("swap", "swap_exact") and self.donor is None:
             raise RuntimeError("本局尚未确定供体（逐局供体须在 begin_episode 给出）")
@@ -362,6 +441,7 @@ class MotionContentClient:
         if self.record_dir is not None:
             self.call_starts.append(key)
             self.call_embs.append(emb.copy())
+            self.call_cache_hits.append(cache_hit)
         if key in self.index:
             self.counts[self.index[key]] += 1
         else:
@@ -370,10 +450,11 @@ class MotionContentClient:
             self.embs.append(emb.copy())
             self.counts.append(1)
             self.donor_starts.append(donor_start)
+            self.cache_hits.append(cache_hit)
         self.dirty = True
         return out
 
-    def begin_episode(self, nonce: str, donor: dict | None = None) -> None:
+    def begin_episode(self, nonce: str, donor: dict | None = None, episode_key: str | None = None) -> None:
         self.flush()
         if self.per_episode_donor:
             if donor is None:
@@ -381,6 +462,16 @@ class MotionContentClient:
             self.donor = donor
         elif donor is not None:
             raise ValueError("固定供体模式不接受逐局供体")
+        if self.demo_cache_map is not None:
+            # 先清旧局缓存：本局载入失败时不残留上一局的示范窗
+            self.demo_cache, self.demo_cache_file = None, None
+            if not episode_key:
+                raise RuntimeError("示范窗缓存需要本局局键（客户端 reset 的 eval_rpc 须带 episode_key）")
+            task, ep = parse_episode(episode_key)
+            path = self.demo_cache_map.get(f"{task}:{ep}")
+            if path is None:
+                raise RuntimeError(f"--demo-cache-map 没有局 {task}:{ep}")
+            self.demo_cache, self.demo_cache_file = load_demo_cache(path), str(path)
         self.episode_nonce = str(nonce)
         self._reset_state()
 
@@ -400,16 +491,26 @@ class MotionContentClient:
         if self.mode in ("swap", "swap_exact"):
             record["donor_start_frames"] = np.asarray(self.donor_starts, np.int32)
             record["donor"] = np.str_(self.donor.get("name", ""))
+        if self.demo_cache_map is not None:
+            # 只在启用示范窗缓存时多写：哪些窗取自缓存（未调原 client）、缓存文件
+            record["cache_hit"] = np.asarray(self.cache_hits, bool)
+            record["call_cache_hit"] = np.asarray(self.call_cache_hits, bool)
+            record["demo_cache_file"] = np.str_(self.demo_cache_file or "")
         np.savez(tmp, **record)
         os.replace(tmp, path)
         self.dirty = False
         return path
 
     def summary(self) -> dict:
-        return {"mode": self.mode, "donor": (self.donor or {}).get("name"), "n_windows": len(self.starts),
-                "n_replaced": self.replaced, "replace_log": [list(x) for x in self.replace_log],
-                "record_file": (str(self.record_dir / f"{self.episode_nonce}.npz")
-                                if self.record_dir is not None and self.episode_nonce else None)}
+        out = {"mode": self.mode, "donor": (self.donor or {}).get("name"), "n_windows": len(self.starts),
+               "n_replaced": self.replaced, "replace_log": [list(x) for x in self.replace_log],
+               "record_file": (str(self.record_dir / f"{self.episode_nonce}.npz")
+                               if self.record_dir is not None and self.episode_nonce else None)}
+        if self.demo_cache_map is not None:
+            out.update(demo_cache_file=self.demo_cache_file, n_cache_hits=int(self.n_cache_hits),
+                       n_inner_calls=int(self.n_inner_calls),
+                       cache_hit_starts=[int(f) for f, hit in zip(self.starts, self.cache_hits) if hit])
+        return out
 
 
 def load_donor(donor_dir, donor_episode) -> dict:
@@ -731,6 +832,15 @@ class RolloutRecorder:
                 raise RuntimeError(f"rollout 记录读回不符: {key}")
 
 
+def rpc_episode_key(rpc, what: str) -> str:
+    """reset eval_rpc 的 episode_key → 规范 "task:ep"；缺失即 RuntimeError。"""
+    key = rpc.get("episode_key") if isinstance(rpc, dict) else None
+    if not isinstance(key, str) or not key:
+        raise RuntimeError(f"{what} 需要客户端在 reset 的 eval_rpc 里带 episode_key（eval.py --profile plfull）")
+    task, ep = parse_episode(key)
+    return f"{task}:{ep}"
+
+
 class AttnRecorder:
     """在 policy 实例属性上遮蔽 reset / add_buffer / infer / _sample_actions，每次推理落一份 npz。"""
 
@@ -739,7 +849,7 @@ class AttnRecorder:
 
     def __init__(self, policy, adapter, attn_out, *, save_top_frames: int = 3, save_prefix: bool = False,
                  ablate: str = "none", record_motion=None, swap_donor: str | None = None,
-                 save_attn: bool | None = None, swap_map: dict | None = None):
+                 save_attn: bool | None = None, swap_map: dict | None = None, demo_cache_map: dict | None = None):
         self.policy, self.adapter = policy, adapter
         self.attn_out = Path(attn_out)
         self.save_top_frames = int(save_top_frames)
@@ -771,6 +881,9 @@ class AttnRecorder:
         if motion_swaps != (swap_donor is not None or bool(swap_map)) and not (frame is not None and not motion_swaps):
             raise SystemExit("错误: --ablate motion_swap:<DIR> 或 motion_swap_exact:<DIR> 与 --swap-donor task:ep"
                              "（或 --swap-map）必须同时给出")
+        if demo_cache_map and not self.motion_enabled:
+            raise SystemExit("错误: --demo-cache-map 需要 motion 模型，本模型无 motion token（基线）")
+        self.demo_cache_map = dict(demo_cache_map) if demo_cache_map else None
         self.record_motion = Path(record_motion) if record_motion is not None else None
         self.donor = load_donor(motion["dir"], swap_donor) if swap_donor is not None else None
         # 逐局供体：目标局 → 供体局；供体文件按需载入并缓存（同一供体可被多局使用）。
@@ -824,12 +937,17 @@ class AttnRecorder:
         """motion 内容替换 / 记录：policy._motion_client 换成包装句柄（policy.reset 用它重建 mem_buffer），
         已建好的 mem_buffer.motion_enc 也一并换掉（首局 reset 之前那个实例）。"""
         motion = self.ablate["motion"]
-        if motion is None and self.record_motion is None:
+        if motion is None and self.record_motion is None and self.demo_cache_map is None:
             return
         mode = "none" if motion is None else motion["kind"]
+        kw = {}
+        if self.demo_cache_map is not None:
+            # 段边界取当前 mem_buffer（reset 时重建；首包 add_buffer 在编 motion 之前写入 exec_start_idx）
+            kw = {"demo_cache_map": self.demo_cache_map,
+                  "exec_start_fn": lambda: getattr(getattr(self.policy, "mem_buffer", None), "exec_start_idx", None)}
         self.motion_client = MotionContentClient(self.policy._motion_client, mode=mode, donor=self.donor,
                                                  record_dir=self.record_motion,
-                                                 per_episode_donor=self.swap_map is not None)
+                                                 per_episode_donor=self.swap_map is not None, **kw)
         self.policy._motion_client = self.motion_client
         mem_buffer = getattr(self.policy, "mem_buffer", None)
         if mem_buffer is not None and hasattr(mem_buffer, "motion_enc"):
@@ -837,7 +955,8 @@ class AttnRecorder:
         import atexit
         atexit.register(self.motion_client.flush)
         print(f"ATTN_MOTION_CONTENT mode={mode} donor={(self.donor or {}).get('path')} "
-              f"swap_map={len(self.swap_map) if self.swap_map else 0} record_motion={self.record_motion}", flush=True)
+              f"swap_map={len(self.swap_map) if self.swap_map else 0} record_motion={self.record_motion}"
+              + (f" demo_cache_map={len(self.demo_cache_map)}" if self.demo_cache_map is not None else ""), flush=True)
 
     def episode_donor(self, rpc) -> tuple[str | None, dict | None]:
         """--swap-map 时按 reset eval_rpc 的 episode_key 确定本局供体；否则 (None, None)。
@@ -975,10 +1094,13 @@ class AttnRecorder:
         self.frames.clear()
         self.saved_frames.clear()
         if self.motion_client is not None:
+            kw = {}
+            if self.demo_cache_map is not None:
+                kw["episode_key"] = episode_key if episode_key is not None else rpc_episode_key(rpc, "--demo-cache-map")
             if self.swap_map is not None:
-                self.motion_client.begin_episode(str(nonce), donor=episode_donor)
+                self.motion_client.begin_episode(str(nonce), donor=episode_donor, **kw)
             else:
-                self.motion_client.begin_episode(str(nonce))
+                self.motion_client.begin_episode(str(nonce), **kw)
         self.episode = {"episode_nonce": str(nonce), "ep_seq": self.ep_seq, "reset_rpc": rpc,
                         "server_pid": os.getpid(), "reset_unix_time": time.time(),
                         "model_kind": self.policy.metadata.get("model_kind"), "motion_enabled": self.motion_enabled,
@@ -1199,7 +1321,8 @@ class MotionOnlyRecorder(AttnRecorder):
     serve_mode = "motion_only"
 
     def __init__(self, policy, attn_out, *, ablate: str = "none", record_motion=None, swap_donor: str | None = None,
-                 swap_map: dict | None = None, save_prefix: bool = False, save_attn: bool | None = None):
+                 swap_map: dict | None = None, save_prefix: bool = False, save_attn: bool | None = None,
+                 demo_cache_map: dict | None = None):
         try:
             parsed = parse_ablate(ablate)
         except ValueError as exc:
@@ -1208,7 +1331,8 @@ class MotionOnlyRecorder(AttnRecorder):
         if save_attn is True:
             raise SystemExit("错误: 只换 motion 模式（modulation 模型）不存注意力，不能显式要求 save_attn")
         super().__init__(policy, None, attn_out, save_top_frames=0, save_prefix=False, ablate=ablate,
-                         record_motion=record_motion, swap_donor=swap_donor, save_attn=False, swap_map=swap_map)
+                         record_motion=record_motion, swap_donor=swap_donor, save_attn=False, swap_map=swap_map,
+                         demo_cache_map=demo_cache_map)
 
     def install(self) -> None:
         # 不碰 policy._sample_actions：生产采样路径原样
@@ -1328,6 +1452,8 @@ def _make_args_class():
         oracle_mode: str = ""
         # 真实 rollout：走原采样路径，每次推理写 rollout_<seq>.npz（完整输入与实际噪声）；默认关
         rollout_record: bool = False
+        # 示范窗缓存（计划 1116 F2）：内联 JSON 或 JSON 文件 {task:ep: N 录制 npz}；示范窗命中直接取缓存、不在线编码
+        demo_cache_map: str | None = None
 
     return Args
 
@@ -1360,6 +1486,14 @@ def main(args) -> None:
             raise SystemExit(f"错误: {exc}") from exc
         if query_count:
             raise SystemExit("询问模式不允许 --swap-map")
+    demo_cache_map = None
+    if getattr(args, "demo_cache_map", None):
+        try:
+            demo_cache_map = parse_demo_cache_map(args.demo_cache_map)
+        except ValueError as exc:
+            raise SystemExit(f"错误: {exc}") from exc
+        if query_count or bool(getattr(args, "rollout_record", False)):
+            raise SystemExit("--demo-cache-map 与 --query-record、--rollout-record 互斥")
     rollout_record = bool(getattr(args, "rollout_record", False))
     if rollout_record and (query_count or ablate["name"] != "none" or args.save_prefix or args.record_motion
                            or args.swap_donor or swap_map or no_save_attn):
@@ -1391,7 +1525,7 @@ def main(args) -> None:
             recorder = MotionOnlyRecorder(policy, attn_out, ablate=ablate_name,
                                           record_motion=Path(record_motion).resolve() if record_motion else None,
                                           swap_donor=getattr(args, "swap_donor", None), swap_map=swap_map,
-                                          save_prefix=save_prefix)
+                                          save_prefix=save_prefix, demo_cache_map=demo_cache_map)
             recorder.install()
             print(f"MOTION_ONLY_SERVE model_kind={policy.metadata.get('model_kind')} ablate={ablate['name']} "
                   f"record_motion={recorder.record_motion} attn_out={attn_out}", flush=True)
@@ -1405,7 +1539,8 @@ def main(args) -> None:
                                 save_prefix=save_prefix, ablate=ablate_name,
                                 record_motion=Path(record_motion).resolve() if record_motion else None,
                                 swap_donor=getattr(args, "swap_donor", None),
-                                save_attn=False if no_save_attn else None, swap_map=swap_map)
+                                save_attn=False if no_save_attn else None, swap_map=swap_map,
+                                demo_cache_map=demo_cache_map)
         recorder.install()
         P = getattr(recorder.adapter, "P", None)
         if P is not None:
@@ -1418,7 +1553,8 @@ def main(args) -> None:
     print(f"ATTN_ABLATE name={ablate['name']} masks={sorted(ablate['masks'])} heads={list(ablate['heads'])} "
           f"motion={ablate['motion']} swap_donor={getattr(args, 'swap_donor', None)} "
           f"swap_map={len(swap_map) if swap_map else 0} "
-          f"record_motion={getattr(args, 'record_motion', None)} save_attn={int(save_attn)}", flush=True)
+          f"record_motion={getattr(args, 'record_motion', None)} save_attn={int(save_attn)}"
+          + (f" demo_cache_map={len(demo_cache_map)}" if demo_cache_map else ""), flush=True)
     _install_rpc_tracking(query_record=query_count, oracle_mode=oracle_mode)
     # metadata、server 构造与 sidecar 收尾全部走主线 main，字段与 serve_policy.py 完全一致
     serve_policy.main(args)
