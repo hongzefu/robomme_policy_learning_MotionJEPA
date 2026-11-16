@@ -1,0 +1,8 @@
+NOOP_EQ2=PASS eps=20 steps=57 agree=57 rate=1.0000 missing=0 min_rate=0.95
+BEHAVIOR_TOL=PASS group=S_swing j=1 key=swing_follow pairs=57 new=0.9825 old=0.9825 diff=+0.0000 tol=0.05 new_all=0.9833 old_all=0.9825 n_new=60 n_old=57
+motion strict: ENC_TOL=FAIL windows=300 min_cos=0.999480 maxabs=0.1406 files=60 aligned=1097 missing_old=0 no_overlap=0 dim_mismatch=0 thr_cos=0.999 thr_abs=0.1
+motion relaxed: ENC_TOL=PASS windows=300 min_cos=0.999480 maxabs=0.1406 files=60 aligned=1097 missing_old=0 no_overlap=0 dim_mismatch=0 thr_cos=0.997 thr_abs=0.3
+motion: OFFLINE_ENC=PASS model=motion windows=5348 files=958 bad=0 reused=129 empty=0 shards=4 missing_shards=0 failed_shards=0 single_check=16 single_min_cos=0.999984 single_maxabs=0.0312
+wan strict: ENC_TOL=PASS windows=300 min_cos=0.999995 maxabs=0.03297 files=60 aligned=1097 missing_old=0 no_overlap=0 dim_mismatch=0 thr_cos=0.999 thr_abs=0.1
+wan relaxed: ENC_TOL=PASS windows=300 min_cos=0.999995 maxabs=0.03297 files=60 aligned=1097 missing_old=0 no_overlap=0 dim_mismatch=0 thr_cos=0.997 thr_abs=0.3
+wan: OFFLINE_ENC=PASS model=wanpool windows=5348 files=958 bad=0 reused=0 empty=0 shards=4 missing_shards=0 failed_shards=0 single_check=16 single_min_cos=1.000000 single_maxabs=0.00179

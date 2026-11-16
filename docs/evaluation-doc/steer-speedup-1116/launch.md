@@ -32,3 +32,5 @@
 12. 读数 bug：常驻服务 attempts 多一层目录，读数 glob 只认一层 → NOOP_EQ2 首判 `missing=20`。FIX-R（4736950，合并 6f241ef）兼容两种布局；读数改用只读工作树 `v1-store/worktrees/s5t-ro`（6f241ef），运行时 spec 仍指 s5t-run（53ae73d，运行代码未变、GL release 不重发）。重判 `NOOP_EQ2=PASS eps=20 steps=57 agree=57 rate=1.0000 missing=0`。
 13. 离线编码在 aspen GPU1 OOM（与 gl11 补跑同卡）→ 改 GPU0；aspen 两卡被他人（daiyp）进程占满利用率，约 6 文件/分钟 → 11:28 起改为 GL 4 占位分片（`runbook/12-gl-offenc.sh i/4`，release 53ae73d，--skip-existing），约 48 文件/分钟。aspen 编码会话按确切名停止。
 14. 顺序调整：Frozen Wan VideoRepick（计划第 4 步）在 RS 等离线编码时先跑，11:27 31 spec 全部完成；MotionMem VideoRepick 11:31 在 aspen GPU0 起池。
+15. 常驻服务下 JAX 显存比例 0.22 在长局 OOM（bt 第 56 局申请 2.4 GB，12:20）：该 spec 前 16 局已完成，放回队列续跑通过；`runbook/10-launch.sh` 起跑显存比例改 0.30（每卡 2 通道，约 2×16 GB）。12:28 后新起的 GL 作业步（rs-wan、core-motion）均用 0.30。
+16. 闸门结果：`NOOP_EQ2=PASS rate=1.0000`；`BEHAVIOR_TOL=PASS j=1 pairs=57 new=0.9825 old=0.9825 diff=+0.0000`；离线编码 `OFFLINE_ENC=PASS` 两模型各 958 文件 bad=0；ENC_TOL（GL A40 离线 vs 上一轮 GL 在线）motion `min_cos=0.999480 maxabs=0.1406`（原阈值 FAIL/放宽 PASS），wan `min_cos=0.999995 maxabs=0.03297`（两档 PASS）。原文见 records/gates/gates.txt。
