@@ -45,6 +45,17 @@
         kseeds（每任务 default_rng(0) 抽 KSEED_PER_TASK 局，seed 1）两阶段 spec；同 (k,组) 的接收局装进同一 spec（F11）。
         打印 FP_K_GROUPS、DONOR_FILES；不动旧组的行。
 
+计划 1115（steer-4task-1115）§4.2 同一局口径（新增，缺省不启用）：
+  scan  --task VideoRepick --difficulties easy,medium,xhard（xhard 只对 VideoRepick 放行）。
+  pool  --tasks VideoRepick --quota-by-difficulty easy=10,medium=20,xhard=20（读全部扫描文件，难度内按格轮转）。
+  specs --history-yaml <checkpoint 目录> [--max-steps 2000] [--noise]：窗口网格写进 plan["motion"]；--noise 另生成每局
+        seed 1、2 各一次不干预（拿起即停照旧，行 group=N、noise_rep）。
+  donors --same-episode：接收局 = recv_ok（不干预第一次就拿对），对每个 k 生成 Z_k（零）、对交换 ≥2 次的局每个 k′≠k 生成
+        T_k←k′（供体 = 同局 N 录制 W_k′ 窗口，按顺序对齐到 W_k，不足用 next_start_after 补齐）；行写 k、k_src、
+        pred_index（去掉第 k 次、换成第 k′ 次那对物体后重放，与 swap_blind_k 同口径）、pred_index_slot（槽位口径旁证）、
+        swap_blind_k、nondiscrim；合成号 20000000+接收局×100+k×10+k′（Z_k 的 k′=0）；生成 samep 阶段。
+  requeue --out <O>/<M> --stage <阶段>：只重发未完成 spec。
+
 trace 与回执字段（FP-W1 提供）只在 receipt_fields、trace_row_fields 两个函数里读，合并后按实际字段名在这里改。
 窗口与帧号（F1）：帧 k = 第 k 步之后的观测（帧 0 为 reset）；示范窗起点 s=0,32,… 满足 s+16 ≤ es−1，真实帧
 [s, min(s+32, es−1)]；执行窗起点 es+32u，真实帧 [f, f+32]，最多到 es+MAX_STEPS；交换帧区间 [第一次 start+1, 最后 end+1]
@@ -85,6 +96,14 @@ MOTION_WINDOW = 33
 MOTION_STRIDE = 32
 DEMO_MIN_REAL = 17                          # 两模型配置 demo_min_real_frames: 17、demo_tail_pad: repeat_last
 MAX_STEPS = 1300                            # eval plfull 固定 1300
+# 当前窗口网格（计划 1115 §4.2「stride 参数化」）：缺省 = 旧口径；specs --history-yaml 写进 plan["motion"]，donors 读后 apply_grid。
+GRID = {"stride": MOTION_STRIDE, "window": MOTION_WINDOW, "demo_min_real": DEMO_MIN_REAL, "max_steps": MAX_STEPS}
+GRID_DEFAULT = dict(GRID)
+# ---- 同一局供体（计划 1115 §2.2）：合成号 = 20000000 + 接收局×100 + k×10 + k′（Z_k 的 k′ 记 0）
+SAMEP_BASE = 20000000
+SAMEP_K_MAX = 9
+SAMEP_DONOR_DIR = "donors_samep"
+NOISE_SEEDS = (1, 2)
 PER_TASK = 120
 SYN_BASE = 10000000                         # F2：ep = SYN_BASE + recv×100 + slot
 SLOTS = {"A1": 1, "A2": 2, "B1": 3, "B2": 4, "S0": 5, "Z": 6, "Rnd": 7, "Zall": 8}
@@ -100,7 +119,7 @@ SEEDCHECK_SEEDS = (1, 2)
 MULTIEQ_GROUPS = ("S0", "A", "B", "Z")
 MULTIEQ_PER_GROUP = 3
 DONOR_DIR = "donors_fp"
-BASE_STAGES = ("smoke", "n", "multieq", "swap", "seeds")
+BASE_STAGES = ("smoke", "n", "multieq", "swap", "seeds", "noise", "samep")
 K_STAGES = ("kswap", "kseeds")
 STAGES = BASE_STAGES + K_STAGES
 # ---- 按第 k 次交换（SP-W2）
@@ -199,6 +218,48 @@ def swap_blind_k(n_objects, target_index, schedule, k):
     return actual.index(belief)
 
 
+def replaced_schedule(schedule, k, kp):
+    """按时间排序的交换表里第 k 次的交换对换成第 k′ 次的交换对（时间保持第 k 次的），其余不变。"""
+    sched = ordered_schedule(schedule)
+    k, kp = int(k), int(kp)
+    if not (1 <= k <= len(sched) and 1 <= kp <= len(sched)):
+        raise ValueError(f"k={k}、k′={kp} 超出交换次数 {len(sched)}")
+    out = [list(x) for x in sched]
+    out[k - 1] = [sched[kp - 1][0], sched[kp - 1][1]] + list(sched[k - 1][2:])
+    return out
+
+
+def pred_index_k(n_objects, target_index, schedule, k, kp):
+    """T_k←k′ 的预测物体（与 swap_blind_k 同口径，主会话 11-16 对齐）：去掉第 k 次、换成第 k′ 次那对物体后按交换表
+    重放得目标的信念槽位，返回实际（全部交换后）占着该槽位的物体下标。k′ = k 时等于目标本身。"""
+    sched = ordered_schedule(schedule)
+    actual = _slots_after(n_objects, sched)
+    belief = _slots_after(n_objects, replaced_schedule(sched, k, kp))[int(target_index)]
+    return actual.index(belief)
+
+
+def slot_pairs(n_objects, schedule):
+    """物体对交换表 → 每次交换发生时两物体所在的槽位对（按时间顺序）。"""
+    slot = list(range(int(n_objects)))
+    out = []
+    for item in ordered_schedule(schedule):
+        a, b = int(item[0]), int(item[1])
+        out.append(tuple(sorted((slot[a], slot[b]))))
+        slot[a], slot[b] = slot[b], slot[a]
+    return out
+
+
+def pred_index_slot_k(n_objects, target_index, schedule, k, kp):
+    """计划 §2.2 原文的槽位口径（旁证）：位置模拟里把第 k 次那对槽换成第 k′ 次那对槽，目标随槽走，
+    返回实际占着该终点槽的物体。"""
+    pairs = slot_pairs(n_objects, schedule)
+    pairs[int(k) - 1] = pairs[int(kp) - 1]
+    pos = int(target_index)
+    for p, q in pairs:
+        pos = q if pos == p else p if pos == q else pos
+    return _slots_after(n_objects, schedule).index(pos)
+
+
 def classify_pick_k(first_pick, target_index, blind_k):
     """correct / swap_blind_k（blind_k ≠ 目标时才可能）/ other / none。"""
     if first_pick is None:
@@ -211,25 +272,43 @@ def classify_pick_k(first_pick, target_index, blind_k):
     return "other"
 
 
+# ---------------------------------------------------------------- 窗口网格
+def apply_grid(motion=None, max_steps=None):
+    """设置窗口网格；motion=None 恢复旧口径（32/33/17、1300）。motion 形如 sp_swap_prep.motion_from_yaml 的返回。"""
+    GRID.clear()
+    GRID.update(GRID_DEFAULT)
+    if motion:
+        GRID.update(stride=int(motion["stride"]), window=int(motion["window"]), demo_min_real=int(motion["demo_min_real"]))
+        if motion.get("max_steps") is not None:
+            GRID["max_steps"] = int(motion["max_steps"])
+    if max_steps is not None:
+        GRID["max_steps"] = int(max_steps)
+    return dict(GRID)
+
+
+def _max_steps(max_steps):
+    return GRID["max_steps"] if max_steps is None else max_steps
+
+
 # ---------------------------------------------------------------- 窗口（F1）
 def demo_starts(es):
     out, s = [], 0
-    while s + (DEMO_MIN_REAL - 1) <= int(es) - 1:
+    while s + (GRID["demo_min_real"] - 1) <= int(es) - 1:
         out.append(s)
-        s += MOTION_STRIDE
+        s += GRID["stride"]
     return out
 
 
-def exec_starts(es, max_steps=MAX_STEPS):
-    """执行窗起点 es+32u：33 帧到齐（f+32 ≤ es+max_steps，帧 es+k 为第 k 步之后的观测）。"""
+def exec_starts(es, max_steps=None):
+    """执行窗起点 es+stride·u：window 帧到齐（f+window−1 ≤ es+max_steps，帧 es+k 为第 k 步之后的观测）。"""
     out, u = [], 0
-    while u + (MOTION_WINDOW - 1) <= int(max_steps):
+    while u + (GRID["window"] - 1) <= int(_max_steps(max_steps)):
         out.append(int(es) + u)
-        u += MOTION_STRIDE
+        u += GRID["stride"]
     return out
 
 
-def all_starts(es, max_steps=MAX_STEPS):
+def all_starts(es, max_steps=None):
     return demo_starts(es) + exec_starts(es, max_steps)
 
 
@@ -237,8 +316,8 @@ def real_range(f, es):
     """起点 f 的真实帧范围（含两端）；示范窗尾部补帧不算真实帧。"""
     f, es = int(f), int(es)
     if f < es:
-        return f, min(f + MOTION_WINDOW - 1, es - 1)
-    return f, f + MOTION_WINDOW - 1
+        return f, min(f + GRID["window"] - 1, es - 1)
+    return f, f + GRID["window"] - 1
 
 
 def frame_offset(task, es, initial_env_step):
@@ -255,12 +334,12 @@ def swap_frames(schedule, offset=0):
     return min(int(x[2]) for x in schedule) + 1 + offset, max(int(x[3]) for x in schedule) + 1 + offset
 
 
-def segment_starts(task, es, max_steps=MAX_STEPS):
+def segment_starts(task, es, max_steps=None):
     """W 的候选起点：Video 只取示范窗，Button 只取执行窗。"""
     return demo_starts(es) if task in VIDEO_TASKS else exec_starts(es, max_steps)
 
 
-def swap_windows(task, es, schedule, offset=0, max_steps=MAX_STEPS):
+def swap_windows(task, es, schedule, offset=0, max_steps=None):
     """W = 真实帧范围与交换帧区间相交的起点（升序）。"""
     span = swap_frames(schedule, offset)
     if span is None:
@@ -283,7 +362,7 @@ def swap_frames_k(schedule, k, offset=0):
     return int(item[2]) + 1 + offset, int(item[3]) + 1 + offset
 
 
-def windows_in_span(task, es, span, max_steps=MAX_STEPS):
+def windows_in_span(task, es, span, max_steps=None):
     """segment_starts 中真实帧闭区间与 span（闭区间）相交的起点（升序，〇′ F8）。"""
     if span is None:
         return []
@@ -291,12 +370,12 @@ def windows_in_span(task, es, span, max_steps=MAX_STEPS):
     return [f for f in segment_starts(task, es, max_steps) if real_range(f, es)[0] <= hi and real_range(f, es)[1] >= lo]
 
 
-def swap_windows_k(task, es, schedule, k, offset=0, max_steps=MAX_STEPS):
+def swap_windows_k(task, es, schedule, k, offset=0, max_steps=None):
     """W_k：第 k 次交换帧区间相交的窗口起点。"""
     return windows_in_span(task, es, swap_frames_k(schedule, k, offset), max_steps)
 
 
-def s0_start(task, es, schedule, offset=0, max_steps=MAX_STEPS):
+def s0_start(task, es, schedule, offset=0, max_steps=None):
     """S0：真实帧范围全在第一次交换 start（帧号）及以前的最后一个起点；没有返回 None。"""
     if not schedule:
         return None
@@ -309,7 +388,7 @@ def last_window_end(W, es):
     return real_range(max(W), es)[1] if W else None
 
 
-def next_start_after(f, es, max_steps=MAX_STEPS):
+def next_start_after(f, es, max_steps=None):
     """供体补齐用：交换段之后的第一个窗起点（示范之后接执行段）。"""
     later = [s for s in all_starts(es, max_steps) if s > int(f)]
     return min(later) if later else None
@@ -460,11 +539,16 @@ def scan_seeds(task, seed0, count, difficulties=DIFFICULTIES):
     return [(i, int(seed0) + SEED_STEP * i, diffs[i % len(diffs)]) for i in range(int(count))]
 
 
-def parse_difficulties(text):
+XHARD_TASKS = ("VideoRepick",)              # 计划 1115：VideoRepick 局池含 xhard
+
+
+def parse_difficulties(text, task=None):
+    """逗号列表 → 难度元组；xhard 只对 XHARD_TASKS 放行（不给 task 时与旧行为相同，拒绝 xhard）。"""
     diffs = tuple(d.strip() for d in str(text).split(",") if d.strip())
-    bad = [d for d in diffs if d not in ("easy", "medium", "hard")]
+    allowed = ("easy", "medium", "hard") + (("xhard",) if task in XHARD_TASKS else ())
+    bad = [d for d in diffs if d not in allowed]
     if not diffs or bad:
-        raise SystemExit(f"--difficulties 只能取 easy/medium/hard 的逗号列表：{text}")
+        raise SystemExit(f"--difficulties 只能取 {'/'.join(allowed)} 的逗号列表：{text}")
     return diffs
 
 
@@ -590,7 +674,7 @@ def scan_verdict(task, entries):
 def cmd_scan(args):
     out = Path(args.out).resolve()
     task = args.task
-    diffs = parse_difficulties(args.difficulties)
+    diffs = parse_difficulties(args.difficulties, args.task)
     tag = scan_tag(diffs, args.tag)
     items = scan_seeds(task, args.seed0, args.count, diffs)
     banned = split_metadata_seeds(task, official_meta(args))
@@ -695,6 +779,31 @@ def by_swap_times_pick(task, entries, per_n=PER_N, sources=None):
     return sorted(picked, key=lambda e: e["env_seed"]), counts, avail, bins
 
 
+def parse_quota(text):
+    """"easy=10,medium=20,xhard=20" → {难度: 局数}（保序）。"""
+    out = {}
+    for part in (x.strip() for x in str(text).split(",") if x.strip()):
+        name, _, n = part.partition("=")
+        if name not in ("easy", "medium", "hard", "xhard") or not n.isdigit():
+            raise SystemExit(f"难度配额非法：{part!r}")
+        out[name] = int(n)
+    if not out:
+        raise SystemExit("难度配额为空")
+    return out
+
+
+def by_difficulty_pick(entries, quota):
+    """每难度 q 局，难度内按（难度，swap_times，moved）格轮转（stratified_pick）。返回 (picked, counts, avail, bins)。"""
+    picked, counts, avail, bins = [], {}, {}, {}
+    for d, q in quota.items():
+        got, c, a = stratified_pick([e for e in entries if e["difficulty"] == d], q)
+        picked += got
+        counts.update(c)
+        avail.update(a)
+        bins[d] = len(got)
+    return sorted(picked, key=lambda e: e["env_seed"]), counts, avail, bins
+
+
 def pool_episodes(task, picked):
     eps = []
     for i, e in enumerate(picked):
@@ -730,11 +839,17 @@ def cmd_pool(args):
     out = Path(args.out).resolve()
     by_n = bool(getattr(args, "by_swap_times", False))
     per_n = int(getattr(args, "per_n", PER_N))
-    per_task = per_n * len(SWAP_TIMES_NS) if by_n else int(args.per_task)
+    quota = parse_quota(args.quota_by_difficulty) if getattr(args, "quota_by_difficulty", None) else None
+    per_task = sum(quota.values()) if quota else (per_n * len(SWAP_TIMES_NS) if by_n else int(args.per_task))
     all_eps, tasks_info, lines, ok_all = [], {}, [], True
     meta_shas = {}
-    for task in TASKS:
-        if by_n:
+    tasks = tuple(t for t in (getattr(args, "tasks", None) or ",".join(TASKS)).split(",") if t)
+    for task in tasks:
+        if quota:
+            scanned, usable, files = load_scan_entries(out, task, all_scans=True)
+            picked, counts, avail, dbins = by_difficulty_pick(usable, quota)
+            bins = None
+        elif by_n:
             scanned, usable, files = load_scan_entries(out, task, all_scans=True)
             picked, counts, avail, bins = by_swap_times_pick(task, usable, per_n)
         else:
@@ -753,6 +868,9 @@ def cmd_pool(args):
         tasks_info[task] = {"scanned": len(scanned), "usable": len(usable), "cells_taken": counts,
                             "cells_available": avail, "overlap": overlap}
         line = f"FP_POOL={'PASS' if ok else 'FAIL'} task={task} eps={len(eps)} cells={len(counts)} overlap={len(overlap)}"
+        if quota:
+            tasks_info[task].update(scan_files=files, difficulties=dbins)
+            line += " d=" + ",".join(f"{k}:{v}" for k, v in dbins.items())
         if by_n:
             tasks_info[task].update(scan_files=files, bins={str(k): v for k, v in bins.items()})
             line += " bins=" + ",".join(f"n{k}:{v}" for k, v in bins.items())
@@ -765,7 +883,9 @@ def cmd_pool(args):
     P._write_once(out / "manifest.json", P._json_bytes(manifest), args.overwrite)
     pool = {"tasks": tasks_info, "per_task": per_task, "metadata_sha256": meta_shas, "manifest_seal": manifest["sha256"],
             "numbering": "每任务局号按 env_seed 升序 0..per_task−1", "episodes": all_eps}
-    if by_n:
+    if quota:
+        pool.update(mode="by_difficulty", quota_by_difficulty=quota)
+    elif by_n:
         pool.update(mode="by_swap_times", per_n=per_n,
                     sources={t: {str(n): list(d) for n, d in v.items()} for t, v in SWAP_TIMES_SOURCES.items()})
     P._write_once(out / "pool.json", P._json_bytes(pool), args.overwrite)
@@ -1020,6 +1140,14 @@ def build_stage_specs(b, pool_by_key, stages):
                 eps = [pool_by_key[k] for k in mine[i:i + P.SPEC_MAX]]
                 b.add(f"n-{worker}-{i // P.SPEC_MAX:02d}", "n", worker, eps, record=out / "record",
                       rows=[n_row(e) for e in eps])
+    if "noise" in stages:
+        # 换 seed 噪声对照（计划 1115 §3）：每局 2 次全长不干预（拿起即停照旧），seed 1、2。
+        keys = sorted(pool_by_key, key=lambda k: (TASKS.index(split_key(k)[0]), split_key(k)[1]))
+        bins = P.pack([(seed, k, k) for seed in NOISE_SEEDS for k in keys], P.SPEC_MAX)
+        for (worker, (seed, members)), i in zip(b.round_robin(bins), range(len(bins))):
+            eps = [pool_by_key[m[1]] for m in members]
+            b.add(f"noise-{worker}-s{seed}-{i:02d}", "noise", worker, eps, seed=seed,
+                  rows=[n_row(e, recv_ep=int(e["episode_id"]), noise_rep=NOISE_SEEDS.index(seed) + 1) for e in eps])
 
 
 def cmd_specs(args):
@@ -1041,7 +1169,15 @@ def cmd_specs(args):
     roots = resolve_roots(args)
     workers = parse_workers(args.workers, gl=bool(args.gl_store))
     b = make_builder(out, args.model, model, args.run_tree, args.frac, pool, roots=roots, workers=workers)
-    stages = ("smoke", "n")
+    motion = None
+    if getattr(args, "history_yaml", None):
+        from scripts.interpret.sp_swap_prep import MAX_STEPS_SAMEP, motion_from_yaml
+        motion = motion_from_yaml(args.history_yaml)
+        motion["max_steps"] = int(args.max_steps if args.max_steps is not None else MAX_STEPS_SAMEP)
+    elif getattr(args, "max_steps", None) is not None:
+        motion = dict(GRID_DEFAULT, max_steps=int(args.max_steps))
+    apply_grid(motion)
+    stages = ("smoke", "n") + (("noise",) if getattr(args, "noise", False) else ())
     build_stage_specs(b, pool_by_key, stages)
     (out / "env.sh").write_text(render_env(roots, args.frac, args.run_tree, args.commit, out))
     launch = out / "launch_stage.sh"
@@ -1051,7 +1187,10 @@ def cmd_specs(args):
     queues = b.write(BASE_STAGES)   # multieq/swap/seeds 先写空队列，donors 再覆盖；kswap/kseeds 由 donors --by-k 写
     plan = {"tasks": list(TASKS), "model": args.model, "commit": args.commit, "run_tree": str(args.run_tree),
             "out": str(out), "pool_root": str(out.parent), "record_dir": str(out / "record"), "model_entry": model,
-            "manifest_seal": pool["manifest_seal"], "frac": float(args.frac), "gate": None, "runs": b.rows}
+            "manifest_seal": pool["manifest_seal"], "frac": float(args.frac), "gate": None, "main_seed": MAIN_SEED,
+            "runs": b.rows}
+    if motion is not None:
+        plan["motion"] = motion
     if roots != default_roots() or b.workers != list(P.WORKERS):
         plan.update(roots=roots, workers={"order": b.workers, "assign": b.assign_order, "cuda": b.worker_cuda})
     P._write_json(plan_path, plan)
@@ -1452,7 +1591,10 @@ def cmd_donors(args):
         return cmd_donors_smoke(out)
     if getattr(args, "by_k", False):
         return cmd_donors_k(out)
+    if getattr(args, "same_episode", False):
+        return cmd_donors_samep(out, args)
     plan = P._read_json(out / "plan.json")
+    apply_grid(plan.get("motion"))
     pool, pool_by_key = load_pool(out.parent)
     infos = collect_n(plan, out / "record", pool_by_key)
     records = {k: load_record(v["record"]) for k, v in infos.items() if v.get("record")}
@@ -1645,6 +1787,7 @@ def build_k_specs(b, pool_by_key, infos, done, seed_runs):
 
 def cmd_donors_k(out):
     plan = P._read_json(out / "plan.json")
+    apply_grid(plan.get("motion"))
     pool, pool_by_key = load_pool(out.parent)
     infos = collect_n(plan, out / "record", pool_by_key)
     records = {k: load_record(v["record"]) for k, v in infos.items() if v.get("record")}
@@ -1689,6 +1832,163 @@ def cmd_donors_k(out):
     return 0 if ok else 1
 
 
+# ---------------------------------------------------------------- donors --same-episode：同一局第 k′ 次交换（计划 1115 §2.2）
+def samep_ep(recv_ep, k, kp):
+    """同一局合成供体号：20000000 + 接收局×100 + k×10 + k′（Z_k 记 k′=0）。"""
+    if not (1 <= int(k) <= SAMEP_K_MAX and 0 <= int(kp) <= SAMEP_K_MAX):
+        raise ValueError(f"k={k}、k′={kp} 超出 1..{SAMEP_K_MAX}")
+    return SAMEP_BASE + int(recv_ep) * 100 + int(k) * 10 + int(kp)
+
+
+def assign_samep(infos, task, records):
+    """返回 (runs, notes)。接收局 = recv_ok（不干预第一次就拿对、F3/F4 资格），交换 ≥ 2 次的局对每个 k、每个 k′≠k 生成
+    T_k←k′（供体 = 同局 N 录制里 W_k′ 的窗口，按顺序对齐到 W_k，不足用 next_start_after 补齐）；每个 k 生成 Z_k（零）。
+    每条带 pred_index（pred_index_k）、pred_index_slot（槽位口径旁证）、swap_blind_k、nondiscrim（预测物体 = 真目标）。"""
+    runs, notes = [], {"no_wk": [], "infeasible": [], "single_swap": []}
+    for v in sorted((x for x in infos.values() if x["task"] == task and x["status"] == "ok" and x["recv_ok"]),
+                    key=lambda x: x["ep"]):
+        rec = records.get(v["key"])
+        if rec is None:
+            continue
+        rf, lab = v["rf"], v["labels"]
+        n, target, sched = lab["n_objects"], int(rf["target_index"]), rf["schedule"]
+        nk = len(sched)
+        dim = next(iter(rec.values())).shape[0]
+        for k in range(1, nk + 1):
+            Wk = k_windows(v, k)
+            if not Wk or any(f not in rec for f in Wk):
+                notes["no_wk"].append(f"{v['key']}:k{k}")
+                continue
+            base = {"recv": v["key"], "task": task, "ep": v["ep"], "recv_ep": v["ep"], "k": k,
+                    "swap_times": int(v["swap_times"]), "w_starts": [int(f) for f in Wk], "target_index": target}
+            blind = int(lab["blind_k"][k])
+            runs.append(dict(base, group="Z_k", k_src=None, donor=samep_ep(v["ep"], k, 0), swap_blind_k=blind,
+                             pred_index=None, pred_index_slot=None, nondiscrim=blind == target,
+                             embs=np.zeros((len(Wk), dim), np.float32), pad=0, src_starts=None))
+            if nk < 2:
+                notes["single_swap"].append(v["key"])
+                continue
+            for kp in range(1, nk + 1):
+                if kp == k:
+                    continue
+                embs, pad, srcs, why = aligned_rows(Wk, k_windows(v, kp), rec, lab["es"])
+                if embs is None:
+                    notes["infeasible"].append(f"{v['key']}:k{k}<-{kp}:{why}")
+                    continue
+                pred = pred_index_k(n, target, sched, k, kp)
+                runs.append(dict(base, group="T_k", k_src=kp, donor=samep_ep(v["ep"], k, kp), swap_blind_k=blind,
+                                 pred_index=pred, pred_index_slot=pred_index_slot_k(n, target, sched, k, kp),
+                                 nondiscrim=pred == target, embs=embs, pad=pad, src_starts=srcs))
+    return runs, notes
+
+
+def write_samep_files(folder, runs):
+    folder = Path(folder)
+    done, integrity = [], 0
+    for run in runs:
+        path = folder / record_name(run["task"], run["donor"])
+        embs = run["embs"].astype(np.float32)
+        P._savez_atomic(path, start_frames=np.asarray(run["w_starts"], np.int32), embs=embs,
+                        counts=np.ones(len(run["w_starts"]), np.int32))
+        with np.load(path) as back:
+            ok = (np.asarray(back["start_frames"]).tolist() == run["w_starts"]
+                  and np.array_equal(np.asarray(back["embs"], np.float32), embs))
+        if not ok:
+            integrity += 1
+            continue
+        done.append({k: v for k, v in run.items() if k != "embs"})
+    return integrity == 0, f"DONOR_FILES={'PASS' if integrity == 0 else 'FAIL'} mode=samep files={len(done)} integrity={integrity}", done
+
+
+def samep_row(run):
+    keys = ("group", "task", "ep", "recv_ep", "k", "k_src", "donor", "swap_times", "w_starts", "pad", "src_starts",
+            "pred_index", "pred_index_slot", "swap_blind_k", "nondiscrim", "target_index", "recv")
+    row = {k: run.get(k) for k in keys}
+    row.update(slot=None, donor_src="same_episode")
+    return row
+
+
+def build_samep_specs(b, pool_by_key, done, seed=MAIN_SEED):
+    """samep：同 (k, k′, 组) 的接收局装进同一 spec（≤ SPEC_MAX、接收局唯一），拿起即停照旧。"""
+    ablate = f"motion_swap_exact:{b.out / SAMEP_DONOR_DIR}"
+    items = sorted((((r["k"], r["k_src"] or 0, r["group"]), r["recv"], r) for r in done),
+                   key=lambda x: (x[0], TASKS.index(x[2]["task"]), x[2]["ep"]))
+    for i, (worker, (key, bin_)) in enumerate(b.round_robin(P.pack(items))):
+        k, kp, group = key
+        runs = [item[2] for item in bin_]
+        name = f"samep-{worker}-k{k}" + (f"from{kp}" if group == "T_k" else "Z") + f"-{i:03d}"
+        b.add(name, "samep", worker, [pool_by_key[r["recv"]] for r in runs], seed=seed, ablate=ablate,
+              swap_map={r["recv"]: episode_key(r["task"], r["donor"]) for r in runs}, rows=[samep_row(r) for r in runs])
+
+
+def cmd_donors_samep(out, args=None):
+    plan = P._read_json(out / "plan.json")
+    apply_grid(plan.get("motion"))
+    pool, pool_by_key = load_pool(out.parent)
+    infos = collect_n(plan, out / "record", pool_by_key)
+    records = {k: load_record(v["record"]) for k, v in infos.items() if v.get("record")}
+    runs, notes = [], {}
+    for task in TASKS:
+        if not any(v["task"] == task for v in infos.values()):
+            continue
+        print(recv_line(task, infos), flush=True)
+        r, notes[task] = assign_samep(infos, task, records)
+        runs += r
+    ok, line, done = write_samep_files(out / SAMEP_DONOR_DIR, runs)
+    print(line, flush=True)
+    for task, n in notes.items():
+        mine = [r for r in done if r["task"] == task]
+        t = [r for r in mine if r["group"] == "T_k"]
+        z = [r for r in mine if r["group"] == "Z_k"]
+        print(f"FP_SAMEP_GROUPS task={task} T={len(t)} T_nondiscrim={sum(r['nondiscrim'] for r in t)} Z={len(z)} "
+              f"Z_nondiscrim={sum(r['nondiscrim'] for r in z)} no_wk={len(n['no_wk'])} infeasible={len(n['infeasible'])} "
+              f"recv={len({r['recv'] for r in mine})} k_max={max([r['k'] for r in mine] or [0])}", flush=True)
+    b = make_builder(out, plan["model"], plan["model_entry"], plan["run_tree"], plan.get("frac", XLA_MEM_FRACTION), pool,
+                     roots=plan.get("roots"), workers=plan_workers(plan))
+    build_samep_specs(b, pool_by_key, done, plan.get("main_seed", MAIN_SEED))
+    b.write(("samep",))
+    plan["runs"] = [r for r in plan["runs"] if r["stage"] != "samep"] + b.rows
+    plan["samep"] = {"notes": notes, "donors": len(done)}
+    plan.setdefault("k_eligibility", {})
+    for k, v in infos.items():
+        plan["k_eligibility"][k] = {"status": v["status"], "recv_ok": v.get("recv_ok"), "swap_times": v.get("swap_times"),
+                                    "Wk": {str(kk): w for kk, w in ((v.get("labels") or {}).get("Wk") or {}).items()},
+                                    "blind_k": {str(kk): w for kk, w in ((v.get("labels") or {}).get("blind_k") or {}).items()}}
+    P._write_json(out / "plan.json", plan)
+    print(f"DONORS_SAMEP={'PASS' if ok else 'FAIL'} runs={len(done)} specs={len(b.specs)}", flush=True)
+    return 0 if ok else 1
+
+
+def cmd_requeue(args):
+    """按每局 terminal.json 重写该阶段队列，只留未完成的 spec（每片 ≤ SPEC_MAX 局）；旧队列改名 .prev。"""
+    from scripts.interpret.sp_swap_prep import episode_done, spec_done
+    out = Path(args.out).resolve()
+    plan = P._read_json(out / "plan.json")
+    by_spec = {}
+    for r in plan["runs"]:
+        if r["stage"] == args.stage:
+            by_spec.setdefault(r["spec"], []).append(r)
+    pending = {n: rows for n, rows in by_spec.items() if not spec_done(rows)}
+    pw = plan_workers(plan)
+    order, cuda = (pw[0], pw[2]) if pw else (list(P.WORKERS), dict(P.WORKER_CUDA))
+    for w in order:
+        mine = sorted(n for n, rows in pending.items() if rows[0]["worker"] == w)
+        path = out / "queues" / f"{args.stage}-{w}.sh"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if path.exists():
+            path.replace(path.with_name(path.name + ".prev"))
+        text = [QUEUE_HEAD.format(stage=args.stage, worker=w, cuda=cuda[w], n=len(mine),
+                                  env=shlex.quote(str(out / "env.sh")), frac=plan.get("frac", XLA_MEM_FRACTION))]
+        text += [f"run_spec {args.stage} {n} {shlex.quote(str(out / 'specs' / f'{n}.json'))}\n" for n in mine]
+        text.append(QUEUE_TAIL.format(stage=args.stage, worker=w, n=len(mine)))
+        path.write_text("".join(text))
+        path.chmod(0o755)
+    missing = sum(1 for rows in pending.values() for r in rows if not episode_done(r))
+    print(f"FPS_REQUEUE stage={args.stage} specs={len(by_spec)} pending={len(pending)} episodes_missing={missing}",
+          flush=True)
+    return 0
+
+
 def add_root_args(p):
     """F5 路径根参数（specs 用；scan / pool 只用 --bench-src 找官方 metadata）。"""
     p.add_argument("--main", default=None, help="替换 spec 里以旧 MAIN 开头的路径")
@@ -1725,6 +2025,9 @@ def main(argv=None):
     p.add_argument("--per-n", type=int, default=PER_N)
     p.add_argument("--bench-src", default=None, help="robomme_benchmark/src（找官方 metadata）")
     p.add_argument("--overwrite", action="store_true")
+    p.add_argument("--tasks", default=",".join(TASKS), help="只取这些任务（逗号列表）")
+    p.add_argument("--quota-by-difficulty", default=None,
+                   help="每难度局数，如 easy=10,medium=20,xhard=20（读全部扫描文件；计划 1115 §7）")
     p = sub.add_parser("specs")
     p.add_argument("--out", required=True, help="<O>/<M>")
     p.add_argument("--model", required=True, choices=sorted(MODELS))
@@ -1737,6 +2040,9 @@ def main(argv=None):
     p.add_argument("--target-contract", default=None)
     p.add_argument("--extra", default=None, help="并入 spec 的额外键（JSON 对象）")
     p.add_argument("--overwrite", action="store_true")
+    p.add_argument("--history-yaml", default=None, help="模型 history yaml 或 checkpoint 目录：motion 网格写进 plan")
+    p.add_argument("--max-steps", type=int, default=None, help="执行窗枚举上限（给 --history-yaml 时缺省 2000）")
+    p.add_argument("--noise", action="store_true", help="另生成 noise 阶段：每局 seed 1、2 各一次不干预")
     add_root_args(p)
     p = sub.add_parser("donors")
     p.add_argument("--by-k", action="store_true", help="按第 k 次交换生成 Bsame_k / Z_k 与 kswap、kseeds 阶段")
@@ -1744,8 +2050,13 @@ def main(argv=None):
     p.add_argument("--wan-gate", type=int, nargs="?", const=WAN_GATE_DEFAULT, default=None,
                    help="某任务接收局 < 该值（缺省 8）时该任务只跑 N、Z、S0、Zall")
     p.add_argument("--smoke", action="store_true", help="只处理 smoke 阶段录制")
+    p.add_argument("--same-episode", action="store_true", help="同一局供体 T_k←k′ 与 Z_k（计划 1115 §2.2）")
+    p = sub.add_parser("requeue")
+    p.add_argument("--out", required=True, help="<O>/<M>")
+    p.add_argument("--stage", required=True, choices=STAGES)
     args = parser.parse_args(argv)
-    return {"scan": cmd_scan, "pool": cmd_pool, "specs": cmd_specs, "donors": cmd_donors}[args.cmd](args)
+    return {"scan": cmd_scan, "pool": cmd_pool, "specs": cmd_specs, "donors": cmd_donors,
+            "requeue": cmd_requeue}[args.cmd](args)
 
 
 if __name__ == "__main__":

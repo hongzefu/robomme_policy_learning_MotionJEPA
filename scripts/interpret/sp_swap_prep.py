@@ -35,6 +35,22 @@
         写 <M>/donors_sp/<task>_ep<合成号>.npz 并读回核对；打印 SP_SEGMENT、SP_RECV、DONOR_FILES、DONOR_DISTINCT
         （PASS|WARN，只记录不阻断）、SP_GROUPS；再生成 multieq、swap（Bsame+Z）、cross（Bcross）、seeds（每任务 20 对 seed 1）四阶段 spec。
 
+计划 1115（steer-4task-1115）§4.2 同一局口径（新增，缺省不启用，旧子命令行为不变）：
+  scan  --seed0 3100000 --quota-by-difficulty easy=8,medium=16,hard=16,xhard=20：RouteStick 按难度配额选候选。
+  pool  --tasks RouteStick --rs-quota-by-difficulty easy=8,medium=16,hard=16,xhard=20：每难度按 env_seed 升序取，不跨难度补缺。
+  （其后在 official-sim 里跑 samep_rs_variants.py build --pool <O>/pool.json，得 variants.jsonl 与 RS_SPEC_REBUILD /
+   RS_SEGLEN / RS_VARIANT 判定行。）
+  specs --history-yaml <checkpoint 目录> [--max-steps 2000] --same-episode <variants.jsonl>：窗口网格（stride / window /
+        demo_min_real）从模型 history yaml 的 motion 节读进 plan["motion"]；另生成 vrec（每片 ≤20 局，自带 metadata 与
+        episode_specs 表，stop_after_first_infer=true + record_motion，录变体与原样重建局的示范 motion）与 noise
+        （每接收局 seed 1、2 各一次全长不干预，行 group=N、noise_rep=1|2）两阶段。plan["main_seed"]=42。
+  donors --same-episode [--groups S_swing,S_side,S_both,Z] [--no-core] [--max-j 3]：W_j 按内容段（标签段后移 1）枚举；
+        S 组供体 = 同局变体录制在同起点上的编码，Z = 零，*_core 只换真实帧全落在第 j 段内的窗；合成号
+        20000000+接收局×1000+j×10+组号；打印 DONOR_ENC（原样重建 vs 自然局在线编码）、DONOR_FILES、SP_SAMEP_GROUPS；
+        生成 samep / samepcore 两阶段（spec 带 stop_after_step=j，同 (j, 组) 一个 spec）。行字段：group、j、ep（接收局）、
+        donor_side（±1）、donor_target、donor_swing（cw/ccw）、variant_physical_arc、w_starts。
+  requeue --out <O>/<M> --stage <阶段>：以每局 accepted/<键>.*.terminal.json 为完成标记，重写该阶段队列只留未完成 spec。
+
 路径根参数（〇′ F5）：所有写死路径都可覆盖，默认 aspen 值。aspen 端 --repo（运行工作树，默认主检出下
 v1-store/worktrees/sp-swap-run）、--store、--bench-src、--sim-python、--policy-python、--stage2-python、--mmevla-store、
 --checkpoint、--target-contract、--log-dir；GL 端 --gl-jobs/--gl-per-job 给 worker 数，--gl-release（GL 仓库 = release
@@ -81,7 +97,7 @@ PER_TASK = 120
 PL_CONFIGS = {"easy": (3, (2, 4)), "medium": (4, (3, 5)), "hard": (5, (4, 8))}    # grid、节点数区间
 PL_SPACING, PL_CENTER = 0.1, (-0.1, 0.0)
 PL_THRESH = 0.025                     # PatternLock.goal_thresh
-RS_CONFIGS = {"easy": ((2, 3), False), "medium": ((4, 5), False), "hard": ((4, 7), True)}
+RS_CONFIGS = {"easy": ((2, 3), False), "medium": ((4, 5), False), "hard": ((4, 7), True), "xhard": ((8, 10), True)}
 RS_ROUTE = (0, 2, 4, 6, 8)
 RS_POSTS = (1, 3, 5, 7)
 RS_CENTER, RS_SPACING, RS_COLS = (-0.1, 0.0), 0.07, 9
@@ -92,6 +108,19 @@ MOTION_WINDOW = 33
 MOTION_STRIDE = 32
 DEMO_MIN_REAL = 17
 MAX_STEPS = 1300
+MAX_STEPS_SAMEP = 2000                # 计划 1115 新口径的执行窗枚举上限（eval.py plfull 本身仍固定 1300 步）
+# 当前窗口网格：缺省 = 旧口径（11-10 复现不变）；specs --history-yaml 从模型 history yaml 的 motion 节读出写进 plan.json，
+# donors 读 plan 后 apply_grid。窗口函数一律读这里。
+GRID = {"stride": MOTION_STRIDE, "window": MOTION_WINDOW, "demo_min_real": DEMO_MIN_REAL, "max_steps": MAX_STEPS}
+GRID_DEFAULT = dict(GRID)
+# ---- 同一局供体（计划 1115 §2.1）
+SAMEP_BASE = 20000000                 # 合成号 = 20000000 + 接收局×1000 + j×10 + 组号
+SAMEP_GROUP_NO = {"S_swing": 1, "S_side": 2, "S_both": 3, "Z": 4,
+                  "S_swing_core": 5, "S_side_core": 6, "S_both_core": 7}
+SAMEP_GROUPS = ("S_swing", "S_side", "S_both", "Z")
+SAMEP_CORE_GROUPS = ("S_swing_core", "S_side_core", "S_both_core")
+SAMEP_DONOR_DIR = "donors_samep"
+NOISE_SEEDS = (1, 2)                  # 换 seed 噪声对照：每接收局 2 次全长不干预（eval.py::PLFULL_SEEDS 内）
 SYN_BASE = 10000000
 GROUP_NO = {"all": {"Bsame": 1, "Bcross": 2, "Z": 3}, "core": {"Bsame": 4, "Bcross": 5, "Z": 6}}
 SWAP_GROUPS = ("Bsame", "Bcross", "Z")
@@ -102,7 +131,8 @@ SEEDCHECK_SWAP, SEEDCHECK_N = 15, 5   # 每任务 20 对
 MULTIEQ_PER_GROUP = 3
 CROSS_FRAC = 0.5
 DONOR_DIR = "donors_sp"
-STAGES = ("smoke", "glsmoke", "n", "multieq", "swap", "cross", "seeds", "swapcore", "crosscore")
+STAGES = ("smoke", "glsmoke", "n", "multieq", "swap", "cross", "seeds", "swapcore", "crosscore",
+          "vrec", "noise", "samep", "samepcore")
 SPEC_MAX = 20
 CHUNK = 5
 
@@ -279,37 +309,81 @@ def donor_dir_target(task, recv_e, j, donor_sg):
     return rs_target(start, donor_sg["side"])
 
 
+# ---------------------------------------------------------------- 窗口网格
+def motion_from_yaml(path):
+    """模型 history yaml（或含 history_config.resolved.yaml 的 checkpoint 目录 / 其上级）→ motion 网格
+    {"stride", "window", "demo_min_real"}。"""
+    import yaml
+    p = Path(path)
+    if p.is_dir():
+        for cand in (p, *p.parents):
+            for name in ("history_config.resolved.yaml", "history_config.yaml"):
+                if (cand / name).is_file():
+                    p = cand / name
+                    break
+            if p.is_file():
+                break
+    if not p.is_file():
+        raise SystemExit(f"找不到 history yaml：{path}")
+    motion = (yaml.safe_load(p.read_text()) or {}).get("motion") or {}
+    missing = [k for k in ("stride", "window_frames", "demo_min_real_frames") if k not in motion]
+    if missing:
+        raise SystemExit(f"{p} 的 motion 节缺 {missing}")
+    return {"stride": int(motion["stride"]), "window": int(motion["window_frames"]),
+            "demo_min_real": int(motion["demo_min_real_frames"]), "source": str(p.resolve())}
+
+
+def apply_grid(motion=None, max_steps=None):
+    """设置窗口网格；motion=None 时恢复旧口径缺省（32/33/17、1300）。返回当前 GRID 副本。"""
+    GRID.clear()
+    GRID.update(GRID_DEFAULT)
+    if motion:
+        GRID.update(stride=int(motion["stride"]), window=int(motion["window"]), demo_min_real=int(motion["demo_min_real"]))
+        if motion.get("max_steps") is not None:
+            GRID["max_steps"] = int(motion["max_steps"])
+    if max_steps is not None:
+        GRID["max_steps"] = int(max_steps)
+    return dict(GRID)
+
+
 # ---------------------------------------------------------------- 窗口
 def demo_starts(es):
     out, s = [], 0
-    while s + (DEMO_MIN_REAL - 1) <= int(es) - 1:
+    while s + (GRID["demo_min_real"] - 1) <= int(es) - 1:
         out.append(s)
-        s += MOTION_STRIDE
+        s += GRID["stride"]
     return out
 
 
-def exec_starts(es, max_steps=MAX_STEPS):
+def exec_starts(es, max_steps=None):
+    max_steps = GRID["max_steps"] if max_steps is None else max_steps
     out, u = [], 0
-    while u + (MOTION_WINDOW - 1) <= int(max_steps):
+    while u + (GRID["window"] - 1) <= int(max_steps):
         out.append(int(es) + u)
-        u += MOTION_STRIDE
+        u += GRID["stride"]
     return out
 
 
-def all_starts(es, max_steps=MAX_STEPS):
+def all_starts(es, max_steps=None):
     return demo_starts(es) + exec_starts(es, max_steps)
 
 
 def real_range(f, es):
     f, es = int(f), int(es)
     if f < es:
-        return f, min(f + MOTION_WINDOW - 1, es - 1)
-    return f, f + MOTION_WINDOW - 1
+        return f, min(f + GRID["window"] - 1, es - 1)
+    return f, f + GRID["window"] - 1
 
 
-def next_start_after(f, es, max_steps=MAX_STEPS):
+def next_start_after(f, es, max_steps=None):
     later = [s for s in all_starts(es, max_steps) if s > int(f)]
     return min(later) if later else None
+
+
+def content_segments(segs):
+    """标签段 [a_j, b_j] → 内容段 [a_j+1, b_j+1]（帧 k 是第 k 步之后的观测，第 k 步在帧 k−1 的子目标下执行；
+    计划 1115 §2.1「第 j 段 = 示范第 50(j−1)+1…50j 帧」，与 samep_rs_variants 实测首个不同帧一致）。"""
+    return [(int(a) + 1, int(b) + 1) for a, b in segs]
 
 
 def segments_from_labels(labels, es, m):
@@ -397,6 +471,39 @@ def choose_candidates(task, seeds, replay_fn, margin, banned=()):
                 got[m] += 1
                 cands.append(dict(rep, task=task, env_seed=int(seed), difficulty=diff, scan_index=i))
                 break
+    return cands, got, scanned
+
+
+def parse_quota(text):
+    """"easy=8,medium=16,…" → {难度: 局数}（保序）。"""
+    out = {}
+    for part in (x.strip() for x in str(text).split(",") if x.strip()):
+        name, _, n = part.partition("=")
+        if name not in RS_CONFIGS or not n.isdigit() or int(n) < 0:
+            raise SystemExit(f"难度配额非法：{part!r}（难度须为 {sorted(RS_CONFIGS)}）")
+        out[name] = int(n)
+    if not out:
+        raise SystemExit("难度配额为空")
+    return out
+
+
+def choose_candidates_by_difficulty(seeds, replay_fn, quota, margin, banned=()):
+    """按难度配额（计划 1115 §7）：seeds 升序，每个 seed 从仍缺额的难度里按 i % 缺额难度数 轮转选一个。
+    返回 (候选, 每难度计数, 扫了几个)。"""
+    want = {d: int(math.ceil(q * margin)) for d, q in quota.items()}
+    got = {d: 0 for d in quota}
+    cands, scanned = [], 0
+    for i, seed in enumerate(seeds):
+        need = [d for d in quota if got[d] < want[d]]
+        if not need:
+            break
+        scanned += 1
+        if seed in banned:
+            continue
+        diff = need[i % len(need)]
+        rep = replay_fn(seed, diff)
+        got[diff] += 1
+        cands.append(dict(rep, env_seed=int(seed), difficulty=diff, scan_index=i))
     return cands, got, scanned
 
 
@@ -492,10 +599,18 @@ def cmd_scan(args):
     seed0 = args.seed0 if args.seed0 is not None else SEED0[task]
     seeds = [int(seed0) + SEED_STEP * i for i in range(int(args.max_count))]
     banned = split_metadata_seeds(task, args.bench_src)
-    cands, got, scanned = choose_candidates(task, seeds, lambda s, d: replay_entry(task, s, d), args.margin, banned)
+    if getattr(args, "quota_by_difficulty", None):
+        if task != "RouteStick":
+            raise SystemExit("--quota-by-difficulty 只用于 RouteStick")
+        cands, got, scanned = choose_candidates_by_difficulty(
+            seeds, lambda s, d: replay_entry(task, s, d), parse_quota(args.quota_by_difficulty), args.margin, banned)
+        for c in cands:
+            c["task"] = task
+    else:
+        cands, got, scanned = choose_candidates(task, seeds, lambda s, d: replay_entry(task, s, d), args.margin, banned)
     n_banned = sum(1 for s in seeds[:scanned] if s in banned)
     print(f"SP_SCAN_REPLAY task={task} scanned={scanned} candidates={len(cands)} "
-          + " ".join(f"m{m}={got[m]}" for m in sorted(got)), flush=True)
+          + " ".join(f"m{m}={got[m]}" for m in sorted(got, key=str)), flush=True)
     if args.no_env_verify:
         entries = [dict(c, status="ok", replay_match=None, es=None, demo_task_index=None, segments=None,
                         segment_problem=None, verified=False) for c in cands]
@@ -546,6 +661,17 @@ def stratified_take(entries, quota, per_task):
     return sorted(picked, key=lambda e: e["env_seed"]), take, max(short, 0)
 
 
+def take_by_difficulty(entries, quota):
+    """每难度按 env_seed 升序取配额，不跨难度补缺额。返回 (picked, take, short)。"""
+    picked, take, short = [], {}, 0
+    for d, q in quota.items():
+        mine = sorted((e for e in entries if e["difficulty"] == d), key=lambda x: x["env_seed"])
+        take[d] = min(q, len(mine))
+        short += q - take[d]
+        picked += mine[:take[d]]
+    return sorted(picked, key=lambda e: e["env_seed"]), take, short
+
+
 def pool_episode(task, i, e):
     ep = {"task_name": task, "episode_id": i, "env_seed": int(e["env_seed"]), "difficulty": e["difficulty"],
           "m": int(e["m"]), "cells": [int(c) for c in e["cells"]], "es": e.get("es"),
@@ -589,30 +715,42 @@ def entry_task(e, task):
 def cmd_pool(args):
     out = Path(args.out).resolve()
     all_eps, info, lines, ok_all, shas = [], {}, [], True, {}
-    for task in TASKS:
+    tasks = tuple(t for t in (getattr(args, "tasks", None) or ",".join(TASKS)).split(",") if t)
+    rs_quota = parse_quota(args.rs_quota_by_difficulty) if getattr(args, "rs_quota_by_difficulty", None) else None
+    per_task_max = 0
+    for task in tasks:
         scan = P._read_json(out / f"scan_{task}.json")
         usable = [e for e in scan["entries"] if e["status"] == "ok" and not e.get("segment_problem")]
-        picked, take, short = stratified_take(usable, QUOTA[task], PER_TASK)
+        if task == "RouteStick" and rs_quota:
+            picked, take, short = take_by_difficulty(usable, rs_quota)
+            want = sum(rs_quota.values())
+        else:
+            picked, take, short = stratified_take(usable, QUOTA[task], PER_TASK)
+            want = PER_TASK
+        per_task_max = max(per_task_max, want)
         eps = [pool_episode(task, i, e) for i, e in enumerate(picked)]
         banned = split_metadata_seeds(task, args.bench_src)
         overlap = sorted({e["env_seed"] for e in eps} & banned)
         data = P._json_bytes(metadata_payload(task, eps))
         shas[meta_name(task)] = hashlib.sha256(data).hexdigest()
         P._write_once(out / "metadata" / meta_name(task), data, args.overwrite)
-        ok = len(eps) == PER_TASK and not overlap
+        ok = len(eps) == want and not overlap
         ok_all &= ok
         info[task] = {"usable": len(usable), "take": {str(k): v for k, v in take.items()}, "short": short,
                       "overlap": overlap}
+        layer = "d" if task == "RouteStick" and rs_quota else "m"
         lines.append(f"SP_POOL={'PASS' if ok else 'FAIL'} task={task} eps={len(eps)} "
-                     f"m={','.join(f'{m}:{take[m]}' for m in QUOTA[task])} short={short} overlap={len(overlap)}")
+                     f"{layer}={','.join(f'{m}:{v}' for m, v in take.items())} short={short} overlap={len(overlap)}")
         all_eps += eps
     limit = eval_episode_limit()
-    limit_ok = limit is not None and PER_TASK <= limit
-    lines.append(f"SP_POOL_LIMIT={'PASS' if limit_ok else 'FAIL'} eval_plfull_episodes={limit} per_task={PER_TASK}")
+    limit_ok = limit is not None and per_task_max <= limit
+    lines.append(f"SP_POOL_LIMIT={'PASS' if limit_ok else 'FAIL'} eval_plfull_episodes={limit} per_task={per_task_max}")
     manifest = manifest_for(all_eps, shas)
     P._write_once(out / "manifest.json", P._json_bytes(manifest), args.overwrite)
-    pool = {"tasks": info, "per_task": PER_TASK, "metadata_sha256": shas, "manifest_seal": manifest["sha256"],
-            "numbering": "每任务局号按 env_seed 升序 0..119", "episodes": all_eps}
+    pool = {"tasks": info, "per_task": per_task_max, "metadata_sha256": shas, "manifest_seal": manifest["sha256"],
+            "numbering": "每任务局号按 env_seed 升序 0..n−1", "episodes": all_eps}
+    if rs_quota:
+        pool["rs_quota_by_difficulty"] = rs_quota
     P._write_once(out / "pool.json", P._json_bytes(pool), args.overwrite)
     for line in lines:
         print(line, flush=True)
@@ -696,7 +834,7 @@ class Builder:
         return self.workers[worker][1]
 
     def add(self, name, stage, worker, episodes, *, seed=MAIN_SEED, ablate="none", swap_map=None, record=None,
-            chunk=CHUNK, record_dir=None, rows=()):
+            chunk=CHUNK, record_dir=None, rows=(), meta_dir=None, meta_shas=None, extra=None):
         if name in self.specs:
             raise ValueError(f"spec 重名 {name}")
         site = self.site(worker)
@@ -711,12 +849,14 @@ class Builder:
         spec.update(repo=roots["repo"], model_seed=int(seed), cuda=self.workers[worker][2],
                     attn_out=str(run_dir / "attn"), run_root=str(run_dir / "run"), xla_mem_fraction=self.frac,
                     manifest=str(self.out / "manifests" / f"{name}.json"), ablate=ablate, profile="plfull",
-                    plfull_metadata_dir=str(self.meta_dir), subgoal_trace=True)
+                    plfull_metadata_dir=str(meta_dir or self.meta_dir), subgoal_trace=True)
         if swap_map:
             spec["swap_map"] = dict(swap_map)
         if record:
             spec["record_motion"] = str(record)
-        manifest = manifest_for(episodes, self.meta_shas, chunk=chunk)
+        if extra:
+            spec.update(extra)
+        manifest = manifest_for(episodes, meta_shas or self.meta_shas, chunk=chunk)
         self.specs[name] = (spec, manifest, stage, worker)
         self.queue.setdefault((stage, worker), []).append(
             f"run_spec {stage} {name} {shlex.quote(str(self.out / 'specs' / f'{name}.json'))}\n")
@@ -947,9 +1087,23 @@ def cmd_specs(args):
         raise SystemExit(f"{plan_path} 已存在；确需重写 spec 加 --overwrite（不删任何运行目录）")
     out.mkdir(parents=True, exist_ok=True)
     workers = make_workers(args.gl_jobs if roots["gl"] else 0, args.gl_per_job)
+    motion = None
+    if getattr(args, "history_yaml", None):
+        motion = motion_from_yaml(args.history_yaml)
+        motion["max_steps"] = int(args.max_steps if args.max_steps is not None else MAX_STEPS_SAMEP)
+    elif getattr(args, "max_steps", None) is not None:
+        motion = dict(GRID_DEFAULT, max_steps=int(args.max_steps))
+    apply_grid(motion)
     b = make_builder(out, args.model, models, roots, workers, args.frac, pool)
     gl_first = next((w[0] for w in workers if w[1] == "gl"), None)
     build_stage_specs(b, pool_by_key, gl_first)
+    samep = None
+    if getattr(args, "same_episode", None):
+        entries, excluded = samep_entries(args.same_episode, pool_by_key)
+        vrec_index = build_samep_specs(b, pool_by_key, entries)
+        samep = {"variants": str(Path(args.same_episode).resolve()), "excluded": excluded, "vrec": vrec_index}
+        print(f"SPS_SAMEP_VREC entries={len(entries)} shards={len({r['shard'] for r in vrec_index})} "
+              f"excluded={len(excluded)}", flush=True)
     for site, r in roots.items():
         if r is None:
             continue
@@ -972,9 +1126,13 @@ def cmd_specs(args):
     plan = {"tasks": list(TASKS), "model": args.model, "commit": args.commit, "out": str(out),
             "pool_root": str(out.parent), "record_dir": str(out / "record"), "models": models, "roots": roots,
             "workers": [list(w) for w in workers], "manifest_seal": pool["manifest_seal"], "frac": float(args.frac),
-            "runs": b.rows}
+            "main_seed": MAIN_SEED, "runs": b.rows}
+    if motion is not None:
+        plan["motion"] = motion
+    if samep is not None:
+        plan["samep"] = samep
     P._write_json(plan_path, plan)
-    counts = {st: sum(1 for r in b.rows if r["stage"] == st) for st in ("smoke", "glsmoke", "n")}
+    counts = {st: sum(1 for r in b.rows if r["stage"] == st) for st in ("smoke", "glsmoke", "n", "vrec", "noise")}
     print("SPS_SPECS model=" + args.model + " " + " ".join(f"{k}={v}" for k, v in counts.items())
           + f" specs={len(b.specs)} queues={len(queues)} workers={len(workers)}", flush=True)
     return 0
@@ -1118,8 +1276,9 @@ def completed_steps(steps):
 
 
 # ---------------------------------------------------------------- donors：读 N
-def episode_info(e, run, record_dir):
-    """一局 N：status ok / no_terminal / no_receipt / no_trace / segment_bad / m_mismatch。"""
+def episode_info(e, run, record_dir, content=False):
+    """一局 N：status ok / no_terminal / no_receipt / no_trace / segment_bad / m_mismatch。
+    content=True（同一局口径）时 W 按内容段（标签段后移 1，见 content_segments）枚举，另记 segments_content。"""
     task, ep = e["task_name"], int(e["episode_id"])
     info = {"task": task, "ep": ep, "key": episode_key(task, ep), "m": int(e["m"]), "status": "ok"}
     if run["terminal"] is None:
@@ -1139,7 +1298,10 @@ def episode_info(e, run, record_dir):
     if why:
         info.update(status="segment_bad", segment_problem=why)
         return info
-    windows = [window_sets(s, es) for s in segs]
+    wsegs = content_segments(segs) if content else segs
+    windows = [window_sets(s, es) for s in wsegs]
+    if content:
+        info["segments_content"] = [list(s) for s in wsegs]
     rows = read_step_rows(run["trace"])
     success = run["terminal"].get("outcome") == "success"
     steps = reconstruct(task, e, rows, e["m"], success)
@@ -1150,13 +1312,14 @@ def episode_info(e, run, record_dir):
     return info
 
 
-def collect_n(plan, pool_by_key, record_dir):
+def collect_n(plan, pool_by_key, record_dir, content=False):
     infos = {}
     for row in plan["runs"]:
         if row["stage"] != "n":
             continue
         key = episode_key(row["task"], row["ep"])
-        infos[key] = episode_info(pool_by_key[key], find_run(row["run_root"], row["attn_out"], key), record_dir)
+        infos[key] = episode_info(pool_by_key[key], find_run(row["run_root"], row["attn_out"], key), record_dir,
+                                  content=content)
     return infos
 
 
@@ -1497,7 +1660,10 @@ def cmd_donors(args):
     out = Path(args.out).resolve()
     if args.smoke:
         return cmd_donors_smoke(out)
+    if getattr(args, "same_episode", False):
+        return cmd_donors_samep(args, out)
     plan = P._read_json(out / "plan.json")
+    apply_grid(plan.get("motion"))
     pool, pool_by_key = load_pool(out.parent)
     infos = collect_n(plan, pool_by_key, out / "record")
     records = {k: load_record(v.get("record")) for k, v in infos.items() if v.get("record")}
@@ -1556,6 +1722,302 @@ def cmd_donors(args):
     return 0 if ok else 1
 
 
+# ---------------------------------------------------------------- 同一局供体（计划 1115 §2.1、§4.2）
+def samep_ep(recv_ep, j, group):
+    """同一局合成供体号：20000000 + 接收局×1000 + j×10 + 组号（不与旧 10000000 段重叠）。"""
+    if not 1 <= int(j) <= 99:
+        raise ValueError(f"j={j} 超出 1..99")
+    return SAMEP_BASE + int(recv_ep) * 1000 + int(j) * 10 + SAMEP_GROUP_NO[group]
+
+
+def parse_samep(ep):
+    rest = int(ep) - SAMEP_BASE
+    recv, slot = divmod(rest, 1000)
+    j, g = divmod(slot, 10)
+    for group, no in SAMEP_GROUP_NO.items():
+        if no == g:
+            return recv, j, group
+    raise ValueError(f"非法同一局合成号 {ep}")
+
+
+def short_swing(d):
+    return SWING_SHORT.get(d, d)
+
+
+def samep_entries(variants_path, pool_by_key):
+    """variants.jsonl × 局池 → (录制条目, 剔除的接收局键)。每个可用接收局一条 vgroup=same（原样重建，DONOR_ENC 用），
+    每个可用变体一条。条目带 donor_side（第 j 步相对起点的路线下标增量 ±1）、donor_target（第 j 步目标按钮格号）、
+    donor_swing（cw/ccw）、variant_physical_arc（变体示范第 j 段物理弧侧口径）。"""
+    from scripts.interpret.samep_rs_variants import read_variants
+    bases, variants = read_variants(variants_path)
+    by_seed = {(int(e["env_seed"]), e["difficulty"]): k for k, e in pool_by_key.items() if e["task_name"] == "RouteStick"}
+    entries, excluded = [], []
+    for (seed, diff), key in sorted(by_seed.items(), key=lambda x: split_key(x[1])[1]):
+        base = bases.get((seed, diff))
+        if base is None or not base.get("usable"):
+            excluded.append(key)
+            continue
+        entries.append({"recv": key, "j": None, "vgroup": "same", "seed": seed, "difficulty": diff,
+                        "episode_spec": base["spec"], "sampling_config": base["sampling_config"]})
+    ok_keys = {e["recv"] for e in entries}
+    for v in variants:
+        key = by_seed.get((int(v["seed"]), v["difficulty"]))
+        if key not in ok_keys or not v.get("usable"):
+            continue
+        j = int(v["j"])
+        slots = v["spec"]["actions"]["node_slots"]
+        entries.append({"recv": key, "j": j, "vgroup": v["group"], "seed": int(v["seed"]), "difficulty": v["difficulty"],
+                        "episode_spec": v["spec"], "sampling_config": v["sampling_config"],
+                        "donor_side": int(slots[j]) - int(slots[j - 1]),
+                        "donor_target": int(v["spec"]["actions"]["nodes"][j]),
+                        "donor_swing": short_swing(v["spec"]["actions"]["directions"][j - 1]),
+                        "variant_physical_arc": short_swing((v.get("demo_swings_phys") or [None] * j)[j - 1])})
+    entries.sort(key=lambda e: (split_key(e["recv"])[1], e["j"] or 0, e["vgroup"]))
+    return entries, excluded
+
+
+def build_samep_specs(b, pool_by_key, entries, main_seed=MAIN_SEED):
+    """vrec（变体与原样重建录 motion，首次推理即停）与 noise（每接收局换 seed 全长不干预）两阶段 spec。
+    vrec 每片 ≤ SPEC_MAX 局，自带 metadata（局号 0..n−1 → seed/难度）与 episode_specs 表。返回 vrec 索引。"""
+    out = b.out
+    shards = [entries[i:i + SPEC_MAX] for i in range(0, len(entries), SPEC_MAX)]
+    vrec_index = []
+    for si, shard in enumerate(shards):
+        worker = b.order[si % len(b.order)]
+        name = f"s{si:03d}"
+        root = out / "vrec" / name
+        eps, table, rows = [], {}, []
+        for local, e in enumerate(shard):
+            eps.append({"task_name": "RouteStick", "episode_id": local, "env_seed": e["seed"], "difficulty": e["difficulty"]})
+            table[episode_key("RouteStick", local)] = {k: e[k] for k in ("seed", "difficulty", "episode_spec",
+                                                                       "sampling_config")}
+            row = {"group": "vrec", "task": "RouteStick", "ep": local, "recv": e["recv"],
+                   "recv_ep": split_key(e["recv"])[1], "j": e["j"], "vgroup": e["vgroup"], "shard": name}
+            row.update({k: e.get(k) for k in ("donor_side", "donor_target", "donor_swing", "variant_physical_arc")})
+            rows.append(row)
+        data = P._json_bytes(metadata_payload("RouteStick", eps))
+        P._write_json(root / "episode_specs.json", table)
+        meta_dir = root / "metadata"
+        meta_dir.mkdir(parents=True, exist_ok=True)
+        (meta_dir / meta_name("RouteStick")).write_bytes(data)
+        shas = {meta_name("RouteStick"): hashlib.sha256(data).hexdigest()}
+        rec = out / "vrec_record" / name
+        b.add(f"vrec-{worker}-{name}", "vrec", worker, eps, seed=main_seed, record=rec, record_dir=rec,
+              meta_dir=meta_dir, meta_shas=shas,
+              extra={"episode_specs": str(root / "episode_specs.json"), "stop_after_first_infer": True}, rows=rows)
+        vrec_index += [dict(r, record=str(rec / record_name("RouteStick", r["ep"]))) for r in rows]
+    recvs = sorted({e["recv"] for e in entries}, key=lambda k: split_key(k)[1])
+    bins = P.pack([(seed, k, k) for seed in NOISE_SEEDS for k in recvs], SPEC_MAX)
+    for i, (seed, members) in enumerate(bins):
+        worker = b.order[i % len(b.order)]
+        eps = [pool_by_key[m[1]] for m in members]
+        b.add(f"noise-{worker}-s{seed}-{i:02d}", "noise", worker, eps, seed=seed,
+              rows=[n_row(e, recv_ep=int(e["episode_id"]), noise_rep=NOISE_SEEDS.index(seed) + 1) for e in eps])
+    return vrec_index
+
+
+def load_vrec_records(vrec_index):
+    """(接收局键, j, vgroup) → {起点: emb}；j=None 为原样重建。缺文件的条目跳过。"""
+    out = {}
+    for r in vrec_index:
+        rec = load_record(r.get("record"))
+        if rec is not None:
+            out[(r["recv"], r["j"], r["vgroup"])] = rec
+    return out
+
+
+def donor_enc_line(infos, vrec, model, tol=1e-5):
+    """DONOR_ENC：原样重建局录到的示范窗编码 vs 自然局 N 在线编码（同起点逐位或 ≤ tol）。"""
+    n = bad = 0
+    maxabs = 0.0
+    for key, v in infos.items():
+        same = vrec.get((key, None, "same"))
+        own = load_record(v.get("record")) if v.get("record") else None
+        if same is None or own is None or v.get("es") is None:
+            continue
+        for s in demo_starts(v["es"]):
+            if s in same and s in own:
+                dev = float(np.max(np.abs(same[s] - own[s])))
+                maxabs = max(maxabs, dev)
+                n += 1
+                bad += int(dev > tol)
+    return f"DONOR_ENC={'PASS' if n and not bad else 'FAIL'} model={model} windows={n} bad={bad} maxabs={maxabs:g}"
+
+
+def assign_samep(infos, vrec, excluded, groups=SAMEP_GROUPS, core=True, max_j=None, vrec_meta=None):
+    """返回 (runs, notes)。接收局 = recv_usable、未被 RS_SPEC_REBUILD 剔除；(局, j) 要求 N 走到第 j 步起点、W_j 非空。
+    S 组供体 = 同局变体录制在 W_j（all）或 W_j core 起点上的编码（按起点精确替换，缺起点记 missing）；Z = 零。
+    供体编码与接收局自身同起点编码逐位相同的记 same_as_recv 并跳过。"""
+    runs, notes = [], {"missing": [], "no_record": [], "same_as_recv": [], "excluded": list(excluded)}
+    meta = vrec_meta or {}
+    skip = set(excluded)
+    for key in sorted((k for k, v in infos.items() if v["task"] == "RouteStick" and recv_usable(v) and k not in skip),
+                      key=lambda k: split_key(k)[1]):
+        v = infos[key]
+        own = load_record(v["record"])
+        dim = next(iter(own.values())).shape[0]
+        for j in range(1, v["m"] + 1):
+            if v["completed"] < j - 1 or (max_j and j > max_j):
+                continue
+            base = {"recv": key, "task": "RouteStick", "ep": v["ep"], "m": v["m"], "j": j}
+            todo = [(g, "all", v["W_all"][j - 1]) for g in groups]
+            if core:
+                todo += [(g + "_core", "core", v["W_core"][j - 1]) for g in groups if g != "Z"]
+            for group, variant, W in todo:
+                if not W:
+                    continue
+                run = dict(base, group=group, variant=variant, w_starts=[int(s) for s in W],
+                           donor=samep_ep(v["ep"], j, group))
+                src = group.replace("_core", "")
+                if src == "Z":
+                    run.update(embs=np.zeros((len(W), dim), np.float32), donor_side=None, donor_target=None,
+                               donor_swing=None, variant_physical_arc=None)
+                else:
+                    rec = vrec.get((key, j, src))
+                    if rec is None:
+                        notes["no_record"].append(f"{key}:{j}:{group}")
+                        continue
+                    miss = [s for s in W if s not in rec]
+                    if miss:
+                        notes["missing"].append(f"{key}:{j}:{group}:{miss}")
+                        continue
+                    run["embs"] = np.stack([rec[s] for s in W]).astype(np.float32)
+                    run.update({k: (meta.get((key, j, src)) or {}).get(k)
+                                for k in ("donor_side", "donor_target", "donor_swing", "variant_physical_arc")})
+                    if (all(s in own for s in W)
+                            and np.stack([own[s] for s in W]).astype(np.float32).tobytes() == run["embs"].tobytes()):
+                        notes["same_as_recv"].append(f"{key}:{j}:{group}")
+                        continue
+                runs.append(run)
+    return runs, notes
+
+
+def write_samep_files(folder, runs):
+    """写同一局合成供体并逐位读回；返回 (ok, 判定行, done)，done 的行去掉 embs。"""
+    folder = Path(folder)
+    done, integrity = [], 0
+    for run in runs:
+        path = folder / record_name("RouteStick", run["donor"])
+        embs = run["embs"].astype(np.float32)
+        P._savez_atomic(path, start_frames=np.asarray(run["w_starts"], np.int32), embs=embs,
+                        counts=np.ones(len(run["w_starts"]), np.int32))
+        with np.load(path) as back:
+            ok = (np.asarray(back["start_frames"]).tolist() == run["w_starts"]
+                  and np.array_equal(np.asarray(back["embs"], np.float32), embs))
+        if not ok:
+            integrity += 1
+            continue
+        done.append({k: v for k, v in run.items() if k != "embs"})
+    line = f"DONOR_FILES={'PASS' if integrity == 0 else 'FAIL'} mode=samep files={len(done)} integrity={integrity}"
+    return integrity == 0, line, done
+
+
+def samep_row(run):
+    keys = ("group", "task", "ep", "m", "j", "donor", "variant", "w_starts", "donor_side", "donor_target",
+            "donor_swing", "variant_physical_arc", "recv")
+    row = {k: run.get(k) for k in keys}
+    row.update(recv_ep=run["ep"], donor_src="same_episode", stop_after_step=int(run["j"]))
+    return row
+
+
+def build_samep_swap_specs(b, pool_by_key, done, seed=MAIN_SEED):
+    """samep（S/Z 组）与 samepcore（*_core）：同 (j, 组) 的接收局进同一 spec（≤ SPEC_MAX、接收局唯一），
+    spec 带 stop_after_step=j。"""
+    ablate = f"motion_swap_exact:{b.out / SAMEP_DONOR_DIR}"
+    for stage, members in (("samep", [r for r in done if r["variant"] == "all"]),
+                           ("samepcore", [r for r in done if r["variant"] == "core"])):
+        bins = pack_runs(sorted(members, key=lambda r: (r["j"], r["group"], r["ep"])), lambda r: (r["j"], r["group"]))
+        for i, ((j, group), runs) in enumerate(bins):
+            worker = b.order[i % len(b.order)]
+            b.add(f"{stage}-{worker}-j{j}-{group.replace('_', '')}-{i:03d}", stage, worker,
+                  [pool_by_key[r["recv"]] for r in runs], seed=seed, ablate=ablate,
+                  swap_map={r["recv"]: episode_key("RouteStick", r["donor"]) for r in runs},
+                  extra={"stop_after_step": int(j)}, rows=[samep_row(r) for r in runs])
+
+
+def cmd_donors_samep(args, out):
+    plan = P._read_json(out / "plan.json")
+    if "samep" not in plan:
+        raise SystemExit("plan.json 没有 samep 段：specs 须带 --same-episode")
+    apply_grid(plan.get("motion"))
+    pool, pool_by_key = load_pool(out.parent)
+    infos = collect_n(plan, pool_by_key, out / "record", content=True)
+    for line in segment_line(infos)[0]:
+        print(line, flush=True)
+    index = plan["samep"]["vrec"]
+    vrec = load_vrec_records(index)
+    meta = {(r["recv"], r["j"], r["vgroup"]): r for r in index}
+    print(f"SAMEP_VREC entries={len(index)} records={len(vrec)} missing={len(index) - len(vrec)}", flush=True)
+    print(donor_enc_line(infos, vrec, plan["model"]), flush=True)
+    groups = tuple(g for g in (args.groups or ",".join(SAMEP_GROUPS)).split(",") if g)
+    bad = [g for g in groups if g not in SAMEP_GROUPS]
+    if bad:
+        raise SystemExit(f"未知组 {bad}（可选 {SAMEP_GROUPS}）")
+    runs, notes = assign_samep(infos, vrec, plan["samep"]["excluded"], groups=groups, core=not args.no_core,
+                               max_j=args.max_j, vrec_meta=meta)
+    ok, line, done = write_samep_files(out / SAMEP_DONOR_DIR, runs)
+    print(line, flush=True)
+    counts = {}
+    for r in done:
+        counts[r["group"]] = counts.get(r["group"], 0) + 1
+    print("SP_SAMEP_GROUPS " + " ".join(f"{g}={counts.get(g, 0)}" for g in SAMEP_GROUP_NO)
+          + f" no_record={len(notes['no_record'])} missing={len(notes['missing'])}"
+          + f" same_as_recv={len(notes['same_as_recv'])} excluded={len(notes['excluded'])}", flush=True)
+    b = builder_from_plan(out, plan, pool)
+    build_samep_swap_specs(b, pool_by_key, done, plan.get("main_seed", MAIN_SEED))
+    b.write(("samep", "samepcore"))
+    plan["runs"] = [r for r in plan["runs"] if r["stage"] not in ("samep", "samepcore")] + b.rows
+    plan["samep"].update(notes=notes, donors=len(done))
+    plan.setdefault("eligibility", {})
+    for k, v in infos.items():
+        plan["eligibility"][k] = {kk: v.get(kk) for kk in ("status", "m", "es", "segments", "segments_content", "W_all",
+                                                           "W_core", "completed", "outcome", "segment_problem")}
+    P._write_json(out / "plan.json", plan)
+    print(f"DONORS_SAMEP={'PASS' if ok else 'FAIL'} runs={len(done)} specs={len(b.specs)}", flush=True)
+    return 0 if ok else 1
+
+
+# ---------------------------------------------------------------- requeue：只重发未完成分片
+def episode_done(row):
+    key = episode_key(row["task"], row["ep"])
+    return bool(list(Path(row["run_root"]).glob(f"accepted/{key}.*.terminal.json")))
+
+
+def spec_done(rows):
+    """一个 spec 的全部局都在 run_root/accepted 下有 terminal.json 才算完成。"""
+    return all(episode_done(r) for r in rows)
+
+
+def cmd_requeue(args):
+    """按每局 terminal.json 重写该阶段队列，只留未完成的 spec；旧队列改名 .prev。"""
+    out = Path(args.out).resolve()
+    plan = P._read_json(out / "plan.json")
+    by_spec = {}
+    for r in plan["runs"]:
+        if r["stage"] == args.stage:
+            by_spec.setdefault(r["spec"], []).append(r)
+    pending = {name: rows for name, rows in by_spec.items() if not spec_done(rows)}
+    written = 0
+    for w in plan["workers"]:
+        wname = w[0]
+        mine = sorted(n for n, rows in pending.items() if rows[0]["worker"] == wname)
+        path = out / "queues" / f"{args.stage}-{wname}.sh"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if path.exists():
+            path.replace(path.with_name(path.name + ".prev"))
+        lines = [QUEUE_HEAD.format(stage=args.stage, worker=wname, cuda=w[2], n=len(mine),
+                                   env=shlex.quote(str(out / f"env-{w[1]}.sh")), frac=plan.get("frac", XLA_MEM_FRACTION))]
+        lines += [f"run_spec {args.stage} {n} {shlex.quote(str(out / 'specs' / f'{n}.json'))}\n" for n in mine]
+        lines.append(QUEUE_TAIL.format(stage=args.stage, worker=wname, n=len(mine)))
+        path.write_text("".join(lines))
+        path.chmod(0o755)
+        written += 1
+    missing = sum(1 for rows in pending.values() for r in rows if not episode_done(r))
+    print(f"SPS_REQUEUE stage={args.stage} specs={len(by_spec)} pending={len(pending)} episodes_missing={missing} "
+          f"queues={written}", flush=True)
+    return 0
+
+
 # ---------------------------------------------------------------- 命令行
 def add_root_args(p):
     for k in ASPEN:
@@ -1587,12 +2049,17 @@ def main(argv=None):
     p.add_argument("--workers", type=int, default=8)
     p.add_argument("--margin", type=float, default=1.3, help="每层候选 = ceil(配额×margin)，留给核实失败")
     p.add_argument("--no-env-verify", action="store_true", help="只复算不建环境（仅调试；pool 需要核实过的 es 与段）")
+    p.add_argument("--quota-by-difficulty", default=None,
+                   help="RouteStick 按难度配额选候选，如 easy=8,medium=16,hard=16,xhard=20（计划 1115 §7；缺省按 m 配额）")
     p.add_argument("--bench-src", default=ASPEN["bench_src"])
     p.add_argument("--overwrite", action="store_true")
     p = sub.add_parser("pool")
     p.add_argument("--out", required=True)
     p.add_argument("--bench-src", default=ASPEN["bench_src"])
     p.add_argument("--overwrite", action="store_true")
+    p.add_argument("--tasks", default=",".join(TASKS), help="只取这些任务的 scan（逗号列表）")
+    p.add_argument("--rs-quota-by-difficulty", default=None,
+                   help="RouteStick 每难度局数，如 easy=8,medium=16,hard=16,xhard=20（不跨难度补缺额）")
     p = sub.add_parser("specs")
     p.add_argument("--out", required=True, help="<O>/<M>")
     p.add_argument("--model", required=True, choices=sorted(MODELS))
@@ -1604,14 +2071,26 @@ def main(argv=None):
     p.add_argument("--target-contract", default=None)
     p.add_argument("--extra", default=None)
     p.add_argument("--overwrite", action="store_true")
+    p.add_argument("--history-yaml", default=None,
+                   help="模型 history yaml 或 checkpoint 目录：motion 节的 stride/window_frames/demo_min_real_frames 写进 plan")
+    p.add_argument("--max-steps", type=int, default=None, help=f"执行窗枚举上限（给 --history-yaml 时缺省 {MAX_STEPS_SAMEP}）")
+    p.add_argument("--same-episode", default=None, help="samep_rs_variants 的 variants.jsonl：另生成 vrec、noise 两阶段")
     add_root_args(p)
     p = sub.add_parser("donors")
     p.add_argument("--out", required=True, help="<O>/<M>")
     p.add_argument("--variant", choices=("all", "core"), default="all")
     p.add_argument("--cross-frac", type=float, default=CROSS_FRAC)
     p.add_argument("--smoke", action="store_true")
+    p.add_argument("--same-episode", action="store_true", help="同一局供体：S_swing/S_side/S_both/Z 与 *_core（计划 1115）")
+    p.add_argument("--groups", default=None, help=f"同一局组（缺省 {','.join(SAMEP_GROUPS)}）")
+    p.add_argument("--no-core", action="store_true", help="同一局不生成 *_core")
+    p.add_argument("--max-j", type=int, default=None, help="同一局只做 j ≤ 此值")
+    p = sub.add_parser("requeue")
+    p.add_argument("--out", required=True, help="<O>/<M>")
+    p.add_argument("--stage", required=True, choices=STAGES)
     args = parser.parse_args(argv)
-    return {"scan": cmd_scan, "pool": cmd_pool, "specs": cmd_specs, "donors": cmd_donors}[args.cmd](args)
+    return {"scan": cmd_scan, "pool": cmd_pool, "specs": cmd_specs, "donors": cmd_donors,
+            "requeue": cmd_requeue}[args.cmd](args)
 
 
 if __name__ == "__main__":

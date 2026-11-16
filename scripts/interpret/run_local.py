@@ -25,6 +25,12 @@ stop_after_first_pick（bool，只许与 bin_trace=true 同用）：开启时客
 并入身份；缺键或为假时身份与命令不变。
 subgoal_trace（bool，与 stopcube_mode、bin_trace 互斥，清单只能含 PatternLock、RouteStick）：开启时改用 subgoal_trace_runner 客户端
 写逐步轨迹，并入身份；缺键或为假时身份与命令不变。
+subgoal_trace 截断与 spec 注入（计划 1115 §4.2，只许与 subgoal_trace=true 同用；缺键时身份与命令不变）：
+  stop_after_step（正整数 j）：客户端加 --stop-after-step j，越过第 j 个执行子目标或整局失败即停，回执写 truncated_step；并入身份。
+  stop_after_first_infer（bool）：客户端加 --stop-after-first-infer，首次推理后第一步即停（录变体示范 motion 用）；并入身份。
+  两个截断键互斥。
+  episode_specs（JSON 文件路径，另须 profile=plfull）：客户端加 --episode-specs <绝对路径>，表中的局按 episode_spec +
+  sampling_config 建环境（seed / 难度须与 plfull metadata 一致）；文件字节 sha256 并入身份。
 movecube_force（bool，与 stopcube_mode、bin_trace、subgoal_trace、rollout_record 互斥，清单只能含 MoveCube）：配 force_table（动作表路径）
 与 force_k（0、16、32、48、64、80）。走官方 scripts.training.serve_policy，不录注意力、不创建 attn_out（该键可省略），一个服务配
 客户端每批至多 5 局；动作表内容与 force_k 并入身份。单局判定：有终局且 terminal.rpc_seq 推出的 infers>0。缺键或为假时身份与命令不变。
@@ -199,6 +205,7 @@ def load_spec(path):
             others = sorted({e["task_name"] for e in read_json(spec["manifest"])["episodes"]} - set(SUBGOAL_TRACE_TASKS))
             if others:
                 raise SystemExit(f"spec: subgoal_trace 的清单只能含 {SUBGOAL_TRACE_TASKS}，得到 {others}")
+    load_subgoal_extras(spec)
     if "movecube_force" in spec:
         if type(spec["movecube_force"]) is not bool:
             raise SystemExit("spec: movecube_force 必须为 bool")
@@ -220,6 +227,29 @@ def load_spec(path):
         if spec.get("rollout_record") or str(spec.get("stopcube_mode")).startswith("oracle_"):
             raise SystemExit("spec: 不存注意力只作用于注意力记录路径，与 rollout_record、Oracle 模式互斥")
     return spec
+
+
+def load_subgoal_extras(spec):
+    """subgoal_trace 截断与 spec 注入三键的校验（计划 1115 §4.2）。"""
+    if "stop_after_step" in spec:
+        value = spec["stop_after_step"]
+        if type(value) is not int or value < 1:
+            raise SystemExit("spec: stop_after_step 必须是正整数")
+        if not spec.get("subgoal_trace"):
+            raise SystemExit("spec: stop_after_step 只许与 subgoal_trace=true 同用")
+    if "stop_after_first_infer" in spec:
+        if type(spec["stop_after_first_infer"]) is not bool:
+            raise SystemExit("spec: stop_after_first_infer 必须为 bool")
+        if spec["stop_after_first_infer"] and not spec.get("subgoal_trace"):
+            raise SystemExit("spec: stop_after_first_infer 只许与 subgoal_trace=true 同用")
+    if spec.get("stop_after_step") and spec.get("stop_after_first_infer"):
+        raise SystemExit("spec: stop_after_step 与 stop_after_first_infer 互斥")
+    if spec.get("episode_specs") is not None:
+        if not spec.get("subgoal_trace") or not is_plfull(spec):
+            raise SystemExit("spec: episode_specs 只许与 subgoal_trace=true、profile=plfull 同用")
+        if not Path(spec["episode_specs"]).is_file():
+            raise SystemExit(f"spec: episode_specs 不是文件：{spec['episode_specs']!r}")
+        spec["episode_specs"] = str(Path(spec["episode_specs"]).resolve())
 
 
 def load_force_spec(spec):
@@ -292,6 +322,12 @@ def run_identity(spec, manifest):
         ident["stop_after_first_pick"] = True
     if spec.get("subgoal_trace"):
         ident["subgoal_trace"] = True
+    if spec.get("stop_after_step"):
+        ident["stop_after_step"] = int(spec["stop_after_step"])
+    if spec.get("stop_after_first_infer"):
+        ident["stop_after_first_infer"] = True
+    if spec.get("episode_specs"):
+        ident["episode_specs_sha256"] = hashlib.sha256(Path(spec["episode_specs"]).read_bytes()).hexdigest()
     if spec.get("save_attn") is False:
         ident["save_attn"] = False
     if spec.get("movecube_force"):
@@ -445,6 +481,12 @@ def build_client_command(spec, grant_path, output, nonce, port, drain_file):
             command += ["--stop-after-first-pick"]
     if spec.get("subgoal_trace"):
         command[1] = str(Path(spec["repo"]) / "scripts/interpret/subgoal_trace_runner.py")
+        if spec.get("stop_after_step"):
+            command += ["--stop-after-step", str(int(spec["stop_after_step"]))]
+        if spec.get("stop_after_first_infer"):
+            command += ["--stop-after-first-infer"]
+        if spec.get("episode_specs"):
+            command += ["--episode-specs", str(spec["episode_specs"])]
     if spec.get("movecube_force"):
         command[1] = str(Path(spec["repo"]) / "scripts/interpret/movecube_force_runner.py")
         command += ["--force-table", str(spec["force_table"]), "--force-k", str(spec["force_k"])]
