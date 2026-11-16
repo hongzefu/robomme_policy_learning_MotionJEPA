@@ -148,13 +148,13 @@ blockquote{border-left:4px solid var(--acc);margin:10px 0;padding:6px 12px;backg
 <li><b>分母</b>：不干预运行走到第 j 步起点的全部 (局, j)（VideoRepick：不干预第一次就拿对的局）。干预运行未走到第 j 步的记 <code>unreached</code>，按「非跟随」计入分母，并单列 unreached 率。</li>
 <li><b>RouteStick 两个读数</b>（干预运行在第 j 个执行子目标判定完成或失败时截断）：
  <ul>
- <li><code>swing_follow</code>：第 j 步实际绕向 = 供体绕向。绕向按执行 TCP 轨迹相对「prev→实际首个触到的按钮」有向线的叉积符号（与 <code>direction_fail</code> 同式，含当场失败的步）；另出「物理弧侧」口径：相对原局 prev→原目标有向线的叉积符号。两种口径都报，S_side/S_both 以物理弧侧口径为主。</li>
+ <li><code>swing_follow</code>：第 j 步实际绕向 = 供体绕向。绕向按执行 TCP 轨迹相对「prev→实际首个触到的按钮」有向线的叉积符号（与 <code>direction_fail</code> 同式，含当场失败的步）；另出「物理弧侧」口径：相对原局 prev→原目标有向线的叉积符号。两种口径都报；S_side/S_both 的 swing_follow（作旁证或 S_both 主读数之一）以物理弧侧口径为主。</li>
  <li><code>button_follow</code>：第 j 步首个触到的偶数按钮 = 供体侧按钮。</li>
  <li>各组只对其被改的维度做主读数：S_swing 看 swing_follow、S_side 看 button_follow、S_both 两项都看；未被改的维度作为「是否被连带改变」的旁证。</li>
  </ul></li>
-<li><b>噪声对照（新增）</b>：对每个接收 (局, j)（RouteStick）或接收局（VideoRepick）额外跑 <b>2 次换采样 seed 的不干预</b>，得「同输入不同采样」翻转率；Z 组给「纯扰动」翻转率。效应只在 <b>S 组净跟随率显著高于 Z 组与换 seed 的翻转率</b>时才算「token 携带该信息」。判定行 <code>NOISE_BASE=PASS model=… pairs=&lt;n&gt; flip_rate=&lt;x&gt;</code>。</li>
+<li><b>噪声对照（新增）</b>：对每个接收局额外跑 <b>2 次换采样 seed 的全长不干预</b>（RouteStick 各 j 共用这 2 次，按 j 分别读翻转；VideoRepick 读首次拿起），得「同输入不同采样」翻转率；Z 组给「纯扰动」翻转率。效应只在 <b>S 组净跟随率显著高于 Z 组与换 seed 的翻转率</b>时才算「token 携带该信息」。判定行 <code>NOISE_BASE=PASS model=… pairs=&lt;n&gt; flip_rate=&lt;x&gt;</code>。</li>
 <li><b>主分析口径</b>：按 j=1 与 j≥2 两档合并总体，bootstrap（按接收局，2000 次）95% 区间；难度×j 分层只作描述。事先定义：区间下界 &gt; max(Z 翻转率, 换 seed 翻转率) 记为「有效应」。每组报有效 n。</li>
-<li><b>VideoRepick</b>（首次拿起后截断）：T 组读拿 pred 比例；Z 组读拿 swap_blind_k 与仍拿对比例；都对照被选局换 seed 的翻转率（被选局按「第一次拿对」筛选，存在向均值回归，结果并列写明）。</li>
+<li><b>VideoRepick</b>（首次拿起后截断：沿用 11-10 已有的 <code>stop_after_first_pick</code>，见 <code>bin_trace_runner.py</code>）：T 组读拿 pred 比例；Z 组读拿 swap_blind_k 与仍拿对比例；都对照被选局换 seed 的翻转率（被选局按「第一次拿对」筛选，存在向均值回归，结果并列写明）。</li>
 </ul>
 
 <h2>4 逐文件改动清单</h2>
@@ -201,12 +201,12 @@ blockquote{border-left:4px solid var(--acc);margin:10px 0;padding:6px 12px;backg
 <tr><td>RUN-x</td><td>起跑</td><td>只写 <code>…-eval/v1-store/evaluation/steer-4task-1115/</code> 与日志</td><td>一切代码</td><td>冒烟过</td><td>—</td><td>首局 terminal.json 落盘</td><td>opus</td></tr>
 <tr><td>审查</td><td>每块合并前</td><td>—</td><td>—</td><td>—</td><td>—</td><td><code>PRE_MERGE_REVIEW</code></td><td>sonnet</td></tr>
 </table>
-<p><code>run_local.py</code> 共享：S1 管白名单段、S2 管截断段；冲突由 <code>sub/MERGE-2</code> 整合。</p>
+<p><code>run_local.py</code> 共享：S1 管白名单段、S2 管截断段；冲突由整合子代理 <code>sub/INTEG-1</code> 处理（MERGE-1 指合入 v17 的任务）。</p>
 
 <h2>6 验收闸门</h2>
 <table>
 <tr><th>判定行</th><th>时点</th><th>口径 / 不过怎么办</th></tr>
-<tr><td><code>MERGE_V17=PASS</code></td><td>整合后</td><td>见 4.0；不过交回续改，两轮不过按 §8 降级</td></tr>
+<tr><td><code>MERGE_V17=PASS</code></td><td>整合后</td><td>见 4.0；不过交回续改；两轮不过走「A 专用退路」（见 §8）</td></tr>
 <tr><td><code>VLA_SYNC=PASS model=A|B</code>、<code>ASSETS=PASS</code></td><td>起跑前</td><td>逐文件 sha256；B 不过则 B 停跑</td></tr>
 <tr><td><code>GL_RELEASE=PASS sha=…</code></td><td>每次部署</td><td><code>.release_sha</code> 与合并 sha 一致</td></tr>
 <tr><td><code>RS_SPEC_REBUILD=PASS eps=&lt;n&gt; frame_mismatch=0</code></td><td>局池后</td><td>重建 spec 原样示范与自然局逐帧一致，不一致局剔除</td></tr>
@@ -215,7 +215,7 @@ blockquote{border-left:4px solid var(--acc);margin:10px 0;padding:6px 12px;backg
 <tr><td><code>DONOR_ENC=PASS model=… windows=&lt;n&gt;</code></td><td>编码后</td><td>原样重建局离线编码 = 在线编码（逐位或 1e-5）</td></tr>
 <tr><td><code>S1_SMOKE</code>、<code>NOOP_EQ=PASS differ=0</code></td><td>冒烟</td><td>NOOP_EQ 不过 = 替换链路错，停该模型修代码</td></tr>
 <tr><td><code>SWAP_SCOPE=PASS scope_bad=0</code></td><td>每批</td><td><code>n_replaced</code> = 计划窗口数；不过的批次重跑</td></tr>
-<tr><td><code>NOISE_BASE</code>、<code>RS_SAMEP groups=7</code>、<code>VR_SAMEP</code>、<code>READOUT_REGRESS</code></td><td>读数</td><td>如实报告</td></tr>
+<tr><td><code>NOISE_BASE</code>、<code>RS_SAMEP</code>（A groups=7，B groups=4）、<code>VR_SAMEP</code>、<code>READOUT_REGRESS</code></td><td>读数</td><td>如实报告</td></tr>
 </table>
 <p>不做 <code>EVAL_PARITY</code>：policy 仓库评估入口只走 env_metadata 自然局，692 表的 spec 注入入口不在本计划改动范围；健康检查由 <code>RS_SPEC_REBUILD</code>、<code>NOOP_EQ</code> 承担。</p>
 
@@ -223,9 +223,9 @@ blockquote{border-left:4px solid var(--acc);margin:10px 0;padding:6px 12px;backg
 <ul>
 <li>局池：RouteStick easy 8 / medium 16 / hard 16 / xhard 20 = 60 局；VideoRepick easy 10 / medium 20 / xhard 20 = 50 局；两模型共用。</li>
 <li>A（MotionMem，优先）：RouteStick 不干预 60 + 换 seed 120 + 干预（7 组含 core，截断）约 1200；VideoRepick 不干预 50 + 换 seed 约 40 + 干预约 200。</li>
-<li>B（Frozen Wan pooling）：第一轮 RouteStick j≤3、组 S_swing/S_side/S_both/Z（不做 core）：不干预 60 + 换 seed 约 80 + 干预约 450；VideoRepick 同 A。<b>第二轮（有时间才跑）</b>：B 的 RouteStick j≥4，同四组，另约 300（用户 11-16：「有时间就继续测这第四步之后」）；排在 A 全部与 B 第一轮之后、08:45 停发新局之前。</li>
+<li>B（Frozen Wan pooling）：第一轮 RouteStick j≤3、组 S_swing/S_side/S_both/Z（不做 core）：不干预 60 + 换 seed 120 + 干预约 450；VideoRepick 同 A。<b>第二轮（有时间才跑）</b>：B 的 RouteStick j≥4，同四组，另约 300（用户 11-16：「有时间就继续测这第四步之后」）；排在 A 全部与 B 第一轮之后、08:45 停发新局之前。</li>
 <li>合计约 2500 次运行（多数截断）；超出 5 倍才停。</li>
-<li>资源：GL 4 个单卡 A40 占位，每占位一个长作业步 <code>srun --jobid=&lt;hold&gt; --overlap --exact --ntasks=1 --gpu_cmode=shared</code>，内含两条通道（错开 45 s），每通道 = 1 模型服务 + 1 仿真客户端，<code>XLA_PYTHON_CLIENT_MEM_FRACTION=0.40</code>；aspen 2×A6000（他人已占 18.6/14.3 GiB）每卡 1 条通道，<code>XLA_PYTHON_CLIENT_MEM_FRACTION=0.30</code>，起跑前 <code>nvidia-smi</code> 复核余量。调度不区分硬件，空闲通道取下一分片。</li>
+<li>资源：GL 4 个单卡 A40 占位，每占位一个长作业步 <code>srun --jobid=&lt;hold&gt; --overlap --exact --ntasks=1 --gpu_cmode=shared</code>，内含若干通道（错开 45 s），每通道 = 1 模型服务 + 1 仿真客户端；aspen 2×A6000（他人已占 18.6/14.3 GiB）同理。冒烟前初值：A40 每卡 2 通道、<code>XLA_PYTHON_CLIENT_MEM_FRACTION=0.40</code>，A6000 每卡 1 通道、0.30；<code>WORKER_FIT</code> 之后以下条公式为准，起跑前 <code>nvidia-smi</code> 复核余量。aspen 通道直接读 turbo 上同一份已核 sha 的模型路径（A：<code>…/v1-store/models/robomme-vla-modul-motion-80k-v1/50000</code>；B：下载后的 turbo 路径），不另拷贝，<code>VLA_SYNC</code> 两边共用。调度不区分硬件，空闲通道取下一分片。</li>
 <li><b>每卡 worker 数按实测显存定</b>：冒烟时每个模型在 A40 与 A6000 上各起 1 个 worker，读 <code>nvidia-smi</code> 峰值显存 P（模型服务 + 仿真渲染 + A 的 encoder sidecar），每卡 worker 数 = floor((可用显存 − 2 GiB) / P)，上限 4；同时把 <code>XLA_PYTHON_CLIENT_MEM_FRACTION</code> 设为 P/卡显存 + 0.02，避免 XLA 预占吃满。CPU 按每 worker 2 核：占位规格相应提到 <code>--cpus-per-task=8 --mem=96G</code>（由本计划开工令放行）。判定行 <code>WORKER_FIT=PASS model=… gpu=… peak_gib=… workers=…</code>。11-10 一占位 3–4 个进程曾 OOM，原因是 XLA 默认预占，按上式设 fraction 后不再叠加。</li>
 </ul>
 
@@ -241,13 +241,14 @@ blockquote{border-left:4px solid var(--acc);margin:10px 0;padding:6px 12px;backg
 <tr><td>09:00 – 09:45</td><td>读数、result.md、矩阵图、提交推送</td></tr>
 <tr><td>09:50</td><td>按清单 scancel 4 个占位；交接 commit</td></tr>
 </table>
-<p><b>降级顺序</b>（到点未完成即砍，记入留档）：① B 的第二轮（j≥4）→ ② B 的 VideoRepick → ③ core 版（A 的 S_side_core 保留到最后，因其承担跨界窗口对照）→ ④ xhard → ⑤ B 的 RouteStick → 最后才砍 A。若 T+3:30 仍未过冒烟，直接只跑 A。</p>
-<p>耗时依据：新模型单局耗时未实测，按 11-10 约 88 局/卡·小时打 5 折、截断局再打对折估算；A40 8 条通道 + A6000 2 条通道 × 约 5.5 h ≈ 能装下 A 全部与 B 大部分，B 不保证。</p>
+<p><b>降级顺序</b>（到点未完成即砍，记入留档；按用户「可以，A 优先」先砍完 B 再动 A）：① B 的第二轮（j≥4）→ ② B 的 VideoRepick → ③ B 的 RouteStick 第一轮 → ④ A 的 core 版（A 的 S_side_core 保留到最后）→ ⑤ A 的 xhard → 最后才砍 A 的其余部分。若 T+3:30 仍未过冒烟，直接只跑 A。</p>
+<p><b>A 专用退路</b>（MERGE-1 两轮不过时）：不合入 v17，在 v4.2-plswap-full 上只做三件事——子模块 gitlink 升到 b4e97f2、<code>env_runner.py</code> 的 xhard 入口、S1–S3（S1 去掉 wan_fixedpool768 部分）；A 的 v10 encoder 路径本分支已支持（<code>motion_client.py</code> 放行 v10）。B 本轮不跑，result 中写明。</p>
+<p>耗时依据：新模型单局耗时未实测，按 11-10 约 88 局/卡·小时打 5 折、截断局再打对折估算；按冒烟初值 A40 8 条通道 + A6000 2 条通道（WORKER_FIT 后可增）× 约 5.5 h ≈ 能装下 A 全部与 B 大部分，B 不保证。</p>
 
 <h2>9 风险、盲区与留档</h2>
 <table>
 <tr><th>项</th><th>处置</th></tr>
-<tr><td>MERGE-1 语义冲突比预期大</td><td>按 §8 降级只跑 A</td></tr>
+<tr><td>MERGE-1 语义冲突比预期大</td><td>走 §8「A 专用退路」</td></tr>
 <tr><td>变体规划失败 / 段长不足</td><td><code>RS_SEGLEN</code>、<code>RS_VARIANT</code> 剔除计数</td></tr>
 <tr><td>S_side/S_both 非单变量</td><td>物理弧侧口径 + 立柱分层 + core 版；结论措辞限定</td></tr>
 <tr><td>统计功效：60/50 局分层后每格 n 小</td><td>主分析只用合并两档；分层只描述</td></tr>

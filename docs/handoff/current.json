@@ -2610,7 +2610,15 @@
           "scope": "计划 1115-4task-routestick-videorepick-steering-plan.html r3.1 @96d016f 全部步骤，含 4 个 GL 占位（8 CPU/96G/48h）、B 下载、写 turbo -eval 目录；一路跑到美东 11-16 10:00"
         }
       ],
-      "pending_decisions": [],
+      "pending_decisions": [
+        {
+          "what": "开工审查 PLAN_CONSISTENCY_REVIEW=FAIL base=96d016f findings=9 blocking=2 的两条 blocking 由主代理按用户「可以，A 优先」「尽可能不要再阻塞了，有问题尽可能留到明天早上」自裁，早上请用户追认",
+          "items": [
+            "降级顺序改为先砍完 B 再动 A 的 core/xhard",
+            "MERGE-1 两轮不过时走 A 专用退路（不合 v17，只升子模块+xhard 入口+S1–S3，B 本轮不跑）"
+          ]
+        }
+      ],
       "next_steps": [
         {
           "what": "用户开工令后：提交占位、B 下载、MERGE-1",
