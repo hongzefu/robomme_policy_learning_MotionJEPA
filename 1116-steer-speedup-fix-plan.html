@@ -25,7 +25,7 @@ blockquote{border-left:4px solid var(--acc);margin:10px 0;padding:6px 12px;backg
 <h1>第一部分（给人看）</h1>
 
 <h2>1 要做什么</h2>
-<p>把上一轮跑了约 8.7 小时的同一局 steering 流水线提速到每个模型约 2 小时以内，然后用它跑完上一轮没跑的部分：<b>Frozen Wan pooling 的 RouteStick 与 VideoRepick、MotionMem 的 VideoRepick、MotionMem 的 core 窗口组</b>。测的内容与上一轮完全相同（同一局、四种走法、置零、换 seed 噪声）。</p>
+<p>把上一轮跑了约 8.7 小时的同一局 steering 流水线提速到每个模型约 3 小时（目标 2 小时，视冒烟实测），然后用它跑完上一轮没跑的部分：<b>Frozen Wan pooling 的 RouteStick 与 VideoRepick、MotionMem 的 VideoRepick、MotionMem 的 core 窗口组</b>。测的内容与上一轮完全相同（同一局、四种走法、置零、换 seed 噪声）。</p>
 <p>上一轮 8.7 小时的去向（审查实测）：变体录制 2.5 h、干预 4.1 h、变体示范生成 1.2 h、不干预 0.5 h、噪声 0.5 h。<b>根因只有一个：motion 窗口被反复在线编码</b>——每段录制、每次干预都把整段示范的全部窗口（xhard 约 30 窗，每窗约 1.7 s，fp32、关 TF32、一次一窗）重编一遍，而真正需要换的只有第 j 段那约 5 个窗。</p>
 
 <h2>2 修复项（按收益排序）</h2>
@@ -46,7 +46,7 @@ blockquote{border-left:4px solid var(--acc);margin:10px 0;padding:6px 12px;backg
 <tr><td><code>BEHAVIOR_TOL</code></td><td>用新流水线把上一轮 MotionMem「只翻绕向」的 60 个位置重跑一遍</td><td>跟随率与上一轮差 ≤ 0.05（上一轮 0.89）；不干预成功率同局对比差 ≤ 0.1</td></tr>
 <tr><td><code>NOOP_EQ2</code></td><td>用 N 自身录制作供体替换（含 F2 复用），动作与不干预比</td><td>第 1–3 步判定（按钮、绕向）一致 ≥ 95%（不再要求逐位）</td></tr>
 </table>
-<p>任一闸门不过：只记录，回退对应修复项的精度改动（F3）重测，不停整条线。</p>
+<p>任一闸门不过：记录原值，按第二部分 7 节「闸门 → FAIL 回退」表回退对应修复项，只重测该闸门，不停整条线（ENC_TOL→VAE 回 fp32、保留批量化；NOOP_EQ2→关 F2 复用；BEHAVIOR_TOL→先归因再回退对应项）。</p>
 
 <h2>4 资源</h2>
 <p><b>GL 最多 4 个单卡 A40 占位</b>（用户 11-16：「就你只能起四张卡不能超过」），每个 6 CPU、80G、48 h（chaijy2 剩 28 核，4×6=24 核）；另加 aspen 2×A6000（与他人共用，每卡 1–2 通道按实测显存）。每占位一个长 srun 作业步，作业步内 3 通道（fast 模式显存若更省则按 <code>WORKER_FIT</code> 加到 4）。</p>
@@ -57,15 +57,15 @@ blockquote{border-left:4px solid var(--acc);margin:10px 0;padding:6px 12px;backg
 <tr><th>顺序</th><th>内容</th><th>预计</th></tr>
 <tr><td>0</td><td>代码改动 + 审查合并 + 冒烟闸门</td><td>约 3 h</td></tr>
 <tr><td>1</td><td>闸门 <code>BEHAVIOR_TOL</code>（MotionMem 只翻绕向 60 位置重跑）</td><td>约 0.3 h</td></tr>
-<tr><td>2</td><td>Frozen Wan pooling · RouteStick：N → 离线编码 → 干预（四组 + core）→ 噪声</td><td>约 3 h</td></tr>
+<tr><td>2</td><td>Frozen Wan pooling · RouteStick：N → 离线编码 → 干预（四组，不含 core）→ 噪声</td><td>约 3 h</td></tr>
 <tr><td>3</td><td>MotionMem · VideoRepick（同局第 k′ 次交换替换 + 置零 + 噪声）</td><td>约 1.2 h</td></tr>
 <tr><td>4</td><td>Frozen Wan pooling · VideoRepick</td><td>约 1.2 h</td></tr>
 <tr><td>5</td><td>MotionMem · RouteStick core 窗口组（三组 core）</td><td>约 1 h</td></tr>
 </table>
-<p>局池与变体示范直接复用上一轮（与模型无关）；F1 需要把变体的第 j 段帧补存下来，在 aspen CPU 上重生成一次约 70 分钟，与步骤 0 并行。</p>
+<p>局池与变体示范直接复用上一轮（与模型无关）；F1 需要把变体的第 j 段帧补存下来，在 aspen CPU 上重生成一次约 70 分钟，S-B 合并后立即开始（与 S-C、S-D 的合并与闸门并行）；重生成后与上一轮 variants.jsonl 逐条比对 spec 字段。</p>
 
 <h2>6 子代理分工与合并（简述）</h2>
-<p>四块并行改代码（各自 worktree、opus），一块一审（sonnet），按 S-A → S-B → S-C → S-D 合并；每次合并前审 diff 与验收，合并后跑短测并推送。</p>
+<p>四块按第二部分 7 节写死的接口契约并行改代码（各自 worktree、opus），一块一审（sonnet），按 S-A → S-B → S-C → S-D 合并；每次合并前审 diff 与验收，合并后跑短测并推送。</p>
 <table>
 <tr><th>块</th><th>内容</th></tr>
 <tr><td>S-A</td><td>sidecar 精度放开（F3）+ 离线批量编码脚本（F1 后半）</td></tr>
@@ -126,17 +126,17 @@ blockquote{border-left:4px solid var(--acc);margin:10px 0;padding:6px 12px;backg
 <h2>2 子代理分配表</h2>
 <table>
 <tr><th>编号</th><th>可写</th><th>禁触</th><th>依赖</th><th>合并顺序</th><th>验收</th><th>模型</th></tr>
-<tr><td>S-A</td><td>1 节 S-A 所列 + tests</td><td>models/integration/*、第三方</td><td>—</td><td>1</td><td>单测；合并后在 GL 1 卡跑 <code>ENC_TOL</code>（上一轮 vrec_record 的 same 组 300 窗）与 fast 模式 1 局冒烟</td><td>opus，worktree</td></tr>
-<tr><td>S-B</td><td>1 节 S-B 所列 + tests</td><td>serve、run_local</td><td>—</td><td>2</td><td>单测（窗口切片与在线规则一致：对 3 个已实测 seed 比较起点与帧号）</td><td>opus，worktree</td></tr>
-<tr><td>S-C</td><td>1 节 S-C 所列 + tests</td><td>wan/*、prep 的 donors 主体</td><td>—</td><td>3</td><td>单测；合并后 <code>NOOP_EQ2</code></td><td>opus，worktree</td></tr>
-<tr><td>S-D</td><td>1 节 S-D 所列 + tests</td><td>其余全部</td><td>—</td><td>4</td><td>单测（并发领取不重复、失败不丢）</td><td>opus，worktree</td></tr>
+<tr><td>S-A</td><td>1 节 S-A 所列 + 7 节补列（motion_client 会话分支、runtime_contract、pin_numerics 断言）+ tests</td><td>models/integration/*、第三方、S-B/S-C/S-D 文件</td><td>契约 C1、C2</td><td>1</td><td>单测；合并后 fast 模式 1 局冒烟；<code>ENC_TOL</code> 在 S-A、S-B 都合并且原样重建局存帧后跑</td><td>opus，worktree</td></tr>
+<tr><td>S-B</td><td>1 节 S-B 所列 + sp_swap_prep.py 写 C3 两个 spec 键（唯一 owner）+ tests</td><td>serve、run_local、fp_swap_prep、wan/*</td><td>契约 C1、C2、C3</td><td>2</td><td>单测（窗口切片与在线规则一致：对 3 个已实测 seed 比较起点与帧号）</td><td>opus，worktree</td></tr>
+<tr><td>S-C</td><td>serve_policy_attn.py、run_local.py、fp_swap_prep.py + tests</td><td>wan/*、sp_swap_prep.py、motion_client</td><td>契约 C2、C3</td><td>3</td><td>单测；合并后 <code>NOOP_EQ2</code></td><td>opus，worktree</td></tr>
+<tr><td>S-D</td><td>1 节 S-D 所列 + tests</td><td>其余全部</td><td>契约 C4</td><td>4</td><td>单测（并发领取不重复、失败不丢）</td><td>opus，worktree</td></tr>
 <tr><td>审查</td><td>—</td><td>—</td><td>—</td><td>每块前</td><td><code>PRE_MERGE_REVIEW</code></td><td>sonnet</td></tr>
 </table>
 
 <h2>3 闸门与判定行</h2>
 <table>
 <tr><th>判定行</th><th>时点</th><th>口径</th></tr>
-<tr><td><code>ENC_TOL</code></td><td>S-A 合并后</td><td>min_cos ≥ 0.999、maxabs ≤ 0.1</td></tr>
+<tr><td><code>ENC_TOL</code></td><td>S-A、S-B 合并且原样重建局存帧后</td><td>min_cos ≥ 0.999、maxabs ≤ 0.1</td></tr>
 <tr><td><code>NOOP_EQ2</code></td><td>S-C 合并后</td><td>第 1–3 步按钮与绕向判定一致 ≥ 95%（20 局）</td></tr>
 <tr><td><code>BEHAVIOR_TOL</code></td><td>正式前</td><td>MotionMem S_swing 60 位置跟随率与 steer-4task-1115 差 ≤ 0.05</td></tr>
 <tr><td><code>OFFLINE_ENC</code>、<code>SWAP_SCOPE</code>、<code>RS_SAMEP</code>、<code>VR_SAMEP</code>、<code>NOISE_BASE</code></td><td>各阶段</td><td>同 steer-4task-1115</td></tr>
@@ -150,13 +150,30 @@ blockquote{border-left:4px solid var(--acc);margin:10px 0;padding:6px 12px;backg
 <li>占位：chaijy2/spgpu 4 个单卡 A40，<code>--cpus-per-task=6 --mem=80G --time=48:00:00 --gpu_cmode=shared</code>，作业名 <code>s5t-hold-1..4</code>；同时最多 4 个。</li>
 </ul>
 <pre>
-# 0 aspen CPU：重生成变体并存窗帧（与代码改动并行，约 70 min）
+# 0 aspen CPU：重生成变体并存窗帧（S-B 合并后开始，约 70 min）
 samep_rs_variants build --pool rs/pool.json --save-window-frames --history-yaml &lt;A yaml&gt; --out rs/variants2
-# 1 冒烟与闸门：ENC_TOL、WORKER_FIT、NOOP_EQ2、BEHAVIOR_TOL
+# 1 闸门按时点：S-A 合并→fast 冒烟/WORKER_FIT；S-B 合并+存帧→ENC_TOL；S-C 合并→NOOP_EQ2；全部合并→BEHAVIOR_TOL
 # 2 每模型：N（record）→ samep_offline_encode → donors --offline-donors → pool_make → gl_hold_pool.sh（4 占位）
 # 3 读数：sp_swap_readout --same-episode / fp_swap_readout --same-episode
 </pre>
 
+
+<h2>7 开工审查修订（r1，PLAN_CONSISTENCY_REVIEW=FAIL base=3923d49 findings=9 blocking=6 后主会话自裁，早上交用户确认）</h2>
+<p>S-A 可写集合补列（F-1）：<code>src/mme_vla_suite/policies/motion_client.py</code> 的 <code>_check_stage2_provenance</code>、<code>_check_timepool_provenance</code>（fast 模式只放行 numerics 字段，模型身份照比）；必要时 <code>scripts/evaluation/runtime_contract.py</code>、<code>motion_store.py</code> 中被这两个分支调用的 numerics 比较；<code>wan_motion_infer.py</code> 的 <code>check_env</code>、<code>check_versions</code>、<code>pin_numerics</code> 末尾 <code>EXPECTED_FLAGS</code>/<code>FORBIDDEN_ENV</code> 断言在 fast 模式下按 fast 期望值比。池化路径为 <code>src/mme_vla_suite/shared/wan_pool768.py</code>。</p>
+<table>
+<tr><th>契约</th><th>内容</th></tr>
+<tr><td>C1 变体窗帧</td><td><code>&lt;variants&gt;/vframes/&lt;variant_key&gt;.npz</code>：<code>start_frames</code> int64[W]（与在线窗口起点同号）、<code>frames</code> uint8[W,…]（逐字节等于在线编码器收到的窗口输入，形状由在线代码决定）、<code>meta</code> json 字符串（key、seed、j、group、scope=all|core|demo_full）。原样重建局 scope=demo_full 存全部示范窗。</td></tr>
+<tr><td>C2 离线供体</td><td><code>&lt;offline&gt;/&lt;variant_key&gt;.npz</code>：字段与上一轮 <code>motion_swap_exact</code> 供体 npz 完全同名同 dtype（<code>start_frames</code>、<code>embs</code> float32），可被现有加载器直接读；另写 <code>OFFLINE_ENC</code> 判定行到 <code>&lt;offline&gt;/OFFLINE_ENC.txt</code>。</td></tr>
+<tr><td>C3 spec 键</td><td><code>demo_cache_map</code>：{接收局 episode 键（与 swap_map 同键）: N 录制 npz 绝对路径}；<code>resident_server</code>: true。sp_swap_prep.py 由 S-B 写，fp_swap_prep.py 由 S-C 写，run_local/serve 由 S-C 读。缺键时行为与现状完全相同。</td></tr>
+<tr><td>C4 任务池</td><td><code>&lt;O&gt;/pool/&lt;stage&gt;/todo/&lt;成本序号6位&gt;-&lt;spec 名&gt;.&lt;gl|aspen&gt;.json</code>；领取 mkdir <code>claim/&lt;名&gt;</code>；完成移 <code>done/</code>、失败移 <code>fail/</code>（附日志路径）；pool_runner 调 <code>run_local.py --spec</code>。</td></tr>
+</table>
+<table>
+<tr><th>闸门</th><th>FAIL 回退</th><th>已完成阶段</th></tr>
+<tr><td>ENC_TOL</td><td>VAE 回 fp32（TF32 关），保留批量化与 encoder bf16，重测 ENC_TOL</td><td>尚无正式阶段，不涉及</td></tr>
+<tr><td>NOOP_EQ2</td><td>关 F2（不传 demo_cache_map），重测</td><td>不涉及</td></tr>
+<tr><td>BEHAVIOR_TOL</td><td>先看 ENC_TOL/NOOP_EQ2 归因，回退对应项后重测一次；仍 FAIL 记录并照常跑</td><td>不涉及（在正式前）</td></tr>
+</table>
+<p>F-6 裁决：core 窗口组只跑 MotionMem（与规模表、步骤 5、给用户的动作总结一致），Frozen Wan 不跑 core。F-8：重生成后比对 spec 字段，不一致写进 BEHAVIOR_TOL 说明。</p>
 <h2>5 风险与盲区</h2>
 <table>
 <tr><th>项</th><th>处置</th></tr>
