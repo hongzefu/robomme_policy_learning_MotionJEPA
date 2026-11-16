@@ -60,3 +60,7 @@ aspen：`s4t-dl`、`s4t-prep-rs`、`s4t-prep-vr`、`s4t-smokeA`、`s4t-smokeA2`�
 5. aspen 用本地 checkpoint 副本与本地 wan venv（turbo NFS 读取超时）。
 6. 首次链式起跑因启动脚本引号转义错误（阶段名被提前展开为空）12 个通道空转退出，按清单停会话、日志移入 `failed-quote/` 后用独立链式脚本重起。
 7. GL 每卡 3 worker、fraction 0.27（冒烟 0.40 单 worker 预占 18.4 GiB；按吞吐估算需 3 worker），OOM 则退回 2。
+8. GL 每卡 3 worker 时第三个 worker OOM（每 worker 策略 12.3 GiB + sidecar 2.9 GiB），退回每卡 2 worker；c 通道队列排到 a 通道之后，spec 不丢。
+9. **GL 作业步结束把 GPU 重置回独占模式**（11-10 已知）：c 通道被停、冒烟作业步结束、用 srun 查 nvidia-smi 后，同占位其他作业步第二局起 Vulkan `ErrorInitializationFailed` / sidecar `CUDA-capable device(s) is/are busy or unavailable`。处置：停掉全部 GL 通道（按确切名，日志移入 `failed-cmode/`），`sp_swap_prep requeue` 重排 n/vrec/noise 未完成 spec，改为**每占位一个长 srun 作业步**（`rs/motion/chains/hold_runner.sh`：a、b 并行，a 结束后接 c；启动器 `rs/motion/gl_holds.sh`，tmux `s4t-h{0..3}-chain1`），此后不再对占位起其他 srun。之后无新增 Vulkan/busy 错误。
+10. aspen spec 的 `motion_prov_relax` 加 `driver`（aspen 驱动 570.195.03 vs checkpoint 记录 595.71.05；用户「暂时不考虑不同硬件」），只改 aspen spec，GL 不变；该字段不进运行身份。
+11. 阶段顺序：噪声对照队列暂存（`noise-*.sh.hold`），第一链只跑 n → vrec；第二链 samep → noise → samepcore（`chains/chain2-*.sh`），让干预尽早开始。
