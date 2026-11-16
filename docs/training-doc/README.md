@@ -101,6 +101,12 @@
 | [`aws-t2-ref-s100/`](aws-t2-ref-s100/result.md) / [`aws-t2-cand-s100/`](aws-t2-cand-s100/result.md) | T2 关闭态 100 步 A/B | ref PASS；cand 的 `BASELINE_ENV` 因 GPU 指纹不同报 FAIL（记录在案，见 result.md） |
 | [`aws-t3-closed-s100/`](aws-t3-closed-s100/result.md) / [`aws-t3-open-s100/`](aws-t3-open-s100/result.md) | T3 closed / open 100 步 | PASS；`T3_MOTION_CAUSAL` 的 `pad_bitexact=0` 由 `tic-t3-causal-40k/` 按新口径闭合 |
 
+### 1115 4task context＋motion160（v17）
+
+| 目录 | 内容 | 状态 |
+|---|---|---|
+| [`v2-1600ep-m8x8-ctx-motion-b128-50k/`](v2-1600ep-m8x8-ctx-motion-b128-50k/launch.md) | 54.62% 那条 512+motion160（v7 ep72）modul run 改 context、其余一致，50k；计划 `1115-4task-ctx-motion160-v7-50k-plan.html` | 起跑前（Beta） |
+
 ## 二、环境 A：motion 接入依据（2×RTX 6000 Ada + turbo，只读）
 
 | 目录 | 闸门 | 判定 |
