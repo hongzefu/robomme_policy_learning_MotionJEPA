@@ -86,7 +86,7 @@ def load_model(run_dir, table, episodes=None):
     run_dir = Path(run_dir)
     keys = sorted(episodes if episodes is not None else table, key=episode_number)
     candidates = {key: [] for key in keys}
-    for path in sorted(run_dir.glob("attempts/*/client/traces/*/step_trace.jsonl")):
+    for path in sorted({*run_dir.glob("attempts/*/client/traces/*/step_trace.jsonl"), *run_dir.glob("attempts/*-service-*/*/client/traces/*/step_trace.jsonl")}):
         try:
             rows = read_steps(path)
         except (OSError, ValueError) as error:
@@ -106,7 +106,7 @@ def load_model(run_dir, table, episodes=None):
         candidates[key].append({"path": path, "rows": rows, "errors": errors, "outcome": outcome,
                                 "task_success": success, "accepted": accepted, "mtime": path.stat().st_mtime_ns})
     started_counts = {}
-    for path in run_dir.glob("attempts/*/client/*.started.json"):
+    for path in sorted({*run_dir.glob("attempts/*/client/*.started.json"), *run_dir.glob("attempts/*-service-*/*/client/*.started.json")}):
         key = path.name[:-len(".started.json")]
         started_counts[key] = started_counts.get(key, 0) + 1
     result = {}

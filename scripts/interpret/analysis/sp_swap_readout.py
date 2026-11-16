@@ -66,7 +66,7 @@ def read_json(path):
 
 def attempts_for(run_root, key):
     n = 0
-    for path in sorted(Path(run_root).glob("attempts/*/commands.json")):
+    for path in sorted({*Path(run_root).glob("attempts/*/commands.json"), *Path(run_root).glob("attempts/*-service-*/*/commands.json")}):
         try:
             if key in read_json(path).get("episode_keys", []):
                 n += 1

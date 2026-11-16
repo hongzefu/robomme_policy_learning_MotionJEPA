@@ -1186,7 +1186,7 @@ def find_run(run_root, attn_out, key):
     terminal = P._read_json(terminals[-1])
     out["terminal"] = terminal
     nonce = terminal["episode_nonce"]
-    traces = sorted(run_root.glob(f"attempts/*/client/traces/{nonce}/step_trace.jsonl"))
+    traces = sorted({*run_root.glob(f"attempts/*/client/traces/{nonce}/step_trace.jsonl"), *run_root.glob(f"attempts/*-service-*/*/client/traces/{nonce}/step_trace.jsonl")})
     if traces:
         out["trace"] = traces[0]
         rp = traces[0].parent / "meta" / "hold_receipt.json"

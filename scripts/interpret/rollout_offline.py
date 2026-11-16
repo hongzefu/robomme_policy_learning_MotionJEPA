@@ -122,7 +122,7 @@ def load_accepted(run_root):
 
 def load_trace(run_root, nonce):
     """返回 {infer_seq: row_in_chunk==0 的 step 行}；轨迹找不到或不唯一就报错，不补造。"""
-    paths = sorted(Path(run_root).glob(f"attempts/*/client/traces/{nonce}/step_trace.jsonl"))
+    paths = sorted({*Path(run_root).glob(f"attempts/*/client/traces/{nonce}/step_trace.jsonl"), *Path(run_root).glob(f"attempts/*-service-*/*/client/traces/{nonce}/step_trace.jsonl")})
     if len(paths) != 1:
         raise SystemExit(f"nonce={nonce} 的 step_trace.jsonl 应恰有 1 份，实际 {len(paths)} 份：{paths}")
     rows = {}
