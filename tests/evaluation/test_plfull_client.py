@@ -80,9 +80,10 @@ def test_plfull_rejects_ep_120_and_bad_seed_and_missing_dir(tmp_path):
     with pytest.raises(candidate.ContractError, match="plfull-metadata-dir"):
         candidate.evaluate(make_args(tmp_path, [("PatternLock", 1, "easy")], profile="plfull",
                                      plfull_metadata_dir=str(tmp_path / "nope")), runner_factory=FakeRunner)
+    # 计划 1115：plfull 放行 max_steps ∈ (1300, 2000)，其他步数仍拒绝
     with pytest.raises(candidate.ContractError, match="1300"):
         candidate.evaluate(make_args(tmp_path, [("PatternLock", 1, "easy")], profile="plfull",
-                                     plfull_metadata_dir=meta, max_steps=2000), runner_factory=FakeRunner)
+                                     plfull_metadata_dir=meta, max_steps=1500), runner_factory=FakeRunner)
 
 
 def test_plfull_seed_mismatch_is_contract_error(tmp_path):

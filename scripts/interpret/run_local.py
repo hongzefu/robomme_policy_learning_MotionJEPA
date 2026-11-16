@@ -55,6 +55,18 @@ Wan 时间池化模型（model_kind=wan_fixedpool1024）：policy_config 与 mot
   （mme-vla-wan-stage2 venv）起 scripts/dataset/wan_timepool/timepool_sidecar.py，保留 --motion-online-gpu；
   不接受 target_contract（MotionEncoderClient 只允许 stage2 encoder 带评估目标合同），spec 里写 null / "" / "none" 均视为不传；
   sidecar 从 MMEVLA_V1_STORE 找 cache/hf（Wan2.1 VAE），可由 spec 键 v1_store 给出，否则须已在环境里。
+modulation 模型（计划 1115 第二部分 §4.1；model_kind=modul_v10_768 即 A：modulation + v10 encoder，或 wan_fixedpool768
+  即 B：modulation + Wan 固定池化 768）：服务端 serve_policy_attn 自动改走「只换 motion、不装 AttnAdapter」模式，一律不写
+  infer_<seq>.npz（按不存注意力判定），save_attn=true / save_prefix / rollout_record 报错；两者的 sidecar 都是
+  scripts/dataset/wan/motion_sidecar.py（uv + MMEVLA_V1_STORE/venvs/wan），stage2_python 可省略，服务端命令去掉 --stage2-python，
+  不接受 target_contract。可选键（不并入身份，只改 sidecar 环境）：
+    v1_store            → MMEVLA_V1_STORE（必须由该键或运行环境给出：A 从 external/motionjepa 找 encoder，两者从
+                          venvs/wan、cache/hf 起 sidecar 与读 Wan VAE）
+    motion_online_gpu   → MMEVLA_MOTION_ONLINE_GPU（缺省取 cuda 的第一张卡，与 run_shard.sh 同口径）
+    motion_prov_relax   → MMEVLA_MOTION_PROV_RELAX（692 评估口径 "gpu_name,compute_cap,sm_count"；缺键时沿用运行环境）
+  motion_overflow="resample" 照旧由 resident_worker.worker_environment 设 MMEVLA_MOTION_OVERFLOW。
+max_steps（只用于 profile=plfull，取值 PLFULL_MAX_STEPS = 1300 / 2000；testx 照旧必填并由 resident_worker 转发）：客户端加
+  --max-steps <n>；≠1300 时并入身份。缺键时命令与身份不变（eval.py 缺省 1300）。
 save_attn（bool，缺省按 ablate 判定）：ablate 含 motion_swap: / motion_swap_exact: / motion_shift 时一律不写 infer_<seq>.npz，
 无需配置，显式给 true 报错；其他 ablate 默认写，显式 false 时服务端加 --no-save-attn 不写。不写时与 save_prefix、rollout_record、
 Oracle 模式互斥。
@@ -91,12 +103,20 @@ from scripts.evaluation import resident_worker as RW  # noqa: E402
 
 SERVER_MODULE, ATTN_MODULE = "scripts.training.serve_policy", "scripts.interpret.serve_policy_attn"
 # model_kind 合法值取自 src/mme_vla_suite/policies/policy_config.py 生成 metadata 处
-MODEL_KINDS = ("history", "stage2_pool4_concat", "wan_fixedpool1024")
+MODEL_KINDS = ("history", "stage2_pool4_concat", "wan_fixedpool1024", "modul_v10_768", "wan_fixedpool768")
 MOTION_MODEL_KIND = "stage2_pool4_concat"
 # Wan 时间池化 1024（与 mme_vla_suite.shared.wan_timepool.TIMEPOOL_ENCODER_KIND 同值，测试盯住）
 WAN_MODEL_KIND = "wan_fixedpool1024"
+# modulation 模型（与 serve_policy_attn.MOTION_ONLY_KINDS 同值，测试盯住）：服务端只换 motion、不装 AttnAdapter、不存注意力；
+# sidecar 都是 scripts/dataset/wan/motion_sidecar.py，不用 stage2_python
+MODUL_V10_KIND, POOL768_KIND = "modul_v10_768", "wan_fixedpool768"
+MOTION_ONLY_KINDS = (MODUL_V10_KIND, POOL768_KIND)
 # 带 motion token 的模型：保留 --motion-online-gpu，可做 motion 内容替换与录制
-MOTION_KINDS = (MOTION_MODEL_KIND, WAN_MODEL_KIND)
+MOTION_KINDS = (MOTION_MODEL_KIND, WAN_MODEL_KIND, *MOTION_ONLY_KINDS)
+# sidecar 从 MMEVLA_V1_STORE 找 venv / 缓存 / encoder，运行树下无 v1-store 时必须显式给出
+V1_STORE_KINDS = (WAN_MODEL_KIND, *MOTION_ONLY_KINDS)
+# plfull 口径允许的客户端步数上限（1300 = 原口径；2000 = 计划 1115 新口径）
+PLFULL_MAX_STEPS = (1300, 2000)
 # testx 由 resident_worker.client_command 原样处理（先导轮 pl_swap_prep 用），此处只放行，不改其行为
 PROFILES = ("official", "testx", "plfull")
 # 与 stopcube_runner.STOPCUBE_MODES 同值（测试盯住）；驱动端不导入客户端模块。
@@ -129,7 +149,8 @@ def write_json(path, value):
 
 def load_spec(path):
     spec = read_json(path)
-    missing = [key for key in REQUIRED_KEYS if key not in spec and not (key == "attn_out" and spec.get("movecube_force") is True)]
+    missing = [key for key in REQUIRED_KEYS if key not in spec and not (key == "attn_out" and spec.get("movecube_force") is True)
+               and not (key == "stage2_python" and spec.get("model_kind") in MOTION_ONLY_KINDS)]
     if missing:
         raise SystemExit(f"spec 缺键: {missing}")
     if spec["model_kind"] not in MODEL_KINDS:
@@ -150,10 +171,16 @@ def load_spec(path):
             raise SystemExit(f"spec: plfull 的 stopcube_mode 只能是 {PLFULL_STOPCUBE_MODES}，且不接受 movecube_force")
     elif spec.get("plfull_metadata_dir"):
         raise SystemExit("spec: plfull_metadata_dir 只用于 profile=plfull")
-    if spec["model_kind"] == WAN_MODEL_KIND:
+    if spec["model_kind"] in V1_STORE_KINDS:
         if spec.get("target_contract") not in (None, "", "none"):
-            raise SystemExit("spec: Wan 时间池化模型不接受 target_contract（只适用于 stage2 encoder），写 null 或 \"none\"")
+            raise SystemExit(f"spec: {spec['model_kind']} 不接受 target_contract（只适用于 stage2 encoder），写 null 或 \"none\"")
         spec.pop("target_contract", None)
+    for key in ("v1_store", "motion_online_gpu", "motion_prov_relax"):
+        if spec.get(key) is not None and spec["model_kind"] not in (V1_STORE_KINDS if key == "v1_store" else MOTION_KINDS):
+            raise SystemExit(f"spec: {key} 只用于 {V1_STORE_KINDS if key == 'v1_store' else MOTION_KINDS}")
+    if "max_steps" in spec and profile != "testx":
+        if profile != "plfull" or type(spec["max_steps"]) is not int or spec["max_steps"] not in PLFULL_MAX_STEPS:
+            raise SystemExit(f"spec: max_steps 只用于 profile=plfull（取 {PLFULL_MAX_STEPS}）或 testx")
     has_swap = any(part.strip().startswith(("motion_swap:", "motion_swap_exact:")) for part in ablate_of(spec).split("+"))
     if spec.get("swap_map") is not None:
         spec["swap_map"] = parse_swap_map(spec["swap_map"])
@@ -221,6 +248,8 @@ def load_spec(path):
             raise SystemExit("spec: save_attn 必须为 bool")
         if spec["save_attn"] and replaces_motion(spec):
             raise SystemExit("spec: motion 替换实验不存注意力，不能给 save_attn=true")
+        if spec["save_attn"] and spec["model_kind"] in MOTION_ONLY_KINDS:
+            raise SystemExit(f"spec: {spec['model_kind']} 走只换 motion 模式，不存注意力，不能给 save_attn=true")
     if not saves_attn(spec):
         if spec.get("save_prefix"):
             raise SystemExit("spec: save_prefix 需要存注意力，与不存注意力（save_attn=false 或 motion 替换实验）互斥")
@@ -330,6 +359,8 @@ def run_identity(spec, manifest):
         ident["episode_specs_sha256"] = hashlib.sha256(Path(spec["episode_specs"]).read_bytes()).hexdigest()
     if spec.get("save_attn") is False:
         ident["save_attn"] = False
+    if is_plfull(spec) and spec.get("max_steps", 1300) != 1300:
+        ident["max_steps"] = int(spec["max_steps"])
     if spec.get("movecube_force"):
         ident.update(movecube_force=True, force_k=spec["force_k"],
                      force_table_sha256=hashlib.sha256(Path(spec["force_table"]).read_bytes()).hexdigest())
@@ -357,7 +388,9 @@ def is_plfull(spec):
 
 
 def saves_attn(spec):
-    return spec.get("save_attn") is not False and not replaces_motion(spec) and not spec.get("movecube_force")
+    # modulation 模型服务端只换 motion、从不写 infer_<seq>.npz，按不存注意力判定
+    return (spec.get("save_attn") is not False and not replaces_motion(spec) and not spec.get("movecube_force")
+            and spec.get("model_kind") not in MOTION_ONLY_KINDS)
 
 
 def select_chunks(manifest, episodes_arg=None, limit=None, single=False):
@@ -405,8 +438,10 @@ def build_server_command(spec, nonce, port, episodes=None):
     movecube_force 不换模块、不插 --attn-out，只按模型去掉 --motion-online-gpu。"""
     previous = os.environ.get("CUDA_VISIBLE_DEVICES")
     os.environ["CUDA_VISIBLE_DEVICES"] = spec["cuda"]   # server_command 从环境读卡号
+    no_stage2 = spec["model_kind"] in MOTION_ONLY_KINDS
     try:
-        command = list(RW.server_command(spec, nonce, port))
+        # modulation 模型不用 stage2_python：占位后整对删去 --stage2-python（v10 / pool768 路径本就丢弃它）
+        command = list(RW.server_command(dict(spec, stage2_python="") if no_stage2 else spec, nonce, port))
     finally:
         if previous is None:
             os.environ.pop("CUDA_VISIBLE_DEVICES", None)
@@ -414,6 +449,9 @@ def build_server_command(spec, nonce, port, episodes=None):
             os.environ["CUDA_VISIBLE_DEVICES"] = previous
     if command.count(SERVER_MODULE) != 1 or command.count("policy:checkpoint") != 1:
         raise RuntimeError(f"server_command 形状变化: {command}")
+    if no_stage2:
+        index = command.index("--stage2-python")
+        del command[index:index + 2]
     if not spec.get("movecube_force"):
         command[command.index(SERVER_MODULE)] = ATTN_MODULE
     if spec["model_kind"] not in MOTION_KINDS:
@@ -461,12 +499,19 @@ def build_environment(spec):
     environment = RW.worker_environment(spec)
     environment.update(CUDA_VISIBLE_DEVICES=spec["cuda"], XLA_FLAGS=XLA_FLAGS,
                        XLA_PYTHON_CLIENT_MEM_FRACTION=str(spec["xla_mem_fraction"]))
-    if spec["model_kind"] == WAN_MODEL_KIND:
-        # timepool sidecar 从 MMEVLA_V1_STORE/cache/hf 离线读 Wan VAE；运行工作树下没有 v1-store 时必须显式给出。
+    if spec["model_kind"] in V1_STORE_KINDS:
+        # sidecar 从 MMEVLA_V1_STORE 离线读 Wan VAE（cache/hf）、venvs/wan 与 v10 encoder；运行工作树下没有 v1-store 时必须显式给出。
         if spec.get("v1_store"):
             environment["MMEVLA_V1_STORE"] = str(spec["v1_store"])
         if not environment.get("MMEVLA_V1_STORE"):
-            raise ValueError("Wan 模型需要 MMEVLA_V1_STORE（spec 键 v1_store 或运行环境变量）")
+            raise ValueError(f"{spec['model_kind']} 模型需要 MMEVLA_V1_STORE（spec 键 v1_store 或运行环境变量）")
+    if spec["model_kind"] in MOTION_ONLY_KINDS:
+        # 与 run_shard.sh 同口径：sidecar 卡号跟随本 worker 可见的第一张卡，不继承外层残留值
+        environment["MMEVLA_MOTION_ONLINE_GPU"] = str(spec.get("motion_online_gpu") or spec["cuda"].split(",")[0])
+    elif spec.get("motion_online_gpu") is not None:
+        environment["MMEVLA_MOTION_ONLINE_GPU"] = str(spec["motion_online_gpu"])
+    if spec.get("motion_prov_relax") is not None:
+        environment["MMEVLA_MOTION_PROV_RELAX"] = str(spec["motion_prov_relax"])
     return environment
 
 
@@ -475,6 +520,8 @@ def build_client_command(spec, grant_path, output, nonce, port, drain_file):
     command = RW.client_command(spec, grant_path, output, nonce, port, drain_file)
     if is_plfull(spec):
         command += ["--profile", "plfull", "--plfull-metadata-dir", str(spec["plfull_metadata_dir"])]
+        if "max_steps" in spec:
+            command += ["--max-steps", str(int(spec["max_steps"]))]
     if spec.get("bin_trace"):
         command[1] = str(Path(spec["repo"]) / "scripts/interpret/bin_trace_runner.py")
         if spec.get("stop_after_first_pick"):

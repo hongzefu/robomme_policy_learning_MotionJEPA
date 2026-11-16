@@ -21,6 +21,9 @@ OFFICIAL_SEEDS = (0, 7, 42)
 # plfull：自建 metadata 清单的局号上限（局号 0–119）；PatternLock／RouteStick 用 0–79，三交换任务第一次拿起实验用 0–119。主 seed 42，seed 复核 1、2。
 PLFULL_SEEDS = (42, 1, 2)
 PLFULL_EPISODES = 120
+# plfull 口径允许的 max_steps：1300 为原口径（缺省）；2000 为计划 1115 新口径（与 692 评估同步数，motion 窗口超 96 交服务端
+# MMEVLA_MOTION_OVERFLOW=resample 处理，客户端预算只查帧数上限）。
+PLFULL_MAX_STEPS = (1300, 2000)
 
 
 @dataclasses.dataclass
@@ -113,8 +116,8 @@ def validate_metadata(metadata, args):
 
 def validate_budget(demo_frames, profile="official", max_steps=1300):
     k_demo = max(0, (demo_frames - 17) // 32 + 1)
-    if profile == "testx":
-        # testx 只查帧数上限；窗口超 96 由服务端抽稀处理，客户端不按窗口数拒绝。
+    if profile == "testx" or (profile == "plfull" and max_steps != 1300):
+        # testx（及 plfull 的非 1300 步数）只查帧数上限；窗口超 96 由服务端抽稀处理，客户端不按窗口数拒绝。
         q = max_steps + 1
         if demo_frames + q >= 4096:
             raise ContractError(f"testx 帧预算越界：D={demo_frames} q={q}")
@@ -303,9 +306,10 @@ def evaluate(args: Args, *, runner_factory=EnvRunner, client_factory=EvaluationC
                 or args.max_steps <= 0 or args.model_seed <= 0):
             raise ContractError("testx 评估固定 test、16 步和历史模式，max_steps、model_seed 与 RPC 超时须为正")
     elif args.profile == "plfull":
-        if (args.dataset != "test" or args.max_steps != 1300 or args.obs_horizon != 16 or not args.use_history
+        if (args.dataset != "test" or args.max_steps not in PLFULL_MAX_STEPS or args.obs_horizon != 16 or not args.use_history
                 or args.rpc_timeout_seconds <= 0 or args.model_seed not in PLFULL_SEEDS):
-            raise ContractError("plfull 评估固定 test、1300、16 步和历史模式，seed 须为 42／1／2，RPC 超时须为正")
+            raise ContractError(f"plfull 评估固定 test、max_steps ∈ {PLFULL_MAX_STEPS}、16 步和历史模式，"
+                                "seed 须为 42／1／2，RPC 超时须为正")
         if not args.plfull_metadata_dir or not Path(args.plfull_metadata_dir).is_dir():
             raise ContractError(f"plfull 需要 --plfull-metadata-dir 指向自建 metadata 目录，得到 {args.plfull_metadata_dir!r}")
     elif (args.dataset != "test" or args.max_steps != 1300 or args.obs_horizon != 16 or not args.use_history
@@ -351,7 +355,7 @@ def evaluate(args: Args, *, runner_factory=EnvRunner, client_factory=EvaluationC
                                             difficulty=episode["difficulty"])
                 elif args.profile == "plfull":
                     # 自建 metadata 覆盖官方表；局数不固定，seed／难度仍由下方 resolve_episode 逐局核对。
-                    runner = runner_factory(episode["task_name"], video_dir, max_steps=1300, dataset="test",
+                    runner = runner_factory(episode["task_name"], video_dir, max_steps=args.max_steps, dataset="test",
                                             difficulty=episode["difficulty"], metadata_dir=args.plfull_metadata_dir)
                 else:
                     runner = runner_factory(episode["task_name"], video_dir, max_steps=1300, dataset="test")
