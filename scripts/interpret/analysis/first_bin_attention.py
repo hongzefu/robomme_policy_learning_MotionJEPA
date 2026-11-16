@@ -888,7 +888,7 @@ def accepted_nonces(run_root):
 
 
 def receipt_prompt(run_root, nonce):
-    for path in sorted(Path(run_root).glob(f"attempts/*/client/traces/{nonce}/meta/hold_receipt.json")):
+    for path in sorted({*Path(run_root).glob(f"attempts/*/client/traces/{nonce}/meta/hold_receipt.json"), *Path(run_root).glob(f"attempts/*-service-*/*/client/traces/{nonce}/meta/hold_receipt.json")}):
         prompt = json.loads(path.read_text()).get("prompt")
         if prompt:
             return prompt

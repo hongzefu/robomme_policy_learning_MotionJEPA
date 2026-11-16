@@ -95,7 +95,7 @@ def load_run(row):
         return out
     episode_path = attn_out / nonce / "episode.json"
     out["motion_content"] = read_json(episode_path).get("motion_content") if episode_path.is_file() else None
-    traces = sorted(run_root.glob(f"attempts/*/client/traces/{nonce}/step_trace.jsonl"))
+    traces = sorted({*run_root.glob(f"attempts/*/client/traces/{nonce}/step_trace.jsonl"), *run_root.glob(f"attempts/*-service-*/*/client/traces/{nonce}/step_trace.jsonl")})
     if not traces:
         out["status"], out["reason"] = "invalid", "no_trace"
         return out

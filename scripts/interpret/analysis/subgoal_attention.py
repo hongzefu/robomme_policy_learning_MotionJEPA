@@ -105,9 +105,9 @@ def rollout_counts(run_dirs):
             if key in accepted:
                 raise SystemExit(f"{key} 有多份 accepted 终局，不知该用哪份：{accepted[key][1]}、{path}")
             accepted[key] = (record, path, Path(run))
-        for path in Path(run).glob("attempts/*/commands.json"):
+        for path in sorted({*Path(run).glob("attempts/*/commands.json"), *Path(run).glob("attempts/*-service-*/*/commands.json")}):
             demand.update(_read_json(path).get("episode_keys", []))
-        for path in Path(run).glob("attempts/*/client/*.started.json"):
+        for path in sorted({*Path(run).glob("attempts/*/client/*.started.json"), *Path(run).glob("attempts/*-service-*/*/client/*.started.json")}):
             key = _read_json(path)["episode_key"]
             demand.add(key)
             starts[key] += 1
@@ -129,7 +129,7 @@ def load_inference(path):
 def load_episode(run_dir, offline_root, record):
     """读一局的回执、轨迹和全部离线记录。缺失或互相对不上一律报错，不跳过。"""
     run_dir, nonce, key = Path(run_dir), record["episode_nonce"], record["episode_key"]
-    trace = _one(run_dir.glob(f"attempts/*/client/traces/{nonce}/step_trace.jsonl"), f"{key} 的 step_trace.jsonl")
+    trace = _one(sorted({*run_dir.glob(f"attempts/*/client/traces/{nonce}/step_trace.jsonl"), *run_dir.glob(f"attempts/*-service-*/*/client/traces/{nonce}/step_trace.jsonl")}), f"{key} 的 step_trace.jsonl")
     receipt = _read_json(trace.parent / "meta" / "hold_receipt.json")
     with trace.open(encoding="utf-8") as stream:
         rows = [row for row in map(json.loads, stream) if row.get("event") == "step"]

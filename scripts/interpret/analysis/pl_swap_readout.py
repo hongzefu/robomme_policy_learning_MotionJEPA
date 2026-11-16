@@ -91,7 +91,7 @@ def read_trace(path):
 def attempts_for(run_root, key):
     """该局在 run_root 下的尝试目录数（按 commands.json 的 episode_keys）。"""
     n = 0
-    for path in sorted(Path(run_root).glob("attempts/*/commands.json")):
+    for path in sorted({*Path(run_root).glob("attempts/*/commands.json"), *Path(run_root).glob("attempts/*-service-*/*/commands.json")}):
         try:
             if key in read_json(path).get("episode_keys", []):
                 n += 1
@@ -117,7 +117,7 @@ def load_run(row):
                terminals=len(terminals))
     episode_path = attn_out / nonce / "episode.json"
     out["motion_content"] = read_json(episode_path).get("motion_content") if episode_path.is_file() else None
-    traces = sorted(run_root.glob(f"attempts/*/client/traces/{nonce}/step_trace.jsonl"))
+    traces = sorted({*run_root.glob(f"attempts/*/client/traces/{nonce}/step_trace.jsonl"), *run_root.glob(f"attempts/*-service-*/*/client/traces/{nonce}/step_trace.jsonl")})
     if not traces:
         out["status"], out["reason"] = "invalid", "no_trace"
         return out

@@ -54,7 +54,7 @@ def load_terminals(run_roots, expect_episodes):
 
 
 def trace_path(run_root, nonce):
-    paths = sorted(Path(run_root).glob(f"attempts/*/client/traces/{nonce}/step_trace.jsonl"))
+    paths = sorted({*Path(run_root).glob(f"attempts/*/client/traces/{nonce}/step_trace.jsonl"), *Path(run_root).glob(f"attempts/*-service-*/*/client/traces/{nonce}/step_trace.jsonl")})
     if len(paths) != 1:
         raise SystemExit(f"nonce={nonce} 的 step_trace.jsonl 应恰有 1 份，实际 {len(paths)} 份：{paths}")
     return paths[0]
