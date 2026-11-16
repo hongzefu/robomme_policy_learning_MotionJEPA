@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>steering 提速修复计划</title>
+<style>
+:root{--fg:#1d1d1f;--bg:#fff;--mut:#666;--line:#ddd;--acc:#0b5cad;--warn:#a33;--code:#f4f4f6}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--fg:#e6e6e6;--bg:#18181a;--mut:#999;--line:#333;--acc:#6aa9ff;--warn:#ff8080;--code:#26262a}}
+:root[data-theme="dark"]{--fg:#e6e6e6;--bg:#18181a;--mut:#999;--line:#333;--acc:#6aa9ff;--warn:#ff8080;--code:#26262a}
+body{font:15px/1.65 -apple-system,"PingFang SC","Noto Sans CJK SC",sans-serif;color:var(--fg);background:var(--bg);max-width:1080px;margin:0 auto;padding:16px}
+h1{font-size:24px;border-bottom:2px solid var(--acc);padding-bottom:4px;margin-top:40px}
+h2{font-size:19px;margin-top:28px;color:var(--acc)} h3{font-size:16px;margin-top:20px}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:13.5px;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:5px 8px;vertical-align:top;text-align:left} th{background:var(--code)}
+code,pre{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.8px;background:var(--code)} code{padding:0 3px;border-radius:3px}
+pre{padding:10px;overflow-x:auto;border-radius:4px;white-space:pre}
+blockquote{border-left:4px solid var(--acc);margin:10px 0;padding:6px 12px;background:var(--code)}
+.warn{color:var(--warn);font-weight:600} .mut{color:var(--mut)}
+</style></head><body>
+<p><b>steer-4task 同一局 steering 提速修复计划</b>　初版（美东 2026-11-16）</p>
+<blockquote>
+<p>权威性：任务 <code>steer-speedup-1116</code> 的唯一计划；只规划不实施，开工令按 AGENTS.md 第 2 条。前序任务 <code>steer-4task-1115</code>（done，<code>c7c28d2</code>），提速审查 <code>docs/evaluation-doc/steer-4task-1115/records/speedup-review.md</code>（13 代理，保留 34 条）。</p>
+<p>代码锚点：主检出 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code> 分支 <code>v4.2-plswap-full</code>，运行代码基线 <code>6d8edc8</code>；benchmark <code>b4e97f2</code>。commit 体例 <code>commitV4.8.x</code>；子代理 <code>sub/&lt;编号&gt;: </code>。</p>
+<p>口径放宽（用户 11-16）：「同意改变为 BF 十六精度」「就这次的实验不需要特别严谨，跨卡以及精度问题我们都可以暂时不考虑，只要它的范围误差范围在一定范围内就可以」「我还可以让你 query 四十张卡」；随后更正：「就你只能起四张卡不能超过」。</p>
+</blockquote>
+
+<h1>第一部分（给人看）</h1>
+
+<h2>1 要做什么</h2>
+<p>把上一轮跑了约 8.7 小时的同一局 steering 流水线提速到每个模型约 2 小时以内，然后用它跑完上一轮没跑的部分：<b>Frozen Wan pooling 的 RouteStick 与 VideoRepick、MotionMem 的 VideoRepick、MotionMem 的 core 窗口组</b>。测的内容与上一轮完全相同（同一局、四种走法、置零、换 seed 噪声）。</p>
+<p>上一轮 8.7 小时的去向（审查实测）：变体录制 2.5 h、干预 4.1 h、变体示范生成 1.2 h、不干预 0.5 h、噪声 0.5 h。<b>根因只有一个：motion 窗口被反复在线编码</b>——每段录制、每次干预都把整段示范的全部窗口（xhard 约 30 窗，每窗约 1.7 s，fp32、关 TF32、一次一窗）重编一遍，而真正需要换的只有第 j 段那约 5 个窗。</p>
+
+<h2>2 修复项（按收益排序）</h2>
+<table>
+<tr><th>#</th><th>改什么</th><th>效果</th><th>口径变化（已获放宽）</th></tr>
+<tr><td>F1</td><td><b>离线批量编码供体</b>：生成变体示范时只把第 j 段相关窗口的帧存下来，单个 GPU 进程用 bf16、批量把它们一次编完；<b>整个「变体录制」阶段取消</b></td><td>变体录制 2.5 h → 约 0.1–0.2 h</td><td>供体 token 由离线 bf16 批量编码，不再由服务端在线 fp32 编码</td></tr>
+<tr><td>F2</td><td><b>干预时复用不干预运行录下的示范窗口</b>：非供体的示范窗直接读 N 的录制，只有执行阶段新出现的窗口在线编码</td><td>干预 4.1 h → 约 1.5–2 h</td><td>示范窗与 N 同值（跨卡差异不再管）</td></tr>
+<tr><td>F3</td><td><b>在线编码改 bf16 + TF32</b>（sidecar 的数值钉放开），执行窗口编码随之变快</td><td>每窗约 1.7 s → 估计 0.3–0.6 s，干预与 N 再快约 1.5–2 倍</td><td>训练建库口径（policy 仓 <code>docs/dataset-build-doc/4task-v2-1600ep-motion-demopad17/result.md</code>、<code>motion_provenance.json</code>）：Wan VAE fp32、TF32 关、B=1；encoder bf16 autocast；token 存 fp32。所以 encoder bf16 与训练一致，<b>VAE 改 bf16/TF32 是偏离训练的部分</b>（存档实测 BF16 VAE latent RMSE 3.1e-3、最大差 0.029），由 <code>ENC_TOL</code> 把关；Frozen Wan 的池化表全程 fp32</td></tr>
+<tr><td>F4</td><td><b>共享拉取队列 + 长任务先领</b>：所有通道（GL 与 aspen）从同一个任务池领 spec，按预计耗时从长到短</td><td>消掉上一轮最多 77 分钟的收工时差</td><td>无</td></tr>
+<tr><td>F5</td><td><b>一个 spec 只起一次策略服务</b></td><td>约 −5%</td><td>无</td></tr>
+</table>
+<p>不做：VAE 重叠帧 latent 拼接（因果分组，latent 不等，收益不可靠）；回放示范帧替代仿真（F1 已覆盖其收益）。</p>
+
+<h2>3 怎么保证「误差在一定范围内」</h2>
+<table>
+<tr><th>闸门</th><th>查什么</th><th>判据</th></tr>
+<tr><td><code>ENC_TOL</code></td><td>抽 300 个窗口，新编码（bf16、批量、离线）对旧编码（上一轮在线 fp32 录制）</td><td>每窗余弦 ≥ 0.999，最大绝对差 ≤ 0.1（MotionJEPA 文档实测 bf16 对 fp32：min cos 0.99997、max 0.034）</td></tr>
+<tr><td><code>BEHAVIOR_TOL</code></td><td>用新流水线把上一轮 MotionMem「只翻绕向」的 60 个位置重跑一遍</td><td>跟随率与上一轮差 ≤ 0.05（上一轮 0.89）；不干预成功率同局对比差 ≤ 0.1</td></tr>
+<tr><td><code>NOOP_EQ2</code></td><td>用 N 自身录制作供体替换（含 F2 复用），动作与不干预比</td><td>第 1–3 步判定（按钮、绕向）一致 ≥ 95%（不再要求逐位）</td></tr>
+</table>
+<p>任一闸门不过：只记录，回退对应修复项的精度改动（F3）重测，不停整条线。</p>
+
+<h2>4 资源</h2>
+<p><b>GL 最多 4 个单卡 A40 占位</b>（用户 11-16：「就你只能起四张卡不能超过」），每个 6 CPU、80G、48 h（chaijy2 剩 28 核，4×6=24 核）；另加 aspen 2×A6000（与他人共用，每卡 1–2 通道按实测显存）。每占位一个长 srun 作业步，作业步内 3 通道（fast 模式显存若更省则按 <code>WORKER_FIT</code> 加到 4）。</p>
+<p>修复后单模型约需 40–60 通道·小时：4 卡 × 3 通道 + aspen 2 通道 ≈ 14 通道，约 3–4 h；若 fast 模式下每卡能放 4 通道，约 2.5–3 h。</p>
+
+<h2>5 跑什么、预计多久（GL 4 卡 A40 + aspen 2 卡）</h2>
+<table>
+<tr><th>顺序</th><th>内容</th><th>预计</th></tr>
+<tr><td>0</td><td>代码改动 + 审查合并 + 冒烟闸门</td><td>约 3 h</td></tr>
+<tr><td>1</td><td>闸门 <code>BEHAVIOR_TOL</code>（MotionMem 只翻绕向 60 位置重跑）</td><td>约 0.3 h</td></tr>
+<tr><td>2</td><td>Frozen Wan pooling · RouteStick：N → 离线编码 → 干预（四组 + core）→ 噪声</td><td>约 3 h</td></tr>
+<tr><td>3</td><td>MotionMem · VideoRepick（同局第 k′ 次交换替换 + 置零 + 噪声）</td><td>约 1.2 h</td></tr>
+<tr><td>4</td><td>Frozen Wan pooling · VideoRepick</td><td>约 1.2 h</td></tr>
+<tr><td>5</td><td>MotionMem · RouteStick core 窗口组（三组 core）</td><td>约 1 h</td></tr>
+</table>
+<p>局池与变体示范直接复用上一轮（与模型无关）；F1 需要把变体的第 j 段帧补存下来，在 aspen CPU 上重生成一次约 70 分钟，与步骤 0 并行。</p>
+
+<h2>6 子代理分工与合并（简述）</h2>
+<p>四块并行改代码（各自 worktree、opus），一块一审（sonnet），按 S-A → S-B → S-C → S-D 合并；每次合并前审 diff 与验收，合并后跑短测并推送。</p>
+<table>
+<tr><th>块</th><th>内容</th></tr>
+<tr><td>S-A</td><td>sidecar 精度放开（F3）+ 离线批量编码脚本（F1 后半）</td></tr>
+<tr><td>S-B</td><td>变体示范存第 j 段帧（F1 前半）+ donors 读离线编码</td></tr>
+<tr><td>S-C</td><td>干预复用 N 录制（F2）+ 每 spec 常驻服务（F5）</td></tr>
+<tr><td>S-D</td><td>共享拉取队列与 GL 单作业步启动器（F4）</td></tr>
+</table>
+
+<h2>7 一路跑到底</h2>
+<p>开工后不再问你：闸门不过只记录并按第 3 节回退；时间或资源不够按第 5 节倒序砍。</p>
+<p>规模、逐文件改动、闸门命令、runbook 与风险见第二部分。</p>
+
+<h1>第二部分（技术细节，供 agent 追踪）</h1>
+
+<h2>〇 红线</h2>
+<table>
+<tr><th>编号</th><th>内容</th></tr>
+<tr><td>R1</td><td>环境 A：aspen + GreatLakes。GL 一律「每占位一个长 srun 作业步，作业步内多通道」，作业步内不得再起额外 srun（作业步结束会把 GPU 重置为独占模式，见 steer-4task-1115 launch.md 第 9 条）。</td></tr>
+<tr><td>R2</td><td>只评估，不训练；模型代码 <code>models/integration/*</code> 不改。</td></tr>
+<tr><td>R3</td><td>benchmark <code>b4e97f2</code> 不改；episode_spec / sampling_config 只作 gym.make 参数。</td></tr>
+<tr><td>R4</td><td>只用同一局供体，口径与 steer-4task-1115 相同（四种走法、置零、换 seed 噪声）。</td></tr>
+<tr><td>R5</td><td>精度与跨卡：按用户放宽口径，只以第一部分第 3 节闸门约束误差，不再要求逐位。</td></tr>
+<tr><td>R6</td><td>占位只用 chaijy2/spgpu，<b>同时最多 4 个</b>（用户硬限）；不换账户/分区。tmux 前缀 <code>s5t-</code>。</td></tr>
+<tr><td>R7</td><td>开工后一路跑到底，闸门 FAIL 只记录；硬停只按 AGENTS.md 第 2 条清单。</td></tr>
+</table>
+
+<h2>1 逐文件改动</h2>
+<h3>S-A：在线编码精度与离线批量编码</h3>
+<table>
+<tr><th>文件</th><th>改什么</th></tr>
+<tr><td><code>scripts/dataset/wan/wan_motion_infer.py</code>（<code>pin_numerics</code>、<code>encode_chunk</code>、<code>load_vae</code>、<code>load_encoder</code>）</td><td>新增环境变量 <code>MMEVLA_MOTION_FAST=1</code>：VAE 前向 bf16 autocast、matmul/cuDNN TF32 开、<code>cudnn.benchmark=True</code>；encoder 保持 bf16 autocast（与训练同）。缺省保持现状。</td></tr>
+<tr><td><code>scripts/dataset/wan/motion_sidecar.py</code></td><td>握手 provenance 增加 <code>fast</code> 标记；对应放宽 <code>check_env</code>/<code>check_versions</code> 中 TF32 与 benchmark 的断言（仅 fast 模式）。</td></tr>
+<tr><td><code>src/mme_vla_suite/policies/motion_client.py</code>（<code>check_provenance</code>）</td><td>fast 模式下 provenance 只比模型身份（encoder sha、VAE sha、readout），不比 numerics 字段。</td></tr>
+<tr><td>新增 <code>scripts/interpret/samep_offline_encode.py</code></td><td>读取 S-B 存下的变体窗帧（<code>vframes/&lt;key&gt;_j&lt;j&gt;_&lt;group&gt;.npz</code>：起点 → 33×256×256×3 uint8，含与在线相同的 demo_min_real/尾部补帧规则），按批（默认 16）过同一 VAE + encoder（MotionMem）或 VAE + 池化（Frozen Wan，<code>shared/wan_pool768.py</code>），写成 <code>motion_swap_exact</code> 供体 npz（start_frames → embs）；多 GPU 按文件分片。判定行 <code>OFFLINE_ENC=PASS model=… windows=… files=…</code>。</td></tr>
+<tr><td>新增 <code>scripts/interpret/samep_enc_tol.py</code></td><td>闸门 <code>ENC_TOL</code>：同一批窗口新旧编码比较，输出 <code>ENC_TOL=PASS|FAIL windows=… min_cos=… maxabs=…</code>。</td></tr>
+</table>
+<h3>S-B：变体存帧与 donors 读离线编码</h3>
+<table>
+<tr><th>文件</th><th>改什么</th></tr>
+<tr><td><code>scripts/interpret/samep_rs_variants.py</code>（<code>reset_demo</code>、<code>cmd_build</code>）</td><td>新增 <code>--save-window-frames</code>：每个变体按与 <code>framesamp_memory._encode_window</code> 相同的窗口切片规则（stride、window、demo_min_real、demo_tail_pad，从模型 yaml 读）只存与第 j 段相交（all）与完全落在段内（core）的窗口帧；原样重建局存全部示范窗（供 <code>ENC_TOL</code>）。</td></tr>
+<tr><td><code>scripts/interpret/sp_swap_prep.py</code>（<code>cmd_specs</code>、<code>cmd_donors_samep</code>、<code>assign_samep</code>）</td><td>新增 <code>--offline-donors &lt;dir&gt;</code>：donors 直接读离线编码目录，不再需要 vrec 阶段；<code>specs --same-episode --no-vrec</code> 不生成 vrec 阶段。VideoRepick 侧 <code>fp_swap_prep.py</code> 不变（供体来自同局 N 录制，本就无 vrec）。</td></tr>
+</table>
+<h3>S-C：干预复用 N 录制 + 每 spec 常驻服务</h3>
+<table>
+<tr><th>文件</th><th>改什么</th></tr>
+<tr><td><code>scripts/interpret/serve_policy_attn.py</code>（<code>MotionContentClient.__call__</code>、<code>begin_episode</code>）</td><td>新增 <code>--demo-cache-map</code>：按局读该接收局 N 的录制 npz；示范窗起点（f &lt; exec_start）命中缓存时直接返回缓存 emb、不调 inner 编码；供体替换优先于缓存；执行窗照常在线编码。缺起点直接报错。</td></tr>
+<tr><td><code>scripts/interpret/run_local.py</code>（<code>main</code>、<code>build_server_command</code>、<code>load_spec</code>）</td><td>spec 键 <code>demo_cache_map</code> 透传；新增 spec 键 <code>resident_server: true</code>：一个 spec 只起一次服务（走 <code>run_oracle_chunks</code> 同款路径），服务端 swap_map 传全 spec 局并集。</td></tr>
+<tr><td><code>scripts/interpret/sp_swap_prep.py</code>、<code>fp_swap_prep.py</code>（specs/donors 生成 samep/noise/T_k/Z_k spec 处）</td><td>写入 <code>demo_cache_map</code>（接收局 → N 录制路径）与 <code>resident_server: true</code>。</td></tr>
+</table>
+<h3>S-D：共享拉取队列与启动器</h3>
+<table>
+<tr><th>文件</th><th>改什么</th></tr>
+<tr><td>新增 <code>scripts/interpret/pool_runner.sh</code></td><td>通道循环：从 <code>&lt;O&gt;/pool/&lt;stage&gt;/todo/</code> 用 <code>mkdir</code> 原子领取 spec（文件名前缀为成本排序号，长者先领），跑 <code>run_local --spec</code>，完成写 <code>done/</code>、失败写 <code>fail/</code>；无可领时退出。</td></tr>
+<tr><td>新增 <code>scripts/interpret/pool_make.py</code></td><td>把一个或多个阶段的 spec 按预计成本（按 j、难度、阶段的上一轮实测每局耗时）降序写入任务池；支持 GL 与 aspen 两套 spec（同名 <code>.gl.json</code>/<code>.aspen.json</code>，领取方按站点选）。</td></tr>
+<tr><td>新增 <code>scripts/interpret/gl_hold_pool.sh</code></td><td>每占位一个长 srun 作业步，作业步内起 N 条 <code>pool_runner.sh</code> 通道（错开 45 s，显存比例按 <code>WORKER_FIT</code>），全部退出后作业步结束。</td></tr>
+</table>
+
+<h2>2 子代理分配表</h2>
+<table>
+<tr><th>编号</th><th>可写</th><th>禁触</th><th>依赖</th><th>合并顺序</th><th>验收</th><th>模型</th></tr>
+<tr><td>S-A</td><td>1 节 S-A 所列 + tests</td><td>models/integration/*、第三方</td><td>—</td><td>1</td><td>单测；合并后在 GL 1 卡跑 <code>ENC_TOL</code>（上一轮 vrec_record 的 same 组 300 窗）与 fast 模式 1 局冒烟</td><td>opus，worktree</td></tr>
+<tr><td>S-B</td><td>1 节 S-B 所列 + tests</td><td>serve、run_local</td><td>—</td><td>2</td><td>单测（窗口切片与在线规则一致：对 3 个已实测 seed 比较起点与帧号）</td><td>opus，worktree</td></tr>
+<tr><td>S-C</td><td>1 节 S-C 所列 + tests</td><td>wan/*、prep 的 donors 主体</td><td>—</td><td>3</td><td>单测；合并后 <code>NOOP_EQ2</code></td><td>opus，worktree</td></tr>
+<tr><td>S-D</td><td>1 节 S-D 所列 + tests</td><td>其余全部</td><td>—</td><td>4</td><td>单测（并发领取不重复、失败不丢）</td><td>opus，worktree</td></tr>
+<tr><td>审查</td><td>—</td><td>—</td><td>—</td><td>每块前</td><td><code>PRE_MERGE_REVIEW</code></td><td>sonnet</td></tr>
+</table>
+
+<h2>3 闸门与判定行</h2>
+<table>
+<tr><th>判定行</th><th>时点</th><th>口径</th></tr>
+<tr><td><code>ENC_TOL</code></td><td>S-A 合并后</td><td>min_cos ≥ 0.999、maxabs ≤ 0.1</td></tr>
+<tr><td><code>NOOP_EQ2</code></td><td>S-C 合并后</td><td>第 1–3 步按钮与绕向判定一致 ≥ 95%（20 局）</td></tr>
+<tr><td><code>BEHAVIOR_TOL</code></td><td>正式前</td><td>MotionMem S_swing 60 位置跟随率与 steer-4task-1115 差 ≤ 0.05</td></tr>
+<tr><td><code>OFFLINE_ENC</code>、<code>SWAP_SCOPE</code>、<code>RS_SAMEP</code>、<code>VR_SAMEP</code>、<code>NOISE_BASE</code></td><td>各阶段</td><td>同 steer-4task-1115</td></tr>
+<tr><td><code>WORKER_FIT</code></td><td>冒烟</td><td>fast 模式下实测每通道显存，确定每卡通道数（上限 4）</td></tr>
+</table>
+
+<h2>4 规模与 runbook</h2>
+<ul>
+<li>局池：RouteStick 60 局（复用 <code>…/steer-4task-1115/rs/pool.json</code>，seed 3104700 仍剔除）；VideoRepick 50 局（复用 <code>vr/pool.json</code>）。</li>
+<li>每模型运行数：RouteStick N 60 + 干预约 950（四组）+ core 约 650（仅 MotionMem 补跑）+ 噪声 118；VideoRepick N 50 + T/Z 约 250 + 噪声 100。</li>
+<li>占位：chaijy2/spgpu 4 个单卡 A40，<code>--cpus-per-task=6 --mem=80G --time=48:00:00 --gpu_cmode=shared</code>，作业名 <code>s5t-hold-1..4</code>；同时最多 4 个。</li>
+</ul>
+<pre>
+# 0 aspen CPU：重生成变体并存窗帧（与代码改动并行，约 70 min）
+samep_rs_variants build --pool rs/pool.json --save-window-frames --history-yaml &lt;A yaml&gt; --out rs/variants2
+# 1 冒烟与闸门：ENC_TOL、WORKER_FIT、NOOP_EQ2、BEHAVIOR_TOL
+# 2 每模型：N（record）→ samep_offline_encode → donors --offline-donors → pool_make → gl_hold_pool.sh（4 占位）
+# 3 读数：sp_swap_readout --same-episode / fp_swap_readout --same-episode
+</pre>
+
+<h2>5 风险与盲区</h2>
+<table>
+<tr><th>项</th><th>处置</th></tr>
+<tr><td>离线窗帧切片与在线规则不一致（demo_min_real、尾部补帧、帧号偏 1）</td><td>S-B 单测对拍起点与帧号；<code>ENC_TOL</code> 用原样重建局全窗比对兜住</td></tr>
+<tr><td>bf16 VAE 误差大于预期（存档实测 BF16 RMSE 3.1e-3、最大 0.029）</td><td><code>ENC_TOL</code> 不过则 VAE 回 fp32+TF32、只保留批量化</td></tr>
+<tr><td>F2 让对照与干预共享 N 的示范窗，与上一轮结果不逐位同源</td><td>用户已放宽；<code>BEHAVIOR_TOL</code> 量化差异</td></tr>
+<tr><td>GL 最多 4 卡，总时长约 8–10 h</td><td>按第 5 节倒序砍；aspen 两卡并入共享队列</td></tr>
+<tr><td>fast 模式单窗耗时未实测</td><td>冒烟实测后重估时间线</td></tr>
+</table>
+
+<h2>6 留档</h2>
+<ul>
+<li>代码：<code>sub/S-A|S-B|S-C|S-D: …</code>，合并 <code>commitV4.8.x</code>；起跑前 <code>commitV4.8.nBeta</code>。</li>
+<li>留档 <code>docs/evaluation-doc/steer-speedup-1116/</code>（launch.md、result.md、records/）。</li>
+<li>状态机：用户同意后登记 <code>steer-speedup-1116</code>。</li>
+</ul>
+</body></html>
