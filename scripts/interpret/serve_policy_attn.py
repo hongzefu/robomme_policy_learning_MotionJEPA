@@ -65,6 +65,14 @@ motion 内容替换（S8；只换 motion 编码内容，motion token 个数、�
   python -m scripts.interpret.serve_policy_attn --port 8011 --seed 42 --attn-out <dir> \
       policy:checkpoint --policy.config <cfg> --policy.dir <ckpt>
 
+只换 motion 模式（计划 1115 第二部分 §4.1，modulation 模型）：AttnAdapter 只支持 HistoryPi0 context 分支，
+modulation 模型（metadata.model_kind ∈ MOTION_ONLY_KINDS，即 modul_v10_768 / wan_fixedpool768，或 history_config.integration_type
+== "modulation"）构造服务时自动改走 MotionOnlyRecorder：不装 AttnAdapter、不换 _sample_actions，采样走生产 policy.infer；
+保留 MotionContentClient（none / zero / swap / swap_exact / shift，--swap-donor / --swap-map 逐局供体）、--record-motion、
+reset / add_buffer 钩子与 episode.json 回执（多一键 serve_mode="motion_only"、attn_saved=false），一律不写 infer_<seq>.npz。
+该模式不支持的参数明确报错：key 遮挡（mask_motion / mask_vis）、heads 消融、frame_swap_exact、--save-prefix。
+供体与录制的编码维数（A/B 均为 768）逐次与原 client 输出核对，不符即报错。
+
 Oracle 询问：加 --query-record 10 --oracle-mode oracle_query；不构造注意力适配器。
 校准交还：--oracle-mode oracle_calibrate，恢复原 infer，不写询问或注意力数组。
 真实 rollout 输入记录：加 --rollout-record；不构造注意力适配器，仍走原采样路径，每次 infer 返回后写
@@ -96,6 +104,8 @@ MOTION_REPLACE_NPZ_KEYS = ("n_motion_replaced",)
 MOTION_INPUT_NPZ_KEYS = ("motion_emb", "motion_pos")
 MASK_KINDS = ("mask_motion", "mask_vis")
 VIS_WINDOW = (0, 32)          # mask_vis 遮的全域帧号区间 [lo, hi)
+# 只换 motion、不装 AttnAdapter 的模型（metadata.model_kind；与 policy_config._motion_model_kind 同值，测试盯住）
+MOTION_ONLY_KINDS = ("modul_v10_768", "wan_fixedpool768")
 NUM_STEPS, NUM_LAYERS, NUM_HEADS, ACTION_HORIZON, TEXT_LEN = 10, 18, 8, 20, 64
 ACTION_DIM, STATE_DIM = 8, 8
 
@@ -311,6 +321,11 @@ class MotionContentClient:
         donor_start = -1
         if self.mode in ("swap", "swap_exact") and self.donor is None:
             raise RuntimeError("本局尚未确定供体（逐局供体须在 begin_episode 给出）")
+        if self.mode in ("swap", "swap_exact"):
+            donor_shape = tuple(np.shape(self.donor["embs"])[1:])
+            if donor_shape != emb.shape:
+                # 不论本窗口是否命中都核：swap_exact 全部未命中时也不让维数不符的供体静默放过
+                raise RuntimeError(f"供体 {self.donor.get('name')} 的编码形状 {donor_shape} 与原编码 {emb.shape} 不符")
         replaced_now = self.mode in ("zero", "swap")
         if self.mode == "none":
             out = emb
@@ -719,6 +734,9 @@ class RolloutRecorder:
 class AttnRecorder:
     """在 policy 实例属性上遮蔽 reset / add_buffer / infer / _sample_actions，每次推理落一份 npz。"""
 
+    # episode.json 的 serve_mode：attn（缺省，不写入 episode.json，与改动前逐字节一致）或 motion_only（子类）
+    serve_mode = "attn"
+
     def __init__(self, policy, adapter, attn_out, *, save_top_frames: int = 3, save_prefix: bool = False,
                  ablate: str = "none", record_motion=None, swap_donor: str | None = None,
                  save_attn: bool | None = None, swap_map: dict | None = None):
@@ -968,6 +986,8 @@ class AttnRecorder:
                         "ablate": self.ablate["name"], "n_masked_keys": []}
         if not self.save_attn:
             self.episode["attn_saved"] = False
+        if self.serve_mode != "attn":
+            self.episode["serve_mode"] = self.serve_mode
         if self.swap_map is not None:
             self.episode.update(episode_key=episode_key, swap_donor=episode_donor["name"])
         if self.motion_client is not None:
@@ -1149,6 +1169,68 @@ class AttnRecorder:
             self.saved_frames.add(frame)
 
 
+def motion_only_mode(policy) -> bool:
+    """modulation 模型走「只换 motion、不装 AttnAdapter」模式：metadata.model_kind ∈ MOTION_ONLY_KINDS，
+    或 history_config.integration_type == "modulation"（AttnAdapter 只支持 context 分支）。"""
+    kind = (getattr(policy, "metadata", None) or {}).get("model_kind")
+    if kind in MOTION_ONLY_KINDS:
+        return True
+    config = getattr(policy, "config", None)
+    integration = config.get("integration_type", None) if hasattr(config, "get") else getattr(config, "integration_type", None)
+    return integration == "modulation"
+
+
+def check_motion_only_args(ablate: dict, *, save_prefix: bool = False) -> None:
+    """只换 motion 模式不支持的参数组合一律 SystemExit（没有注意力适配器，无法遮 key、消融头或存注意力）。"""
+    if ablate["masks"]:
+        raise SystemExit(f"错误: 只换 motion 模式（modulation 模型）不支持 key 遮挡 {sorted(ablate['masks'])}：没有 AttnAdapter")
+    if ablate["heads"]:
+        raise SystemExit("错误: 只换 motion 模式（modulation 模型）不支持 heads 消融：没有 AttnAdapter")
+    if ablate.get("frame") is not None:
+        raise SystemExit("错误: 只换 motion 模式（modulation 模型）不支持 frame_swap_exact")
+    if save_prefix:
+        raise SystemExit("错误: 只换 motion 模式（modulation 模型）不存注意力，不支持 --save-prefix")
+
+
+class MotionOnlyRecorder(AttnRecorder):
+    """modulation 模型的只换 motion 记录器：不装 AttnAdapter、不换 _sample_actions，采样走生产 policy.infer；
+    motion 内容替换 / 录制、逐局供体、reset / add_buffer 钩子与 episode.json 回执与 AttnRecorder 相同，从不写注意力。"""
+
+    serve_mode = "motion_only"
+
+    def __init__(self, policy, attn_out, *, ablate: str = "none", record_motion=None, swap_donor: str | None = None,
+                 swap_map: dict | None = None, save_prefix: bool = False, save_attn: bool | None = None):
+        try:
+            parsed = parse_ablate(ablate)
+        except ValueError as exc:
+            raise SystemExit(f"错误: {exc}") from exc
+        check_motion_only_args(parsed, save_prefix=save_prefix)
+        if save_attn is True:
+            raise SystemExit("错误: 只换 motion 模式（modulation 模型）不存注意力，不能显式要求 save_attn")
+        super().__init__(policy, None, attn_out, save_top_frames=0, save_prefix=False, ablate=ablate,
+                         record_motion=record_motion, swap_donor=swap_donor, save_attn=False, swap_map=swap_map)
+
+    def install(self) -> None:
+        # 不碰 policy._sample_actions：生产采样路径原样
+        self.policy.reset = self.reset
+        self.policy.add_buffer = self.add_buffer
+        self.policy.infer = self.infer
+        self._install_motion_client()
+        self._hook_mem_buffer()
+
+    def _log_unsaved_infer(self) -> int:
+        if not self.printed_env:
+            print(f"MOTION_ONLY_SERVE_ENV motion={int(self.motion_enabled)} attn_out={self.attn_out} "
+                  f"ablate={self.ablate['name']} save_attn=0", flush=True)
+            self.printed_env = True
+        print(f"MOTION_ONLY_INFER nonce={self.episode['episode_nonce']} infer_seq={self.infer_seq} "
+              f"step_idx={int(self.policy.step_idx)} ablate={self.ablate['name']}"
+              + (f" n_motion_replaced={int(self.motion_client.replaced)}"
+                 if self.ablate["motion"] is not None and self.motion_client is not None else ""),
+              flush=True)
+        return 0
+
+
 def _as_str(value):
     if value is None:
         return None
@@ -1251,7 +1333,6 @@ def _make_args_class():
 
 
 def main(args) -> None:
-    from scripts.interpret.attn_adapter import AttnAdapter
     from scripts.training import serve_policy
 
     if args.save_top_frames < 0:
@@ -1304,11 +1385,22 @@ def main(args) -> None:
             print(f"ROLLOUT_SERVE out={attn_out}", flush=True)
             return policy
         save_prefix = bool(getattr(args, "save_prefix", False))
+        record_motion = getattr(args, "record_motion", None)
+        if motion_only_mode(policy):
+            # modulation 模型：AttnAdapter 只支持 context 分支，改走只换 motion 模式（不装适配器）
+            recorder = MotionOnlyRecorder(policy, attn_out, ablate=ablate_name,
+                                          record_motion=Path(record_motion).resolve() if record_motion else None,
+                                          swap_donor=getattr(args, "swap_donor", None), swap_map=swap_map,
+                                          save_prefix=save_prefix)
+            recorder.install()
+            print(f"MOTION_ONLY_SERVE model_kind={policy.metadata.get('model_kind')} ablate={ablate['name']} "
+                  f"record_motion={recorder.record_motion} attn_out={attn_out}", flush=True)
+            return policy
+        from scripts.interpret.attn_adapter import AttnAdapter
         kw ={"save_prefix": True} if save_prefix else {}
         if ablate["heads"]:
             kw["ablate_heads"] = ablate["heads"]
         adapter = AttnAdapter(policy, **kw)
-        record_motion = getattr(args, "record_motion", None)
         recorder = AttnRecorder(policy, adapter, attn_out, save_top_frames=args.save_top_frames,
                                 save_prefix=save_prefix, ablate=ablate_name,
                                 record_motion=Path(record_motion).resolve() if record_motion else None,
