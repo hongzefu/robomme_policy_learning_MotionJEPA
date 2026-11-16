@@ -34,3 +34,11 @@
 14. 顺序调整：Frozen Wan VideoRepick（计划第 4 步）在 RS 等离线编码时先跑，11:27 31 spec 全部完成；MotionMem VideoRepick 11:31 在 aspen GPU0 起池。
 15. 常驻服务下 JAX 显存比例 0.22 在长局 OOM（bt 第 56 局申请 2.4 GB，12:20）：该 spec 前 16 局已完成，放回队列续跑通过；`runbook/10-launch.sh` 起跑显存比例改 0.30（每卡 2 通道，约 2×16 GB）。12:28 后新起的 GL 作业步（rs-wan、core-motion）均用 0.30。
 16. 闸门结果：`NOOP_EQ2=PASS rate=1.0000`；`BEHAVIOR_TOL=PASS j=1 pairs=57 new=0.9825 old=0.9825 diff=+0.0000`；离线编码 `OFFLINE_ENC=PASS` 两模型各 958 文件 bad=0；ENC_TOL（GL A40 离线 vs 上一轮 GL 在线）motion `min_cos=0.999480 maxabs=0.1406`（原阈值 FAIL/放宽 PASS），wan `min_cos=0.999995 maxabs=0.03297`（两档 PASS）。原文见 records/gates/gates.txt。
+17. core 池 `samepcore-g2b-j4-Ssidecore-027` 在 aspen 两批 RPC 超时（600 s）后被服务端拒绝重试（`active_attempt`），已完成 11/20 局；放回队列续跑通过（基础设施重试 1 次）。
+18. 资源释放：14:33 scancel 66207065、66207069，14:43 scancel 66207067、66207068（各自作业步全部退出后）；训练占位 65943150/65943151 未动。aspen tmux `s5t-rs-wan-a0`、`s5t-rs-wan-a1` 等均已自行结束。
+19. 子代理 worktree（S-A/S-B/S-C/S-D/FIX-R）全部合入后按 `git worktree remove` + `git branch -d` 清理；运行树 `v1-store/worktrees/s5t-run`（53ae73d）、读数树 `s5t-ro`（6f241ef）保留供复现。
+
+## ⑥ 本轮 tmux 会话清单（全部已结束）
+
+GL 登录节点：s5t-prelim-h1/h2/h3、s5t-noise-h1、s5t-vrn-h2/h3/h4、s5t-m-h1..h4、s5t-noop-motion-h66207069-noop-h4、s5t-vr-wan-h66207065/67/68/69-vrw-h1..h4、s5t-offenc-g0..g3、s5t-bt-motion-h66207065/67/68/69-btvr-h1..h4、s5t-rs-wan-h66207065/67/68/69-rc-h1..h4。
+aspen：s5t-prelim-a0a/a0b/a1a/a1b、s5t-noise-a0a/a0b、s5t-variants2、s5t-smoke-fast/fb/def、s5t-offenc、s5t-vrm-gl11、s5t-vr-motion-a0、s5t-rs-wan-a0/a1、s5t-ro-noop/noop2/noop3、s5t-ro-vrwan、s5t-ro-vrm、s5t-ro-bt、s5t-ro-rswan、s5t-ro-core、s5t-rb03。

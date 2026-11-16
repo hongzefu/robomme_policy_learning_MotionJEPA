@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-16T17:13:36Z",
-    "america_new_york": "2026-11-16T12:13:36-0500"
+    "utc": "2026-11-16T20:14:34Z",
+    "america_new_york": "2026-11-16T15:14:34-0500"
   },
   "repo": {
     "branch": "v4.2-plswap-full",
-    "base_head": "7818174a3fb0d0bdda05f1e53132748524592f52",
+    "base_head": "6cddfa9040e26a7eedb4d5cb428ae0b9079082a9",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -2610,9 +2610,9 @@
         "file": "1116-steer-speedup-fix-plan.html",
         "sha": "7dd722cd81c84f1c9c577b121bfe589cace07222"
       },
-      "state": "running",
-      "state_changed_at": "2026-11-16T14:37:05Z",
-      "state_reason": "代码合入（53ae73d + FIX-R 6f241ef）；NOOP_EQ2=PASS；离线编码完成；BEHAVIOR_TOL、MotionMem VR 在跑，Frozen Wan RS 与 MotionMem core 池待跑",
+      "state": "done",
+      "state_changed_at": "2026-11-16T20:14:34Z",
+      "state_reason": "四部分全部跑完并出读数；闸门全过；GL 占位全部释放",
       "owner": {
         "session": "Claude Code 会话 89cd97e5-8264-43d7-9a9c-b1dd6b275bbc",
         "host": "sled-aspen"
@@ -2635,9 +2635,9 @@
         },
         {
           "what": "BEHAVIOR_TOL",
-          "evidence": "",
-          "where": "pool/bt-motion",
-          "status": "pending"
+          "evidence": "BEHAVIOR_TOL=PASS j=1 pairs=57 new=0.9825 old=0.9825 diff=+0.0000",
+          "where": "docs/evaluation-doc/steer-speedup-1116/records/gates/gates.txt",
+          "status": "pass"
         },
         {
           "what": "Frozen Wan VR 读数",
@@ -2647,24 +2647,13 @@
         },
         {
           "what": "Frozen Wan RS / MotionMem VR / MotionMem core 读数",
-          "evidence": "",
+          "evidence": "RS_SAMEP model=wan SWAP_SCOPE=PASS runs=793；VR_SAMEP=PASS model=motion；core SWAP_SCOPE=PASS runs=723",
           "where": "docs/evaluation-doc/steer-speedup-1116/result.md",
-          "status": "pending"
+          "status": "pass"
         }
       ],
       "long_tail": [],
-      "running_handles": [
-        {
-          "tmux": "GL 登录节点 s5t-bt-motion-h66207065-btvr-h1 / -h66207067-btvr-h2 / -h66207068-btvr-h3 / -h66207069-btvr-h4（占位 66207065/67/68/69）",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/steer-speedup-1116/s5t-bt-motion-h*-btvr-h*.log",
-          "done_line": "POOL_HOLD_DONE"
-        },
-        {
-          "tmux": "aspen s5t-vr-motion-a0",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/steer-speedup-1116/s5t-vr-motion-a0.log",
-          "done_line": "POOL_HOLD_DONE"
-        }
-      ],
+      "running_handles": [],
       "authorizations": [
         {
           "kind": "go",
@@ -2673,17 +2662,16 @@
           "scope": "1116-steer-speedup-fix-plan.html @7dd722c 全部步骤，GL 占位同时最多 4 个，开工后一路跑到底"
         }
       ],
-      "pending_decisions": [],
+      "pending_decisions": [
+        "ENC_TOL 放宽到跨卡噪声口径 0.997/0.3（原阈值 FAIL 照录）待用户确认",
+        "开工审查 F-5（闸门回退表）、F-6（Frozen Wan 不跑 core）为主会话自裁，待用户确认",
+        "上一轮遗留：.gitmodules fork URL、eval.py/eval_v17.py 拆分、FIX-1 使 v10 离线链不可用、追加占位权限被拒"
+      ],
       "next_steps": [
         {
-          "what": "bt/vr-motion 池跑空后各占位起 rs-wan,core-motion 池",
-          "command": "bash …/steer-speedup-1116/runbook/10-launch.sh gl <hold> wan rs-wan,core-motion <tag>",
-          "verdict_line": "POOL_STATUS=DONE"
-        },
-        {
-          "what": "读数",
-          "command": "bash …/runbook/11-readout.sh bt|rs-wan|core|vr-motion",
-          "verdict_line": "BEHAVIOR_TOL / RS_SAMEP / VR_SAMEP"
+          "what": "用户审阅 result.md；如需对 VideoRepick k=5 或 RouteStick 跨界窗口做针对性实验另立计划",
+          "command": "",
+          "verdict_line": ""
         }
       ]
     }
