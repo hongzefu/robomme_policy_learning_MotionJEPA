@@ -26,6 +26,7 @@ import mem_buffer（建库域留有冻结副本 `dataset_builder/mem_buffer.py`�
 """
 
 import math
+import os
 from typing import Callable
 
 import einops
@@ -113,8 +114,10 @@ class FrameSampMemory:
         self.exec_start_idx: int | None = None
         self.motion_encode_calls = 0
         self.motion_encode_s = 0.0
-        # 本局降级步数：resample 口径下由 policy.infer 回传客户端
+        # 本局降级统计：由 policy.infer 回传客户端，落 motion_stats.json 供 check_shard.py 的 MOTION_WINDOWS 闸验收（v17）
         self.motion_downsample_steps = 0
+        self.motion_downsample_max_k = 0
+        self.motion_last_k = 0
 
     @property
     def n_steps(self) -> int:
@@ -128,6 +131,8 @@ class FrameSampMemory:
         self._next_grid_start_exec = 0
         self.exec_start_idx = None
         self.motion_downsample_steps = 0
+        self.motion_downsample_max_k = 0
+        self.motion_last_k = 0
 
     def add_buffer(
         self,
@@ -186,16 +191,29 @@ class FrameSampMemory:
                 self._raw_frames[step_idx] = np.ascontiguousarray(images[i, 0])
 
         # 与旧实现逐字同式的归一化 / resize / 编码链
-        image_jnp = jnp.array(
-            images.astype(np.float32) / 255.0 * 2.0 - 1.0
-        )
-        image_jnp = einops.rearrange(image_jnp, "t v h w c -> (t v) h w c")
-        image_jnp = image_tools.resize_with_pad(image_jnp, 224, 224)
-        image_jnp = einops.rearrange(image_jnp, "(t v) h w c -> t v h w c", t=t, v=v)
-        output_emb = self.vision_enc(image_jnp)  # 真实 SigLIP 输出 (t,v,256,2048)
+        # MMEVLA_ENC_CHUNK（v17，默认 0 = 关闭）：BinFill 补 demo 前缀后首批最多 1282 帧一次性进 SigLIP，
+        # (t,1,224,224,3) float32 输入与 bf16 输出都随 t 线性涨（1282 帧约 771 MiB / 1.3 GiB），显存风险未测。
+        # 设正整数即按该尺寸切 batch 维分批；切 batch 可能让 XLA 换 kernel、改变 bf16 累加序，
+        # 因此默认关闭（chunk >= t 时走单次循环，与关闭时逐字等价），开启前须先跑 enc_chunk_cmp.py 测出差异量级。
+        chunk = int(os.environ.get("MMEVLA_ENC_CHUNK", "0") or 0)
+        if chunk < 0:
+            raise ValueError(f"MMEVLA_ENC_CHUNK 必须为非负整数，得到 {chunk}")
+        if chunk == 0 or chunk >= t:
+            chunk = t
+        pooled_parts = []
+        for b0 in range(0, t, chunk):
+            b1 = min(b0 + chunk, t)
+            image_jnp = jnp.array(
+                images[b0:b1].astype(np.float32) / 255.0 * 2.0 - 1.0
+            )
+            image_jnp = einops.rearrange(image_jnp, "t v h w c -> (t v) h w c")
+            image_jnp = image_tools.resize_with_pad(image_jnp, 224, 224)
+            image_jnp = einops.rearrange(image_jnp, "(t v) h w c -> t v h w c", t=b1 - b0, v=v)
+            output_emb = self.vision_enc(image_jnp)  # 真实 SigLIP 输出 (t,v,256,2048)
 
-        pooled_emb = pool_tokens_to_size(output_emb, self.token_per_image)
-        pooled_host = jax.device_get(pooled_emb)  # 循环外一次（合法差异②）
+            pooled_emb = pool_tokens_to_size(output_emb, self.token_per_image)
+            pooled_parts.append(jax.device_get(pooled_emb))  # 每批循环外一次（合法差异②；不分批时就是原来的一次）
+        pooled_host = pooled_parts[0] if len(pooled_parts) == 1 else np.concatenate(pooled_parts, axis=0)
 
         for i, step_idx in enumerate(step_idx_list):
             image_emb = pooled_host[i]  # (v,token_per_image,2048)
@@ -282,6 +300,7 @@ class FrameSampMemory:
         frames = self.visible_motion_frames(step_idx)
         k = len(frames)
         B = self.motion_budget
+        self.motion_last_k = k
         if k > B:
             # getattr 缺省 raise：测试夹具 / 对拍脚本用 __new__ 绕过构造，未设该字段时行为同改动前
             if getattr(self, "motion_overflow", "raise") != "resample":
@@ -298,6 +317,7 @@ class FrameSampMemory:
                 raise RuntimeError(
                     f"降级结果非法：step {step_idx} 得到 {len(frames)} 个起点（应为 {B}）或次序非严格递增")
             self.motion_downsample_steps += 1
+            self.motion_downsample_max_k = max(getattr(self, "motion_downsample_max_k", 0), k)
             print(f"MOTION_DOWNSAMPLE step={step_idx} es={es} k={k} k_demo={len(demo)} k_exec={len(exec_)} "
                   f"kept_demo={keep_demo} kept_exec={keep_exec} budget={B}", flush=True)
             k = len(frames)

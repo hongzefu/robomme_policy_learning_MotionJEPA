@@ -304,6 +304,12 @@ a批次仅执行配置基线和2048 before-20的部分前缀，其余预建验�
 | [`aws-t2-ref-s100/`](aws-t2-ref-s100/result.md) / [`aws-t2-cand-s100/`](aws-t2-cand-s100/result.md) | T2 关闭态 100 步 A/B | ref PASS；cand 的 `BASELINE_ENV` 因 GPU 指纹不同报 FAIL（记录在案，见 result.md） |
 | [`aws-t3-closed-s100/`](aws-t3-closed-s100/result.md) / [`aws-t3-open-s100/`](aws-t3-open-s100/result.md) | T3 closed / open 100 步 | PASS；`T3_MOTION_CAUSAL` 的 `pad_bitexact=0` 由 `tic-t3-causal-40k/` 按新口径闭合 |
 
+### 1115 4task context＋motion160（v17）
+
+| 目录 | 内容 | 状态 |
+|---|---|---|
+| [`v2-1600ep-m8x8-ctx-motion-b128-50k/`](v2-1600ep-m8x8-ctx-motion-b128-50k/launch.md) | 54.62% 那条 512+motion160（v7 ep72）modul run 改 context、其余一致，50k；计划 `1115-4task-ctx-motion160-v7-50k-plan.html` | 起跑前（Beta） |
+
 ## 二、环境 A：motion 接入依据（2×RTX 6000 Ada + turbo，只读）
 
 | 目录 | 闸门 | 判定 |
@@ -336,6 +342,19 @@ a批次仅执行配置基线和2048 before-20的部分前缀，其余预建验�
 | [`eval-binfill-pickxtimes/`](eval-binfill-pickxtimes/result.md) | BinFill / PickXTimes 评估 |
 | [`eval-orig80k-modul-vs-official/`](eval-orig80k-modul-vs-official/result.md) | 原版 80k 两 run（16 任务 / counting 4 任务）与官方 modul 80k 同口径 test 评估，8 卡 24 片并发，回放全保留 | full16 44.62% vs 官方 47.88%（−3.25pp，未检出差异；Behavior −8pp 显著）；count4 70.0% vs 官方 72.0% |
 | [`eval-orig40k-ckpt40000/`](eval-orig40k-ckpt40000/result.md) | 同两条原版 80k run 的第 40000 步 checkpoint，同口径 test 评估（16 任务 / counting 4 任务），回放全保留 | full16 40k 40.62%（→80k 44.62%，+4pp 显著）；count4 40k 67.0%（→80k 70.0%） |
+| [`primary700-motion50k-gl/`](primary700-motion50k-gl/result.md) | motion 80k run 的 50000 跑完 700 条：40.71%（285/700，error 9）——**BinFill 部分已作废、总成绩更新为 54.62%**，见 `binfilldemo-*`；本页非 BinFill 的 550 条仍有效，A40 sidecar 1.64 s/窗、infer 126 ms、anon 峰 18.2 GiB；链路接入与冒烟见其 `launch.md` |
+| [`primary700-nomotion50k-gl/`](primary700-nomotion50k-gl/result.md) | 无 motion 60k run 的 50000 跑完 700 条：26.00%（182/700，error 9）——**BinFill 部分已作废、总成绩更新为 30.49%**；本页非 BinFill 的 550 条仍有效，与 motion 50000 同一套调用、8 个 gpu-hold 作业动态抢单 + 看门狗 + 续跑队列；两轮对照表、配对 2×2、执行记录都在此 |
+| [`primary700-modul32frame-50k-gl/`](primary700-modul32frame-50k-gl/result.md) | 32 帧 / 感知预算 2048（modulation，motion 关）的 50000 跑完 700 条：34.86%（244/700，error 9）——**BinFill 部分已作废、总成绩更新为 45.09%**；本页非 BinFill 的 550 条仍有效。与 8 帧/512 的 26.00%、512+motion 的 40.71% 三方对照——放大感知上下文 +8.86 pp，只有 motion 收益的六成；BinFill 上两条独立机制同向退化 |
+| [`binfilldemo-nomotion50k-gl/`](binfilldemo-nomotion50k-gl/result.md) | **三模型现行权威结果页，含 50000 与最终 ckpt 两档**：@50000 为 512 **30.49%** / 2048 **45.09%** / 512+motion **54.62%**，最终 ckpt 为 **32.95%**（59999）/ **45.66%**（79999）/ **56.36%**（79999）——三条 run 在 50k 后基本收敛，多训只带来 +0.6~+2.5 pp。旧 BinFill 因训练/推理不一致作废——它是四任务里唯一「训练有 demo 段、评测没有」的；补齐后同一批 142 条上 512 档 30.3%→51.4%，三者排序从颠倒恢复成与其它三任务一致。含 14 组逐格、按任务/按难度、「这些数字不能怎么用」与盲区清单 |
+| [`binfilldemo-motion50k-gl/`](binfilldemo-motion50k-gl/result.md) | 512+motion 补 demo 后 12.7%→**78.2%**（111/142，6.17x），三者中回升最多；另含 motion 窗统计与端到端降级验证（`MMEVLA_MOTION_OVERFLOW=resample`，真实评测仅 1 条集触发、闭式与实测三项全同） |
+| [`binfilldemo-modul32frame-50k-gl/`](binfilldemo-modul32frame-50k-gl/result.md) | 32 帧 / 2048 补 demo 后 11.3%→**59.2%**（84/142，5.25x），回升倍数介于 8 帧基线 1.70x 与 512+motion 6.17x 之间，与记忆通道宽度单调对应 |
+| [`finalckpt-nomotion59999-gl/`](finalckpt-nomotion59999-gl/result.md) | **最终 ckpt 档的起跑留档**（三个 run 共用）+ 512 @59999 的 692 条：**32.95%**（228/692）。60k run 训到 60000 步为止、没有 80k，故本档不是等步数比较 |
+| [`finalckpt-motion79999-gl/`](finalckpt-motion79999-gl/result.md) | 512+motion @79999 的 692 条：**56.36%**（390/692），三者最高；十片 `MOTION_WINDOWS` 全 PASS，降级仅 1 条集触发、闭式与实测精确相等 |
+| [`finalckpt-modul32frame79999-gl/`](finalckpt-modul32frame79999-gl/result.md) | 2048 @79999 的 692 条：**45.66%**（316/692），较 @50000 仅 +0.58 pp |
+| [`finalckpt-modul16frame50000-gl/`](finalckpt-modul16frame50000-gl/result.md) | **1024（16 帧）@50000 的 692 条：42.05%**（291/692）；本目录另存 1024 / 4096 四个 run 共用的起跑留档 `launch.md`（8 个 48 h 占位作业、40 行 manifest、3 h 15 min 跑完、逐个 scancel 记录）与 40 片两道闸汇总 |
+| [`finalckpt-modul16frame79999-gl/`](finalckpt-modul16frame79999-gl/result.md) | 1024 @79999 的 692 条：**41.33%**（286/692），较 @50000 −0.72 pp（噪声级） |
+| [`finalckpt-modul64frame50000-gl/`](finalckpt-modul64frame50000-gl/result.md) | 4096（64 帧）@50000 的 692 条：**45.23%**（313/692），与 2048 @50000 持平 |
+| [`finalckpt-modul64frame79999-gl/`](finalckpt-modul64frame79999-gl/result.md) | 4096 @79999 的 692 条：**45.95%**（318/692），与 2048 @79999 持平——感知上下文收益在 2048 饱和，512+motion 仍高 10 pp 以上 |
 
 ## 五、已归档（`../archive/training-doc/`，34 项）
 

@@ -1,0 +1,16 @@
+SHARD_START run=primary700-ctx2048-50k-gl shard=s9 plan=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-ctx2048-50k-gl/plans/shard9.json node=gl1513.arc-ts.umich.edu job=61721505
+START_UTC=2026-09-22T17:44:54Z
+EVAL_PARAMS policy=perceptual-framesamp-modul-32frame-8x8 config=mme_vla_suite_b128_80k ckpt=50000 seed=7 max_steps=2000 wall=2400 online_gpu=0 prov_relax=gpu_name,compute_cap,sm_count
+SERVER_READY port=18074 pid=3389239 own=1 tree=3389239 3389246 
+CHUNK_START 1/4
+CHUNK_DONE 1/4
+CHUNK_START 2/4
+CHUNK_DONE 2/4
+CHUNK_START 3/4
+CHUNK_DONE 3/4
+CHUNK_START 4/4
+CHUNK_DONE 4/4
+SHARD_PASS {"pipeline_pass": true, "shard_tag": "s9", "identity_sha256": "3b4de03a0b4639181f9c68086aea11e9b51ffcb65bbed701a44f573e74e0beb7", "episodes": 70, "evaluated": 68, "successes": 22, "errors": [{"group": "VideoRepick/medium", "episode": 172}, {"group": "VideoUnmaskSwap/xhard", "episode": 164}], "groups": {"BinFill/easy": {"episodes": 5, "successes": 1, "errors": 0}, "BinFill/hard": {"episodes": 5, "successes": 0, "errors": 0}, "BinFill/medium": {"episodes": 5, "successes": 1, "errors": 0}, "RouteStick/easy": {"episodes": 5, "successes": 5, "errors": 0}, "RouteStick/hard": {"episodes": 5, "successes": 3, "errors": 0}, "RouteStick/medium": {"episodes": 5, "successes": 5, "errors": 0}, "RouteStick/xhard": {"episodes": 5, "successes": 1, "errors": 0}, "VideoRepick/easy": {"episodes": 5, "successes": 1, "errors": 0}, "VideoRepick/medium": {"episodes": 5, "successes": 3, "errors": 1}, "VideoRepick/xhard": {"episodes": 5, "successes": 2, "errors": 0}, "VideoUnmaskSwap/easy": {"episodes": 5, "successes": 0, "errors": 0}, "VideoUnmaskSwap/hard": {"episodes": 5, "successes": 0, "errors": 0}, "VideoUnmaskSwap/medium": {"episodes": 5, "successes": 0, "errors": 0}, "VideoUnmaskSwap/xhard": {"episodes": 5, "successes": 0, "errors": 1}}}
+END_UTC=2026-09-22T18:18:05Z
+EXIT_CODE=0
+EXIT_CODE=0

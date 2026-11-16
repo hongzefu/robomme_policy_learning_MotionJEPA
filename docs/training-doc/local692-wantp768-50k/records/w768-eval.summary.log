@@ -1,0 +1,91 @@
+LOCAL692_START mode=eval dry=0 run=local692-wantp768-50k ckpt=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-modul-wantp768-b128-50k/50000 seed=7 store=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/demo-prefix/binfill-3b4de03a0b46 2026-11-09T08:01:24Z
+EVAL_ENV MMEVLA_MOTION_OVERFLOW=resample EXPECT_MOTION_STATS=1 EXPECT_DEMO_INJECT=1 CHUNK_EPISODES=20 MMEVLA_MOTION_PROV_RELAX=gpu_name,compute_cap,sm_count seed=7 max_steps=2000(run_shard.sh) EPISODE_WALL_S=2400 EVAL_TIMEOUT=14400 LOCAL_GPU_SHARE=2 XLA_PYTHON_CLIENT_MEM_FRACTION=0.45 POLICY=perceptual-framesamp-modul-8frame-8x8-wantp768 POLICY_CONFIG=mme_vla_suite_b128_80k EXPECT_CKPT_ID=50000
+E0_GATE=PASS DEMO_PREFIX_SRC=PASS code_same=1 benchmark=b4e97f2 shards_ok=16/16 ok=142 failed=8 diff_vs_old=40
+[plan] 按 demo 前缀库剔除 BinFill 8 条（预生成未成功），其余三任务全收；合计 692 条
+PLAN_OK shards=10 total=692 per_shard=69 disjoint=True groups=14 demo_store=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/demo-prefix/binfill-3b4de03a0b46 identity=3b4de03a0b46
+  组分布: BinFill/easy=49 BinFill/hard=44 BinFill/medium=49 RouteStick/easy=50 RouteStick/hard=50 RouteStick/medium=50 RouteStick/xhard=50 VideoRepick/easy=50 VideoRepick/medium=50 VideoRepick/xhard=50 VideoUnmaskSwap/easy=50 VideoUnmaskSwap/hard=50 VideoUnmaskSwap/medium=50 VideoUnmaskSwap/xhard=50
+SHARD_MAP shard=s0 gpu=0 port_base=18011 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/local692-wantp768-50k/plans/shard0.json
+SHARD_MAP shard=s1 gpu=1 port_base=18018 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/local692-wantp768-50k/plans/shard1.json
+SHARD_MAP shard=s2 gpu=2 port_base=18025 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/local692-wantp768-50k/plans/shard2.json
+SHARD_MAP shard=s3 gpu=3 port_base=18032 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/local692-wantp768-50k/plans/shard3.json
+SHARD_MAP shard=s4 gpu=4 port_base=18039 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/local692-wantp768-50k/plans/shard4.json
+SHARD_MAP shard=s5 gpu=5 port_base=18046 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/local692-wantp768-50k/plans/shard5.json
+SHARD_MAP shard=s6 gpu=6 port_base=18053 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/local692-wantp768-50k/plans/shard6.json
+SHARD_MAP shard=s7 gpu=7 port_base=18060 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/local692-wantp768-50k/plans/shard7.json
+SHARD_MAP shard=s8 gpu=0 port_base=18067 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/local692-wantp768-50k/plans/shard8.json
+SHARD_MAP shard=s9 gpu=1 port_base=18074 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/local692-wantp768-50k/plans/shard9.json
+PRESEED_PLACE key=VideoRepick/easy/189 shards=s6
+PRESEED_PLACE key=VideoRepick/medium/155 shards=s4
+PRESEED_PLACE key=VideoRepick/medium/167 shards=s6
+PRESEED_PLACE key=VideoRepick/medium/172 shards=s1
+PRESEED_PLACE key=VideoRepick/xhard/168 shards=s7
+PRESEED_PLACE key=VideoRepick/xhard/197 shards=s6
+PRESEED_PLACE key=VideoRepick/xhard/201 shards=s0
+PRESEED_PLACE key=VideoUnmaskSwap/xhard/139 shards=s6
+PRESEED_PLACE key=VideoUnmaskSwap/xhard/164 shards=s1
+PRESEED=PASS episodes=9 placed=9 duplicates=0
+SLOT_REGISTERED gpu=2 tag=s2 pid=748087 run=local692-wantp768-50k
+SLOT_REGISTERED gpu=3 tag=s3 pid=748089 run=local692-wantp768-50k
+SLOT_REGISTERED gpu=6 tag=s6 pid=748095 run=local692-wantp768-50k
+SLOT_REGISTERED gpu=4 tag=s4 pid=748092 run=local692-wantp768-50k
+SLOT_REGISTERED gpu=5 tag=s5 pid=748094 run=local692-wantp768-50k
+SLOT_REGISTERED gpu=7 tag=s7 pid=748103 run=local692-wantp768-50k
+SLOT_REGISTERED gpu=1 tag=s1 pid=748084 run=local692-wantp768-50k
+SLOT_REGISTERED gpu=0 tag=s0 pid=748083 run=local692-wantp768-50k
+SLOT_REGISTERED gpu=1 tag=s9 pid=748117 run=local692-wantp768-50k
+SLOT_REGISTERED gpu=0 tag=s8 pid=748121 run=local692-wantp768-50k
+SHARD_EXIT_CODE=0 shard=s0
+SHARD_EXIT_CODE=0 shard=s1
+SHARD_EXIT_CODE=0 shard=s2
+SHARD_EXIT_CODE=0 shard=s3
+SHARD_EXIT_CODE=0 shard=s4
+SHARD_EXIT_CODE=0 shard=s5
+SHARD_EXIT_CODE=0 shard=s6
+SHARD_EXIT_CODE=0 shard=s7
+SHARD_EXIT_CODE=0 shard=s8
+SHARD_EXIT_CODE=0 shard=s9
+SHARD_SCAN shard=s0 rc=0 complete=1 errors=1 preseeded=1 new_errors=0 verdict=ok new=-
+SHARD_SCAN shard=s1 rc=0 complete=1 errors=2 preseeded=2 new_errors=0 verdict=ok new=-
+SHARD_SCAN shard=s2 rc=0 complete=1 errors=0 preseeded=0 new_errors=0 verdict=ok new=-
+SHARD_SCAN shard=s3 rc=0 complete=1 errors=0 preseeded=0 new_errors=0 verdict=ok new=-
+SHARD_SCAN shard=s4 rc=0 complete=1 errors=1 preseeded=1 new_errors=0 verdict=ok new=-
+SHARD_SCAN shard=s5 rc=0 complete=1 errors=0 preseeded=0 new_errors=0 verdict=ok new=-
+SHARD_SCAN shard=s6 rc=0 complete=1 errors=4 preseeded=4 new_errors=0 verdict=ok new=-
+SHARD_SCAN shard=s7 rc=0 complete=1 errors=1 preseeded=1 new_errors=0 verdict=ok new=-
+SHARD_SCAN shard=s8 rc=0 complete=1 errors=0 preseeded=0 new_errors=0 verdict=ok new=-
+SHARD_SCAN shard=s9 rc=0 complete=1 errors=0 preseeded=0 new_errors=0 verdict=ok new=-
+RETRY_INTEGRATE=PASS retried=0
+CHECK_SHARD_EXIT_CODE=0 shard=s0 SHARD_PASS
+CHECK_SHARD_EXIT_CODE=0 shard=s1 SHARD_PASS
+CHECK_SHARD_EXIT_CODE=0 shard=s2 SHARD_PASS
+CHECK_SHARD_EXIT_CODE=0 shard=s3 SHARD_PASS
+CHECK_SHARD_EXIT_CODE=0 shard=s4 SHARD_PASS
+CHECK_SHARD_EXIT_CODE=0 shard=s5 SHARD_PASS
+CHECK_SHARD_EXIT_CODE=0 shard=s6 SHARD_PASS
+CHECK_SHARD_EXIT_CODE=0 shard=s7 SHARD_PASS
+CHECK_SHARD_EXIT_CODE=0 shard=s8 SHARD_PASS
+CHECK_SHARD_EXIT_CODE=0 shard=s9 SHARD_PASS
+[warn] 跳过没有 progress.json 的目录：gpu-slots
+[warn] 跳过没有 progress.json 的目录：logs
+[warn] 跳过没有 progress.json 的目录：plans
+  MOTION_MERGED episodes=683 k_max=179 es_max=1107 downsampled_episodes=2 （分层成功率 0/2 vs 298/681，仅作描述：两组存在选择偏倚，不可当因果证据）
+MERGE_OK shards=10 episodes=692 successes=298 errors=9
+  macro_success_rate=0.4298  micro_success_rate=0.4306
+  BinFill/easy                44/ 49 = 0.898
+  BinFill/hard                10/ 44 = 0.227
+  BinFill/medium              30/ 49 = 0.612
+  RouteStick/easy             50/ 50 = 1.000
+  RouteStick/hard             27/ 50 = 0.540
+  RouteStick/medium           48/ 50 = 0.960
+  RouteStick/xhard            13/ 50 = 0.260
+  VideoRepick/easy            12/ 50 = 0.240  errors=1
+  VideoRepick/medium          16/ 50 = 0.320  errors=3
+  VideoRepick/xhard           10/ 50 = 0.200  errors=3
+  VideoUnmaskSwap/easy        14/ 50 = 0.280
+  VideoUnmaskSwap/hard         4/ 50 = 0.080
+  VideoUnmaskSwap/medium      15/ 50 = 0.300
+  VideoUnmaskSwap/xhard        5/ 50 = 0.100  errors=2
+  补跑计划已写入 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/local692-wantp768-50k/merged/retry_plan.json（9 条）
+EVAL692=PASS episodes=692 success=298 rate=0.4306 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1
+LOCAL692_DONE 2026-11-09T11:08:57Z
+EXIT_CODE=0

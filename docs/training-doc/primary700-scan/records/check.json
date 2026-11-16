@@ -1,0 +1,37 @@
+{
+  "pipeline_pass": true,
+  "shard_tag": "smoke",
+  "identity_sha256": "",
+  "episodes": 2,
+  "evaluated": 2,
+  "successes": 1,
+  "errors": [],
+  "groups": {
+    "BinFill/hard": {
+      "episodes": 1,
+      "successes": 1,
+      "errors": 0
+    },
+    "RouteStick/xhard": {
+      "episodes": 1,
+      "successes": 0,
+      "errors": 0
+    }
+  },
+  "videos": [
+    {
+      "group": "RouteStick/xhard",
+      "episode": 115,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-smoke-local/smoke/perceptual-framesamp-modul-8frame-8x8/ckpt59999/seed7/videos/RouteStick_ep115_fail_watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path_xhard.mp4",
+      "frames": 499,
+      "bytes": 1275373
+    },
+    {
+      "group": "BinFill/hard",
+      "episode": 153,
+      "path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-smoke-local/smoke/perceptual-framesamp-modul-8frame-8x8/ckpt59999/seed7/videos/BinFill_ep153_success_put two red cubes and two green cubes into the bin, then press the button to stop_hard.mp4",
+      "frames": 879,
+      "bytes": 2673149
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+/home/hongzefu/.local/bin/uv
+LOCAL_GPU_IDLE=PASS device=1
+START_UTC=2026-09-18T21:27:22Z
+sled-vail
+c0bb5eb8927ba4c320cc5fe100b97cb5b91564bd
+ b4e97f22fe007078e297205898c07c1acbc69165 third_party/robomme_benchmark (heads/PolicyEvalThirdParty-v2-eval-0917)
+uv 0.10.2
+name, uuid, memory.used [MiB], compute_mode
+NVIDIA RTX 6000 Ada Generation, GPU-590b693c-56db-a2b6-c4e3-5e20108f92d7, 1017 MiB, Default
+NVIDIA RTX 6000 Ada Generation, GPU-c58b7cba-c0e5-971b-e77a-0dd73bf26a9e, 9 MiB, Default
+REPO=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA SLURM_JOB_ID=local ARRAY_TASK=none SHARD=smoke CUDA_VISIBLE_DEVICES=1
+PLAN=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-motion50k-gl/plans/smoke2.json episodes=2 chunk=1
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+SOURCES_PASS {"python": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/bin/python3", "benchmark": "b4e97f22fe007078e297205898c07c1acbc69165", "robomme": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/third_party/robomme_benchmark/src/robomme/__init__.py", "openpi_client": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/packages/openpi-client/src/openpi_client/__init__.py", "candidates": {"run_id": "20260912-contract-v3-10", "identity_sha256": "3b4de03a0b4639181f9c68086aea11e9b51ffcb65bbed701a44f573e74e0beb7", "groups": 14, "primary": 700}, "probe": {"key": ["RouteStick", "xhard", 115], "seed": 27500, "spec_sha256": "ae9abaed203437030b6237478f35e80df26d6811e34054e7c944a11ae4126d93"}, "official_routestick_ep0": {"task": "RouteStick", "episode": 0, "seed": 660000, "difficulty": "easy"}}
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+RENDER_PASS {"render_pass": true, "task": "BinFill", "episode": 0, "status": "ongoing", "frames": [{"shape": [256, 256, 3], "std": 53.09643729088601}, {"shape": [256, 256, 3], "std": 52.75876086672221}, {"shape": [256, 256, 3], "std": 53.09674462593213}, {"shape": [256, 256, 3], "std": 52.013364007753225}]}
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+SERVER_SOURCE /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-server/bin/python3 /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/policies/policy_config.py /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/src/openpi/models/model.py
+BUDGET_CONSISTENT=PASS budget=160 source_run=wan-full1600-filter2-b176x4-72ep-a/checkpoint_epoch_72.pt#encoder
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+
+PARAM_TREE_EXACT=PASS n_model=65 n_ckpt=65 missing=0 extra=0 shape_mismatch=0 motion_leaves=4
+HISTORY_CONFIG=PASS NORM_STATS=PASS MOTION_ENABLED=PASS config=mme_vla_suite_b128_80k step=50000
+LOCAL_GPU_IDLE=PASS device=1
+EVAL_PARAMS policy=perceptual-framesamp-modul-8frame-8x8-motion config=mme_vla_suite_b128_80k ckpt=50000 seed=7 max_steps=2000 wall=2400 online_gpu=1 prov_relax=gpu_name,compute_cap,sm_count
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+INFO:root:Checking history config
+INFO:2026-09-18 17:29:10,625:jax._src.xla_bridge:925: Unable to initialize backend 'rocm': module 'jaxlib.xla_extension' has no attribute 'GpuAllocatorConfig'
+INFO:jax._src.xla_bridge:Unable to initialize backend 'rocm': module 'jaxlib.xla_extension' has no attribute 'GpuAllocatorConfig'
+INFO:2026-09-18 17:29:10,626:jax._src.xla_bridge:925: Unable to initialize backend 'tpu': INTERNAL: Failed to open libtpu.so: libtpu.so: cannot open shared object file: No such file or directory
+INFO:jax._src.xla_bridge:Unable to initialize backend 'tpu': INTERNAL: Failed to open libtpu.so: libtpu.so: cannot open shared object file: No such file or directory
+INFO:absl:orbax-checkpoint version: 0.11.13
+INFO:absl:Created BasePyTreeCheckpointHandler: use_ocdbt=True, use_zarr3=False, pytree_metadata_options=PyTreeMetadataOptions(support_rich_types=False), array_metadata_store=<orbax.checkpoint._src.metadata.array_metadata_store.Store object at 0x712f82a4ca50>
+INFO:absl:Restoring checkpoint from /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/robomme-vla-modul-motion-80k-v1/50000/params.
+INFO:absl:[thread=MainThread] Failed to get flag value for EXPERIMENTAL_ORBAX_USE_DISTRIBUTED_PROCESS_ID.
+INFO:absl:[process=0] /jax/checkpoint/read/bytes_per_sec: 1.5 GiB/s (total bytes: 6.4 GiB) (time elapsed: 4 seconds) (per-host)
+INFO:absl:Finished restoring checkpoint in 4.32 seconds from /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/robomme-vla-modul-motion-80k-v1/50000/params.
+INFO:root:Loading model...
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+
+max_token_len: 64
+INFO:root:Norm stats not found in v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da/robomme, skipping.
+INFO:root:Loaded norm stats from /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/robomme-vla-modul-motion-80k-v1/50000/assets/robomme
+Training config:  TrainConfig(name='mme_vla_suite_b128_80k', project_name='robomme-framesamp', exp_name=<PropagatingMissingType id='124449370391184'>, model=HistoryPi0Config(action_dim=32, action_horizon=20, max_token_len=64, dtype='bfloat16', paligemma_variant='gemma_2b', action_expert_variant='gemma_300m', pi05=True, discrete_state_input=False, memory_expert_variant='gemma_150m', use_history=True, history_config={'budget': 512, 'num_views': 1, 'token_per_image': 64, 'streaming_obs_horizon': 16, 'pool_type': 'mean', 'use_pos_emb': True, 'use_state_emb': False, 'memory_feature': {'img': {'net': 'identity', 'input_dim': 2048}, 'pos': {'input_dim': 768, 'hidden_dim': 768}, 'state': {'input_dim': 8, 'hidden_dim': 512}}, 'integration_type': 'modulation', 'memory_token_dim': 1024, 'representation_type': 'perceptual', 'perceptual_memory': {'type': 'frame_sampling'}, 'motion': {'enabled': True, 'dim': 768, 'budget': 160, 'demo_min_real_frames': 17, 'demo_tail_pad': 'repeat_last', 'stride': 16, 'window_frames': 33, 'window_direction': 'forward', 'grid_origin': 'segment_start', 'store_path': 'v1-store/datasets/4task-v2-1600ep-604f16da/motion', 'source_run': 'wan-full1600-filter2-b176x4-72ep-a/checkpoint_epoch_72.pt#encoder', 'pos_dim': 256, 'frame_size': 256, 'online_gpu': 4}}), weight_loader=CheckpointWeightLoader(params_path='/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/cache/policy-eval/openpi/openpi-assets/checkpoints/pi05_base/params'), pytorch_weight_path=None, pytorch_training_precision='bfloat16', lr_schedule=CosineDecaySchedule(warmup_steps=5000, peak_lr=5e-05, decay_steps=80000, decay_lr=5e-05), optimizer=AdamW(b1=0.9, b2=0.95, eps=1e-08, weight_decay=1e-10, clip_gradient_norm=1.0), ema_decay=0.999, freeze_filter=PathRegex(pattern=re.compile('.*img.*'), sep='/'), data=RoboMMEDataConfig(repo_id='robomme', assets=AssetsConfig(assets_dir='v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da', asset_id='robomme'), base_config=DataConfig(repo_id=None, asset_id=None, norm_stats=None, repack_transforms=Group(inputs=(), outputs=()), data_transforms=Group(inputs=(), outputs=()), model_transforms=Group(inputs=(), outputs=()), use_quantile_norm=False, action_sequence_keys=('actions',), prompt_from_task=True, rlds_data_dir=None, action_space=None, filter_dict_path=None)), assets_base_dir='runs/assets', checkpoint_base_dir='runs/ckpts', seed=42, batch_size=128, num_workers=16, num_train_steps=80000, log_interval=100, save_interval=5000, keep_period=5000, overwrite=False, resume=False, wandb_enabled=True, policy_metadata=None, fsdp_devices=8, resum_ckpt_id=None, dataset_path='data/robomme')
+Data config:  DataConfig(repo_id='robomme', asset_id='robomme', norm_stats=None, repack_transforms=Group(inputs=[RepackTransform(structure={'observation/image': 'image', 'observation/wrist_image': 'wrist_image', 'observation/state': 'state', 'actions': 'actions', 'prompt': 'prompt', 'static_image_emb': 'static_image_emb', 'static_pos_emb': 'static_pos_emb', 'static_state_emb': 'static_state_emb', 'static_mask': 'static_mask', 'motion_emb': 'motion_emb', 'motion_pos': 'motion_pos', 'motion_mask': 'motion_mask', 'mem_order': 'mem_order'})], outputs=()), data_transforms=Group(inputs=(RoboMMEInputs(model_type=<ModelType.PI05: 'pi05'>), DeltaActions(mask=(True, True, True, True, True, True, True, False))), outputs=(AbsoluteActions(mask=(True, True, True, True, True, True, True, False)), RoboMMEOutputs())), model_transforms=Group(inputs=[InjectDefaultPrompt(prompt=None), ResizeImages(height=224, width=224), TokenizePromptWithState(tokenizer=<mme_vla_suite.training.config.PaligemmaTokenizer object at 0x712eb177efd0>, discrete_state_input=False), PadStatesAndActions(model_action_dim=32)], outputs=()), use_quantile_norm=True, action_sequence_keys=('actions',), prompt_from_task=True, rlds_data_dir=None, action_space=None, filter_dict_path=None)
+INFO:root:motion sidecar online_gpu='1' (env MMEVLA_MOTION_ONLINE_GPU='1')
+warning: `VIRTUAL_ENV=v1-store/envs/policy-eval-server` does not match the project environment path `v1-store/venvs/wan` and will be ignored; use `--active` to target the active environment instead
+Cannot initialize model with low cpu memory usage because `accelerate` was not found in the environment. Defaulting to `low_cpu_mem_usage=False`. It is strongly recommended to install `accelerate` for faster and less memory-intense model loading. You can do so with: 
+```
+pip install accelerate
+```
+.
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/venvs/wan/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py:205: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+[sidecar pid=2131386] 模型就绪 warmup=3.20s vae=9980d252230c265c… ckpt=0c1986297ccc0ab1…
+MOTION_PROV_RELAXED vae.gpu_name: sidecar='NVIDIA RTX 6000 Ada Generation' store='NVIDIA A100-SXM4-80GB'
+MOTION_PROV_RELAXED vae.compute_cap: sidecar='8.9' store='8.0'
+MOTION_PROV_RELAXED vae.sm_count: sidecar=142 store=108
+MOTION_PROV_RELAXED encoder.gpu_name: sidecar='NVIDIA RTX 6000 Ada Generation' store='NVIDIA A100-SXM4-80GB'
+MOTION_PROV_RELAXED encoder.compute_cap: sidecar='8.9' store='8.0'
+MOTION_PROV_RELAXED encoder.sm_count: sidecar=142 store=108
+[sidecar pid=2131386] 收到关闭请求，已服务 0 窗，退出
+Traceback (most recent call last):
+  File "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/scripts/training/serve_policy.py", line 109, in <module>
+    main(tyro.cli(Args))
+  File "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/scripts/training/serve_policy.py", line 91, in main
+    policy = create_policy(args)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/scripts/training/serve_policy.py", line 82, in create_policy
+    return _policy_config.create_trained_policy(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/policies/policy_config.py", line 148, in create_trained_policy
+    motion_enc_fn = MotionEncoderClient(
+                    ^^^^^^^^^^^^^^^^^^^^
+  File "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/policies/motion_client.py", line 103, in __init__
+    self.check_provenance(store_provenance)
+  File "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/policies/motion_client.py", line 126, in check_provenance
+    raise RuntimeError("sidecar 与离线库 provenance 不同源:\n  " + "\n  ".join(diffs))
+RuntimeError: sidecar 与离线库 provenance 不同源:
+  vae.driver: sidecar='570.211.01' store='595.71.05'
+  encoder.driver: sidecar='570.211.01' store='595.71.05'
+END_UTC=2026-09-18T21:30:13Z
+EXIT_CODE=1
+EXIT_CODE=1
