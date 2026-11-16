@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-16T14:37:05Z",
-    "america_new_york": "2026-11-16T09:37:05-0500"
+    "utc": "2026-11-16T17:13:36Z",
+    "america_new_york": "2026-11-16T12:13:36-0500"
   },
   "repo": {
     "branch": "v4.2-plswap-full",
-    "base_head": "7dd722cd81c84f1c9c577b121bfe589cace07222",
+    "base_head": "7818174a3fb0d0bdda05f1e53132748524592f52",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -2612,7 +2612,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-11-16T14:37:05Z",
-      "state_reason": "用户开工令到达；开工审查与 S-A..S-D 改代码进行中",
+      "state_reason": "代码合入（53ae73d + FIX-R 6f241ef）；NOOP_EQ2=PASS；离线编码完成；BEHAVIOR_TOL、MotionMem VR 在跑，Frozen Wan RS 与 MotionMem core 池待跑",
       "owner": {
         "session": "Claude Code 会话 89cd97e5-8264-43d7-9a9c-b1dd6b275bbc",
         "host": "sled-aspen"
@@ -2623,24 +2623,30 @@
       "pre_handoff": [
         {
           "what": "ENC_TOL",
-          "evidence": "",
-          "where": "docs/evaluation-doc/steer-speedup-1116/",
-          "status": "pending"
+          "evidence": "ENC_TOL=FAIL(原阈值)/PASS(放宽 0.997/0.3) model=motion min_cos=0.999480 maxabs=0.1406；model=wan PASS min_cos=0.999995 maxabs=0.03297",
+          "where": "…/steer-speedup-1116/offline/{motion,wan}/ENC_TOL.*.json",
+          "status": "pass"
         },
         {
           "what": "NOOP_EQ2",
-          "evidence": "",
-          "where": "docs/evaluation-doc/steer-speedup-1116/",
-          "status": "pending"
+          "evidence": "NOOP_EQ2=PASS eps=20 steps=57 agree=57 rate=1.0000",
+          "where": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/steer-speedup-1116/ro-noop.log",
+          "status": "pass"
         },
         {
           "what": "BEHAVIOR_TOL",
           "evidence": "",
-          "where": "docs/evaluation-doc/steer-speedup-1116/",
+          "where": "pool/bt-motion",
           "status": "pending"
         },
         {
-          "what": "Frozen Wan RS / MotionMem VR / Frozen Wan VR / MotionMem core 读数",
+          "what": "Frozen Wan VR 读数",
+          "evidence": "VR_SAMEP=PASS model=wan invalid=0",
+          "where": "docs/evaluation-doc/steer-speedup-1116/records/vr-wan/",
+          "status": "pass"
+        },
+        {
+          "what": "Frozen Wan RS / MotionMem VR / MotionMem core 读数",
           "evidence": "",
           "where": "docs/evaluation-doc/steer-speedup-1116/result.md",
           "status": "pending"
@@ -2649,9 +2655,14 @@
       "long_tail": [],
       "running_handles": [
         {
-          "tmux": "GL 占位 66207065,66207067,66207068,66207069 (s5t-hold-1..4)",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/steer-4task-1115/s5t-hold-*.out",
-          "done_line": "scancel"
+          "tmux": "GL 登录节点 s5t-bt-motion-h66207065-btvr-h1 / -h66207067-btvr-h2 / -h66207068-btvr-h3 / -h66207069-btvr-h4（占位 66207065/67/68/69）",
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/steer-speedup-1116/s5t-bt-motion-h*-btvr-h*.log",
+          "done_line": "POOL_HOLD_DONE"
+        },
+        {
+          "tmux": "aspen s5t-vr-motion-a0",
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/steer-speedup-1116/s5t-vr-motion-a0.log",
+          "done_line": "POOL_HOLD_DONE"
         }
       ],
       "authorizations": [
@@ -2665,9 +2676,14 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "PLAN_CONSISTENCY_REVIEW → S-A..S-D worktree 子代理",
-          "command": "",
-          "verdict_line": "PRE_MERGE_REVIEW=PASS"
+          "what": "bt/vr-motion 池跑空后各占位起 rs-wan,core-motion 池",
+          "command": "bash …/steer-speedup-1116/runbook/10-launch.sh gl <hold> wan rs-wan,core-motion <tag>",
+          "verdict_line": "POOL_STATUS=DONE"
+        },
+        {
+          "what": "读数",
+          "command": "bash …/runbook/11-readout.sh bt|rs-wan|core|vr-motion",
+          "verdict_line": "BEHAVIOR_TOL / RS_SAMEP / VR_SAMEP"
         }
       ]
     }
