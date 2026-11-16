@@ -33,6 +33,30 @@ WANTP768_YAML = 'src/mme_vla_suite/models/config/robomme/perceptual-framesamp-mo
 # 按 resolved_sha256_of_yaml 口径独立复算得出，与 S2 预算值逐位一致（2026-11-08）；正式 run 与冒烟 run 共用。
 WANTP768_RESOLVED_SHA256 = '4e70e93373d5b20061a4067c911021100375d2bc28cff276acaf7559b2441910'
 
+# 1112 计划（1112-4task-modul-wanraw9-s32-50k-plan.html 第二部分 1.1 第 15 行）的不池化 run：kind / readout 与
+# shared/wan_raw9.py 的 RAW9_ENCODER_KIND / RAW9_READOUT 同值，同样写字面量不 import。
+WANRAW9_KIND = 'wan_raw9'
+WANRAW9_READOUT = 'wan_raw9_flat16384_s32_v1'
+WANRAW9_YAML = 'src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-8frame-8x8-wanraw9s32.yaml'
+# 按 resolved_sha256_of_yaml 口径对定稿 YAML（budget: 80 写死）预算；正式 run 与四条冒烟 run 共用。
+# 预算时 S2 YAML 尚未合入：以 wantp768.yaml 为底，按计划 1.1 第 7 行改 dim 16384 / budget 80 / stride 32 /
+# store_path …/motion-wan-raw9-s32 / encoder_kind wan_raw9 / readout wan_raw9_flat16384_s32_v1，tokens_per_window: 9
+# 紧跟在 dim 之后（OmegaConf.to_yaml 保留键序，位置不同 sha 即不同）。
+# S2 YAML 合入后（v15 73289a3）已以 `check_checkpoint.py --resolved-sha256 <WANRAW9_YAML>` 复算，逐位一致。
+WANRAW9_RESOLVED_SHA256 = '819a001c58b00d4a4110835b913ac1fb58238fb71d272eaa33a429f6dcb53062'
+
+# 1115 计划（1115-4task-ctx-motion160-v7-50k-plan.html B5）的 context＋motion160 run：resolved_sha256 由主会话在主检出
+# 用 `check_checkpoint.py --resolved-sha256 <新 context YAML>` 复算回填（计划 §6 第 4 步）。回填前是占位常量：
+# 它不是合法 sha256，main() 里 resolved_sha256 比对必然失败，检查明确 FAIL，不会静默通过。
+CTXMOTION160_RESOLVED_SHA256 = 'TODO_BACKFILL_IN_MAIN_CHECKOUT'
+
+
+def assert_integration(cfg, run):
+    """按 run 登记的 integration（缺省 'modulation'，旧条目行为不变）核对快照的 token_per_image 与融合方式。"""
+    expected = run.get('integration', 'modulation')
+    assert cfg.token_per_image == 64 and cfg.integration_type == expected, \
+        (cfg.token_per_image, cfg.integration_type, expected)
+
 
 def resolved_sha256_of_yaml(yaml_path) -> str:
     """与 scripts/training/train.py::init_history_config 写 history_config.resolved.yaml 同口径：
@@ -53,6 +77,20 @@ def assert_motion(cfg, run, prov):
         assert str(cfg.motion.source_run) == run['motion_source_run'], cfg.motion.source_run
         assert int(cfg.motion.stride) == 16 and int(cfg.motion.window_frames) == 33 and int(cfg.motion.frame_size) == 256
         print(f'BUDGET_CONSISTENT=PASS budget={int(cfg.motion.budget)} source_run={cfg.motion.source_run}', flush=True)
+        return
+    if kind == WANRAW9_KIND:
+        # 不池化分支（1112 计划 1.1 第 15 行）：窗步长 32、每窗 9 个 16384 维 token；prov 须带 raw9 源码 sha256、无 encoder
+        assert cfg.motion.get('encoder_kind') == kind, cfg.motion.get('encoder_kind')
+        assert cfg.motion.get('readout') == run['readout'], cfg.motion.get('readout')
+        assert int(cfg.motion.stride) == 32 and int(cfg.motion.window_frames) == 33 and int(cfg.motion.frame_size) == 256
+        assert int(cfg.motion.dim) == 16384, cfg.motion.dim
+        assert int(cfg.motion.get('tokens_per_window', 1)) == 9, cfg.motion.get('tokens_per_window')
+        assert prov.get('encoder_kind') == kind and prov.get('readout') == run['readout'], \
+            (prov.get('encoder_kind'), prov.get('readout'))
+        assert prov.get('encoder') is None and prov.get('vae') is not None and prov.get('raw9_source_sha256'), \
+            (prov.get('encoder'), prov.get('vae'), prov.get('raw9_source_sha256'))
+        print(f'BUDGET_CONSISTENT=PASS budget={int(cfg.motion.budget)} motion_kind={kind} readout={run["readout"]} '
+              f'tokens_per_window=9 raw9_source_sha256={str(prov["raw9_source_sha256"])[:16]}', flush=True)
         return
     # 池化分支（1108 计划 1.1 第 6 行）：不要求 motion_source_run，改核快照与 motion_provenance.json 的 kind / readout
     assert kind == WANTP768_KIND, kind
@@ -137,6 +175,65 @@ RUNS = {
         norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
         motion_budget=160, motion_kind=WANTP768_KIND, readout=WANTP768_READOUT,
     ),
+    # ── 1112 计划（1112-4task-modul-wanraw9-s32-50k-plan.html 第二部分 1.1 第 15 行）：Wan raw latent 不池化，
+    # 每窗 9 个 16384 维 token、窗步长 32、motion.budget = 80 窗；同一 4task-v2-1600ep 库，norm_stats 与 v11 同一份。
+    # 正式 run 只评 @50000；冒烟 run（runner --smoke20，num_train_steps=20，最后一份 ckpt 为 19）供 G6b 走一次真实评估入口，
+    # 未触发 L 级用 r9-smoke20，触发 S5-L<k> 则为 r9-smoke20-l<k>，跑完即删。
+    # 正式 run（bucket HongzeFu/robomme-4task-modul-wanraw9-s32-50k-v1）
+    'v2-1600ep-m8x8-modul-wanraw9s32-b128-50k': dict(
+        steps=('50000',), motion=True, config='mme_vla_suite_b128_80k', budget=512,
+        resolved_sha256=WANRAW9_RESOLVED_SHA256,
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+        motion_budget=80, motion_kind=WANRAW9_KIND, readout=WANRAW9_READOUT,
+    ),
+    # 冒烟 run r9-smoke20
+    'r9-smoke20': dict(
+        steps=('19',), motion=True, config='mme_vla_suite_b128_80k', budget=512,
+        resolved_sha256=WANRAW9_RESOLVED_SHA256,
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+        motion_budget=80, motion_kind=WANRAW9_KIND, readout=WANRAW9_READOUT,
+    ),
+    # 冒烟 run r9-smoke20-l1
+    'r9-smoke20-l1': dict(
+        steps=('19',), motion=True, config='mme_vla_suite_b128_80k', budget=512,
+        resolved_sha256=WANRAW9_RESOLVED_SHA256,
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+        motion_budget=80, motion_kind=WANRAW9_KIND, readout=WANRAW9_READOUT,
+    ),
+    # 冒烟 run r9-smoke20-l2
+    'r9-smoke20-l2': dict(
+        steps=('19',), motion=True, config='mme_vla_suite_b128_80k', budget=512,
+        resolved_sha256=WANRAW9_RESOLVED_SHA256,
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+        motion_budget=80, motion_kind=WANRAW9_KIND, readout=WANRAW9_READOUT,
+    ),
+    # 冒烟 run r9-smoke20-l3
+    'r9-smoke20-l3': dict(
+        steps=('19',), motion=True, config='mme_vla_suite_b128_80k', budget=512,
+        resolved_sha256=WANRAW9_RESOLVED_SHA256,
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+        motion_budget=80, motion_kind=WANRAW9_KIND, readout=WANRAW9_READOUT,
+    ),
+    # ── 1115 计划（1115-4task-ctx-motion160-v7-50k-plan.html B5）：与 'robomme-vla-modul-motion-80k-v1'（原 modulation
+    # motion run）同库、同 v7 encoder（wan-full1600…ep72）、同 norm，只把融合方式改为 context（memory_token_dim 2048）。
+    # motion 断言走 encoder 分支（不写 motion_kind）：核 motion_source_run、stride 16 / 窗 33 帧 / 帧 256，与原 run 同口径。
+    # resolved_sha256 暂为占位，由主会话在主检出用 --resolved-sha256 复算回填（计划 §6 第 4 步）；正式与冒烟共用同一 YAML。
+    # 正式 run，只评 @50000（bucket HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1）
+    'v2-1600ep-m8x8-ctx-motion-b128-50k': dict(
+        steps=('50000',), motion=True, config='mme_vla_suite_b128_80k', budget=512, integration='context',
+        resolved_sha256=CTXMOTION160_RESOLVED_SHA256,
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+        motion_budget=160,
+        motion_source_run='wan-full1600-filter2-b176x4-72ep-a/checkpoint_epoch_72.pt#encoder',
+    ),
+    # 试跑 run v17-smoke20（训 20 步，最后一份 ckpt 为 19），供试评估与每卡 4 份压测，跑完即删
+    'v17-smoke20': dict(
+        steps=('19',), motion=True, config='mme_vla_suite_b128_80k', budget=512, integration='context',
+        resolved_sha256=CTXMOTION160_RESOLVED_SHA256,
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+        motion_budget=160,
+        motion_source_run='wan-full1600-filter2-b176x4-72ep-a/checkpoint_epoch_72.pt#encoder',
+    ),
 }
 
 
@@ -153,9 +250,10 @@ def main(argv):
     # budget 逐 run 钉死：它是模型语义参数（决定 static_image_emb 的序列长度与取帧数 budget//token_per_image），
     # 参数树形状对它失明，配错了不会被 PARAM_TREE_EXACT 拦住
     assert int(cfg.budget) == run['budget'], (cfg.budget, run['budget'])
-    assert cfg.token_per_image == 64 and cfg.integration_type == 'modulation'
+    assert_integration(cfg, run)
     assert cfg.perceptual_memory.type == 'frame_sampling'
-    assert hashlib.sha256((checkpoint.parent / 'history_config.resolved.yaml').read_bytes()).hexdigest() == run['resolved_sha256']
+    assert hashlib.sha256((checkpoint.parent / 'history_config.resolved.yaml').read_bytes()).hexdigest() == run['resolved_sha256'], \
+        f"resolved_sha256 不符（期望 {run['resolved_sha256']}；占位 TODO_BACKFILL_IN_MAIN_CHECKOUT 表示尚未回填）"
     assert hashlib.sha256((checkpoint / 'assets/robomme/norm_stats.json').read_bytes()).hexdigest() == run['norm_stats_sha256']
     if run['motion']:
         prov = json.loads((checkpoint.parent / 'motion_provenance.json').read_text(encoding='utf-8'))
