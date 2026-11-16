@@ -57,6 +57,6 @@ def test_context_entries_fields(name):
     assert run['config'] == 'mme_vla_suite_b128_80k' and run['motion_budget'] == 160
     assert run['motion_source_run'] == ref['motion_source_run'] and 'motion_kind' not in run
     assert run['norm_stats_sha256'] == '856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173'
-    # 回填前占位不是合法 sha256，main() 的 resolved_sha256 比对必然失败（不会静默通过）
-    assert run['resolved_sha256'] == 'TODO_BACKFILL_IN_MAIN_CHECKOUT'
-    assert len(run['resolved_sha256']) != 64
+    # 已回填（v17 a085c88 复算）：必须是 64 位小写十六进制
+    assert run['resolved_sha256'] == '21791b2964c868119784d086f5ce2334405596d8fa20586e217c4703f018d0e3'
+    assert len(run['resolved_sha256']) == 64 and all(c in '0123456789abcdef' for c in run['resolved_sha256'])

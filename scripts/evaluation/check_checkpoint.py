@@ -45,10 +45,9 @@ WANRAW9_YAML = 'src/mme_vla_suite/models/config/robomme/perceptual-framesamp-mod
 # S2 YAML 合入后（v15 73289a3）已以 `check_checkpoint.py --resolved-sha256 <WANRAW9_YAML>` 复算，逐位一致。
 WANRAW9_RESOLVED_SHA256 = '819a001c58b00d4a4110835b913ac1fb58238fb71d272eaa33a429f6dcb53062'
 
-# 1115 计划（1115-4task-ctx-motion160-v7-50k-plan.html B5）的 context＋motion160 run：resolved_sha256 由主会话在主检出
-# 用 `check_checkpoint.py --resolved-sha256 <新 context YAML>` 复算回填（计划 §6 第 4 步）。回填前是占位常量：
-# 它不是合法 sha256，main() 里 resolved_sha256 比对必然失败，检查明确 FAIL，不会静默通过。
-CTXMOTION160_RESOLVED_SHA256 = 'TODO_BACKFILL_IN_MAIN_CHECKOUT'
+# 1115 计划（1115-4task-ctx-motion160-v7-50k-plan.html B5）的 context＋motion160 run：S1/S2 合入后（v17 a085c88）
+# 以 `check_checkpoint.py --resolved-sha256 perceptual-framesamp-ctx-8frame-8x8-motion-v7ep72.yaml` 复算回填（计划 §6 第 4 步）。
+CTXMOTION160_RESOLVED_SHA256 = '21791b2964c868119784d086f5ce2334405596d8fa20586e217c4703f018d0e3'
 
 
 def assert_integration(cfg, run):
