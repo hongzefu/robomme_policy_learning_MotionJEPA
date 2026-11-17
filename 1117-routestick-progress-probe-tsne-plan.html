@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RouteStick 进度探针与图 a 计划</title>
+<style>
+  body { margin: 0; background: #f7f8f8; color: #1d2528; font: 16px/1.75 -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  main { max-width: 1000px; margin: 0 auto; padding: 36px 24px 72px; }
+  h1 { font-size: 1.7rem; line-height: 1.35; margin: 44px 0 14px; padding-top: 16px; border-top: 3px solid #1d2528; }
+  h1.title { border-top: 0; margin-top: 0; padding-top: 0; font-size: 2rem; }
+  h2 { font-size: 1.22rem; margin: 30px 0 8px; }
+  h3 { font-size: 1.05rem; margin: 20px 0 6px; }
+  p { margin: 9px 0; } ul, ol { margin: 9px 0; padding-left: 1.4em; } li { margin: 4px 0; }
+  code { font: 0.87em ui-monospace, Menlo, monospace; overflow-wrap: anywhere; background: #eef2f3; padding: 0 3px; border-radius: 3px; }
+  pre { background: #eef2f3; padding: 10px 12px; overflow-x: auto; font: 0.85em/1.5 ui-monospace, Menlo, monospace; }
+  .note { background: #e9eef0; padding: 10px 14px; margin: 14px 0; }
+  .warn { color: #a3361b; font-weight: 600; }
+  .tbl { overflow-x: auto; margin: 12px 0; }
+  table { border-collapse: collapse; font-size: 0.91rem; width: 100%; background: #fff; }
+  th, td { border: 1px solid #d3dbde; padding: 6px 9px; text-align: left; vertical-align: top; }
+  th { background: #eef2f3; white-space: nowrap; }
+</style>
+</head>
+<body>
+<main>
+<h1 class="title">RouteStick 任务进度探针（论文 §5.2 改版）与图 a（t-SNE）计划</h1>
+
+<div class="note">
+<b>权威性：</b>本文件是这一轮的唯一计划。只规划、不实施；开工令按 AGENTS.md 第 2 条：用户对本计划不做修改、明确同意后才开工。<br>
+<b>代码锚点：</b>主检出 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code>，分支 <code>v4.2-plswap-full</code>，写计划时 HEAD 为 <code>0cdd1af</code>。benchmark 子模块 gitlink 为 <code>b4e97f22fe007078e297205898c07c1acbc69165</code>（干净）。<br>
+<b>外部锚点：</b>模型 A = MotionMem 四任务×400（<code>v2-1600ep-m8x8-modul-motion-b128-80k@50000</code>，bucket <code>HongzeFu/robomme-vla-modul-motion-80k-v1</code>）；模型 B = Frozen Wan pooling（<code>v2-1600ep-m8x8-modul-wantp768-b128-50k@50000</code>，bucket <code>HongzeFu/robomme-vla-4task-modul-wantp768-50k-v1</code>）；motion encoder <code>wan-full1600-filter2-b176x4-72ep-a/checkpoint_epoch_72.pt</code>，sha256 前缀 <code>0c198629</code>。<br>
+<b>参照：</b>StopCube 版 <a href="1105-stopcube-hover-probe-plan.html">1105-stopcube-hover-probe-plan.html</a>，结果在 <code>docs/evaluation-doc/stopcube-hover-probe-1105/</code> 与 <code>stopcube-common-fig4-1108/</code>，两轮都在 sled-aspen 2×A6000 上跑。论文图在 <code>/data/hongzefu/motionjepa-paper-CoRLWorkshop/CVPR2027-submission/paper/sec/5_interpretability.tex</code>：<code>fig:cluster</code>（图 a 现在是 PLACEHOLDER）和 <code>fig:belief</code>。<br>
+<b>已先执行（用户 11-17 点名）：</b>GreatLakes 4 个单卡 A40 占位 <code>rsp-hold-1..4</code>，JobID <code>66304774</code>、<code>66304775</code>、<code>66304776</code>（8 CPU/96G）和 <code>66305145</code>（4 CPU/64G；原 <code>66304777</code> 因 <code>AssocGrpCpuLimit</code> 排不上，已撤回重交），美东 12:18 全部 RUNNING。清单在 turbo <code>v1-store/logs/hold-jobs-rsprog-1117.txt</code>。<br>
+<b>commit 体例：</b>计划与留档用 <code>docs:</code>；合并用 <code>commitV4.9.x:</code>；子代理用 <code>sub/R&lt;n&gt;:</code>。
+</div>
+
+<h1>第一部分（给人看）</h1>
+
+<h2>1 要做什么</h2>
+<p>把论文 §5.2「策略内部有没有任务进度的估计」从 StopCube 换成 RouteStick，同时把 §5.1 图 a（motion token 按事件着色的 t-SNE，现在是假数据占位）也用 RouteStick 的真实 token 画出来。两件事共用同一批数据、同一次回放：</p>
+<ol>
+<li><b>数据：</b>用最新 benchmark <code>b4e97f2</code> 按 episode_spec 新生成 RouteStick 专家局，四个难度各 50 局，共 200 局。这些局两个模型都没见过。</li>
+<li><b>回放：</b>两个四任务 modulation 模型各回放一遍，按评测节奏（执行段每 16 步推理一次）在每个推理点抓逐层隐状态。</li>
+<li><b>探针：</b>逐层线性探针读「进度」和「下一步怎么走」，与时间基线、模型内部的「无记忆」前缀组对比，出一张替换 Fig. 4 的图。</li>
+<li><b>图 a：</b>从模型 A 的记忆输入里取 motion token 和帧 token，按 RouteStick 的四种事件（左/右 × 顺/逆时针）着色画 t-SNE，并给一个可写进正文的数字。</li>
+</ol>
+
+<h2>2 已定口径</h2>
+<div class="tbl"><table>
+<tr><th>编号</th><th>口径</th><th>依据</th></tr>
+<tr><td>K1</td><td>任务换成 RouteStick，模型用四任务×400 的 modulation 模型</td><td>用户：「能不能在4task的routestick任务上做」</td></tr>
+<tr><td>K2</td><td>图 a 一起做，也改成 RouteStick</td><td>用户：「图a能不能一起做了？也改为routestick任务」。图 a 指 <code>fig:cluster</code> 的 (a)「t-SNE of motion tokens by event, frame tokens in gray」</td></tr>
+<tr><td>K3</td><td>用最新的 RouteStick 数据：在 <code>b4e97f2</code> 上按 spec 新生成，不用旧示教</td><td>用户：「最新的rss」。<span class="warn">这是本计划对这句话的理解，</span>如果你指的是别的数据（例如训练集 400 局），开工前改这一条即可，第二部分 B1 的 rsprog_points 和 B6 第 2 步跟着改</td></tr>
+<tr><td>K4</td><td>GreatLakes 4 张 A40 加 aspen 2 张 A6000 一起用；占位已先交</td><td>用户：「然后query4卡」</td></tr>
+<tr><td>K5</td><td>只评估，不训练、不改权重；不存注意力；不置空、不删 motion token</td><td>记忆：替换实验不存注意力；R2/R8 沿用 steer-4task-1115</td></tr>
+<tr><td>K6</td><td>动作 token 每个点取 5 个噪声样本</td><td>沿用 StopCube K5：「action expert 5个够了」</td></tr>
+</table></div>
+
+<h2>3 和 StopCube 版的两处根本不同</h2>
+<p><b>(1) 记忆不进前缀。</b>四任务模型是 modulation 注入：<code>history_pi0.py</code> 里 <code>mem_mods=[False, True]</code>，<code>embed_prefix</code> 只在 <code>integration_type == "context"</code> 时拼入记忆。所以前缀（当前图像加文字）完全看不到历史，记忆只通过 <code>history_gemma.py</code> 的 <code>MemoryAttention</code>（4 头交叉注意力，Q 是动作 token，K/V 是 <code>mem_seq</code>）加 <code>MemoryRMSNorm</code> 的 FiLM 调制，在动作专家每一层 FFN 前进入。这带来两个后果：</p>
+<ul>
+<li>StopCube 读的「前缀四组」在这里读不到任何记忆信息。主读数改成<b>动作专家的逐层隐状态</b>，和<b>每层的记忆调制向量</b> <code>mem_mod_vec</code>。</li>
+<li>前缀组反而成了模型内部天然的「无记忆」对照，比 StopCube 干净：StopCube 的基线当前画面组从第 1 层起就能读出历史，已经不能当只看画面的对照（1105 B10）。这里用闸门 <code>MEM_BLIND</code> 证明前缀与记忆无关。</li>
+</ul>
+<p><b>(2) RouteStick 的进度是离散的，专家执行又是等速的。</b>每一步正好 50 帧（<code>solve_swingonto_withDirection</code> 是 45 个途经点加 5 个停顿；<code>RS_SEGLEN=PASS eps=60 variants=903 bad=0</code>）。所以「已完成几步 j」等于执行段时间 ÷ 50，只看时间就能读出，不能当主读数。主读数改用必须靠记忆才能知道的量：</p>
+<div class="tbl"><table>
+<tr><th>标签</th><th>定义</th><th>只看时间能不能读出</th><th>地位</th></tr>
+<tr><td>进度比例 τ</td><td>执行段已走步数 ÷ 总步数 50L（L 是路线步数，只在示范视频里）</td><td>不能：缺 L</td><td><b>主读数 1</b>，画成 Fig. 4 那样的逐层 R² 图</td></tr>
+<tr><td>下一步走法</td><td>即将开始那一步的「左右 × 顺/逆」四分类</td><td>不能，当前画面也看不出来</td><td><b>主读数 2</b></td></tr>
+<tr><td>剩余步数 L − j</td><td>还剩几步</td><td>不能：缺 L</td><td>副读数</td></tr>
+<tr><td>当前这一步的走法</td><td>正在走的这一步的四分类</td><td>不能，但画面里手臂在动，能部分读出</td><td>正对照（应当读得出）</td></tr>
+<tr><td>已完成步数 j</td><td>⌊执行步 ÷ 50⌋</td><td>能</td><td>只作时间基线核对，不进结论</td></tr>
+</table></div>
+<p>这一点与参照论文（Bhardwaj 等，arXiv 2608.13474）的 τ 定义相同，但我们把时间基线写进每一个读数，报「超出时间多少」，这是 StopCube 第一轮的教训 L1。</p>
+
+<h2>4 数据与取点</h2>
+<div class="tbl"><table>
+<tr><th>项</th><th>做法</th><th>数字</th></tr>
+<tr><td>局池</td><td>seed 从 3400000 起，用 <code>samep_rs_variants.rebuild_spec</code> 复算 spec（与 steering 同一套函数），按难度显式传入。注意 <code>RouteStick</code> 不传 difficulty 时恒为 easy（构造函数里那条 if 链会被覆盖）</td><td>easy/medium/hard/xhard 各 50 局；步数 L 分别为 2–3、4–5、4–7、8–10</td></tr>
+<tr><td>生成</td><td>benchmark 自带的 <code>scripts/generate_dataset_newseed.py --episode-specs &lt;spec&gt;</code>，产出与训练集同格式的 H5（示范在前、专家执行在后；有 <code>choice_action</code> 和 <code>is_subgoal_boundary</code>）</td><td>预计约 10.7 万帧；按训练集实测每局 xhard 约 900 步、easy 约 250 步</td></tr>
+<tr><td>取点</td><td>执行段从起点开始每 16 步一个推理点，与评测完全同节奏（喂帧也按评测的批，不再有「评测没见过的推理时刻」）</td><td>每模型约 3350 点：easy 约 8、medium 14、hard 17、xhard 28 点/局</td></tr>
+<tr><td>同帧异史配对</td><td>hard/xhard 允许回头，会在同一局里回到同一个按钮。每一步起点处、机械臂停在同一按钮、前视与腕部逐像素差都不超过 8 的点对，做严格档</td><td>写计划时没生成数据，配对数未知，生成后由 R1 的脚本实算</td></tr>
+</table></div>
+
+<h2>5 特征组（每模型）</h2>
+<div class="tbl"><table>
+<tr><th>组</th><th>取法</th><th>作用</th></tr>
+<tr><td>前缀：当前图像 / 文字</td><td>18 层逐层组均值（沿用 <code>hidden_prefix</code>）</td><td>模型内无记忆对照（MEM_BLIND 证明）</td></tr>
+<tr><td>动作 token</td><td>18 层；前 16 个动作位均值，对去噪步平均，5 个噪声样本再平均（沿用 <code>hidden_action</code> 定义）</td><td><b>主特征</b></td></tr>
+<tr><td>记忆调制</td><td>18 层 <code>mem_mod_vec</code>（MemoryAttention 输出）在动作位上取均值，同样对去噪步和噪声平均</td><td>每层「从记忆读到了什么」</td></tr>
+<tr><td>记忆输入级</td><td><code>mem_seq</code>：帧 token 均值、motion token 均值、最近一个 motion token</td><td>编码器给了什么 vs 策略算出了什么</td></tr>
+</table></div>
+<p>每组在外层训练折内标准化、PCA 到 64 维、岭回归或一对多分类，按局 5 折，局级 bootstrap 2000 次，全部复用 <code>analysis/hover_probe.py</code> 和 <code>rollout_probe.py</code>。</p>
+
+<h2>6 图 a（t-SNE）</h2>
+<ul>
+<li><b>点：</b>每局最后一个推理点的 <code>mem_seq</code> 覆盖整段示范加执行。motion token 窗口为 33 帧、步长 16（配置 <code>motion.stride: 16</code>，<code>grid_origin: segment_start</code>）；帧 token 每帧 64 个，取每帧均值，画成灰点。两者都在投影后的 1024 维记忆空间里，所以能画在同一张 t-SNE 上。</li>
+<li><b>事件标签：</b>窗口至少 2/3 帧（≥ 22/33）落在同一步里，取该步的「左右 × 顺/逆」，四色；跨步的窗口标「过渡」，画成浅色或不画（在图注里写明）。示范段和执行段都算，用实心/空心区分。</li>
+<li><b>一个数字：</b>四分类的按局 5 折线性准确率：motion token 对帧 token。另报 kNN 准确率作稳健性核对。</li>
+<li>图 b（线性探针柱状图）不在本轮范围。</li>
+</ul>
+
+<h2>7 验收</h2>
+<div class="tbl"><table>
+<tr><th>查什么</th><th>怎么查</th><th>判定行</th></tr>
+<tr><td>生成局与 spec 一致</td><td>逐局：示范段长 = 50L，每段 <code>choice_action</code> 的左右/绕向等于 spec，<code>is_video_demo</code> 在示范结束处翻转</td><td><code>GEN_SPEC=PASS eps=200 mismatches=0</code></td></tr>
+<tr><td>标签正确</td><td>抽 8 局（每难度 2 局）把若干取点存图，主会话目视核对按钮位置与下一步走法</td><td><code>LABELS=PASS episodes=8 mismatches=0</code></td></tr>
+<tr><td>前缀看不到记忆</td><td>同一观测把 <code>mem_seq</code> 换成全零：前缀各层隐状态最大差应为 0，动作组应变化</td><td><code>MEM_BLIND=PASS prefix_maxabs=0 action_maxabs&gt;0</code></td></tr>
+<tr><td>捕获路径 = 真实推理</td><td>同一噪声，新捕获路径输出的动作对 <code>policy._sample_actions</code> 的动作，冒烟局全部推理点</td><td><code>REPLAY_PARITY=PASS points=&lt;n&gt; maxabs≤1e-3</code></td></tr>
+<tr><td>精度够用</td><td>相邻点距离中位数 ÷ 捕获误差 ≥ 10（沿用 StopCube）</td><td><code>HIDDEN_PRECISION=PASS</code></td></tr>
+<tr><td>正对照</td><td>动作组第 17 层读当前这一步的走法，折外准确率 ≥ 0.8</td><td><code>POSITIVE_CONTROL=PASS acc=&lt;值&gt;</code></td></tr>
+<tr><td>无同局泄漏</td><td>每折训练局与测试局交集</td><td><code>GROUP_LEAK=PASS leak=0</code></td></tr>
+<tr><td>全量完成</td><td>每模型点数等于标签表点数，日志 <code>EXIT_CODE=0</code></td><td><code>REPLAY_RUN=PASS model=&lt;A|B&gt;</code></td></tr>
+<tr><td>主读数</td><td>探针减时间基线的差与局级区间；PASS 只表示流程完整，不表示解码成功</td><td><code>PROBE=PASS model=&lt;m&gt; label=&lt;l&gt;</code></td></tr>
+<tr><td>t-SNE 样本够</td><td>四种事件各至少 30 个窗口</td><td><code>TSNE_SET=PASS windows=&lt;n&gt; min_per_event≥30</code></td></tr>
+<tr><td>图可交付</td><td>渲染 PNG 后主会话目视：重叠、对齐、溢出、图例</td><td><code>FIG_VISUAL=PASS figs=3</code></td></tr>
+</table></div>
+
+<h2>8 步骤</h2>
+<div class="tbl"><table>
+<tr><th>阶段</th><th>内容</th><th>判据</th></tr>
+<tr><td>0</td><td>开工审查：一个只读审查代理查计划自相矛盾</td><td><code>PLAN_CONSISTENCY_REVIEW</code></td></tr>
+<tr><td>1</td><td>R1 / R2 / R3 三个写入型子代理并行写代码；R1 先合入，主会话用它出 200 局 spec</td><td>各自单测；合并前后两次审查</td></tr>
+<tr><td>2</td><td>生成：先每难度 1 局冒烟，再在 4 个 A40 占位里全量生成（与 R2/R3 写代码并行）</td><td><code>GEN_SPEC</code></td></tr>
+<tr><td>3</td><td>标签与配对、目视抽查</td><td><code>LABELS</code></td></tr>
+<tr><td>4</td><td>回放冒烟：A、B 各 1 局（aspen 两张卡）</td><td><code>MEM_BLIND</code>、<code>REPLAY_PARITY</code>、<code>HIDDEN_PRECISION</code></td></tr>
+<tr><td>5</td><td>全量回放：200 局切 6 份，A40×4 + A6000×2，A、B 各一半通道</td><td><code>REPLAY_RUN</code></td></tr>
+<tr><td>6</td><td>探针、Fig. 4 新版、图 a、目视复查</td><td><code>GROUP_LEAK</code>、<code>POSITIVE_CONTROL</code>、<code>PROBE</code>、<code>TSNE_SET</code>、<code>FIG_VISUAL</code></td></tr>
+<tr><td>7</td><td>留档 <code>docs/evaluation-doc/rs-progress-probe-1117/</code>、commit、push、按清单 scancel 4 个占位</td><td>—</td></tr>
+</table></div>
+
+<h2>9 子代理分工与合并（简述）</h2>
+<p>代码拆成三块，写集不重叠，各自在独立 worktree 里做：</p>
+<ul>
+<li><b>R1</b>：局池、spec、取点、标签、配对、t-SNE 窗口表（新文件）。</li>
+<li><b>R2</b>：适配器支持 modulation，加动作组与记忆调制的捕获，新回放入口。</li>
+<li><b>R3</b>：探针与三张图。</li>
+</ul>
+<p>R1 只依赖已有函数，先合，让生成能尽早开跑；然后合 R2、R3。每次合并前派一个只读审查代理审固定 sha，合并后主会话跑定向单测、核文件清单，通过就推送。生成、冒烟、全量回放、出图目视和留档都由主会话做，因为监听和资源归主会话。细节见第二部分 B4。</p>
+
+<h2>10 资源与时间</h2>
+<p>GL 4×A40（已占）加 aspen 2×A6000（与他人共用：写计划时 GPU0 已用约 6.7 GB，GPU1 约 1.8 GB）。生成没有实测，按 steering 变体录制每段约 100–130 秒估算，200 局约 1200 段，摊到 4 卡、每卡 3 个 worker，约 3–4 小时。回放每点要做 5 个噪声 × 10 个去噪步：StopCube 第一轮 bf16 加 10 个噪声样本实测约 3.1 秒/点，按这个算每模型约 3 小时，6 卡分摊后约 1–2 小时；冒烟后回填。探针和出图在 CPU 上，约 30 分钟。4 个占位从开工令起计，空闲期间也占配额，所以开工令不来的话，我会在你说不做时按清单 scancel。</p>
+<p>第二部分有红线、逐文件改动、子代理分配表、闸门、runbook、风险、盲区和留档。</p>
+
+<h1>第二部分（技术细节，供 agent 追踪）</h1>
+
+<h2>B0 前置声明与红线</h2>
+<div class="tbl"><table>
+<tr><th>编号</th><th>内容</th></tr>
+<tr><td>R1</td><td>环境 A：sled-aspen 2×A6000，加 GreatLakes spgpu A40 占位 <code>66304774</code>、<code>66304775</code>、<code>66304776</code>、<code>66305145</code>。不用 Vail；AWS 只发消息。不做同卡配对约束，回执记录 GPU 型号（沿用 steer R1）。</td></tr>
+<tr><td>R2</td><td>只评估、只读权重；<code>src/</code>、<code>third_party/</code>、<code>scripts/training/</code>、<code>scripts/evaluation/</code> 零改动。代码改动只在 B4 列出的 <code>scripts/interpret/</code> 文件里。</td></tr>
+<tr><td>R3</td><td>benchmark 固定 <code>b4e97f2</code>；episode_spec 只作为生成脚本的输入。</td></tr>
+<tr><td>R4</td><td>checkpoint 固定 step 50000。A：aspen <code>v1-store/assets/vla-4task-modul-motion-50000/50000</code>，GL <code>…/robomme_policy_learning_MotionJEPA/v1-store/models/robomme-vla-modul-motion-80k-v1/50000</code>；B：aspen <code>v1-store/assets/vla-4task-modul-wantp768-50000/50000</code>，GL <code>…/robomme_policy_learning_MotionJEPA-eval/v1-store/models/robomme-vla-4task-modul-wantp768-50k-v1/50000</code>（注意在 <code>-eval</code> 树下）。起跑前按 <code>SHA256SUMS.pre.txt</code> 复核（<code>VLA_SYNC=PASS</code>）。norm_stats sha256 <code>856c75ea…</code>。</td></tr>
+<tr><td>R5</td><td>seed 池从 3400000 起，与 692 评估（&lt;500000）、test（RouteStick 660000+）、11-10 池（2200000–2450000）、steering 池（3100000+、3200000+）不重叠。</td></tr>
+<tr><td>R6</td><td>tmux 前缀 <code>rsp-</code>；GL 只 scancel 清单 <code>hold-jobs-rsprog-1117.txt</code> 里的 JobID，不动在跑的训练占位 <code>65943150</code>、<code>65943151</code>。</td></tr>
+<tr><td>R7</td><td>不存注意力；motion token 不换、不删、不置零（<code>MEM_BLIND</code> 里的置零只在闸门自测里做，不进数据）。</td></tr>
+<tr><td>R8</td><td>主读数预先写死：模型 A 动作组的 τ（R²）和下一步走法（准确率），层由训练折内选。其余都标为探索性。FAIL 只记录、不改判据。</td></tr>
+<tr><td>R9</td><td>P-LINEAGE 不适用：本轮不建库、不训练。</td></tr>
+<tr><td>R10</td><td>正式运行取固定 sha：aspen 用 detached clean worktree <code>v1-store/worktrees/rsp-run</code>；GL 用 <code>git archive</code>（含子模块）出 <code>…-eval/releases/&lt;sha&gt;/</code>，核 <code>GL_RELEASE=PASS</code>（沿用 steer R10）。</td></tr>
+</table></div>
+
+<h2>B1 逐文件改动清单</h2>
+<div class="tbl"><table>
+<tr><th>文件</th><th>锚点</th><th>改什么</th></tr>
+<tr><td><code>scripts/interpret/rsprog_points.py</code>（新）</td><td><code>build_pool</code>、<code>write_specs</code>、<code>points_from_h5</code>、<code>labels</code>、<code>same_frame_pairs</code>、<code>tsne_windows</code></td><td>复用 <code>samep_rs_variants.rebuild_spec</code>、<code>check_spec</code>、<code>content_segments</code>、<code>swing_of</code> 和 <code>rs_full_prep.cell_xy</code>。<code>write_specs</code> 按 <code>generate_dataset_newseed.load_episode_specs</code> 的多组格式写（<code>SPEC_RECORD_REQUIRED</code> 含 <code>spec_sha256</code>）。<code>points_from_h5</code> 用 <code>is_video_demo</code> 定示范与执行分界、<code>is_subgoal_boundary</code> 定步边界，执行段偏移 0、16、32… 取点，输出 <code>rsprog_points.json</code>：每局 seed、难度、L、路线、示范长度；每点 t、执行偏移、j、τ、下一步与当前步走法、L−j、所在按钮。打印 <code>GEN_SPEC</code>、配对数。</td></tr>
+<tr><td><code>scripts/interpret/attn_adapter.py</code></td><td><code>AttnAdapter.__init__</code> 的 context 断言、<code>_build</code> 里 <code>HistoryBlock(integration_type="context")</code>、<code>block_apply</code>、<code>f_sample_attn</code>、<code>f_prefix</code>、<code>layout</code>、<code>run</code>、<code>dry_shapes</code>、<code>selftest</code></td><td>放开 <code>"modulation"</code>：HistoryBlock 跟随 <code>integration_type</code>；去噪步向 suffix 传 <code>mem_seq=[None, mem_seq]</code>、<code>mem_mask=[None, mem_mask]</code>（<code>mem_seq</code> 在循环外由 <code>embed_memory</code> 算一次，与 <code>HistoryPi0.sample_actions</code> 一致）；<code>layout</code> 的前缀 MEM=0、IMG=P−TXT，记忆长度另记；新增 capture 项 <code>hidden_memmod</code>（每层 <code>mem_mod_vec</code> 在动作位上取均值，按去噪步平均）和 <code>mem_inputs</code>（帧均值、motion 均值、最近 motion token，以及给 t-SNE 用的逐 token <code>mem_seq</code> 与 token 类型/时间）。context 路径的调用形式与编译产物不变（用现有 selftest 守住）。子代理估算约 120–200 行。</td></tr>
+<tr><td><code>scripts/interpret/rsprog_replay.py</code>（新）</td><td><code>replay_episode</code>、<code>write_episode</code>、<code>--selftest</code>、<code>--mem-blind-check</code>、<code>--parity-check</code></td><td>从 <code>hover_replay.py</code> 导入 <code>build_observation</code>、<code>action_noise</code> 等（不改原文件）。喂帧按评测：示范段与执行段按 <code>exec_start_idx</code>，执行段每批 16 帧，在批尾推理点调用 <code>adapter.run(..., capture_hidden=True)</code>，K=5 噪声。只在每局最后一个点存逐 token <code>mem_seq</code>。分组不再假设记忆在前缀里（不调用 <code>build_groups</code>，前缀只分图像、文字两组）。</td></tr>
+<tr><td><code>scripts/interpret/analysis/rsprog_probe.py</code>（新）</td><td><code>load_bank</code>、<code>analyze</code>、<code>plot_layerwise</code>、<code>plot_progress</code></td><td>从 <code>hover_probe.py</code> 导入 <code>fit_pca</code>、<code>pca_transform</code>、<code>ridge_path</code>、<code>fit_targets</code>，从 <code>rollout_probe.py</code> 导入 <code>hash_fold</code>、<code>episode_weights</code>、<code>select_lambda</code>，bootstrap 用 <code>oracle_press_prob.bootstrap</code>。时间基线：执行偏移独热；另报 <code>[偏移, L]</code> oracle。打乱对照：整局换路线后按本局时间重算标签，20 次。新版 Fig. 4：上排逐层 R²（τ），三组（前缀、记忆调制、动作）× 两模型，虚线为时间基线；下排第 17 层预测对真值。</td></tr>
+<tr><td><code>scripts/interpret/analysis/rsprog_tsne.py</code>（新）</td><td><code>window_labels</code>、<code>embed</code>、<code>plot</code>、<code>linear_acc</code></td><td>t-SNE（sklearn，perplexity 30，种子 0，PCA 50 维初始化）。版式与 <code>latent_placeholder.pdf</code> 的 (a) 一致：单栏宽、四色事件、灰色帧 token、图例在下。打印 <code>TSNE_SET</code> 和按局 5 折四分类准确率（motion 对帧）。</td></tr>
+<tr><td>测试</td><td><code>scripts/interpret/tests/test_rsprog_points.py</code>、<code>test_rsprog_replay.py</code>、<code>test_rsprog_probe.py</code></td><td>纯 CPU：合成 spec 与 H5 的取点和标签；适配器的 layout 与分组；合成数据的探针与 t-SNE 冒烟。</td></tr>
+</table></div>
+
+<h2>B2 标签与取点细则</h2>
+<ul>
+<li>执行段起点 <code>e0</code> = 第一帧 <code>is_video_demo == False</code>；执行步 <code>u = t − e0</code>，推理点 <code>u ∈ {0, 16, 32, …}</code> 且 <code>u &lt; 50L</code>。</li>
+<li><code>j = ⌊u/50⌋</code>（0 起），τ = u/(50L)，剩余步数 L − j，当前步走法 = <code>directions[j]</code> 加 <code>_stick_side</code>（由节点 y 坐标相对上一节点判左右），下一步 = 第 j+1 步；最后一步没有下一步，不进该标签。</li>
+<li>H5 的每段 <code>choice_action</code>（A 左顺、B 右顺、C 左逆、D 右逆）必须与 spec 一致（GEN_SPEC），以 spec 为真值。</li>
+<li>专家执行段实际帧数若不等于 50L（失败重试、停顿），按 <code>is_subgoal_boundary</code> 的实际边界算 j 和 τ，并在 GEN_SPEC 里单独计数，不当成 mismatch。</li>
+<li>同帧异史：同一局中，两个点都在步起点（<code>u mod 50 &lt; 16</code> 的第一个推理点），所在节点相同，前视与腕部逐像素最大差 ≤ 8。严格档读「下一步走法」的配对准确率（两点都对才算对），对 <code>[偏移]</code> 基线。</li>
+</ul>
+
+<h2>B3 已核实的事实（写计划时只读核实，2026-11-17 美东）</h2>
+<div class="tbl"><table>
+<tr><th>事实</th><th>证据</th></tr>
+<tr><td>modulation 下前缀不含记忆，记忆在动作专家每层 FFN 前经 MemoryAttention + MemoryRMSNorm（FiLM）进入</td><td><code>src/mme_vla_suite/models/integration/history_pi0.py</code>：<code>embed_prefix</code> 只在 context 分支拼记忆，<code>sample_actions</code> 的 modulation 分支传 <code>mem_seq=[None, mem_seq]</code>，构造时 <code>mem_mods=[False, True]</code>；<code>history_gemma.py</code> 的 <code>HistoryBlock.__call__</code>、<code>MemoryAttention</code>、<code>MemoryRMSNorm</code></td></tr>
+<tr><td>现有适配器只认 context</td><td><code>attn_adapter.py</code> <code>AttnAdapter.__init__</code>：<code>integration_type != "context"</code> 时 SystemExit；<code>_build</code> 写死 <code>HistoryBlock(..., integration_type="context")</code></td></tr>
+<tr><td>RouteStick：5 个按钮节点、4 根柱，每步一段 50 帧；easy 2–3、medium 4–5、hard 4–7、xhard 8–10 步；hard/xhard 允许回头</td><td><code>third_party/robomme_benchmark/src/robomme/robomme_env/RouteStick.py</code>（<code>_load_scene</code>、难度表、<code>_stick_side</code>）、<code>utils/route.py::generate_dynamic_walk</code>；<code>RS_SEGLEN=PASS eps=60 variants=903 bad=0</code></td></tr>
+<tr><td>不传 difficulty 时恒为 easy</td><td><code>RouteStick.__init__</code>：seed%3 的 if 链之后无条件 <code>self.difficulty = "easy"</code></td></tr>
+<tr><td>生成脚本支持 spec</td><td><code>third_party/robomme_benchmark/scripts/generate_dataset_newseed.py</code>：<code>--episode-specs</code>、<code>--difficulty</code>、<code>--workers</code>、<code>--gpus</code>、<code>--output-dir</code>；<code>load_episode_specs</code>、<code>validate_episode_spec</code></td></tr>
+<tr><td>H5 每帧有 <code>choice_action</code>、<code>is_subgoal_boundary</code>、<code>is_video_demo</code>，没有路线数组</td><td>官方 <code>/data/hongzefu/data_0226/record_dataset_RouteStick.h5</code> 只读实查（episode_0 共 200 步；边界在 0、50、100…）</td></tr>
+<tr><td>记忆配置：帧 budget 512、每帧 64 token、motion budget 160、窗口 33 帧、步长 16、<code>memory_token_dim 1024</code></td><td><code>src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-8frame-8x8-motion.yaml</code>（B 为 <code>…-wantp768.yaml</code>）</td></tr>
+<tr><td>训练集 RouteStick 400 局的 H5 不在 aspen 上（只有 smoke28 子集）</td><td><code>/data/hongzefu/robomme-4task-h5-20260912-v2/control/source.json</code>；这也是 K3 改用新生成数据的另一个理由</td></tr>
+<tr><td>aspen 运行环境可复用</td><td>steering 的 <code>v1-store/venvs/wan</code>（sidecar）、<code>v1-store/logs/steer-4task-1115/aspen_env.sh</code>；aspen 在显存比例 0.22 下跑 1 局 xhard 无 OOM</td></tr>
+</table></div>
+
+<h2>B4 子代理分配表</h2>
+<p>写入型子代理 <code>model: opus</code> 加 <code>isolation: worktree</code>，基线是开工审查后的 HEAD；审查 <code>model: sonnet</code> 只读，每个分支一轮一个。worktree 环境：<code>UV_PROJECT_ENVIRONMENT=&lt;主检出 .venv&gt; PYTHONPATH=&lt;worktree&gt;:&lt;worktree&gt;/src uv run --no-sync …</code>，先打印模块 <code>__file__</code> 确认指向 worktree。每条 git 命令单独一次 Bash；不 push；不跑超过 5 分钟的任务。</p>
+<div class="tbl"><table>
+<tr><th>编号</th><th>目标</th><th>可写文件</th><th>禁触</th><th>接口与依赖</th><th>合并顺序</th><th>验收</th><th>资源</th></tr>
+<tr><td>R1</td><td>B1 第 1 行、B2</td><td><code>scripts/interpret/rsprog_points.py</code>、<code>scripts/interpret/tests/test_rsprog_points.py</code></td><td>其余全部；不写 <code>v1-store/</code></td><td>输出 spec 文档与 <code>rsprog_points.json</code>、<code>tsne_windows.json</code>（模式写在模块 docstring）；无上游</td><td>1</td><td><code>uv run python -m pytest scripts/interpret/tests/test_rsprog_points.py -q</code> 全过；另对 5 个 steering 池 seed 复算 spec 与 <code>rebuild_spec</code> 一致</td><td>CPU</td></tr>
+<tr><td>R2</td><td>B1 第 2、3 行</td><td><code>scripts/interpret/attn_adapter.py</code>、<code>scripts/interpret/rsprog_replay.py</code>、<code>scripts/interpret/tests/test_rsprog_replay.py</code></td><td><code>src/</code>、<code>third_party/</code>、<code>hover_replay.py</code>（只导入）</td><td>读 R1 的 JSON 模式；npz 字段写在 docstring：<code>t</code>、<code>u</code>、<code>hidden_prefix (19,2,W)</code>、<code>hidden_action (K,18,W_a)</code>、<code>hidden_memmod (K,18,W_a)</code>、<code>mem_inputs</code></td><td>2</td><td>单测全过；现有 <code>attn_adapter</code> context selftest 不变（CPU dry_shapes）</td><td>CPU；GPU 冒烟归主会话</td></tr>
+<tr><td>R3</td><td>B1 第 4、5 行</td><td><code>scripts/interpret/analysis/rsprog_probe.py</code>、<code>scripts/interpret/analysis/rsprog_tsne.py</code>、<code>scripts/interpret/tests/test_rsprog_probe.py</code></td><td><code>hover_probe.py</code>、<code>rollout_probe.py</code>（只导入）</td><td>读 R1、R2 的输出模式</td><td>3</td><td>合成数据单测全过，图能出</td><td>CPU</td></tr>
+<tr><td>主会话</td><td>spec 生成、数据生成、冒烟、全量回放、分析、目视、留档</td><td><code>docs/evaluation-doc/rs-progress-probe-1117/</code>；运行脚本放 <code>v1-store/evaluation/rs-progress-probe-1117/</code>（不进 git）</td><td>—</td><td>依赖 R1（生成）和 R1–R3（回放）</td><td>—</td><td>B5 全部判定行</td><td>A40×4、A6000×2</td></tr>
+</table></div>
+<p>共享文件：<code>attn_adapter.py</code> 只归 R2。合并按第 26 条：sonnet 审查钉死 BASE/TIP，输出 <code>PRE_MERGE_REVIEW</code> → <code>git merge --no-ff &lt;TIP&gt;</code> → 合并后跑三份单测与 context selftest，输出 <code>POST_MERGE_REVIEW</code> → push。worktree 在全量回放通过后才清理。</p>
+
+<h2>B5 闸门总表</h2>
+<p>判定行与阈值见第一部分 §7；补充两点：<code>REPLAY_PARITY</code> 的 1e-3 沿用 StopCube，没有本模型的实测依据，冒烟 FAIL 就停下交用户，不改阈值；<code>MEM_BLIND</code> 若前缀差不为 0，说明对 modulation 数据流的理解有误，停下。</p>
+
+<h2>B6 Runbook</h2>
+<ol>
+<li>开工审查（<code>PLAN_CONSISTENCY_REVIEW</code>），然后派 R1、R2、R3。</li>
+<li>R1 合入后：<code>rsprog_points.py build-pool --seed-start 3400000 --per-difficulty 50</code> 写 spec。aspen 上每难度 1 局冒烟生成：<code>generate_dataset_newseed.py --env RouteStick --difficulty &lt;d&gt; --episode-specs &lt;spec&gt; --episodes 1 --workers 1 --gpus 1 --output-dir v1-store/datasets/rs-progress-1117/</code>。然后全量：GL 4 个占位各一个 srun 作业步，每卡 3 个 worker，<code>--gpu_cmode=shared</code>，<code>OMP_NUM_THREADS=1</code>，按难度分卡。输出写 turbo <code>…-eval/v1-store/datasets/rs-progress-1117/</code>，完成后 rsync 到 aspen <code>v1-store/datasets/rs-progress-1117/</code>（逐文件 sha256），<code>--merge-only</code> 合成 <code>record_dataset_RouteStick.h5</code>。</li>
+<li><code>rsprog_points.py points</code> → <code>GEN_SPEC</code>、<code>LABELS</code>、配对数。</li>
+<li>R2、R3 合入后，aspen 冒烟（A 在 GPU1、B 在 GPU0，比例 0.40）：<code>rsprog_replay.py --model A --episode 0 --mem-blind-check --parity-check</code>，回填单点耗时。</li>
+<li>全量：200 局按局号哈希切 6 片；A、B 各 3 片（GL 2 片加 aspen 1 片），tmux <code>rsp-rep-&lt;m&gt;-&lt;k&gt;</code>，日志 <code>v1-store/evaluation/rs-progress-probe-1117/logs/</code>，每份日志一个 Monitor。过滤词：<code>EXIT_CODE=|Traceback|Error|nan|NaN|out of memory|Killed|拒绝|失败|FAIL|找不到</code>。</li>
+<li><code>rsprog_probe.py</code>、<code>rsprog_tsne.py</code>（tmux <code>rsp-probe</code>），出 <code>records/progress-layerwise.png/pdf</code>、<code>records/progress-fit.png</code>、<code>records/tsne-routestick.png/pdf</code>；渲染后目视复查。</li>
+<li>写 <code>result.md</code>、commit、push；按清单 scancel 4 个占位，前后各 <code>squeue --me</code> 一次；清理 worktree。图进论文仓库是另一件事，交给用户决定。</li>
+</ol>
+
+<h2>B7 风险登记</h2>
+<div class="tbl"><table>
+<tr><th>风险</th><th>处置</th></tr>
+<tr><td>专家执行段不是严格每步 50 帧（重试、停顿）</td><td>以 <code>is_subgoal_boundary</code> 实际边界算标签（B2）；GEN_SPEC 计数</td></tr>
+<tr><td>生成失败自动重试改变 seed（<code>attempt+1</code>）</td><td>spec 模式下路线由 spec 定，seed 变化只影响物理细节；记录每局实际 seed</td></tr>
+<tr><td>τ 与时间高度相关（同难度内 L 变化小）</td><td>主结论只看「超出 <code>[偏移]</code> 基线多少」，另按难度分层报</td></tr>
+<tr><td>相邻点高度相关</td><td>统计单位是局；按局 bootstrap</td></tr>
+<tr><td>t-SNE 的视觉分簇依赖超参</td><td>固定种子和 perplexity；正文只引用线性准确率，不引用图的观感</td></tr>
+<tr><td>aspen 卡与他人共用</td><td>比例 0.40，OOM 就降 K（噪声样本数）之前先停下，记录后改到 A40</td></tr>
+<tr><td>GL Vulkan 在作业步结束后卡回独占模式（11-10 已知）</td><td>生成一个占位一个长作业步依次跑完；遇 <code>ErrorInitializationFailed</code> 按 steer 第 9 条处置</td></tr>
+</table></div>
+
+<h2>B8 盲区诚实清单</h2>
+<ul>
+<li>生成与回放都没有实测耗时；第一部分 §10 的时间只是估计。</li>
+<li>没有核实 <code>generate_dataset_newseed.py</code> 在 spec 模式下写出的 H5 键与官方示教完全一致；冒烟时核对。</li>
+<li>modulation 下 <code>hidden_action</code> 的定义（前 16 个动作位、去噪步平均）沿用 StopCube 第二批的写法，没有与用户单独确认。</li>
+<li>新生成局两个模型都没见过，与 StopCube 用训练集示教不同，两张图的数字不能直接比较。</li>
+<li>没有做 motion 通道消融，结论只到「可解码」。</li>
+</ul>
+
+<h2>B9 留档与交接</h2>
+<ul>
+<li>run_name：<code>rs-progress-probe-1117</code>；留档 <code>docs/evaluation-doc/rs-progress-probe-1117/</code>（<code>launch.md</code>、<code>result.md</code>、<code>records/</code>）；产物 <code>v1-store/evaluation/rs-progress-probe-1117/</code>；隐状态每模型约 3350 × (19×2×2048 + 2×5×18×1024) × 4 字节 ≈ 3.0 GB。</li>
+<li>超过 5 分钟的运行从干净 HEAD 启动（第 17 条）。</li>
+<li>状态机（第 27 条）：任务 id <code>rs-progress-probe-1117</code>。交接前要完成：B5 全部判定行与 <code>result.md</code> 已提交，4 个占位已 scancel。没有长尾。无上游依赖。下游（图进论文、图 b、反事实）都要另给开工令。是否登记由用户定。</li>
+</ul>
+
+<h2>B10 实施中调整（完工后追加，不改写上文）</h2>
+<p>（空）</p>
+
+</main>
+</body>
+</html>
