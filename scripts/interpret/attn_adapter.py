@@ -44,9 +44,43 @@ P / MEM / IMG / TXT 一律从当次观测经 `embed_prefix` / `embed_memory` 的
   adapter.run_prefix(obs, group_masks=<bool[G,P]>) -> {"hidden_prefix": f32 (19, G, W), "group_tokens": int32 (G,)}
   前缀段的计算与 capture_hidden=True 相同，不做去噪；只支持 batch=1；由独立的 jit 函数 f_prefix 执行，不影响 f_sample_attn。
 
+modulation 分支（计划 1117-routestick-progress-probe-attn-plan.html B1 第 2 行、B4 R2）：
+  AttnAdapter 也接受 integration_type="modulation"（四任务模型）。与 HistoryPi0.sample_actions 的 modulation 分支同式：
+  前缀只含图像与文字（make_attn_mask 不带 na_mask），prefill 不传记忆；mem_seq, mem_mask 在循环外由 embed_memory
+  算一次，去噪每步每层向动作专家传 mem_seq=[None, mem_seq]、mem_mask=[None, mem_mask]。layout 里 MEM=0、IMG=P−TXT，
+  记忆 token 数另记为 MEM_TOKENS（context 下 MEM_TOKENS=MEM）。context 路径的 trace 与编译产物不变。
+  capture_hidden=True 时 output[-1] 在原三项之外多出（只有 modulation 才有）：
+    hidden_memmod   f32 (18, W_a)  每层 mem_mod_vec（MemoryAttention 输出）在与 hidden_action 相同的动作位
+                                    （后 AH 个 token 的前 16 个）上取均值，再对去噪步平均
+    attn_mem        f32 (18, S)    每层 MemoryAttention softmax（f32），对 4 个头、上述动作位、去噪步平均；S=MEM_TOKENS，
+                                    按模型内的记忆序（mem_order 重排后）；无效（mask=False）token 上为 0
+    attn_main       f32 (18, 3)    每层动作 token 主注意力在 (lang, image, action) 三组 key 上的份额之和，
+                                    对 8 个头、动作位、去噪步平均；lang=[IMG,P)、image=[0,IMG)、action=后缀 [P,P+T)
+    film_rel        f32 (18, 2)    第 0 列：FiLM 相对改变量 ‖F(x,m) − F(x,0)‖ / ‖F(x,0)‖，F 为
+                                    mem_rms_norm_ffn（MemoryRMSNorm），x 为该层 FFN 前的动作残差流，m 为 mem_mod_vec；
+                                    F(x,0) = rms(x)·(1+b_scale)+b_shift，即 cond 置零时 Dense 只剩偏置的输出
+                                    （源码里 cond=None 是另一条带 scale 参数的分支，本模块从不走，故取 m=0 作基线）。
+                                    第 1 列：motion 部分 ‖Σ_{s∈motion} α_s·V_s‖ / ‖Σ_s α_s·V_s‖，α 为 MemoryAttention
+                                    f32 概率、V 为该层 mem 的 value（out_einsum 之前，4 个头拼成 4×256 维再取范数）。
+                                    两列都先在每个动作位上求比值，再对动作位取均值、对去噪步平均
+    mem_frame_mean / mem_motion_mean / mem_motion_latest  f32 (1024,)  mem_seq（embed_memory 输出，零记忆闸门时为零）
+                                    在有效帧 token / 有效 motion token 上的均值，以及模型记忆序里最后一个有效 motion
+                                    token（mem_order 按时间稳定排序，即时间最新）；没有该类 token 时为 0
+    mem_valid / mem_is_motion  bool (S,)   记忆序下每个 token 是否有效、是否 motion
+    attn_mem_rowsum_err / attn_main_rowsum_err  f32 ()  两套 softmax 行和对 1 的最大偏差（ATTN_AGG ①）
+    memmod_maxabs   f32 ()         重写版 MemoryAttention 输出对原模块 history_gemma.MemoryAttention（同参数、同输入）
+                                    的最大绝对差，跨层与去噪步取最大（ATTN_AGG ②）
+  run(..., zero_mem=True)（static，只用于 MEM_BLIND 闸门）把 embed_memory 输出的 mem_seq 换成全零，mask 不变。
+  重写的 MemoryAttention / MemoryRMSNorm 与 history_gemma 同算式同参数名，只额外记录中间量，不改输出。
+
 用法：
   # CPU、不加载权重，抽象求值两种 P 下的输出形状
   JAX_PLATFORMS=cpu uv run --no-sync python scripts/interpret/attn_adapter.py --dry-shapes
+  # CPU、不加载权重，modulation 模型的抽象形状（四任务模型 A）
+  JAX_PLATFORMS=cpu uv run --no-sync python scripts/interpret/attn_adapter.py --dry-shapes-modul \
+      --modul-ckpt v1-store/assets/vla-4task-modul-motion-50000/50000 --modul-config mme_vla_suite_b128_80k
+  # 原 context 用法：CPU、不加载权重，抽象求值两种 P 下的输出形状
+  (同上 --dry-shapes)
   # GPU 自检（主会话在 GPU0 跑，≤5 min）
   CUDA_VISIBLE_DEVICES=0 XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0' \
     uv run --no-sync python scripts/interpret/attn_adapter.py --selftest \
@@ -56,6 +90,7 @@ P / MEM / IMG / TXT 一律从当次观测经 `embed_prefix` / `embed_memory` 的
 from __future__ import annotations
 
 import argparse
+import contextlib
 import dataclasses
 import functools
 import os
@@ -189,6 +224,187 @@ def _make_ablate_attention(zero_heads: tuple):
     return _AblateAttention
 
 
+_MEM_CAPTURE: list = []          # 重写版 MemoryAttention / MemoryRMSNorm 把中间量追加到这里（trace 期内消费）
+_MEM_CLS: dict = {}
+
+
+def _make_mem_capture_classes():
+    """返回 (MemoryAttention 重写版, MemoryRMSNorm 重写版)。
+
+    两者与 history_gemma.MemoryAttention / MemoryRMSNorm 同算式、同子模块名与参数名（q_einsum_mem、kv_einsum_mem、
+    mem_rms_norm、out_einsum_mem；MemoryRMSNorm 的 scale 与 Dense_0），输出逐式相同；只额外把中间量追加到 _MEM_CAPTURE：
+      {"kind": "attn", "probs": f32 (B,K,G,T,S), "v": (B,S,K,H), "out": (B,T,D), "x_in": (B,T,D)}
+      {"kind": "film", "out": F(x,m) (B,T,D), "base": F(x,0) (B,T,D)}   # 只在 cond 不为 None 时记录
+    F(x,0) 复用同一个 Dense（同一组参数）作用在全零 cond 上，即只剩偏置的 scale / shift。"""
+    if "cls" in _MEM_CLS:
+        return _MEM_CLS["cls"]
+    import einops
+    import flax.linen as nn
+    import jax
+    import jax.numpy as jnp
+    import openpi.models.lora as lora
+    from openpi.models.gemma import _apply_rope
+    from mme_vla_suite.models.representation.utils import kernel_init_out_proj
+
+    capture = _MEM_CAPTURE
+
+    class _CapMemoryRMSNorm(nn.Module):
+        @nn.compact
+        def __call__(self, x, cond=None):
+            dtype = x.dtype
+            var = jnp.mean(jnp.square(x.astype(jnp.float32)), axis=-1, keepdims=True)
+            normed_inputs = jnp.asarray(x * jnp.reciprocal(jnp.sqrt(var + 1e-06)))
+            if cond is None:
+                scale = self.param("scale", nn.initializers.zeros_init(), (x.shape[-1]))
+                normed_inputs = normed_inputs * (1 + scale)
+                return normed_inputs.astype(dtype)
+            dense = nn.Dense(x.shape[-1] * 2, kernel_init=kernel_init_out_proj, dtype=dtype)
+            modulation = dense(cond)
+            scale, shift = jnp.split(modulation, 2, axis=-1)
+            out = (normed_inputs * (1 + scale) + shift).astype(dtype)
+            scale0, shift0 = jnp.split(dense(jnp.zeros_like(cond)), 2, axis=-1)        # ← 记录用：cond 置零的基线
+            base = (normed_inputs * (1 + scale0) + shift0).astype(dtype)
+            capture.append({"kind": "film", "out": out, "base": base})
+            return out
+
+    class _CapMemoryAttention(nn.Module):
+        @nn.compact
+        def __call__(self, x, mem_seq, mem_mask):
+            x_in = x
+            B, mem_len, mem_width = mem_seq.shape
+            B, x_len, x_width = x.shape
+            num_heads, num_kv_heads, head_dim, width = (4, 1, 256, 1024)
+            assert mem_width == x_width == width
+            q_einsum = lora.Einsum(shape=(num_heads, width, head_dim), name="q_einsum_mem",
+                                   init_fn=nn.initializers.lecun_normal(in_axis=-2, out_axis=-1, batch_axis=(0,)))
+            kv_einsum = lora.Einsum(shape=(2, num_kv_heads, width, head_dim), name="kv_einsum_mem",
+                                    init_fn=nn.initializers.lecun_normal(in_axis=-2, out_axis=-1, batch_axis=(0, 1)))
+            rms_norm = _CapMemoryRMSNorm(name="mem_rms_norm")
+            x = rms_norm(x)
+            q = q_einsum("BTD,NDH->BTNH", x)
+            mem_seq = rms_norm(mem_seq)
+            k, v = kv_einsum("BSD,2KDH->2BSKH", mem_seq)
+            q_positions = einops.repeat(jnp.arange(mem_len, x_len + mem_len), "t -> b t", b=B)
+            k_positions = einops.repeat(jnp.arange(mem_len), "t -> b t", b=B)
+            q = _apply_rope(q, positions=q_positions)
+            q *= head_dim**-0.5
+            k = _apply_rope(k, positions=k_positions)
+            q = einops.rearrange(q, "B T (K G) H -> B T K G H", K=num_kv_heads)
+            logits = jnp.einsum("BTKGH,BSKH->BKGTS", q, k, preferred_element_type=jnp.float32)
+            attn_mask = mem_mask[:, None, None, None, :]
+            masked_logits = jnp.where(attn_mask, logits, -2.3819763e38)
+            probs_f32 = jax.nn.softmax(masked_logits, axis=-1)
+            probs = probs_f32.astype(x.dtype)
+            encoded = jnp.einsum("BKGTS,BSKH->BTKGH", probs, v)
+            encoded = einops.rearrange(encoded, "B T K G H -> B T (K G) H")
+            out_einsum = lora.Einsum(shape=(num_heads, head_dim, width), name="out_einsum_mem",
+                                     init_fn=nn.initializers.lecun_normal(in_axis=(-3, -2), out_axis=-1))
+            out = out_einsum("BTNH,NHD->BTD", encoded)
+            capture.append({"kind": "attn", "probs": probs_f32, "v": v, "out": out, "x_in": x_in})
+            return out
+
+    _MEM_CLS["cls"] = (_CapMemoryAttention, _CapMemoryRMSNorm)
+    return _MEM_CLS["cls"]
+
+
+@contextlib.contextmanager
+def _capture_mem(hg_module):
+    """trace 期把 history_gemma.MemoryAttention / MemoryRMSNorm 换成重写版；退出时恢复。"""
+    from unittest import mock
+    att, norm = _make_mem_capture_classes()
+    with mock.patch.object(hg_module, "MemoryAttention", att), mock.patch.object(hg_module, "MemoryRMSNorm", norm):
+        _MEM_CAPTURE.clear()
+        yield _MEM_CAPTURE
+
+
+def _guard_modulation_source() -> None:
+    """modulation 复刻所依赖的生产源码片段（漂移即 SystemExit）。"""
+    from mme_vla_suite.models.integration import history_gemma as hg
+    from mme_vla_suite.models.integration import history_pi0 as hp
+    C.guard_source(hp.HistoryPi0.sample_actions, (
+        "prefix_tokens, prefix_mask, prefix_ar_mask, _ = self.embed_prefix(observation)",
+        "prefix_attn_mask = make_attn_mask(prefix_mask, prefix_ar_mask)",
+        "mem_seq, mem_mask, _, _ = self.embed_memory(observation)",
+        "mem_seq=[None, mem_seq],",
+        "mem_mask=[None, mem_mask],"), "HistoryPi0.sample_actions(modulation)")
+    C.guard_source(hp.HistoryPi0.embed_prefix, ('if self.integration_type == "context":',), "HistoryPi0.embed_prefix")
+    C.guard_source(hg.HistoryBlock.__call__, (
+        'mem_attn = MemoryAttention(name="mem_attn")',
+        'if i == len(xs) - 1 and self.integration_type == "modulation":',
+        'mem_mod_vec = mem_attn(x, mem_seq[-1], mem_mask[-1])',
+        'x = MemoryRMSNorm(name="mem_rms_norm_ffn")(x, mem_mod_vec)'), "history_gemma.HistoryBlock.__call__(modulation)")
+    C.guard_source(hg.MemoryAttention.__call__, (
+        "num_heads, num_kv_heads, head_dim, width = (",
+        'rms_norm = MemoryRMSNorm(name="mem_rms_norm")',
+        "x = rms_norm(x)",
+        "mem_seq = rms_norm(mem_seq)",
+        'k, v = kv_einsum("BSD,2KDH->2BSKH", mem_seq)',
+        'jnp.arange(mem_len, x_len + mem_len), "t -> b t", b=B',
+        "q *= head_dim**-0.5",
+        "masked_logits = jnp.where(attn_mask, logits, -2.3819763e38)",
+        "probs = jax.nn.softmax(masked_logits, axis=-1).astype(x.dtype)",
+        'return out_einsum("BTNH,NHD->BTD", encoded)'), "history_gemma.MemoryAttention.__call__")
+    C.guard_source(hg.MemoryRMSNorm.__call__, (
+        "normed_inputs = jnp.asarray(x * jnp.reciprocal(jnp.sqrt(var + 1e-06)))",
+        "modulation = nn.Dense(x.shape[-1] * 2, kernel_init=kernel_init_out_proj, dtype=dtype)(cond)",
+        "normed_inputs = normed_inputs * (1 + scale) + shift"), "history_gemma.MemoryRMSNorm.__call__")
+
+
+def mem_token_flags(mem_order, n_frame_tokens: int):
+    """模型记忆序（mem_order 重排后）下每个 token 是否 motion：重排前下标 ≥ 帧路 token 数即 motion。"""
+    import jax.numpy as jnp
+    return jnp.asarray(mem_order) >= int(n_frame_tokens)
+
+
+def modulation_point_stats(rec_attn, rec_film, probs_main, is_motion, *, action_horizon: int, img_end: int, prefix_len: int,
+                           n_tokens: int = HIDDEN_ACTION_TOKENS):
+    """一层一个去噪步的 modulation 聚合（batch=1）；返回 dict（全部 f32）：
+    memmod (W_a,)、attn_mem (S,)、attn_main (3,)、film (2,)、mem_rowsum_err ()、main_rowsum_err ()。
+    动作位 = 后缀后 action_horizon 个 token 里的前 n_tokens 个，与 action_token_mean 同口径。"""
+    import jax.numpy as jnp
+    p = rec_attn["probs"][0, 0].astype(jnp.float32)                     # (G,T,S)
+    T = p.shape[1]
+    lo = T - action_horizon
+    sel = slice(lo, lo + n_tokens)
+    ps = p[:, sel]                                                       # (G,16,S)
+    out = rec_attn["out"][0].astype(jnp.float32)                         # (T,W)
+    memmod = out[sel].mean(axis=0)
+    attn_mem = ps.mean(axis=(0, 1))
+    mem_rowsum = jnp.abs(p.sum(-1) - 1.0).max()
+    pm = probs_main[0, 0].astype(jnp.float32)[:, sel]                    # (8,16,P+T)
+    lang = pm[..., img_end:prefix_len].sum(-1)
+    image = pm[..., :img_end].sum(-1)
+    action = pm[..., prefix_len:].sum(-1)
+    attn_main = jnp.stack([lang.mean(), image.mean(), action.mean()])
+    main_rowsum = jnp.abs(pm.sum(-1) - 1.0).max()
+    f_out = rec_film["out"][0, sel].astype(jnp.float32)
+    f_base = rec_film["base"][0, sel].astype(jnp.float32)
+    tiny = jnp.float32(1e-30)
+    film_total = (jnp.linalg.norm(f_out - f_base, axis=-1) / jnp.maximum(jnp.linalg.norm(f_base, axis=-1), tiny)).mean()
+    v = rec_attn["v"][0, :, 0, :].astype(jnp.float32)                     # (S,H)，num_kv_heads=1
+    enc_all = jnp.einsum("gts,sh->tgh", ps, v).reshape(ps.shape[1], -1)
+    enc_mot = jnp.einsum("gts,sh->tgh", ps * is_motion.astype(jnp.float32)[None, None, :], v).reshape(ps.shape[1], -1)
+    film_motion = (jnp.linalg.norm(enc_mot, axis=-1) / jnp.maximum(jnp.linalg.norm(enc_all, axis=-1), tiny)).mean()
+    return {"memmod": memmod, "attn_mem": attn_mem, "attn_main": attn_main,
+            "film": jnp.stack([film_total, film_motion]), "mem_rowsum_err": mem_rowsum, "main_rowsum_err": main_rowsum}
+
+
+def memory_input_means(mem_seq, mem_mask, is_motion):
+    """mem_seq (S,D)、mem_mask bool[S]、is_motion bool[S] → (帧 token 均值, motion token 均值, 最新有效 motion token)，f32 (D,)。"""
+    import jax.numpy as jnp
+    x = mem_seq.astype(jnp.float32)
+    fr = mem_mask & ~is_motion
+    mo = mem_mask & is_motion
+
+    def mean(sel):
+        n = sel.sum()
+        return jnp.where(sel[:, None], x, 0.0).sum(0) / jnp.maximum(n, 1).astype(jnp.float32)
+
+    idx = jnp.where(mo, jnp.arange(x.shape[0]), -1).max()
+    latest = jnp.where(idx >= 0, x[jnp.maximum(idx, 0)], jnp.zeros_like(x[0]))
+    return mean(fr), mean(mo), latest
+
+
 def head_out_leaves(state) -> list:
     """llm 里 attn_vec_einsum（两路 expert）的参数叶子 (keystr, shape)；自检用权重置零的定位。"""
     import jax
@@ -265,9 +481,14 @@ class AttnAdapter:
         self.hg, self.gemma = hg, gemma
         self.policy = policy
         self.model = policy._model
-        if not getattr(self.model, "use_history", False) or getattr(self.model, "integration_type", None) != "context":
-            raise SystemExit(f"错误: 只支持 HistoryPi0 context 分支（use_history={getattr(self.model, 'use_history', None)}, "
+        if (not getattr(self.model, "use_history", False)
+                or getattr(self.model, "integration_type", None) not in ("context", "modulation")):
+            raise SystemExit(f"错误: 只支持 HistoryPi0 context / modulation 分支（use_history={getattr(self.model, 'use_history', None)}, "
                              f"integration_type={getattr(self.model, 'integration_type', None)!r}）")
+        self.integration_type = str(self.model.integration_type)
+        self.modulation = self.integration_type == "modulation"
+        if self.modulation:
+            _guard_modulation_source()
         self.gdef, self.gstate = nnx.split(self.model)
         self.AH, self.AD = int(self.model.action_horizon), int(self.model.action_dim)
         self.embed_dtype = self.model.config.dtype
@@ -307,12 +528,13 @@ class AttnAdapter:
             return mem_tok, pt, o.tokenized_prompt
 
         mem_tok, pt, tp = jax.eval_shape(f, self.gstate, obs)
-        P, MEM, TXT = int(pt.shape[1]), int(mem_tok.shape[1]), int(tp.shape[1])
+        P, MEM_TOKENS, TXT = int(pt.shape[1]), int(mem_tok.shape[1]), int(tp.shape[1])
+        MEM = 0 if self.modulation else MEM_TOKENS          # modulation：记忆不进前缀
         IMG = P - MEM - TXT
         n_img = len(obs.images)
         if IMG <= 0 or IMG % max(n_img, 1) != 0:
             raise SystemExit(f"错误: 前缀布局异常 P={P} MEM={MEM} TXT={TXT} IMG={IMG} n_img={n_img}")
-        out = {"P": P, "MEM": MEM, "IMG": IMG, "TXT": TXT, "n_img": n_img}
+        out = {"P": P, "MEM": MEM, "IMG": IMG, "TXT": TXT, "n_img": n_img, "MEM_TOKENS": MEM_TOKENS}
         self._layout_cache[sig] = out
         return out
 
@@ -324,11 +546,17 @@ class AttnAdapter:
         preprocess_observation, make_attn_mask = self._preprocess, self._make_attn_mask
         cfgs, ed, L, AH = self.cfgs, self.embed_dtype, N_LAYERS, self.AH
         patched = _make_patched_attention()
-        block = hg.HistoryBlock(configs=cfgs, integration_type="context")
+        modul = self.modulation
+        block = hg.HistoryBlock(configs=cfgs, integration_type=self.integration_type)
         final_norm_1 = gemma.RMSNorm()
+        orig_mem_attn = hg.MemoryAttention()            # 原模块（未 patch），只用于 ATTN_AGG ② 的对照
 
         def llm_of(state):
             return state.to_pure_dict()["PaliGemma"]["llm"]
+
+        def prefix_mask(pm, par_, pna):
+            # modulation 分支与 HistoryPi0.sample_actions 同式：不带 na_mask；context 照旧
+            return make_attn_mask(pm, par_) if modul else make_attn_mask(pm, par_, pna)
 
         def block_apply(layers, l, xs, kv, positions, mask3d, adarms, attn_cls=patched):
             p_l = jax.tree.map(lambda x: x[l], layers)
@@ -338,10 +566,23 @@ class AttnAdapter:
                 probs = cap[0]
             return out, kv_out, probs
 
+        def block_apply_mem(layers, l, xs, kv, positions, mask3d, adarms, mem_seq, mem_mask, attn_cls=patched):
+            """modulation 去噪步：动作专家传 mem_seq=[None, mem_seq]、mem_mask=[None, mem_mask]（与生产 Module 的
+            nn.scan broadcast 同值）；同时用重写版 MemoryAttention / MemoryRMSNorm 记录中间量。"""
+            p_l = jax.tree.map(lambda x: x[l], layers)
+            with _capture_attn(hg, attn_cls) as cap, _capture_mem(hg) as mcap:
+                out, kv_out = block.apply({"params": p_l}, xs, kv, positions, mask3d[:, None, :, :],
+                                          adarms, [None, mem_seq], [None, mem_mask], True)
+                probs = cap[0]
+                rec = {r["kind"]: r for r in mcap}
+            if set(rec) != {"attn", "film"} or len(mcap) != 2:
+                raise RuntimeError(f"modulation 记录项异常：{[r['kind'] for r in mcap]}")
+            return out, kv_out, probs, rec, p_l
+
         @functools.partial(jax.jit, static_argnames=("num_steps", "txt_lo", "out_f16", "save_prefix", "ablate_heads",
-                                                    "capture_hidden"))
+                                                    "capture_hidden", "zero_mem"))
         def f_sample_attn(state, rng, obs, noise, num_steps, txt_lo, out_f16=True, save_prefix=False,
-                          mask_keys=None, ablate_heads=(), capture_hidden=False, group_masks=None):
+                          mask_keys=None, ablate_heads=(), capture_hidden=False, group_masks=None, zero_mem=False):
             """逐字复刻 HistoryPi0.sample_actions（context 分支）的 18 层展开版；返回 (x_0, probs_action, probs_text, n_done)。
             probs_action (num_steps, L, b, G, AH, P+AH)；probs_text (L, b, G, TXT, P)，padding 文本行置 0。
             save_prefix=True（static）时末尾多返回 probs_prefix (L, b, G, P, P)：prefill 每层完整概率，padding query 行置 0。
@@ -365,7 +606,7 @@ class AttnAdapter:
             if noise is None:
                 noise = jax.random.normal(rng, (b, m.action_horizon, m.action_dim))
             pt, pm, par_, pna = m.embed_prefix(o)
-            base = make_attn_mask(pm, par_, pna)                        # (b,P,P)
+            base = prefix_mask(pm, par_, pna)                        # (b,P,P)
             if mask_keys is not None:
                 # 干预点 1（prefill）：非被遮 query 行 × 被遮 key 列 → False；被遮 token 之间照常互读
                 mk = jnp.broadcast_to(mask_keys.astype(bool), pm.shape)
@@ -393,6 +634,21 @@ class AttnAdapter:
             txt_valid = pm[:, txt_lo:P].astype(jnp.float32)              # padding 文本 query 行（全遮蔽 → softmax 均匀）置 0
             probs_text = jnp.stack(txt) * txt_valid[None, :, None, :, None]
             spos_base = jnp.sum(pm, axis=-1)[:, None]
+            mod_capture = modul and capture_hidden
+            if modul:
+                # 与 HistoryPi0.sample_actions 的 modulation 分支同：循环外 embed_memory 一次，每步每层共用
+                mem_seq, mem_mask, _, _ = m.embed_memory(o)
+                if zero_mem:                                             # MEM_BLIND 闸门专用：token 置零，mask 不变
+                    mem_seq = jnp.zeros_like(mem_seq)
+                S = mem_seq.shape[1]
+                if mod_capture:
+                    if o.mem_order is not None:
+                        is_mot = mem_token_flags(o.mem_order[0], o.static_mask.shape[1])
+                    else:
+                        is_mot = jnp.zeros((S,), bool)
+                    mem_means = memory_input_means(mem_seq[0], mem_mask[0], is_mot)
+            elif zero_mem:
+                raise ValueError("zero_mem 只用于 modulation 模型")
 
             def step(carry):
                 x_t, time, i, acc = carry[:4]
@@ -404,16 +660,36 @@ class AttnAdapter:
                 full = jnp.concatenate([prefix_attn, sattn], axis=-1)
                 spos = spos_base + jnp.cumsum(sm, axis=-1) - 1
                 hs = st.astype(ed)
-                rows, action_rows = [], []
+                rows, action_rows, mod_rows = [], [], []
                 for l in range(L):
-                    (_, hs), _, probs = block_apply(layers, l, [None, hs], (K[l], V[l]), spos, full, [None, ad],
-                                                    cls_of.get(l, patched))
+                    if modul:
+                        (_, hs), _, probs, rec, p_l = block_apply_mem(layers, l, [None, hs], (K[l], V[l]), spos, full,
+                                                                      [None, ad], mem_seq, mem_mask,
+                                                                      cls_of.get(l, patched))
+                        if mod_capture:
+                            stats = modulation_point_stats(rec["attn"], rec["film"], probs, is_mot, action_horizon=AH,
+                                                           img_end=txt_lo, prefix_len=P)
+                            ref = orig_mem_attn.apply({"params": p_l["mem_attn"]}, rec["attn"]["x_in"], mem_seq, mem_mask)
+                            stats["memmod_err"] = jnp.abs(ref.astype(jnp.float32)
+                                                          - rec["attn"]["out"].astype(jnp.float32)).max()
+                            mod_rows.append(stats)
+                    else:
+                        (_, hs), _, probs = block_apply(layers, l, [None, hs], (K[l], V[l]), spos, full, [None, ad],
+                                                        cls_of.get(l, patched))
                     rows.append(probs[:, 0])                             # (b,G,AH,P+AH)：不平均，原样保留
                     if capture_hidden:
                         action_rows.append(action_token_mean(hs[0], AH))
                 hs, _ = final_norm_1.apply({"params": fn1}, hs, ad)
                 v_t = m.action_out_proj(hs[:, -AH:])
                 done = (x_t + dt * v_t, time + dt, i + 1, acc.at[i].set(jnp.stack(rows)))
+                if mod_capture:
+                    prev = carry[5]
+                    errs = jnp.stack([jnp.stack([r[k] for r in mod_rows]).max()
+                                      for k in ("mem_rowsum_err", "main_rowsum_err", "memmod_err")])
+                    mod_sum = {k: prev[k] + jnp.stack([r[k] for r in mod_rows])
+                               for k in ("memmod", "attn_mem", "attn_main", "film")}
+                    mod_sum["err"] = jnp.maximum(prev["err"], errs)
+                    return (*done, carry[4] + jnp.stack(action_rows), mod_sum)
                 return (*done, carry[4] + jnp.stack(action_rows)) if capture_hidden else done
 
             def cond(carry):
@@ -423,12 +699,27 @@ class AttnAdapter:
             carry0 = (noise, 1.0, jnp.int32(0), acc0)
             if capture_hidden:                                           # 和 acc 一样预分配，循环内累加
                 carry0 = (*carry0, jnp.zeros((L, cfgs[1].width), jnp.float32))
+            if mod_capture:
+                carry0 = (*carry0, {"memmod": jnp.zeros((L, cfgs[1].width), jnp.float32),
+                                    "attn_mem": jnp.zeros((L, S), jnp.float32),
+                                    "attn_main": jnp.zeros((L, 3), jnp.float32),
+                                    "film": jnp.zeros((L, 2), jnp.float32),
+                                    "err": jnp.zeros((3,), jnp.float32)})
             x_0, _, n_done, acc, *action_sum = jax.lax.while_loop(cond, step, carry0)
             tail = ()
             if capture_hidden:
                 tail = ({"hidden_prefix": jnp.stack(hidden_rows),
                          "hidden_action": action_sum[0] / n_done.astype(jnp.float32),
                          "group_tokens": group_tokens},)
+            if mod_capture:
+                nd = n_done.astype(jnp.float32)
+                ms = action_sum[1]
+                tail[0].update({"hidden_memmod": ms["memmod"] / nd, "attn_mem": ms["attn_mem"] / nd,
+                                "attn_main": ms["attn_main"] / nd, "film_rel": ms["film"] / nd,
+                                "mem_frame_mean": mem_means[0], "mem_motion_mean": mem_means[1],
+                                "mem_motion_latest": mem_means[2], "mem_valid": mem_mask[0], "mem_is_motion": is_mot,
+                                "attn_mem_rowsum_err": ms["err"][0], "attn_main_rowsum_err": ms["err"][1],
+                                "memmod_maxabs": ms["err"][2]})
             if save_prefix:                                              # padding query 行（全遮蔽 → softmax 均匀）置 0，同 probs_text
                 probs_prefix = jnp.stack(pre) * pm.astype(jnp.float32)[None, :, None, :, None]
                 if out_f16:
@@ -445,7 +736,7 @@ class AttnAdapter:
             m = nnx.merge(gdef, state)
             o = preprocess_observation(None, obs, train=False)
             pt, pm, par_, pna = m.embed_prefix(o)
-            base = make_attn_mask(pm, par_, pna)
+            base = prefix_mask(pm, par_, pna)
             b = pm.shape[0]
             x0 = jnp.zeros((b, m.action_horizon, m.action_dim), jnp.float32)
             st, sm, sar, _, _ = m.embed_suffix(o, x0, jnp.ones((b,), jnp.float32))
@@ -461,7 +752,7 @@ class AttnAdapter:
             o = preprocess_observation(None, obs, train=False)
             b = o.state.shape[0]
             pt, pm, par_, pna = m.embed_prefix(o)
-            base = make_attn_mask(pm, par_, pna)
+            base = prefix_mask(pm, par_, pna)
             pos = jnp.cumsum(pm, axis=1) - 1
             P = pt.shape[1]
             if b != 1 or group_masks.ndim != 2 or group_masks.shape[1] != P:
@@ -495,13 +786,16 @@ class AttnAdapter:
 
     def run(self, rng, observation, *, noise=None, num_steps: int = DEFAULT_NUM_STEPS, out_f16: bool = True, state=None,
             save_prefix: bool | None = None, mask_keys=None, ablate_heads=None,
-            capture_hidden: bool = False, group_masks=None):
+            capture_hidden: bool = False, group_masks=None, zero_mem: bool = False):
         """调一次展开版；返回 (x_0, probs_action, probs_text, n_done, layout)，probs 仍在 device 上、保留 batch 轴。
         save_prefix（缺省取构造参数）为真时末尾多一个 probs_prefix (L, b, G, P, P)。
         mask_keys（缺省 None=关）见 pad_mask_keys；ablate_heads（缺省取构造参数）((layer, head), ...)。
         遮挡全关时调用形式与 S7 之前逐字相同（不传 mask_keys / ablate_heads），trace 与编译产物不变。
         capture_hidden=True 时在上述返回值之后再多一个 dict（hidden_prefix、hidden_action、group_tokens，见文件头），
-        group_masks 为 bool[G,P]；默认关闭时不向 f_sample_attn 传这两个参数，调用与编译产物不变。"""
+        group_masks 为 bool[G,P]；默认关闭时不向 f_sample_attn 传这两个参数，调用与编译产物不变。
+        modulation 模型 capture_hidden=True 时 dict 另含 hidden_memmod、attn_mem 等（见文件头）；
+        zero_mem=True（只用于 modulation 的 MEM_BLIND 闸门）把 mem_seq 置零，缺省不传、编译产物不变。
+        modulation 下 txt_lo = MEM + IMG = IMG（layout 的 MEM=0），文字 query 行切片仍正确。"""
         if group_masks is not None and not capture_hidden:
             raise ValueError("group_masks 只在 capture_hidden=True 时使用")
         lay = self.layout(observation)
@@ -515,6 +809,10 @@ class AttnAdapter:
         if capture_hidden:
             extra["capture_hidden"] = True
             extra["group_masks"] = None if group_masks is None else self.jnp.asarray(np.asarray(group_masks, dtype=bool))
+        if zero_mem:
+            if not self.modulation:
+                raise ValueError("zero_mem 只用于 modulation 模型")
+            extra["zero_mem"] = True
         if self.save_prefix if save_prefix is None else bool(save_prefix):
             x_0, pa, ptxt, n_done, pp, *hidden = self.f_sample_attn(st, rng, observation, noise, int(num_steps),
                                                                     lay["MEM"] + lay["IMG"], out_f16, save_prefix=True, **extra)
@@ -655,6 +953,52 @@ def dry_shapes(args) -> int:
         summary.append(f"{tag}:P={P},MEM={MEM}")
     print(f"ATTN_DRY_SHAPES={'PASS' if ok_all else 'FAIL'} {' '.join(summary)} num_steps={args.num_steps} L={N_LAYERS} AH=20")
     return 0 if ok_all else 1
+
+
+def modulation_abstract(ckpt, config_name: str):
+    """CPU 抽象求值用：按 checkpoint 的 run 快照建 modulation 模型的抽象版，返回 (adapter, obs_spec, layout)。"""
+    import flax.nnx as nnx
+    import jax
+    from mme_vla_suite.training import config as _config
+    tc = _config.get_config(config_name)
+    hc, _ = _resolve_history_config(pathlib.Path(ckpt), None)
+    model_cfg = dataclasses.replace(tc.model, history_config=hc, use_history=True)
+    model = nnx.eval_shape(model_cfg.create, jax.random.key(0))
+    ad = AttnAdapter(_ModelShim(model), require_flags=False)
+    obs = _robomme_obs_spec(model.config)
+    return ad, obs, ad.layout(obs)
+
+
+def modulation_capture_shapes(ad, obs, lay, num_steps: int = DEFAULT_NUM_STEPS, zero_mem: bool = False):
+    """抽象求值 capture_hidden=True 的输出；group_masks 为 bool[2,P]（image、lang 两组）。"""
+    import jax
+    import jax.numpy as jnp
+    gm = jax.ShapeDtypeStruct((2, lay["P"]), jnp.bool_)
+    kw = {"zero_mem": True} if zero_mem else {}
+    return jax.eval_shape(lambda s, r, o, g: ad.f_sample_attn(s, r, o, None, int(num_steps), lay["MEM"] + lay["IMG"], False,
+                                                              capture_hidden=True, group_masks=g, **kw),
+                          ad.gstate, jax.random.key(0), obs, gm)
+
+
+def dry_shapes_modulation(args) -> int:
+    """modulation 模型（四任务 A / B）的 CPU 抽象形状；打印 ATTN_DRY_SHAPES_MODUL。"""
+    import jax.numpy as jnp
+    os.chdir(C.REPO_ROOT)
+    t0 = time.perf_counter()
+    ad, obs, lay = modulation_abstract(args.modul_ckpt, args.modul_config)
+    out = modulation_capture_shapes(ad, obs, lay, args.num_steps)
+    hid = out[-1]
+    S, Wa, W = lay["MEM_TOKENS"], ad.cfgs[1].width, ad.cfgs[0].width
+    want = {"hidden_prefix": (N_LAYERS + 1, 2, W), "hidden_action": (N_LAYERS, Wa), "hidden_memmod": (N_LAYERS, Wa),
+            "attn_mem": (N_LAYERS, S), "attn_main": (N_LAYERS, 3), "film_rel": (N_LAYERS, 2),
+            "mem_frame_mean": (Wa,), "mem_motion_mean": (Wa,), "mem_motion_latest": (Wa,), "mem_valid": (S,),
+            "mem_is_motion": (S,), "attn_mem_rowsum_err": (), "attn_main_rowsum_err": (), "memmod_maxabs": ()}
+    bad = [k for k, sh in want.items() if k not in hid or tuple(hid[k].shape) != sh]
+    ok = (not bad and ad.modulation and lay["MEM"] == 0 and lay["IMG"] == lay["P"] - lay["TXT"]
+          and tuple(out[0].shape) == (1, ad.AH, ad.AD) and hid["attn_mem"].dtype == jnp.float32)
+    print(f"ATTN_DRY_SHAPES_MODUL={'PASS' if ok else 'FAIL'} P={lay['P']} MEM={lay['MEM']} IMG={lay['IMG']} TXT={lay['TXT']} "
+          f"MEM_TOKENS={S} W={W} W_a={Wa} bad={bad} wall={time.perf_counter() - t0:.0f}s", flush=True)
+    return 0 if ok else 1
 
 
 # ══════════════════════════════════════════ selftest（GPU）══════════════════════════════════════════
@@ -935,6 +1279,9 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--selftest", action="store_true")
     ap.add_argument("--dry-shapes", action="store_true")
+    ap.add_argument("--dry-shapes-modul", action="store_true", help="modulation 模型的 CPU 抽象形状")
+    ap.add_argument("--modul-ckpt", default=str(C.V1 / "assets/vla-4task-modul-motion-50000/50000"))
+    ap.add_argument("--modul-config", default="mme_vla_suite_b128_80k")
     ap.add_argument("--ckpt", default=None, help="--selftest 的 checkpoint 目录（…/<step>）")
     ap.add_argument("--config", default=None, help="--selftest 的 train config 名")
     ap.add_argument("--n-frames", type=int, default=49, help="selftest 喂入的随机帧数（49 帧 → motion 侧 2 个窗口）")
@@ -949,11 +1296,15 @@ def main() -> int:
         if os.environ.get("JAX_PLATFORMS", "") != "cpu":
             C.require_det_flags()        # CPU dry-shapes 豁免确定性开关；非 CPU 仍硬闸
         return dry_shapes(args)
+    if args.dry_shapes_modul:
+        if os.environ.get("JAX_PLATFORMS", "") != "cpu":
+            C.require_det_flags()
+        return dry_shapes_modulation(args)
     if args.selftest:
         if not args.ckpt or not args.config:
             ap.error("--selftest 需要 --ckpt 与 --config")
         return selftest(args)
-    ap.error("只支持 --selftest / --dry-shapes（适配器由 serve_policy_attn.py import 使用）")
+    ap.error("只支持 --selftest / --dry-shapes / --dry-shapes-modul（适配器由 serve_policy_attn.py import 使用）")
     return 2
 
 
