@@ -170,6 +170,34 @@ blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid var(--line);colo
 </table>
 <h2>十〇′、追加修订：去掉 Slurm 分支的 GPU 独占检查（11-16 当晚，你说「加上并开工」）</h2>
 <p><code>run_shard.sh</code> 在 <code>SLURM_JOB_ID</code> 非空时：① 跳过 <code>check_local_gpu</code>（即 AWS 用的 <code>LOCAL_GPU_SHARE</code> flock 登记检查）；② 改做「卡上不得有任何计算进程」检查（<code>nvidia-smi --query-compute-apps</code>，不认 <code>CUDA_VISIBLE_DEVICES</code>，看到 4 卡全部进程）。同卡多片同时起时，晚到的片若撞上先到片的 server 已起，就会退 2，结果取决于启动先后。修法不改代码：链在第 2–4 关的 srun 命令里一律以 <code>env -u SLURM_JOB_ID</code> 起 <code>local_692_pool.sh</code>，让 GL 与 AWS 走同一条检查路径（占位登记 + 进程树归属）。<code>--gpu_cmode=shared</code> 照传，compute_mode 检查随 Slurm 分支一起不再执行。另把「ssh 断开连带停掉 srun」登记进风险表，不改挂法。</p>
+<h2>十〇″、第二轮审查：开工审查 + 4 路 opus 对抗审查（11-16 晚，锚点 30f4653）</h2>
+<p>判定行：<code>PLAN_CONSISTENCY_REVIEW=FAIL findings=5 blocking=2</code>、<code>ADV_REVIEW_A=FAIL findings=6 blocking=4</code>、<code>ADV_REVIEW_B=FAIL findings=5 blocking=2</code>、<code>ADV_REVIEW_C=FAIL findings=7 blocking=1</code>、<code>ADV_REVIEW_D=FAIL findings=5 blocking=1</code>。去重后如下。标「已核实」的由主会话对照 <code>git show 30f4653:…</code> 原文核过。</p>
+<h3>需要裁决（改口径、改验收或改代码范围）</h3>
+<table>
+<tr><th>#</th><th>问题</th><th>推荐改法</th></tr>
+<tr><td>R1 显存</td><td>A40 实际 45.0 GiB（<code>nvidia-smi</code> 46068 MiB）。AWS g6b 实测 2 片×0.45 峰值 78.3 GiB，即 XLA 池外每卡还要约 6.3 GiB。K4 两档与 g6b 都是 XLA 合计 0.9 张卡（40.5 GiB），加开销约 46.8 GiB，超总量；压测余量要求 ≥4 GiB 也过不了。g6b 的 0.45/0.7 写死、不可覆盖（已核实）</td><td>K4 改为首试每卡 2 片×0.38（8 片），退路每卡 1 片×0.70（4 片，与以往 GL 每片独占一卡相同）；g6b 的 share2 比例改为可覆盖（默认 0.45，AWS 不变），链传 0.38</td></tr>
+<tr><td>R2 内存</td><td>作业 cgroup 现场：<code>memory.current</code>≈128 GiB 顶满，其中 file 页缓存 91.5 GB、anon 43.8 GB。按 <code>memory.current</code> 做差，要么被缓存挤掉、增量≈0 假 PASS，要么把 13 GB ckpt 缓存 ×4 误判 FAIL；<code>env -u SLURM_JOB_ID</code> 后也不能按 job id 拼路径</td><td>改读 srun 步自己 cgroup（由 <code>/proc/self/cgroup</code> 截到 <code>step_&lt;n&gt;</code>）的 <code>memory.stat</code> 里 <code>anon+shmem</code>，取压测期间最大值 − 压测前值；判定行注明 <code>metric=anon+shmem scope=step path=…</code>。仍只在压测分支采样（R-MEM 不变）</td></tr>
+<tr><td>R3 CPU</td><td><code>env.sh</code> 设 <code>OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK:-4}</code>，srun 步里是 16，每个 server/client 开 16 线程挤 16 核；AWS 是 4</td><td>链第 2–4 关再加 <code>-u SLURM_CPUS_PER_TASK</code>，回到 AWS 的 OMP=4；不改代码</td></tr>
+<tr><td>R4 超时</td><td>每块 20 局共用 <code>EVAL_TIMEOUT=14400</code>，<code>CHUNK_EPISODES=20</code> 写死。超时 → 该片不完整 → <code>verdict=infra</code> → 整轮 <code>EVAL692=FAIL</code>、无重跑。压测只跑 1 局、只用 GPU0，测不出 4 卡同跑的争用</td><td>链按压测 <code>CAP_TIME wall_s</code> 加一道外推：<code>20 × 单局墙钟 × 2 &lt; 14400</code>，不满足即退一档（不改代码）。GL 同类模型历史实测约 0.54 片·分/局，余量预计很大</td></tr>
+<tr><td>R5 可比性</td><td>V7 只要 merge 成功就 PASS，new_errors 不设门槛；单局 2400 s 超时记 error、重跑仍超时按失败计入分母。§六「只差融合方式」说过头：对照组训练在 AWS 8×A100、评估代码版本更早、每卡 1 片；512 对照 211/692 由 primary700（550 局）与 binfilldemo（142 局）两次拼成</td><td>V7 加条件：最终 <code>new_errors=0</code> 才按 §六 直接对比；&gt;0 时 result.md 单列这些局、标「不可直接比的下界」交你。§六 改为如实列差异，补「692 局二项标准误约 1.8 pp，4 pp 内差距不宜过度解读」，盲区加「新驱动未与 GL 历史结果交叉复现」</td></tr>
+<tr><td>R6 前缀库</td><td><code>DEMO_PREFIX_ORIGINAL=1</code> 只要求 index.json 存在，挂到任何库都放行</td><td><code>E0_GATE=SKIP</code> 行打印并核 index.json sha256 = <code>3ef6b165cc999c6a434283b963d336406b43f59a0fd30161621931b347343f27</code>（与对照档案一致），不等退 2</td></tr>
+</table>
+<h3>实现或文字错误（按审查改，不改口径）</h3>
+<ul>
+<li><b>F1 写法会崩（已核实）</b>：<code>cmd_summary</code> 是单引号 heredoc 里的 Python f-string，<code>${EXPECT_MOTION_STATS:-1}</code> 不被 bash 展开，Python 抛 NameError，且在 692 局跑完后才触发。改为 <code>import os</code> + <code>os.environ.get('EXPECT_MOTION_STATS','1')</code>；<code>py summary</code> 后检查 <code>PIPESTATUS</code>，失败打 <code>EVAL692=FAIL reason=summary</code>；V1 加伪造 eval root 直接调 <code>py summary</code> 的用例（不设 / 设 0 各一次）。</li>
+<li><b>F4 改错了（已核实）</b>：<code>test_context_entries_fields</code> 对 <code>CTX_RUNS</code> 每项断言 motion True、budget 512、config b128_80k、motion_budget 160，新登记加进去必挂。改为另建 <code>CTX_NOMOTION_RUNS</code>，<code>CTX_RUNS</code> 不动，跳过条件与 integration 用例覆盖两组。</li>
+<li><b>V1/V2 跑不起来（已核实）</b>：E0 闸排在 <code>SHARD_MAP</code> 之前，<code>make_shard_plan.py</code> 需要 client 环境与库，E1 worktree 都没有。E1 验收只留 <code>bash -n</code> 与 pytest；V1/V2 移到合并后、E2 评估副本里由主会话跑，新旧脚本共用一个临时 STORE stub（软链原库 index.json、写一行假 E0.txt），只比 SHARD_MAP 与 PRESEED 行；V2 补 <code>EVAL_PER_GPU</code>。</li>
+<li>§三 内存公式与新口径统一（不再「单片 × 每卡片数 × 4」）。</li>
+<li>链第 1 关：见 <code>^EXIT_CODE=[^0]</code>、tmux 已退却无 EXIT_CODE=0、出现 <code>attempt*.log</code> 均 <code>CHAIN_STOP stage=train</code>；用 grep 不用「末行」；<code>CHAIN_WAIT</code> 只在启动时打印一次（防 Monitor 限流）。</li>
+<li>Monitor 过滤词补 <code>拒绝|失败|FAIL|错误|找不到|不起跑|SLOT_REFUSED|PRESEED=|RETRY_INFRA|SHARD_EXIT_CODE=[^0]</code>。</li>
+<li>runbook 按关写全 env；第 2、3 关用各自 RUN_NAME（两条链共用一个评估副本，漏传会撞目录）。</li>
+<li>scancel 条件写成「<code>EVAL692=PASS</code> 之后」，由会话执行；加一次 11-20 下午唤醒，免 ctx1024 评完空占近一天。</li>
+<li>E6：<code>git worktree remove</code> 遇子模块要 <code>--force</code>，会删掉副本内 <code>v1-store/evaluation/</code>。改为先把 <code>$W/v1-store/evaluation/gl692-*</code> 移到 <code>$G/v1-store/evaluation/</code> 核对后再删。</li>
+<li>V3：client 环境没有 mme_vla_suite；改核 server 侧 <code>mme_vla_suite</code>/<code>openpi</code> 指向 <code>$W/src</code>，client 侧 <code>robomme</code>/<code>openpi_client</code> 指向 W 内对应源码。</li>
+<li>耗时改用 GL 同类历史数；65943151 到期是 11-26 06:41 美东，不是 11-27。</li>
+<li>补一句「P-LINEAGE 不适用：两条均无 encoder（<code>motion_provenance.json</code> 中 encoder 为 null）」。</li>
+<li>风险表补：链与 ctx1024 训练共用同一 ControlMaster，主连接断开会同时停掉两者。</li>
+</ul>
 <h2>十一、待你确认（写计划时）</h2>
 <ol>
 <li>每卡 3 片、退路 2 片（K4）是否可以？还是要像 AWS 一样先试 4 片？</li>
