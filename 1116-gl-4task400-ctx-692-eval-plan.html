@@ -45,10 +45,10 @@ blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid var(--line);colo
   │                                     │                                                  │
   ├─ E1 改评估脚本（子代理，worktree）    ├─ 链 g4c-ev512-chain 自动接手 65943150            ├─ 链 g4c-ev1024-chain 接手 65943151
   ├─ E2 GL 评估副本：worktree + 装两套环境 │    ① 加载冒烟 → ② 显存/内存压测 → ③ 692 局        │    同左
-  └─ E3 空跑 DRY_RUN、布两条触发链         │    ④ 汇总、写档案、scancel 65943150             │    ④ … scancel 65943151</pre>
+  └─ E3 合并后 V1/V2、布两条触发链         │    ④ 汇总；会话核 PASS 后写档案、scancel 65943150 │    ④ … 会话 scancel 65943151</pre>
 <table>
 <tr><th>运行</th><th>checkpoint</th><th>占位（节点）</th><th>局数</th><th>并发</th><th>输出目录（评估副本内）</th></tr>
-<tr><td>ctx512</td><td><code>&lt;GL_REPO&gt;/v1-store/train-runs/mme_vla_suite_b128_60k/v2-1600ep-m8x8-ctx-b128-50k-gl/50000</code></td><td>65943150（gl1513）</td><td>692</td><td>4 卡 × 3 片 = 12 片；压测不过就退到 4 × 2 = 8 片</td><td><code>v1-store/evaluation/gl692-ctx512-50k</code></td></tr>
+<tr><td>ctx512</td><td><code>&lt;GL_REPO&gt;/v1-store/train-runs/mme_vla_suite_b128_60k/v2-1600ep-m8x8-ctx-b128-50k-gl/50000</code></td><td>65943150（gl1513）</td><td>692</td><td>4 卡 × 2 片 = 8 片；压测不过就退到 4 × 1 = 4 片</td><td><code>v1-store/evaluation/gl692-ctx512-50k</code></td></tr>
 <tr><td>ctx1024</td><td><code>&lt;GL_REPO&gt;/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m16x8x8-ctx-b128-50k-gl/50000</code></td><td>65943151（gl1514）</td><td>692</td><td>同上，单独压测</td><td><code>v1-store/evaluation/gl692-ctx1024-50k</code></td></tr>
 </table>
 
@@ -58,9 +58,11 @@ blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid var(--line);colo
 <tr><td>K1</td><td>跑完直接在原 job 里评，不另提交占位，评完才 scancel 本 run 的占位</td><td>你的原话（11-16）：「跑完了直接在本地原job评估」</td></tr>
 <tr><td>K2</td><td>评估方式照搬 AWS 的 <code>local_692_pool.sh</code>：692 局、seed 7、单驱动一次起满、预标 9 局、新 error 只重跑一次、<code>check_shard.py</code> 判据不改、<code>merge_shards.py</code> 合并</td><td>你的原话：「参考aws的评估方式」；AWS 版见 <code>1115-4task-ctx-motion160-v7-50k-plan.html</code> §5 第 7、8、12 道与 B5</td></tr>
 <tr><td>K3</td><td>只评 50000，不评中间步</td><td>与对照组 modulation @50000 同步数（§六）</td></tr>
-<tr><td>K4</td><td>每卡先试 3 片，显存比例 0.30（每片约 14.4 GB，接近 AWS 每片 0.2 × 80 = 16 GB）；压测不过退到每卡 2 片、比例 0.45；2 片也不过就停下交你</td><td>AWS 是每卡 4 片 / 0.2；A40 只有 48 GB，占位只有 16 CPU、128 GB 内存，所以按绝对显存对齐，见 §三</td></tr>
+<tr><td>K4</td><td>每卡先试 2 片，显存比例 0.38（每片 XLA 约 17.1 GiB）；压测不过退到每卡 1 片、比例 0.70（与以往 GL 每片独占一卡相同）；1 片也不过就停下交你</td><td>第二轮审查 R1（你裁定「按推荐改」）：A40 实测 45.0 GiB；AWS g6b 实测 2 片×0.45 峰值 78.3 GiB，XLA 池外每卡约 6.3 GiB；2×0.38 → 34.2+6.3≈40.5 GiB，余量约 4.5 GiB。原 3×0.30、2×0.45 两档合计 0.9 张卡，放不下</td></tr>
 <tr><td>K5</td><td>两条 run 都不带 motion：<code>EXPECT_MOTION_STATS=0</code>，不起 sidecar，不装 wan 环境</td><td>两条 run 的 history config 只有 framesamp context（1111 计划）</td></tr>
-<tr><td>K6</td><td>BinFill 演示前缀用 GL 原库 <code>&lt;GL_REPO&gt;/v1-store/demo-prefix/binfill-3b4de03a0b46</code>，跳过 AWS 的 E0 闸，判定行记 <code>E0_GATE=SKIP reason=original_store</code></td><td>E0 闸是 AWS 为了核对「本机重新生成的前缀库与原库同代码」才加的；GL 上这份就是原库，以往 GL 692 评估都用它（<code>finalckpt-*-gl</code> 档案）</td></tr>
+<tr><td>K6</td><td>BinFill 演示前缀用 GL 原库 <code>&lt;GL_REPO&gt;/v1-store/demo-prefix/binfill-3b4de03a0b46</code>，跳过 AWS 的 E0 闸，判定行记 <code>E0_GATE=SKIP reason=original_store index_sha256=&lt;实算&gt;</code>，且 index.json 的 sha256 必须等于 <code>3ef6b165cc999c6a434283b963d336406b43f59a0fd30161621931b347343f27</code>（与对照档案 <code>binfilldemo-nomotion50k-gl/result.md</code> 一致），不等退 2（R6）</td><td>E0 闸是 AWS 为了核对「本机重新生成的前缀库与原库同代码」才加的；GL 上这份就是原库，以往 GL 692 评估都用它（<code>finalckpt-*-gl</code> 档案）</td></tr>
+<tr><td>K7</td><td>链第 2–4 关以 <code>env -u SLURM_JOB_ID -u SLURM_CPUS_PER_TASK</code> 起 <code>local_692_pool.sh</code>：前者走 AWS 同款 <code>LOCAL_GPU_SHARE</code> 检查（十〇′），后者让 <code>env.sh</code> 的 <code>OMP_NUM_THREADS</code> 回到 AWS 的 4（R3）</td><td>你的原话「加上并开工」「按推荐改」</td></tr>
+<tr><td>K8</td><td>P-LINEAGE 不适用：两条均无 encoder（run 根 <code>motion_provenance.json</code> 中 encoder 为 null），无需 <code>DATA_LINEAGE</code> 判定行</td><td>对抗审查 D 现场核实</td></tr>
 </table>
 
 <h2>二、为什么不能直接在 &lt;GL_REPO&gt; 里跑</h2>
@@ -74,55 +76,60 @@ blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid var(--line);colo
 <h2>三、并发怎么定（A40 与 AWS 的差别）</h2>
 <table>
 <tr><th></th><th>AWS（1115 计划）</th><th>GL 一份占位</th></tr>
-<tr><td>GPU</td><td>8 × A100-80GB</td><td>4 × A40-48GB</td></tr>
+<tr><td>GPU</td><td>8 × A100-80GB</td><td>4 × A40（<code>nvidia-smi</code> 实测 46068 MiB ≈ 45.0 GiB）</td></tr>
 <tr><td>CPU / 内存</td><td>整机</td><td>16 CPU / 128 GB（cgroup 限额）</td></tr>
-<tr><td>并发</td><td>32 片，每卡 4 片，比例 0.2</td><td>先试 12 片（每卡 3，比例 0.30），不过就 8 片（每卡 2，比例 0.45）</td></tr>
+<tr><td>并发</td><td>32 片，每卡 4 片，比例 0.2</td><td>先试 8 片（每卡 2，比例 0.38），不过就 4 片（每卡 1，比例 0.70）</td></tr>
 </table>
-<p>真正卡住的可能是内存。以往 GL 每片按 2 CPU / 32 GB 申请（<code>gl_eval_shard.sbatch</code>），这是申请量，不是实测值。所以压测时除了照 AWS 记显存峰值，还要记作业 cgroup 的内存峰值。判据有两条，都满足才算 PASS：</p>
+<p>显存与内存都可能卡住。以往 GL 每片独占一卡，同卡多片在 A40 上没实测过；内存方面，作业 cgroup 现场已被训练留下的页缓存顶满（<code>memory.current</code>≈128 GiB，其中 file 91.5 GB、anon 43.8 GB），读总量做差没有意义。压测时只在 GPU0 起 N 片（N=每卡片数），判据四条，都满足才算 PASS：</p>
 <ul>
-<li>GPU0 显存余量 ≥ 4 GB；</li>
-<li>单片内存峰值 × 每卡片数 × 4 卡 ≤ 115 GB。</li>
+<li>GPU0 显存余量 ≥ 4 GiB（脚本原判据）；</li>
+<li>内存：读压测这一个 srun 步自己 cgroup 的 <code>memory.stat</code> 里 <code>anon+shmem</code>，压测期间最大值 − 压测前值 = 同卡 N 片总增量 <code>host_delta_gb</code>；<code>host_delta_gb × 4 卡 ≤ 115 GB</code>（R2）；</li>
+<li>超时：压测单局墙钟 <code>wall_s</code> 满足 <code>20 × wall_s × 2 &lt; 14400</code>（每块 20 局共用 <code>EVAL_TIMEOUT=14400</code>，乘 2 留给 4 卡同跑的争用，R4）；</li>
+<li>压测的局本身 <code>episode_ok</code>、无 OOM 行。</li>
 </ul>
-<p>另外，<code>local_692_pool.sh</code> 的卡位满了会直接返回 97，不会排队。所以逻辑分片数必须等于卡数 × 每卡片数，即 12 或 8，一波起完。</p>
+<p>CPU：16 核要分给 8 片的 server + client。<code>env.sh</code> 按 <code>SLURM_CPUS_PER_TASK</code> 设线程数，srun 步里是 16，所以链去掉这个变量，回到 AWS 的每进程 4 线程（K7）。</p>
+<p>另外，<code>local_692_pool.sh</code> 的卡位满了会直接返回 97，不会排队。所以逻辑分片数必须等于卡数 × 每卡片数，即 8 或 4，一波起完。</p>
 
 <h2>四、要改什么（先说为什么非改不可）</h2>
 <p><code>local_692_pool.sh</code> 是给 AWS 8 卡、带 motion 的 run 写的。有三处写死了，直接用会出错：</p>
 <ul>
 <li>卡号用 <code>K % 8</code>，在 4 卡占位上会派到不存在的卡 4–7；</li>
 <li><code>EXPECT_MOTION_STATS=1</code>、<code>POLICY_CONFIG=mme_vla_suite_b128_80k</code> 写死，ctx512 的配置是 <code>b128_60k</code>，而且两条都没有 motion；</li>
-<li>E0 闸要求前缀库里有 <code>E0.txt</code>，GL 原库里没有这个文件。</li>
+<li>E0 闸要求前缀库里有 <code>E0.txt</code>，GL 原库里没有这个文件；</li>
+<li>g6b 冒烟的同卡 2 片比例写死 0.45，A40 放不下（R1）。</li>
 </ul>
 <p>另外，<code>check_checkpoint.py</code> 只认 <code>RUNS</code> 表里登记过的 run，这两条还没登记。</p>
 <table>
 <tr><th>文件</th><th>锚点</th><th>改什么</th><th>默认（不设新变量）</th><th>本次取值</th></tr>
 <tr><td><code>scripts/evaluation/local_692_pool.sh</code></td><td>分片→卡映射、<code>SHARD_MAP</code> 空跑输出</td><td>新增 <code>EVAL_NGPU</code>，把 <code>K % 8</code> 改成 <code>K % EVAL_NGPU</code></td><td>8，行为不变</td><td>4</td></tr>
 <tr><td>同上</td><td>评估环境 export 一行</td><td><code>EXPECT_MOTION_STATS</code>、<code>MMEVLA_MOTION_OVERFLOW</code>、<code>POLICY_CONFIG</code> 改成可覆盖</td><td>1 / resample / b128_80k，行为不变</td><td>0 / 空 / b128_60k 或 b128_80k</td></tr>
-<tr><td>同上</td><td>① E0 闸</td><td>新增 <code>DEMO_PREFIX_ORIGINAL=1</code>：跳过 E0，打印 <code>E0_GATE=SKIP reason=original_store store=&lt;路径&gt;</code></td><td>不设，照旧要求 E0=PASS</td><td>1</td></tr>
-<tr><td>同上</td><td><code>--g6b-capacity</code> 压测</td><td>只在压测期间每 2 秒读一次作业 cgroup 的 <code>memory.current</code>，压测结束即停，把增量写进 <code>EVAL_CAPACITY</code> 判定行（<code>host_delta_gb=</code>）；正式 692 局不读内存</td><td>多一个字段，判据不变</td><td>按 §三 的两条判</td></tr>
-<tr><td>同上</td><td><code>cmd_summary</code> 的 EVAL692 行</td><td><code>expect_motion_stats=</code> 改为打印实际 <code>EXPECT_MOTION_STATS</code> 值（F1）</td><td>1，输出不变</td><td>0</td></tr>
+<tr><td>同上</td><td>① E0 闸</td><td>新增 <code>DEMO_PREFIX_ORIGINAL=1</code>：跳过 E0，核 index.json sha256（K6），打印 <code>E0_GATE=SKIP reason=original_store store=&lt;路径&gt; index_sha256=&lt;sha&gt;</code></td><td>不设，照旧要求 E0=PASS</td><td>1</td></tr>
+<tr><td>同上</td><td><code>--g6b-capacity</code> 压测</td><td>只在压测期间每 2 秒读一次本 srun 步 cgroup 的 <code>memory.stat</code>（<code>anon+shmem</code>），压测结束即停，把增量写进 <code>EVAL_CAPACITY</code> 判定行（<code>host_delta_gb= mem_metric=anon+shmem mem_scope=step mem_path=…</code>）；正式 692 局不读内存</td><td>多几个字段，判据不变</td><td>按 §三 判</td></tr>
+<tr><td>同上</td><td><code>--g6b</code> 冒烟</td><td>同卡 2 片的比例改读 <code>G6B_SHARE_FRACTION</code>（R1）</td><td>0.45，行为不变</td><td>0.38</td></tr>
+<tr><td>同上</td><td><code>cmd_summary</code> 的 EVAL692 行</td><td><code>expect_motion_stats=</code> 改为 Python 读 <code>os.environ.get('EXPECT_MOTION_STATS','1')</code>（F1；heredoc 里不能写 bash 的 <code>${…}</code>）；<code>py summary</code> 失败打 <code>EVAL692=FAIL reason=summary</code></td><td>1，输出不变</td><td>0</td></tr>
 <tr><td><code>scripts/evaluation/check_checkpoint.py</code></td><td><code>RUNS</code></td><td>登记两条：<code>v2-1600ep-m8x8-ctx-b128-50k-gl</code>（steps <code>50000</code>，motion False，config <code>mme_vla_suite_b128_60k</code>，budget 512，integration context，resolved <code>9fa83497…0d15</code>）；<code>v2-1600ep-m16x8x8-ctx-b128-50k-gl</code>（同上，config <code>b128_80k</code>，budget 1024，resolved <code>70208fa3…e016</code>）；两条 norm_stats 都是 <code>856c75ea…d173</code></td><td>旧条目不动</td><td>—</td></tr>
-<tr><td><code>scripts/evaluation/test_check_checkpoint_integration.py</code></td><td>新增用例</td><td>两条新登记能查到，integration=context、budget 正确</td><td>—</td><td>—</td></tr>
+<tr><td><code>scripts/evaluation/test_check_checkpoint_integration.py</code></td><td>新增用例</td><td>另建 <code>CTX_NOMOTION_RUNS</code> 放两条新登记，核 integration=context、motion False、budget 正确；<code>CTX_RUNS</code> 不动</td><td>—</td><td>—</td></tr>
 </table>
 <p>新写的只有每条 run 的触发链脚本（§五），放在评估副本外的 <code>&lt;GL_REPO&gt;/v1-store/jobs/</code>，不进 git，sha 写进 launch.md。明确不做的：监督器、断点续评、额外重试循环、改判据。</p>
 
 <h2>五、触发与时间线</h2>
 <p>每条 run 一条 aspen 本机 tmux 链（<code>g4c-ev512-chain</code> / <code>g4c-ev1024-chain</code>），按顺序走四关，任何一关 FAIL 就停下，不往下走：</p>
 <ol>
-<li><b>等训练</b>：每 60 秒读一次训练日志末行，等出现 <code>EXIT_CODE=0</code>，并且 50000/_CHECKPOINT_METADATA 存在、10 份 ckpt 齐全。然后再确认 tmux <code>g4c-train-512</code> 已退出，占位里没有训练 step（<code>squeue -s</code>）。</li>
-<li><b>加载冒烟</b>：经 <code>srun --jobid=&lt;占位&gt; --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=shared</code> 跑 <code>local_692_pool.sh --g6b &lt;ckpt&gt; 7</code>。先在 GPU0 单片跑 1 局，再同卡 2 片各 1 局，期望 <code>EVAL_LOAD_SMOKE=PASS</code>。</li>
-<li><b>压测</b>：<code>EVAL_PER_GPU=3 EVAL_MEM_FRACTION=0.30 --g6b-capacity</code>。不过就用 <code>2 / 0.45</code> 再压一次，按 PASS 的那档定并发。</li>
-<li><b>正式 692 局</b>：<code>EVAL_NGPU=4 EVAL_SHARDS=&lt;12|8&gt; …</code>，得到 <code>EVAL692=PASS</code> 和成功率。</li>
+<li><b>等训练</b>：每 60 秒 <code>grep ^EXIT_CODE=</code> 训练日志。见 <code>EXIT_CODE=0</code>，且 50000/_CHECKPOINT_METADATA 存在、10 份 ckpt 齐全、tmux <code>g4c-train-512</code> 已退出、占位里没有训练 step（<code>squeue -s</code>）、评估环境就绪（V1–V3 已 PASS 的标记文件存在）才进下一关。见 <code>EXIT_CODE=</code> 非 0、tmux 已退却没有 <code>EXIT_CODE=0</code>、或出现 <code>*.attempt*.log</code>（训练改续跑），一律 <code>CHAIN_STOP stage=train</code>。<code>CHAIN_WAIT</code> 只在启动时打印一次，防 Monitor 限流。</li>
+<li><b>加载冒烟</b>：经 <code>srun --jobid=&lt;占位&gt; --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=shared env -u SLURM_JOB_ID -u SLURM_CPUS_PER_TASK G6B_SHARE_FRACTION=0.38 …</code> 跑 <code>local_692_pool.sh --g6b &lt;ckpt&gt; 7</code>。先在 GPU0 单片跑 1 局，再同卡 2 片各 1 局，期望 <code>EVAL_LOAD_SMOKE=PASS</code>。</li>
+<li><b>压测</b>：<code>EVAL_PER_GPU=2 EVAL_MEM_FRACTION=0.38 --g6b-capacity</code>。链脚本读 <code>EVAL_CAPACITY</code> 行，另出 <code>HOST_MEM</code> 与 <code>CAP_TIMEOUT</code> 两行（§三）。任一不过就用 <code>1 / 0.70</code> 再压一次，按 PASS 的那档定并发。</li>
+<li><b>正式 692 局</b>：<code>EVAL_NGPU=4 EVAL_SHARDS=&lt;8|4&gt; EVAL_PER_GPU=&lt;2|1&gt; …</code>，得到 <code>EVAL692=PASS</code> 和成功率。正式运行全程不读内存、不加采样（R-MEM）。</li>
 </ol>
-<p>链本身只跑评估，不 scancel。收尾（写档案、scancel 本 run 的占位、更新状态机）由 Claude 会话核对判定行后完成。会话这边除了每份日志挂 Monitor，还沿用已改好的定时唤醒（每天 08:03、11-17 19:13、11-20 07:17）兜底。</p>
+<p>链本身只跑评估，不 scancel。收尾（写档案、scancel 本 run 的占位、更新状态机）由 Claude 会话在核到 <code>EVAL692=PASS</code> 之后完成。会话这边除了每份日志挂 Monitor，还沿用已改好的定时唤醒（每天 08:03、11-17 19:13、11-20 07:17）兜底，另加一次 11-20 16:07 的唤醒，免 ctx1024 评完后占位空等近一天。</p>
 <table>
 <tr><th>节点（美东）</th><th>预计</th><th>依据</th></tr>
 <tr><td>开工后 E1–E3 完成</td><td>开工后约 2–3 小时</td><td>改 4 个文件；在 aspen 上往 turbo 装两套环境（uv sync，JAX + ManiSkill），装环境时间未实测</td></tr>
 <tr><td>ctx512 训练结束，链接手</td><td>11-17 约 18:05</td><td>11-16 08:03 时 37.1k 步，9.5 s/步</td></tr>
 <tr><td>ctx512 冒烟 + 压测</td><td>约 30–40 分钟</td><td>首次 JIT 编译加 3 次短跑</td></tr>
-<tr><td>ctx512 692 局完成</td><td>11-18 凌晨，约 6–10 小时</td><td>AWS 32 片 75–100 分钟折合约 4.6 片·分/局；A40 按 1.5 倍慢估约 7 片·分/局；692 × 7 / 12 ≈ 6.7 小时，8 片时约 10 小时。未实测</td></tr>
+<tr><td>ctx512 692 局完成</td><td>11-17 夜间，约 1–3 小时</td><td>GL A40 同类非 motion 档案 <code>finalckpt-modul16frame50000-gl/result.md</code> 实测 40 片均值 0.62 h/片、每片约 69 局，折合约 0.54 片·分/局；692 × 0.54 / 8 ≈ 47 分钟，同卡 2 片与 CPU 争用按 2–3 倍放慢估。未实测</td></tr>
 <tr><td>ctx1024 训练结束 → 评估完成</td><td>11-20 约 06:00 → 当天下午到晚上</td><td>1024 序列更长，推理更慢，按上限估</td></tr>
 </table>
-<p><b>占位余量</b>：65943150 在 11-20 约 04:50 到期，ctx512 评估完还剩约 2 天；65943151 在 11-27 约 06:40 到期，余量充足。</p>
+<p><b>占位余量</b>：65943150 在 11-20 04:52 到期，ctx512 评估完还剩约 2 天；65943151 在 11-26 06:41 到期（<code>scontrol</code> EndTime），余量充足。</p>
 
 <h2>六、结果怎么读</h2>
 <p>对照组是同库、同 692 局、同 seed 7、同为 GL A40、同为 @50000 的 modulation 结果（档案 <code>docs/training-doc/binfilldemo-nomotion50k-gl/result.md</code>、<code>finalckpt-modul16frame50000-gl/result.md</code>）：</p>
@@ -131,34 +138,41 @@ blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid var(--line);colo
 <tr><td>512（8 帧 × 8×8）</td><td>211/692 = 30.49%</td><td>待测</td></tr>
 <tr><td>1024（16 帧 × 8×8）</td><td>291/692 = 42.05%</td><td>待测</td></tr>
 </table>
-<p>两组只差融合方式，硬件和评估口径相同。不同的是本次用单驱动多片并发，对照组是 10 片动态队列。分片方式只影响局怎么分到 worker，每局的 seed、清单和判据不变，所以成功率可以直接比。9 局预标 error 计入分母、按失败算，成功率是下界。这一点与对照组相同。</p>
+<p>两组相同的是：同一训练库（manifest 与 store_meta sha 一致）、同 692 局清单、seed 7、max_steps 2000、单局墙钟 2400 s、benchmark <code>b4e97f2</code>、同一份 BinFill 前缀库（index sha <code>3ef6b165…</code>）、同一批 9 局预标 error 计入分母。不同的有四处，读数时要记着：</p>
+<ul>
+<li>训练：modulation 对照在 AWS 8×A100 训练；context 在 GL 4×A40 训练（每卡 16、累积 2、fsdp 4）。</li>
+<li>评估代码：对照组是 9 月的 GL 评估栈（动态队列、看门狗）；本次是 AWS 的 <code>local_692_pool.sh</code> 与 <code>eval_v17.py</code>，中间加了大量输入校验。这套新驱动没有在 GL 已评过的 ckpt 上复现过历史数字。</li>
+<li>并发：对照组每卡 1 片；本次每卡 2 片（或退到 1 片），XLA 显存比例不同。</li>
+<li>512 对照 211/692 由两次评估拼成：<code>primary700-nomotion50k-gl</code> 的 550 局非 BinFill 加 <code>binfilldemo-nomotion50k-gl</code> 的 142 局 BinFill；14 组逐格要从两处拼。1024 对照是一次跑完的 692 局。</li>
+</ul>
+<p>直接比较的前提（R5）：最终 <code>new_errors=0</code>。new_errors 大于 0 时，result.md 单列这些局（多为单局 2400 s 超时），标「不可直接比的下界」交你。692 局的二项标准误约 1.8 pp，4 pp 以内的差距不宜过度解读。</p>
 
 <h2>七、验收判定行</h2>
 <table>
 <tr><th>#</th><th>查什么</th><th>怎么查</th><th>过了说明什么</th><th>判定行</th></tr>
-<tr><td>V1</td><td>脚本改动不破坏旧行为</td><td>评估副本里 <code>bash -n</code>；默认参数 <code>DRY_RUN=1</code> 的 <code>SHARD_MAP</code> 与改前逐行相同；<code>uv run python -m pytest scripts/evaluation/test_check_checkpoint_integration.py -q</code></td><td>AWS 侧调用不受影响</td><td><code>POOL_DEFAULT_EQ=PASS</code>、pytest 全过</td></tr>
-<tr><td>V2</td><td>4 卡映射正确</td><td><code>EVAL_NGPU=4 EVAL_SHARDS=12 DRY_RUN=1</code></td><td>12 片落在卡 0–3，每卡 3 片，端口互不相同</td><td><code>SHARD_MAP</code> 12 行，gpu∈{0..3}</td></tr>
-<tr><td>V3</td><td>评估副本就是评估提交，环境指向副本</td><td>worktree <code>git rev-parse HEAD</code> 等于合并提交，<code>git status --porcelain</code> 为空；两套环境 python 打印 <code>mme_vla_suite.__file__</code> 在副本 <code>src/</code> 下；子模块与 gitlink 一致</td><td>跑的就是审过的代码</td><td><code>EVAL_WT=PASS head=&lt;sha&gt; editable=wt</code></td></tr>
+<tr><td>V1</td><td>脚本改动不破坏旧行为</td><td>E1 worktree 内：<code>bash -n</code>、pytest。合并后在评估副本里（E2 之后）：新旧两版脚本（旧版用 <code>git show &lt;改前 sha&gt;:scripts/evaluation/local_692_pool.sh</code> 放到副本内临时位置）指向同一个临时 STORE stub（软链原库 index.json、一行假 <code>E0.txt</code>），默认参数 <code>DRY_RUN=1</code> 的 <code>SHARD_MAP</code> 与 <code>PRESEED</code> 行逐行相同；伪造一个 eval root（<code>merged/log.json</code>、<code>errors.json</code>、<code>preseeded-errors.json</code>、<code>retries.json</code>）直接调 <code>py summary</code>，不设与设 <code>EXPECT_MOTION_STATS=0</code> 各一次</td><td>AWS 侧调用不受影响；summary 不会在跑完后崩</td><td><code>POOL_DEFAULT_EQ=PASS</code>、<code>SUMMARY_SMOKE=PASS ems_default=1 ems_set=0</code>、pytest 全过</td></tr>
+<tr><td>V2</td><td>4 卡映射正确</td><td>合并后在评估副本、同一 stub 上：<code>EVAL_NGPU=4 EVAL_SHARDS=8 EVAL_PER_GPU=2 DRY_RUN=1</code>；再跑一次 <code>EVAL_SHARDS=12</code>（应退 2）</td><td>8 片落在卡 0–3，每卡 2 片，端口互不相同；片数不等于卡数 × 每卡片数时拒绝</td><td><code>SHARD_MAP</code> 8 行，gpu∈{0..3}；<code>EVAL_SHARDS=12</code> 时退出码 2</td></tr>
+<tr><td>V3</td><td>评估副本就是评估提交，环境指向副本</td><td>worktree <code>git rev-parse HEAD</code> 等于合并提交，<code>git status --porcelain</code> 为空；server 环境 <code>mme_vla_suite</code>、<code>openpi</code> 的 <code>__file__</code> 在 <code>$W/src</code> 下；client 环境 <code>robomme</code> 在 <code>$W/third_party/robomme_benchmark/src</code>、<code>openpi_client</code> 在 <code>$W/packages/openpi-client/src</code> 下；子模块与 gitlink 一致</td><td>跑的就是审过的代码</td><td><code>EVAL_WT=PASS head=&lt;sha&gt; editable=wt</code></td></tr>
 <tr><td>V4</td><td>ckpt 可评</td><td>链第 1 关（<code>check_checkpoint.py</code> 由 <code>run_shard.sh</code> 在起服务前自动调用）</td><td>训练完整，配置快照为 context、budget 对</td><td><code>TRAIN_DONE=PASS ckpts=10</code>、<code>CKPT_CHECK</code> 通过</td></tr>
-<tr><td>V5</td><td>加载冒烟</td><td><code>--g6b</code></td><td>能加载、握手通过、同卡 2 片能共存</td><td><code>EVAL_LOAD_SMOKE=PASS episodes=1 handshake=PASS share2=PASS</code></td></tr>
-<tr><td>V6</td><td>并发档位</td><td><code>--g6b-capacity</code></td><td>正式并发不会 OOM 或撞内存限额</td><td><code>EVAL_CAPACITY=PASS per_gpu=&lt;3|2&gt; peak_mem_gb= free_gb= host_delta_gb=</code> 且链脚本 <code>HOST_MEM=PASS per_gpu=N host_delta_gb=&lt;x&gt; projected_gb=&lt;4x&gt; limit=115</code></td></tr>
-<tr><td>V7</td><td>692 局结果</td><td>正式运行</td><td>成功率可信、可与对照组比</td><td><code>EVAL692=PASS episodes=692 success=&lt;k&gt; rate=&lt;x&gt; preseeded_errors=9 new_errors=&lt;n&gt; retried=&lt;n&gt; expect_motion_stats=0</code></td></tr>
+<tr><td>V5</td><td>加载冒烟</td><td><code>--g6b</code></td><td>能加载、握手通过、同卡 2 片能共存</td><td><code>EVAL_LOAD_SMOKE=PASS episodes=1 handshake=PASS share2=PASS</code>（share2 比例 0.38）</td></tr>
+<tr><td>V6</td><td>并发档位</td><td><code>--g6b-capacity</code></td><td>正式并发不会 OOM 或撞内存限额</td><td><code>EVAL_CAPACITY=PASS per_gpu=&lt;2|1&gt; peak_mem_gb= free_gb= host_delta_gb= mem_metric=anon+shmem mem_scope=step</code>，链脚本 <code>HOST_MEM=PASS per_gpu=N host_delta_gb=&lt;x&gt; projected_gb=&lt;4x&gt; limit=115</code>，<code>CAP_TIMEOUT=PASS wall_s=&lt;t&gt; projected_chunk_s=&lt;40t&gt; limit=14400</code></td></tr>
+<tr><td>V7</td><td>692 局结果</td><td>正式运行</td><td>成功率可信；<code>new_errors=0</code> 时可按 §六 与对照组直接比，&gt;0 时只作下界</td><td><code>EVAL692=PASS episodes=692 success=&lt;k&gt; rate=&lt;x&gt; preseeded_errors=9 new_errors=&lt;n&gt; retried=&lt;n&gt; expect_motion_stats=0</code></td></tr>
 </table>
 
 <h2>八、实施步骤</h2>
 <table>
 <tr><th>阶段</th><th>内容</th><th>判据</th></tr>
-<tr><td>0</td><td>开工前派一个 sonnet 只读子代理审本计划全文一致性</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS</code></td></tr>
-<tr><td>E1</td><td>子代理在独立 worktree 改 §四 的 3 个文件 → sonnet 审查 → <code>--no-ff</code> 合入 → push</td><td>V1、V2、<code>PRE/POST_MERGE_REVIEW=PASS</code></td></tr>
-<tr><td>E2</td><td>&lt;GL_REPO&gt; 上 worktree 出评估副本，初始化子模块；在 aspen 的 tmux 里跑 <code>setup.sh server client</code>；tokenizer 从 &lt;GL_REPO&gt; 复制并校验 sha</td><td>V3</td></tr>
+<tr><td>0</td><td>开工前派一个 sonnet 只读子代理审本次修订（第十〇″节与正文改动）的一致性</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS</code></td></tr>
+<tr><td>E1</td><td>子代理在独立 worktree 改 §四 的 3 个文件（验收只做 <code>bash -n</code> 与 pytest）→ sonnet 审查 → <code>--no-ff</code> 合入 → push</td><td>pytest、<code>PRE/POST_MERGE_REVIEW=PASS</code></td></tr>
+<tr><td>E2</td><td>&lt;GL_REPO&gt; 上 worktree 出评估副本，初始化子模块；在 aspen 的 tmux 里跑 <code>setup.sh server client</code>；tokenizer 从 &lt;GL_REPO&gt; 复制并校验 sha</td><td>V3；之后在副本里补跑 V1（DRY 对比、summary 冒烟）与 V2，FAIL 按合并后审查 FAIL 处置</td></tr>
 <tr><td>E3</td><td>写两条链脚本、建两份评估档案 launch.md（第一段），布 <code>g4c-ev512-chain</code>，各挂 Monitor；ctx1024 的链同时布上，等它自己的训练日志</td><td>链日志出现 <code>CHAIN_WAIT</code></td></tr>
 <tr><td>E4</td><td>ctx512 训练结束 → 链走完四关</td><td>V4–V7</td></tr>
 <tr><td>E5</td><td>写 result.md，提交推送；scancel 65943150；更新 current.json</td><td>EVAL692 行原文进档案</td></tr>
-<tr><td>E6</td><td>ctx1024 同 E4–E5，scancel 65943151；两条都完成后删评估副本 worktree（<code>git worktree remove</code>，环境随之删除）</td><td>同上</td></tr>
+<tr><td>E6</td><td>ctx1024 同 E4–E5，scancel 65943151；两条都完成后，先把 <code>$W/v1-store/evaluation/gl692-*</code> 移到 <code>$G/v1-store/evaluation/</code> 并核对文件数，再 <code>git worktree remove --force</code>（副本含子模块，不加 <code>--force</code> 会被拒；不先移会删掉评估结果）</td><td>同上</td></tr>
 </table>
 
 <h2>九、子代理分工与合并（简述）</h2>
-<p>只拆出一块写代码的活：子代理 E1 在自己的 worktree 改 <code>local_692_pool.sh</code>、<code>check_checkpoint.py</code> 和测试文件，提交前缀 <code>sub/E1:</code>。合并前，我核对改动范围并复跑 V1、V2，再派一个 sonnet 审查 diff；审查通过后 <code>--no-ff</code> 合入 <code>v4.2-plswap-full</code>，合并后跑一遍 pytest 再 push。装环境、布链、启动评估都由我在主会话里做，因为这几步依赖 GL 上的路径和占位，要按顺序进行。</p>
+<p>只拆出一块写代码的活：子代理 E1 在自己的 worktree 改 <code>local_692_pool.sh</code>、<code>check_checkpoint.py</code> 和测试文件，提交前缀 <code>sub/E1:</code>。合并前，我核对改动范围并复跑 pytest，再派一个 sonnet 审查 diff；审查通过后 <code>--no-ff</code> 合入 <code>v4.2-plswap-full</code>，合并后跑一遍 pytest 再 push。V1 的 DRY 对比、summary 冒烟和 V2 要用到 client 环境和前缀库，只能等 E2 建好评估副本后在副本里跑。装环境、布链、启动评估都由我在主会话里做，因为这几步依赖 GL 上的路径和占位，要按顺序进行。</p>
 
 <h2>十、开工审查结果与裁决（11-16 美东 19:40 审查；当晚你裁定「按推荐改」）</h2>
 <p><code>PLAN_CONSISTENCY_REVIEW=FAIL base=60c49b691bfdaabe3d95acf9aacfcb6f676245a6 findings=5 blocking=3</code>。两条文字项已直接改：F4（测试 <code>CTX_RUNS</code> 同步，见 1.3）、F5（§二 diff 口径）。三条阻断项涉及接口或验收，你已裁定按下表推荐改法执行，已改进 §四、§七 与第二部分 1.1、runbook。另按你的追加要求：<b>内存只在压测时读，正式 692 局全程不读内存</b>（不加任何持续采样或校验），见红线 R-MEM。</p>
@@ -172,7 +186,7 @@ blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid var(--line);colo
 <p><code>run_shard.sh</code> 在 <code>SLURM_JOB_ID</code> 非空时：① 跳过 <code>check_local_gpu</code>（即 AWS 用的 <code>LOCAL_GPU_SHARE</code> flock 登记检查）；② 改做「卡上不得有任何计算进程」检查（<code>nvidia-smi --query-compute-apps</code>，不认 <code>CUDA_VISIBLE_DEVICES</code>，看到 4 卡全部进程）。同卡多片同时起时，晚到的片若撞上先到片的 server 已起，就会退 2，结果取决于启动先后。修法不改代码：链在第 2–4 关的 srun 命令里一律以 <code>env -u SLURM_JOB_ID</code> 起 <code>local_692_pool.sh</code>，让 GL 与 AWS 走同一条检查路径（占位登记 + 进程树归属）。<code>--gpu_cmode=shared</code> 照传，compute_mode 检查随 Slurm 分支一起不再执行。另把「ssh 断开连带停掉 srun」登记进风险表，不改挂法。</p>
 <h2>十〇″、第二轮审查：开工审查 + 4 路 opus 对抗审查（11-16 晚，锚点 30f4653）</h2>
 <p>判定行：<code>PLAN_CONSISTENCY_REVIEW=FAIL findings=5 blocking=2</code>、<code>ADV_REVIEW_A=FAIL findings=6 blocking=4</code>、<code>ADV_REVIEW_B=FAIL findings=5 blocking=2</code>、<code>ADV_REVIEW_C=FAIL findings=7 blocking=1</code>、<code>ADV_REVIEW_D=FAIL findings=5 blocking=1</code>。去重后如下。标「已核实」的由主会话对照 <code>git show 30f4653:…</code> 原文核过。</p>
-<h3>需要裁决（改口径、改验收或改代码范围）</h3>
+<h3>需要裁决（改口径、改验收或改代码范围）——11-16 晚你裁定「按推荐改」，已全部改进正文</h3>
 <table>
 <tr><th>#</th><th>问题</th><th>推荐改法</th></tr>
 <tr><td>R1 显存</td><td>A40 实际 45.0 GiB（<code>nvidia-smi</code> 46068 MiB）。AWS g6b 实测 2 片×0.45 峰值 78.3 GiB，即 XLA 池外每卡还要约 6.3 GiB。K4 两档与 g6b 都是 XLA 合计 0.9 张卡（40.5 GiB），加开销约 46.8 GiB，超总量；压测余量要求 ≥4 GiB 也过不了。g6b 的 0.45/0.7 写死、不可覆盖（已核实）</td><td>K4 改为首试每卡 2 片×0.38（8 片），退路每卡 1 片×0.70（4 片，与以往 GL 每片独占一卡相同）；g6b 的 share2 比例改为可覆盖（默认 0.45，AWS 不变），链传 0.38</td></tr>
@@ -182,7 +196,7 @@ blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid var(--line);colo
 <tr><td>R5 可比性</td><td>V7 只要 merge 成功就 PASS，new_errors 不设门槛；单局 2400 s 超时记 error、重跑仍超时按失败计入分母。§六「只差融合方式」说过头：对照组训练在 AWS 8×A100、评估代码版本更早、每卡 1 片；512 对照 211/692 由 primary700（550 局）与 binfilldemo（142 局）两次拼成</td><td>V7 加条件：最终 <code>new_errors=0</code> 才按 §六 直接对比；&gt;0 时 result.md 单列这些局、标「不可直接比的下界」交你。§六 改为如实列差异，补「692 局二项标准误约 1.8 pp，4 pp 内差距不宜过度解读」，盲区加「新驱动未与 GL 历史结果交叉复现」</td></tr>
 <tr><td>R6 前缀库</td><td><code>DEMO_PREFIX_ORIGINAL=1</code> 只要求 index.json 存在，挂到任何库都放行</td><td><code>E0_GATE=SKIP</code> 行打印并核 index.json sha256 = <code>3ef6b165cc999c6a434283b963d336406b43f59a0fd30161621931b347343f27</code>（与对照档案一致），不等退 2</td></tr>
 </table>
-<h3>实现或文字错误（按审查改，不改口径）</h3>
+<h3>实现或文字错误（按审查改，不改口径）——已全部改进正文</h3>
 <ul>
 <li><b>F1 写法会崩（已核实）</b>：<code>cmd_summary</code> 是单引号 heredoc 里的 Python f-string，<code>${EXPECT_MOTION_STATS:-1}</code> 不被 bash 展开，Python 抛 NameError，且在 692 局跑完后才触发。改为 <code>import os</code> + <code>os.environ.get('EXPECT_MOTION_STATS','1')</code>；<code>py summary</code> 后检查 <code>PIPESTATUS</code>，失败打 <code>EVAL692=FAIL reason=summary</code>；V1 加伪造 eval root 直接调 <code>py summary</code> 的用例（不设 / 设 0 各一次）。</li>
 <li><b>F4 改错了（已核实）</b>：<code>test_context_entries_fields</code> 对 <code>CTX_RUNS</code> 每项断言 motion True、budget 512、config b128_80k、motion_budget 160，新登记加进去必挂。改为另建 <code>CTX_NOMOTION_RUNS</code>，<code>CTX_RUNS</code> 不动，跳过条件与 integration 用例覆盖两组。</li>
@@ -200,8 +214,8 @@ blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid var(--line);colo
 </ul>
 <h2>十一、待你确认（写计划时）</h2>
 <ol>
-<li>每卡 3 片、退路 2 片（K4）是否可以？还是要像 AWS 一样先试 4 片？</li>
-<li>是否把本评估登记进状态机 <code>docs/handoff/current.json</code>（新任务 <code>gl-4task400-ctx-692-eval</code>，依赖 <code>gl-4task400-ctx-50k</code>）？</li>
+<li><s>每卡几片</s>：已按第二轮审查 R1 改为 2 片、退路 1 片。</li>
+<li>是否把本评估登记进状态机 <code>docs/handoff/current.json</code>（新任务 <code>gl-4task400-ctx-692-eval</code>，依赖 <code>gl-4task400-ctx-50k</code>）？未答复前按不登记处理，交接走人工。</li>
 </ol>
 <p class="mut">第二部分是逐文件细节、runbook、风险与盲区。</p>
 
@@ -211,33 +225,35 @@ blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid var(--line);colo
 <ul>
 <li>R1 不动 &lt;GL_REPO&gt; 的工作树和 HEAD；只允许 <code>git -C &lt;GL_REPO&gt; worktree add/remove</code> 和 <code>fetch</code>。</li>
 <li>R2 训练进程未退出前不起任何评估 step；链第 1 关同时核对 tmux 已退出、<code>squeue -s -j &lt;占位&gt;</code> 只剩 <code>.batch/.extern</code>。</li>
-<li>R3 只 scancel 本 run 的占位（512→65943150，1024→65943151），并且要在 <code>EVAL692</code> 判定行出现之后，或评估 FAIL 停工经你裁决之后。绝不 <code>scancel -u</code>。</li>
+<li>R3 只 scancel 本 run 的占位（512→65943150，1024→65943151），并且要在 <code>EVAL692=PASS</code> 出现、会话核对之后，或评估 FAIL 停工经你裁决之后。绝不 <code>scancel -u</code>。</li>
 <li>R4 判据不改：<code>check_shard.py</code>、<code>merge_shards.py</code>、预标清单 <code>docs/training-doc/finalckpt-nomotion59999-gl/records/preseeded-errors.json</code> 原样使用。</li>
 <li>R5 tmux 会话名清单：<code>g4c-ev-setup</code>、<code>g4c-ev512-chain</code>、<code>g4c-ev1024-chain</code>。清理只按这份清单逐个 <code>kill-session -t '=名'</code>。</li>
-<li>R6 新 run_name：<code>gl692-ctx512-50k</code>、<code>gl692-ctx1024-50k</code>，冒烟和压测用 <code>gl692-ctx512-g6b</code>、<code>gl692-ctx512-cap&lt;N&gt;</code>（1024 同理）。不复用、不覆盖。</li>
+<li>R6 新 run_name：<code>gl692-ctx512-50k</code>、<code>gl692-ctx1024-50k</code>，冒烟和压测用 <code>gl692-ctx512-g6b</code>、<code>gl692-ctx512-cap&lt;N&gt;</code>（1024 同理）。两条链共用一个评估副本，每关都必须显式传各自 RUN_NAME。不复用、不覆盖。</li>
+<li>R7 链第 2–4 关一律 <code>env -u SLURM_JOB_ID -u SLURM_CPUS_PER_TASK</code>（K7）。</li>
 </ul>
 
 <h2>一、逐文件改动清单（E1）</h2>
 <h3>1.1 <code>scripts/evaluation/local_692_pool.sh</code></h3>
 <ul>
 <li>开头参数区：<code>NGPU="${EVAL_NGPU:-8}"</code>，校验为正整数；<code>SHARDS</code> 必须等于 <code>NGPU*PER_GPU</code>，否则退 2 并提示（防止卡位满时返回 97）。只有正式模式（<code>MODE=eval</code>，含 <code>DRY_RUN=1</code>）且 <code>EVAL_NGPU</code> 被显式设置时才检查这一条（F2）；<code>--g6b</code>、<code>--g6b-capacity</code> 不检查，默认路径保持原行为。</li>
-<li><code>cmd_summary</code>：EVAL692 行的 <code>expect_motion_stats=1</code> 字面量改为 <code>expect_motion_stats=${EXPECT_MOTION_STATS:-1}</code>（F1）。</li>
+<li><code>cmd_summary</code>（F1）：PYHELP 加 <code>import os</code>，EVAL692 行的 <code>expect_motion_stats=1</code> 字面量改为 <code>expect_motion_stats={os.environ.get('EXPECT_MOTION_STATS', '1')}</code>。PYHELP 在单引号 heredoc 里，bash 不展开 <code>${…}</code>，写成 bash 形式会在跑完后抛 NameError。<code>py summary … | tee</code> 之后检查 <code>${PIPESTATUS[0]}</code>，非 0 打 <code>EVAL692=FAIL reason=summary</code> 并退 1。</li>
 <li>所有 <code>$((K % 8))</code>（正式起片、retry1 重跑、<code>SHARD_MAP</code> 空跑行）改成 <code>$((K % NGPU))</code>；g6b 和压测只用 GPU0，不变。</li>
 <li>export 行：<code>MMEVLA_MOTION_OVERFLOW="${MMEVLA_MOTION_OVERFLOW-resample}"</code>（空串表示关闭），<code>EXPECT_MOTION_STATS="${EXPECT_MOTION_STATS:-1}"</code>，<code>POLICY_CONFIG="${POLICY_CONFIG:-mme_vla_suite_b128_80k}"</code>；<code>EVAL_ENV</code> 回显行照常打印实际值。</li>
-<li>① E0 闸：<code>DEMO_PREFIX_ORIGINAL=1</code> 时打印 <code>E0_GATE=SKIP reason=original_store store=$STORE</code>，同时要求 <code>$STORE/index.json</code> 存在，然后继续；否则保持原逻辑。</li>
-<li><code>--g6b-capacity</code>（F3）：压测起片前读一次作业 cgroup 的 <code>memory.current</code>（cgroup v2；不存在时用 v1 <code>memory.usage_in_bytes</code>）作基线；压测期间与 nvidia-smi 采样并列，每 2 秒读一次，压测结束即停；<code>host_delta_gb = 压测期间最大值 − 基线</code>，写进 <code>EVAL_CAPACITY</code> 行。读不到时写 <code>host_delta_gb=unknown</code>。脚本仍只按原有显存条件判 PASS/FAIL。</li>
-<li>链脚本（E3）读 <code>EVAL_CAPACITY</code> 行，另出 <code>HOST_MEM=PASS|FAIL per_gpu=N host_delta_gb=&lt;x&gt; projected_gb=&lt;x×4&gt; limit=115</code>；<code>unknown</code> 判 FAIL。V6 要两行都 PASS。</li>
+<li>① E0 闸：<code>DEMO_PREFIX_ORIGINAL=1</code> 时算 <code>$STORE/index.json</code> 的 sha256，等于 <code>${DEMO_PREFIX_INDEX_SHA256:-3ef6b165cc999c6a434283b963d336406b43f59a0fd30161621931b347343f27}</code> 才打印 <code>E0_GATE=SKIP reason=original_store store=$STORE index_sha256=&lt;sha&gt;</code> 并继续，不等或文件缺失打 <code>E0_GATE=FAIL reason=index_sha</code> 退 2；不设该开关保持原逻辑。</li>
+<li><code>--g6b</code>：同卡 2 片那一步的 <code>XLA_PYTHON_CLIENT_MEM_FRACTION=0.45</code> 改为 <code>${G6B_SHARE_FRACTION:-0.45}</code>（DRY 回显同步）；单片那一步 0.7 不变。</li>
+<li><code>--g6b-capacity</code>（F3，按 R2 修订）：从 <code>/proc/self/cgroup</code> 取本进程 cgroup 路径（GL 现场形如 <code>0::/system.slice/slurmstepd.scope/job_&lt;id&gt;/step_&lt;n&gt;/user/task_0</code>），截到 <code>step_&lt;n&gt;</code> 一级，读 <code>/sys/fs/cgroup/&lt;该路径&gt;/memory.stat</code> 的 <code>anon</code> 与 <code>shmem</code> 之和（cgroup v1 时读对应目录 <code>memory.stat</code> 的 <code>total_rss+total_shmem</code>）；不读 <code>SLURM_JOB_ID</code>（已被 <code>env -u</code> 去掉）。压测起片前读一次作基线；压测期间与 nvidia-smi 采样并列，每 2 秒读一次，压测结束即停；<code>host_delta_gb = 压测期间最大值 − 基线</code>，写进 <code>EVAL_CAPACITY</code> 行，并记 <code>mem_metric=anon+shmem mem_scope=step mem_path=&lt;实际文件&gt;</code>。读不到时写 <code>host_delta_gb=unknown</code>。脚本仍只按原有显存条件判 PASS/FAIL。</li>
+<li>链脚本（E3）读 <code>EVAL_CAPACITY</code> 行与各片 <code>CAP_TIME wall_s</code>，另出 <code>HOST_MEM=PASS|FAIL per_gpu=N host_delta_gb=&lt;x&gt; projected_gb=&lt;x×4&gt; limit=115</code>（<code>unknown</code> 判 FAIL）与 <code>CAP_TIMEOUT=PASS|FAIL wall_s=&lt;各片最大&gt; projected_chunk_s=&lt;20×wall_s×2&gt; limit=14400</code>。V6 要三行都 PASS。</li>
 <li><b>红线 R-MEM</b>：内存采样只存在于 <code>--g6b-capacity</code> 分支；正式 692 局（<code>MODE=eval</code>）与 g6b 冒烟不读内存、不加任何持续采样或校验进程。</li>
 </ul>
 <h3>1.2 <code>scripts/evaluation/check_checkpoint.py</code></h3>
 <p>在 <code>RUNS</code> 末尾按既有体例加两条，带中文注释，注明来源计划 1111 和本计划。<code>resolved_sha256</code> 取 run 根 <code>history_config.resolved.sha256</code> 文件内容（已读：512 为 <code>9fa83497c0ce1e5b493b248c79e3c9b67efe03f9c7de2b84bf192a4932050d15</code>，1024 为 <code>70208fa373a470b5e0a19385d4a1db0984d3ed3bc70b8a635fe4f4cedf31e016</code>）。合入后在主检出用 <code>check_checkpoint.py --resolved-sha256 src/mme_vla_suite/models/config/robomme/perceptual-framesamp-context-{8,16}frame-8x8.yaml</code> 复算，逐位一致才算通过。<code>token_per_image==64</code> 两条都满足（8×8）。</p>
 <h3>1.3 <code>scripts/evaluation/test_check_checkpoint_integration.py</code></h3>
-<p>加用例：<code>RUNS[name]</code> 存在、<code>integration=='context'</code>、<code>motion is False</code>、<code>budget</code> 分别为 512 和 1024、<code>steps==('50000',)</code>。同时把两条新名字加进 <code>CTX_RUNS</code> 元组，否则旧用例 <code>test_modulation_snapshot_passes_existing_entries</code> 会因断言非 CTX 条目不带 <code>integration</code> 而失败（开工审查 F4）。</p>
+<p>新建元组 <code>CTX_NOMOTION_RUNS = ('v2-1600ep-m8x8-ctx-b128-50k-gl', 'v2-1600ep-m16x8x8-ctx-b128-50k-gl')</code>，<code>CTX_RUNS</code> 不动（<code>test_context_entries_fields</code> 对 <code>CTX_RUNS</code> 每项断言 motion True、budget 512、config b128_80k、motion_budget 160，新登记放进去必挂，第二轮审查已核实）。改动：<code>test_modulation_snapshot_passes_existing_entries</code> 的跳过条件改为 <code>name in CTX_RUNS + CTX_NOMOTION_RUNS</code>；<code>test_context_snapshot_passes_context_entry</code> 参数化覆盖两组；新增用例对 <code>CTX_NOMOTION_RUNS</code> 核 <code>integration=='context'</code>、<code>motion is False</code>、budget 分别为 512 和 1024、<code>steps==('50000',)</code>、config 分别为 b128_60k 和 b128_80k、norm_stats <code>856c75ea…d173</code>。</p>
 
 <h2>二、子代理分配表</h2>
 <table>
 <tr><th>编号</th><th>目标</th><th>可写文件</th><th>禁触</th><th>契约与依赖</th><th>合并顺序</th><th>验收（在哪、什么环境）</th><th>资源</th><th>共享文件归属</th></tr>
-<tr><td>E1（opus，worktree）</td><td>§一 三个文件</td><td>1.1–1.3 列出的 3 个文件</td><td>其余一切，尤其 <code>run_shard.sh</code>、<code>check_shard.py</code>、<code>merge_shards.py</code>、<code>src/</code>、<code>scripts/training/</code></td><td>默认参数行为与 b67c710 相同；无依赖</td><td>唯一一块</td><td>worktree 内 <code>bash -n</code>；<code>DRY_RUN=1</code> 默认与 <code>EVAL_NGPU=4 EVAL_SHARDS=12</code> 各一次（DRY 不起片、不写评估目录）；pytest 用 <code>UV_PROJECT_ENVIRONMENT=&lt;主 .venv&gt; PYTHONPATH=&lt;wt&gt;/src uv run --no-sync</code></td><td>CPU，无 GPU</td><td>无</td></tr>
+<tr><td>E1（opus，worktree）</td><td>§一 三个文件</td><td>1.1–1.3 列出的 3 个文件</td><td>其余一切，尤其 <code>run_shard.sh</code>、<code>check_shard.py</code>、<code>merge_shards.py</code>、<code>src/</code>、<code>scripts/training/</code></td><td>默认参数行为与 b67c710 相同；无依赖</td><td>唯一一块</td><td>worktree 内 <code>bash -n scripts/evaluation/local_692_pool.sh</code>；pytest 用 <code>UV_PROJECT_ENVIRONMENT=&lt;主 .venv&gt; PYTHONPATH=&lt;wt&gt;/src uv run --no-sync python -m pytest scripts/evaluation/test_check_checkpoint_integration.py -q</code>。DRY 对比与 summary 冒烟需要 client 环境和库，合并后由主会话在评估副本里跑（V1/V2）</td><td>CPU，无 GPU</td><td>无</td></tr>
 <tr><td>主会话自做</td><td>E2 副本与环境、E3 链脚本、E4–E6 起跑与收尾</td><td>评估副本、<code>&lt;GL_REPO&gt;/v1-store/jobs/g4c-ev*-chain.sh</code>、档案</td><td>&lt;GL_REPO&gt; 工作树</td><td>依赖 E1 合入</td><td>—</td><td>V3–V7</td><td>两份占位</td><td>—</td></tr>
 </table>
 
@@ -245,10 +261,11 @@ blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid var(--line);colo
 <table>
 <tr><th>闸</th><th>位置</th><th>FAIL 处置</th></tr>
 <tr><td>PLAN_CONSISTENCY_REVIEW</td><td>开工前</td><td>blocking 项交你</td></tr>
-<tr><td>V1 / V2</td><td>E1 合并前后</td><td>交回 E1 续改</td></tr>
+<tr><td>pytest</td><td>E1 合并前后</td><td>交回 E1 续改</td></tr>
+<tr><td>V1 / V2</td><td>合并后，E2 评估副本内</td><td>按合并后审查 FAIL 处置：停、写 HOLD、交你</td></tr>
 <tr><td>V3 EVAL_WT</td><td>E2</td><td>查环境指向，不借 &lt;GL_REPO&gt; 环境</td></tr>
-<tr><td>V4–V6</td><td>链第 1–3 关</td><td>链停下（<code>CHAIN_STOP stage=…</code>），保留日志，交你；V6 只允许 3→2 一次退档</td></tr>
-<tr><td>V7 EVAL692</td><td>链第 4 关</td><td>FAIL 不合并、不 scancel，交你</td></tr>
+<tr><td>V4–V6</td><td>链第 1–3 关</td><td>链停下（<code>CHAIN_STOP stage=…</code>），保留日志，交你；V6 只允许 2→1 一次退档</td></tr>
+<tr><td>V7 EVAL692</td><td>链第 4 关</td><td>FAIL 不 scancel，交你；PASS 但 <code>new_errors&gt;0</code> 时结果标下界，交你</td></tr>
 </table>
 
 <h2>四、runbook</h2>
@@ -265,28 +282,39 @@ tmux new-session -d -s g4c-ev-setup "set -o pipefail; bash $W/scripts/evaluation
 
 # E3：链（每条 run 一份脚本，ctx512 示例）
 tmux new-session -d -s g4c-ev512-chain "set -o pipefail; bash $G/v1-store/jobs/g4c-ev512-chain.sh 2&gt;&amp;1 | tee $G/v1-store/logs/g4c-ev512-chain.log; echo \"EXIT_CODE=\$?\" &gt;&gt; $G/v1-store/logs/g4c-ev512-chain.log"
-#   链内第 2–4 关：ssh greatlakes srun --jobid=65943150 --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=shared \
-#     env -u SLURM_JOB_ID \   （十〇′：走 AWS 同款 LOCAL_GPU_SHARE 检查）
-#     （EVAL_NGPU、EVAL_SHARDS 只在第 4 关正式评估传；第 2、3 关 g6b/压测不传）
-#     env EVAL_NGPU=4 EVAL_SHARDS=&lt;12|8&gt; EVAL_PER_GPU=&lt;3|2&gt; EVAL_MEM_FRACTION=&lt;0.30|0.45&gt; EXPECT_MOTION_STATS=0 MMEVLA_MOTION_OVERFLOW= \
-#         POLICY=perceptual-framesamp-context-8frame-8x8 POLICY_CONFIG=mme_vla_suite_b128_60k DEMO_PREFIX_ORIGINAL=1 RUN_NAME=gl692-ctx512-50k \
-#         bash $W/scripts/evaluation/local_692_pool.sh $G/v1-store/train-runs/mme_vla_suite_b128_60k/v2-1600ep-m8x8-ctx-b128-50k-gl/50000 7
-#   ctx1024：65943151、POLICY=perceptual-framesamp-context-16frame-8x8、POLICY_CONFIG=mme_vla_suite_b128_80k、RUN_NAME=gl692-ctx1024-50k
+#   链内每关前缀（PRE）：ssh -o BatchMode=yes greatlakes srun --jobid=65943150 --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=shared \
+#     env -u SLURM_JOB_ID -u SLURM_CPUS_PER_TASK \
+#     EXPECT_MOTION_STATS=0 MMEVLA_MOTION_OVERFLOW= POLICY=perceptual-framesamp-context-8frame-8x8 \
+#     POLICY_CONFIG=mme_vla_suite_b128_60k DEMO_PREFIX_ORIGINAL=1
+#   CK=$G/v1-store/train-runs/mme_vla_suite_b128_60k/v2-1600ep-m8x8-ctx-b128-50k-gl/50000
+#   第 2 关：PRE RUN_NAME=gl692-ctx512-g6b G6B_SHARE_FRACTION=0.38 bash $W/scripts/evaluation/local_692_pool.sh --g6b $CK 7
+#   第 3 关：PRE RUN_NAME=gl692-ctx512-cap2 EVAL_PER_GPU=2 EVAL_MEM_FRACTION=0.38 bash $W/scripts/evaluation/local_692_pool.sh --g6b-capacity $CK 7
+#           退档：PRE RUN_NAME=gl692-ctx512-cap1 EVAL_PER_GPU=1 EVAL_MEM_FRACTION=0.70 …同上
+#   第 4 关：PRE RUN_NAME=gl692-ctx512-50k EVAL_NGPU=4 EVAL_SHARDS=&lt;8|4&gt; EVAL_PER_GPU=&lt;2|1&gt; EVAL_MEM_FRACTION=&lt;0.38|0.70&gt; \
+#           bash $W/scripts/evaluation/local_692_pool.sh $CK 7
+#   ctx1024：65943151、POLICY=perceptual-framesamp-context-16frame-8x8、POLICY_CONFIG=mme_vla_suite_b128_80k、
+#           CK=…/mme_vla_suite_b128_80k/v2-1600ep-m16x8x8-ctx-b128-50k-gl/50000、RUN_NAME 前缀 gl692-ctx1024-
 
 # 监听：每份日志一个 Monitor
 tail -n +1 -F $G/v1-store/logs/g4c-ev512-chain.log | stdbuf -oL tr '\r' '\n' \
-  | grep --line-buffered -E "CHAIN_|EVAL_LOAD_SMOKE=|EVAL_CAPACITY=|HOST_MEM=|EVAL692=|E0_GATE=|EXIT_CODE=|Traceback|out of memory|Killed|oom"
+  | grep --line-buffered -E "CHAIN_|EVAL_LOAD_SMOKE=|EVAL_CAPACITY=|HOST_MEM=|CAP_TIMEOUT=|EVAL692=|E0_GATE=|EXIT_CODE=|SHARD_EXIT_CODE=[^0]|SLOT_REFUSED|PRESEED=|RETRY_INFRA|拒绝|失败|FAIL|错误|找不到|不起跑|Traceback|out of memory|Killed|oom"
 
-# E5：收尾
-ssh greatlakes scancel 65943150; ssh greatlakes 'squeue -u hongzefu'</pre>
+# E5：收尾（会话核到 EVAL692=PASS 之后）
+ssh greatlakes scancel 65943150; ssh greatlakes 'squeue -u hongzefu'
+
+# E6：两条都完成后
+mkdir -p $G/v1-store/evaluation; mv $W/v1-store/evaluation/gl692-* $G/v1-store/evaluation/   # 移完核对文件数
+git -C $G worktree remove --force $W</pre>
 <p>srun 经 ssh 长挂：链脚本在 aspen 的 tmux 里执行 <code>ssh -o BatchMode=yes greatlakes srun …</code>，ssh 会话要一直挂到该关结束。训练的 srun wrapper 正在用同一个 ControlMaster。主连接会话上限是 10，每条链同一时刻只占 1 个会话，够用。</p>
 
 <h2>五、风险登记</h2>
 <table>
 <tr><th>风险</th><th>影响</th><th>处置</th></tr>
-<tr><td>128 GB 内存撑不住 12 片</td><td>OOM killer 杀片</td><td>V6 用压测期间 cgroup 增量 ×4 外推（<code>HOST_MEM</code>），超 115 GB 退到 8 片</td></tr>
+<tr><td>128 GB 内存撑不住 8 片</td><td>OOM killer 杀片</td><td>V6 用压测期间 step 级 anon+shmem 增量 ×4 外推（<code>HOST_MEM</code>），超 115 GB 退到 4 片。压测每片只跑 1 局，外推是下界</td></tr>
+<tr><td>A40 同卡 2 片显存不够</td><td>冒烟或压测 OOM</td><td>XLA 池外开销 6.3 GiB 是从 A100 推的；V5/V6 当场测，不过退每卡 1 片</td></tr>
+<tr><td>单块 20 局超 14400 s</td><td>该片不完整，整轮 FAIL、无重跑</td><td>V6 的 <code>CAP_TIMEOUT</code> 外推，不过退档</td></tr>
 <tr><td>卡位锁文件 <code>flock</code> 落在 turbo NFS 上</td><td>锁失效时同卡超额</td><td>V5 的 share2 和 V6 压测都经过同一把锁，能先暴露问题；若锁失效，链停下交你，不另加机制</td></tr>
-<tr><td>aspen→GL 的 ssh 断开</td><td>srun 随之被停，该关中断</td><td>训练同样挂法已稳定数日，不改；中断即链停下、保留日志，按工程故障自行处理并在汇报里写明</td></tr>
+<tr><td>aspen→GL 的 ssh 断开</td><td>srun 随之被停，该关中断</td><td>训练同样挂法已稳定数日，不改；中断即链停下、保留日志，按工程故障自行处理并在汇报里写明。链与 ctx1024 训练共用同一个 ControlMaster，主连接断开会同时停掉 ctx512 评估和 ctx1024 训练，训练侧按 1111 计划的续跑流程处理</td></tr>
 <tr><td>节点上有别人的进程占用端口</td><td>连错服务</td><td><code>run_shard.sh</code> 按 18011+7k 取端口；节点 GPU 归本作业独占，端口冲突概率低；出现 <code>Errno 98</code> 即停</td></tr>
 <tr><td>装环境耗时或失败</td><td>赶不上 ctx512 结束</td><td>链等训练结束和环境就绪两个条件，晚开不影响结果；占位还有约 2 天余量</td></tr>
 <tr><td>A40 推理慢于估计</td><td>评估超过 10 小时</td><td>占位余量足够；只记录，不处置</td></tr>
@@ -294,7 +322,8 @@ ssh greatlakes scancel 65943150; ssh greatlakes 'squeue -u hongzefu'</pre>
 
 <h2>六、盲区诚实清单</h2>
 <ul>
-<li>A40 上每卡几片能跑、单片内存多大、692 局要多久，都没实测，全靠 V6 当场定。</li>
+<li>A40 上每卡几片能跑、单片内存多大、692 局要多久，都没实测，全靠 V5/V6 当场定。</li>
+<li>新驱动 <code>local_692_pool.sh</code> 没有在 GL 已评过的 ckpt 上复现过历史数字，与对照组的差异见 §六。</li>
 <li>context 1024 的推理显存比 512 大多少没测过，所以两条各压测一次，并发可能不同。</li>
 <li>新环境用 <code>uv.lock</code> 装，与 &lt;GL_REPO&gt; 那套 policy-eval 环境同一份锁，但没有逐包比对过；V3 只核 editable 指向。</li>
 </ul>
