@@ -33,37 +33,79 @@ def test_eval_batches_follow_eval_cadence():
         R.check_eval_points(5, [5, 20])
 
 
-def test_load_points_variants(tmp_path):
-    a = {"episodes": [{"difficulty": "easy", "episode": 1000, "e0": 100, "seed": 3400000,
-                       "points": [{"t": 116, "u": 16}, {"t": 100, "u": 0}]},
-                      {"difficulty": "xhard", "episode": 1000, "exec_start_idx": 300, "points": [{"u": 0}]}]}
-    pa = tmp_path / "a.json"
-    pa.write_text(json.dumps(a))
-    pts = R.load_points(pa)
-    assert list(pts) == ["easy/1000", "xhard/1000"]
-    assert pts["easy/1000"]["ts"] == [100, 116] and pts["easy/1000"]["us"] == [0, 16]
-    assert pts["xhard/1000"]["ts"] == [300]
-    assert pts["easy/1000"]["noise_id"] != pts["xhard/1000"]["noise_id"]
-    b = {"episodes": {"medium/1001": {"difficulty": "medium", "demo_len": 50, "points": [{"t": 66}]}}}
-    pb = tmp_path / "b.json"
-    pb.write_text(json.dumps(b))
-    assert R.load_points(pb)["medium/1001"]["episode"] == 1001
-    bad = {"episodes": [{"difficulty": "easy", "episode": 1, "e0": 10, "points": [{"t": 20}]}]}
-    pc = tmp_path / "c.json"
-    pc.write_text(json.dumps(bad))
+def _points_json(tmp_path, dropped=(), extra_point=None):
+    """按 R1 rsprog_points.py 文件头的 rsprog-points-1 模式造点表：顶层 episodes[] 与顶层 points[]，点不挂在局下。"""
+    episodes, points = [], []
+    for k, (d, e0, n_frames) in {0: ("easy", 100, 200), 1: ("easy", 100, 250), 150: ("xhard", 400, 900)}.items():
+        ep = 1000 + k % 50
+        L = (n_frames - e0) // 50
+        episodes.append({"k": k, "seed": 3400000 + 100 * k, "env_seed": 7, "difficulty": d, "episode": ep, "L": L,
+                         "node_slots": [], "nodes": [], "directions": [], "sides": [], "moves": [],
+                         "demo_bounds": [[50 * i, 50 * i + 49] for i in range(L)],
+                         "exec_bounds": [[e0 + 50 * i, e0 + 50 * i + 49] for i in range(L)],
+                         "e0": e0, "n_frames": n_frames, "irregular": False})
+        for u in range(0, n_frames - e0, 16):
+            points.append({"k": k, "difficulty": d, "episode": ep, "t": e0 + u, "u": u, "j": u // 50,
+                           "tau": u / (50 * L), "tau_time": u / (50 * L), "remaining": L - u // 50, "cur_move": "A",
+                           "next_move": None, "button_slot": 0, "button_cell": 0, "target_slot": 1,
+                           "step_start": u % 50 < 16})
+    if extra_point is not None:
+        points.append(extra_point)
+    raw = {"schema": "rsprog-points-1", "pool": "pool.json", "data_root": "x", "pix_tol": 8, "stride": 16, "seglen": 50,
+           "episodes": episodes, "points": points[::-1], "pairs": [],
+           "dropped": [{"k": k, "difficulty": "easy", "episode": 1000 + k, "reason": "mismatch"} for k in dropped],
+           "verdicts": {"GEN_SPEC": "GEN_SPEC=PASS", "PAIRS": "PAIRS n=0 kept=0"}}
+    path = tmp_path / "rsprog_points.json"
+    path.write_text(json.dumps(raw))
+    return path
+
+
+def test_load_points_real_schema(tmp_path):
+    pts = R.load_points(_points_json(tmp_path))
+    assert list(pts) == [0, 1, 150]
+    e = pts[150]
+    assert e["difficulty"] == "xhard" and e["episode"] == 1000 and e["e0"] == 400 and e["noise_id"] == 150
+    assert e["ts"] == [400 + 16 * i for i in range(32)] and e["us"][0] == 0
+    assert pts[0]["episode"] == 1000 and pts[1]["episode"] == 1001
+    # dropped 的局整局跳过（连同它的点）
+    assert list(R.load_points(_points_json(tmp_path, dropped=(1,)))) == [0, 150]
+    # 不在 16 拍上的点、t/u 不自洽、schema 不对都报错
     with pytest.raises(ValueError):
-        R.load_points(pc)
+        R.load_points(_points_json(tmp_path, extra_point={"k": 0, "difficulty": "easy", "episode": 1000, "t": 108, "u": 8}))
+    with pytest.raises(ValueError):
+        R.load_points(_points_json(tmp_path, extra_point={"k": 0, "difficulty": "easy", "episode": 1000, "t": 112, "u": 16}))
+    raw = json.loads((tmp_path / "rsprog_points.json").read_text())
+    raw["schema"] = "other"
+    (tmp_path / "bad.json").write_text(json.dumps(raw))
+    with pytest.raises(ValueError):
+        R.load_points(tmp_path / "bad.json")
+
+
+def test_h5_and_npz_paths(tmp_path):
+    e = {"k": 150, "difficulty": "xhard", "episode": 1000}
+    with pytest.raises(FileNotFoundError):
+        R.h5_path_of(e, tmp_path)
+    flat = tmp_path / "xhard" / "record_dataset_RouteStick.h5"
+    flat.parent.mkdir(parents=True)
+    flat.write_bytes(b"")
+    assert R.h5_path_of(e, tmp_path) == flat
+    man = tmp_path / "RouteStick" / "xhard" / "record_dataset_RouteStick.h5"
+    man.parent.mkdir(parents=True)
+    man.write_bytes(b"")
+    assert R.h5_path_of(e, tmp_path) == man                  # 清单布局优先
+    assert R.npz_path(tmp_path, "A", 150) == tmp_path / "A" / "episode_150.npz"
+    assert "{model}/episode_{k}.npz".format(model="A", k=150) == "A/episode_150.npz"   # R3 缺省 --npz-pattern
 
 
 def test_shards_partition():
-    pts = {f"{d}/{k}": None for d in R.DIFFICULTIES for k in range(1000, 1050)}
+    pts = {k: None for k in range(200)}
     shards = [set(R.select_episodes(pts, None, f"{i}/3")) for i in range(3)]
     assert set().union(*shards) == set(pts)
     assert sum(len(s) for s in shards) == len(pts)
     assert all(len(s) > 40 for s in shards)
-    assert R.select_episodes(pts, ["hard/1003"], None) == ["hard/1003"]
+    assert R.select_episodes(pts, [153, 3], None) == [153, 3]
     with pytest.raises(SystemExit):
-        R.select_episodes(pts, ["1003"], None)        # 局号在四个难度里重复
+        R.select_episodes(pts, [200], None)
 
 
 # ── 记忆 token 表 ─────────────────────────────────────────────────────────────────────────
@@ -215,13 +257,16 @@ def test_pack_episode_matches_plan_table(tmp_path):
         assert np.array_equal(arrays["attn_mem"][i, :, :lens[i]], r["attn_mem"][:, v])
         assert np.all(arrays["mem_type"][i, lens[i]:] == -1) and np.all(arrays["mem_t0"][i, lens[i]:] == -1)
         assert np.all(arrays["attn_mem"][i, :, lens[i]:] == 0)
-    path = tmp_path / "A" / "easy" / "episode_1000.npz"
-    R.write_episode(path, arrays, {"episode": 1000, "difficulty": "easy", "model": "A", "e0": 10, "samples": 5,
+    assert arrays["memmod_maxabs"].shape == () and arrays["memmod_maxabs_pt"].shape == (4,)
+    path = R.npz_path(tmp_path, "A", 7)
+    R.write_episode(path, arrays, {"k": 7, "episode": 1007, "difficulty": "easy", "model": "A", "e0": 10, "samples": 5,
                                    "seed": 42, "fingerprint": "f"})
     with np.load(path, allow_pickle=False) as z:
         loaded = {k: z[k] for k in z.files}
     assert R.check_npz_schema(loaded) == []
     assert str(loaded["model"]) == "A" and int(loaded["action_samples"]) == 5
+    assert int(loaded["k"]) == 7 and int(loaded["episode"]) == 1007 and str(loaded["difficulty"]) == "easy"
+    assert loaded["memmod_maxabs"].shape == () and float(np.max(loaded["memmod_maxabs"])) == 0.0
     assert R.existing_points(path, "f") == 4
     with pytest.raises(SystemExit):
         R.existing_points(path, "g")

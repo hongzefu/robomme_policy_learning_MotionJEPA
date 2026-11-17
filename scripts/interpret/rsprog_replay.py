@@ -7,14 +7,15 @@
 bf16 的 policy 只用来逐帧生成记忆（motion 走真实编码器 sidecar）与装配观测；捕获由 float32 模型在 highest 精度下做，
 与 hover_replay.build_models 相同。
 
-输入 --points（R1 的 rsprog_points.json）。本脚本只依赖下列字段（其余字段原样忽略）：
-  {"episodes": [ {"difficulty": "easy", "episode": 1000, "e0": <执行段起点>, "points": [{"t": <帧号>, "u": <执行偏移>}, ...]}, ...]}
-  - "episodes" 也可以是以任意键为键的 dict；e0 依次取 e0 / exec_start_idx / exec_start / demo_len / demo_length；
-    每点的 t 缺省时取 e0 + u（u 依次取 u / exec_offset / offset）；可选 "prompt"、"h5"（单局 H5 路径）、"seed"。
-  - 局的唯一键为 "<difficulty>/<episode>"（四个难度的局号都是 1000–1049，会重复）。
-H5：缺省 <h5-root>/<difficulty>/record_dataset_RouteStick.h5 里的 episode_<episode>；prompt 缺省取 setup/task_goal[0]。
+输入 --points：R1 的 rsprog_points.json（schema "rsprog-points-1"，见 rsprog_points.py 文件头）。本脚本只用：
+  episodes[]：k（全局序号 0–199）、difficulty、episode（每难度 1000–1049）、e0、n_frames；
+  points[]（顶层，按 k 归局）：k、difficulty、episode、t、u（t − e0 = u，u 为 16 的倍数）；
+  dropped[]：其中的 k 整局跳过。局的唯一键为全局序号 k。
+H5：与 R1 points 子命令同一查找顺序——<h5-root>/RouteStick/<difficulty>/record_dataset_RouteStick.h5（清单生成布局），
+再 <h5-root>/<difficulty>/record_dataset_RouteStick.h5；局名 episode_<episode>；prompt 取 setup/task_goal[0]。
+回放前用 H5 的 is_video_demo 核 e0，不符即报错。
 
-npz（<out>/<A|B>/<difficulty>/episode_<k>.npz；N 为本局推理点数，M 为本局各点有效记忆 token 数的最大值，按记忆序紧排、
+npz（<out>/<A|B>/episode_<k>.npz，k 为 R1 全局序号 0–199，与 R3 rsprog_probe 缺省 --npz-pattern 一致；N 为本局推理点数，M 为本局各点有效记忆 token 数的最大值，按记忆序紧排、
 不足补齐，mem_len 记每点实际个数）：
   t、u                     (N,)         int64
   hidden_prefix            (N,19,2,W)   f32   前缀两组（0=image、1=lang）逐级有效 token 均值（第 0 级为进第 0 层前）
@@ -29,15 +30,15 @@ npz（<out>/<A|B>/<difficulty>/episode_<k>.npz；N 为本局推理点数，M 为
   film_rel                 (N,18,2)     f32   [:, :, 0] = ‖F(x,m) − F(x,0)‖/‖F(x,0)‖；[:, :, 1] = ‖Σ_motion α·V‖/‖Σ_all α·V‖
                                               （定义见 attn_adapter 文件头），K 平均
   mem_frame_mean、mem_motion_mean、mem_motion_latest  (N,1024) f32   mem_seq 的帧 token 均值、motion 均值、最新 motion token
-另有元数据键（不在计划字段表里，只供核对）：episode、difficulty、model、e0、action_samples、seed、fingerprint、
-attn_mem_rowsum_err、attn_main_rowsum_err、memmod_maxabs（(N,) f32，每点 K 个样本的最大值）。
+另有元数据键（不在计划字段表里，只供核对）：k、episode、difficulty、model、e0、action_samples、seed、fingerprint、
+attn_mem_rowsum_err、attn_main_rowsum_err、memmod_maxabs_pt（(N,) f32，每点 K 个样本的最大值），
+memmod_maxabs（f32 标量 = memmod_maxabs_pt 的局内最大值，供 R3 rsprog_attn 的 ATTN_AGG）。
 
-噪声：第 j 份噪声用 hover_replay.action_noise(seed, noise_id, t, j)，noise_id = 难度序号×1_000_000 + 局号
-（easy 0、medium 1、hard 2、xhard 3），保证四个难度同局号不撞 key。
+噪声：第 j 份噪声用 hover_replay.action_noise(seed, k, t, j)，k 为全局序号（四个难度唯一）。
 
 用法（JAX 确定性环境变量与日志由调用方给）：
   python -m scripts.interpret.rsprog_replay --model A --ckpt <…/50000> --points rsprog_points.json --h5-root <根> \
-      --out <输出根> [--episodes easy/1000 xhard/1003 | --shard 0/3] [--samples 5] [--seed 42]
+      --out <输出根> [--episodes 0 153 | --shard 0/3] [--samples 5] [--seed 42]   # --episodes 为全局序号 k
   闸门（只读一局，不写 npz）：--mem-blind-check、--parity-check、--precision-check（可同时给），对 --episodes 的第一局
   （缺省本分片第一局）跑，--check-max-points 限制点数。
   --selftest：不加载权重的 CPU 自检（喂帧节奏、点表规范化、MemoryAttention 重写对原模块、npz 打包形状）。
@@ -56,6 +57,8 @@ import uuid
 import numpy as np
 
 DIFFICULTIES = ("easy", "medium", "hard", "xhard")
+POINTS_SCHEMA = "rsprog-points-1"
+TASK = "RouteStick"
 MODEL_KINDS = {"A": "modul_v10_768", "B": "wan_fixedpool768"}
 DEFAULT_CONFIG = "mme_vla_suite_b128_80k"
 EVAL_BATCH = 16
@@ -70,8 +73,6 @@ PREFIX_GROUPS = ("image", "lang")
 AVERAGED_KEYS = ("hidden_action", "hidden_memmod", "attn_mem", "attn_main", "film_rel")
 NOISE_FREE_KEYS = ("hidden_prefix", "mem_frame_mean", "mem_motion_mean", "mem_motion_latest", "mem_valid", "mem_is_motion")
 ERROR_KEYS = ("attn_mem_rowsum_err", "attn_main_rowsum_err", "memmod_maxabs")
-E0_KEYS = ("e0", "exec_start_idx", "exec_start", "demo_len", "demo_length")
-U_KEYS = ("u", "exec_offset", "offset")
 
 # 计划 B4 R2 行的字段表：名字 → (dtype, 形状模板)；模板里 N/M/W/Wa 为符号
 NPZ_SPEC = {
@@ -92,96 +93,68 @@ NPZ_SPEC = {
 
 
 # ══════════════════════════════════════════ 点表与分片 ══════════════════════════════════════════
-def _first(d, keys):
-    for k in keys:
-        if k in d and d[k] is not None:
-            return d[k]
-    return None
-
-
-def normalize_entry(raw, fallback_key=None):
-    """单局记录 → {"key", "difficulty", "episode", "e0", "ts", "us", "prompt", "h5", "seed", "noise_id"}。"""
-    difficulty = str(raw["difficulty"])
+def normalize_entry(ep, points):
+    """rsprog-points-1 的一局记录 + 该局的点 → {"k", "difficulty", "episode", "e0", "n_frames", "ts", "us", "h5", "noise_id"}。"""
+    k = int(ep["k"])
+    difficulty = str(ep["difficulty"])
     if difficulty not in DIFFICULTIES:
-        raise ValueError(f"未知难度 {difficulty!r}")
-    episode = raw.get("episode")
-    if episode is None and fallback_key is not None:
-        episode = str(fallback_key).rsplit("/", 1)[-1].replace("episode_", "")
-    episode = int(episode)
-    e0 = _first(raw, E0_KEYS)
-    if e0 is None:
-        raise ValueError(f"{difficulty}/{episode} 缺执行段起点（{'/'.join(E0_KEYS)}）")
-    e0 = int(e0)
-    ts, us = [], []
-    for p in raw.get("points", []):
-        t = p.get("t")
-        u = _first(p, U_KEYS)
-        if t is None:
-            if u is None:
-                raise ValueError(f"{difficulty}/{episode} 的点既无 t 也无 u：{p}")
-            t = e0 + int(u)
-        t = int(t)
-        u = t - e0 if u is None else int(u)
-        if t - e0 != u:
-            raise ValueError(f"{difficulty}/{episode} 点 t={t} u={u} 与 e0={e0} 不符")
-        ts.append(t)
-        us.append(u)
-    order = np.argsort(ts, kind="stable")
-    ts = [ts[i] for i in order]
-    us = [us[i] for i in order]
+        raise ValueError(f"k={k} 未知难度 {difficulty!r}")
+    episode, e0 = int(ep["episode"]), int(ep["e0"])
+    pts = sorted(points, key=lambda p: int(p["t"]))
+    for p in pts:
+        if (str(p["difficulty"]), int(p["episode"])) != (difficulty, episode):
+            raise ValueError(f"k={k} 的点 (difficulty, episode) 与局记录不符：{p}")
+        if int(p["t"]) - e0 != int(p["u"]):
+            raise ValueError(f"k={k} 点 t={p['t']} u={p['u']} 与 e0={e0} 不符")
+    ts = [int(p["t"]) for p in pts]
+    if len(set(ts)) != len(ts):
+        raise ValueError(f"k={k} 推理点重复")
     check_eval_points(e0, ts)
-    return {"key": f"{difficulty}/{episode}", "difficulty": difficulty, "episode": episode, "e0": e0,
-            "ts": ts, "us": us, "prompt": raw.get("prompt"), "h5": raw.get("h5") or raw.get("h5_path"),
-            "seed": raw.get("seed"), "noise_id": DIFFICULTIES.index(difficulty) * 1_000_000 + episode}
+    n_frames = ep.get("n_frames")
+    if n_frames is not None and ts and max(ts) >= int(n_frames):
+        raise ValueError(f"k={k} 推理点 {max(ts)} 超出 n_frames={n_frames}")
+    return {"k": k, "difficulty": difficulty, "episode": episode, "e0": e0,
+            "n_frames": None if n_frames is None else int(n_frames), "ts": ts, "us": [t - e0 for t in ts],
+            "h5": ep.get("h5"), "noise_id": k}
 
 
 def load_points(path):
-    """R1 的 rsprog_points.json → {局键: 规范化记录}，按 (难度, 局号) 排序。"""
+    """R1 的 rsprog_points.json（schema rsprog-points-1：顶层 episodes[] 与顶层 points[]，点按 k 归局；
+    dropped[] 里的 k 跳过）→ {k: 规范化记录}，按 k 排序。"""
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
-    eps = raw.get("episodes") if isinstance(raw, dict) else raw
-    items = []
-    if isinstance(eps, dict):
-        items = [(k, v) for k, v in eps.items()]
-    elif isinstance(eps, list):
-        items = [(None, v) for v in eps]
-    elif isinstance(raw, dict) and isinstance(raw.get("points"), list):   # 平铺点表：按 (难度, 局号) 分组
-        grouped = {}
-        for p in raw["points"]:
-            g = grouped.setdefault((p["difficulty"], int(p["episode"])),
-                                   {"difficulty": p["difficulty"], "episode": int(p["episode"]), "points": []})
-            e0 = _first(p, E0_KEYS)
-            if e0 is not None:
-                g.setdefault("e0", int(e0))
-            g["points"].append(p)
-        items = [(None, v) for v in grouped.values()]
-    else:
-        raise ValueError(f"{path} 不是可识别的点表（缺 episodes）")
+    if raw.get("schema") != POINTS_SCHEMA:
+        raise ValueError(f"{path} 的 schema={raw.get('schema')!r}，期望 {POINTS_SCHEMA!r}")
+    dropped = {int(d["k"]) for d in raw.get("dropped", [])}
+    by_k = {}
+    for p in raw["points"]:
+        by_k.setdefault(int(p["k"]), []).append(p)
     out = {}
-    for k, v in items:
-        e = normalize_entry(v, k)
-        if e["key"] in out:
-            raise ValueError(f"点表里局键重复：{e['key']}")
-        out[e["key"]] = e
-    return dict(sorted(out.items(), key=lambda kv: (DIFFICULTIES.index(kv[1]["difficulty"]), kv[1]["episode"])))
+    for ep in raw["episodes"]:
+        k = int(ep["k"])
+        if k in dropped:
+            continue
+        if k in out:
+            raise ValueError(f"点表里 k={k} 重复")
+        out[k] = normalize_entry(ep, by_k.pop(k, []))
+    stray = sorted(set(by_k) - dropped)
+    if stray:
+        raise ValueError(f"点表里有不属于任何保留局的点：k={stray[:5]}")
+    return dict(sorted(out.items()))
 
 
-def shard_of(key, n):
-    """按局键的 sha256 分片（与机器、顺序无关）。"""
-    return int(hashlib.sha256(key.encode("utf-8")).hexdigest(), 16) % int(n)
+def shard_of(k, n):
+    """按全局序号 k 的 sha256 分片（与机器、顺序无关）。"""
+    return int(hashlib.sha256(str(int(k)).encode("utf-8")).hexdigest(), 16) % int(n)
 
 
 def select_episodes(points, episodes=None, shard=None):
+    """--episodes 为全局序号 k 的列表；--shard i/n 按 k 哈希。"""
     keys = list(points)
     if episodes:
-        want = []
-        for e in episodes:
-            if e in points:
-                want.append(e)
-                continue
-            hits = [k for k in keys if k.endswith(f"/{e}")]
-            if len(hits) != 1:
-                raise SystemExit(f"--episodes {e!r} 匹配到 {len(hits)} 局（写成 <难度>/<局号>）")
-            want.append(hits[0])
+        want = [int(e) for e in episodes]
+        missing = [e for e in want if e not in points]
+        if missing:
+            raise SystemExit(f"--episodes 里的 k 不在点表（或已剔除）：{missing}")
         keys = want
     if shard:
         i, n = (int(x) for x in shard.split("/"))
@@ -329,8 +302,6 @@ def read_point_inputs(h5_episode, start, stop):
 
 
 def episode_prompt(entry, h5_episode):
-    if entry.get("prompt"):
-        return str(entry["prompt"])
     goal = h5_episode["setup/task_goal"][()]
     goal = goal[0] if np.ndim(goal) else goal
     return goal.decode("utf-8") if isinstance(goal, bytes) else str(goal)
@@ -344,13 +315,13 @@ def replay_episode(policy, adapter, h5_episode, entry, *, seed, samples, ts=None
     e0 = entry["e0"]
     e0_h5, n_steps = h5_exec_start(h5_episode)
     if e0_h5 != e0:
-        raise RuntimeError(f"{entry['key']} 点表 e0={e0} 与 H5 is_video_demo 边界 {e0_h5} 不符")
+        raise RuntimeError(f"k={entry['k']} 点表 e0={e0} 与 H5 is_video_demo 边界 {e0_h5} 不符")
     ts = list(entry["ts"]) if ts is None else list(ts)
     if not ts:
         return []
     check_eval_points(e0, ts, EVAL_BATCH)
     if max(ts) >= n_steps:
-        raise RuntimeError(f"{entry['key']} 推理点 {max(ts)} 超出局长 {n_steps}")
+        raise RuntimeError(f"k={entry['k']} 推理点 {max(ts)} 超出局长 {n_steps}")
     wanted = set(ts)
     prompt = episode_prompt(entry, h5_episode)
     rows = []
@@ -381,7 +352,7 @@ def replay_episode(policy, adapter, h5_episode, entry, *, seed, samples, ts=None
         if on_point is not None:
             on_point(t, observation, masks, row)
     if [r["t"] for r in rows] != sorted(ts):
-        raise RuntimeError(f"{entry['key']} 实际推理点 {[r['t'] for r in rows]} 与点表不一致")
+        raise RuntimeError(f"k={entry['k']} 实际推理点 {[r['t'] for r in rows]} 与点表不一致")
     return rows
 
 
@@ -407,8 +378,11 @@ def pack_episode(rows):
     for k in ("hidden_prefix", "hidden_action", "hidden_memmod", "attn_main", "film_rel",
               "mem_frame_mean", "mem_motion_mean", "mem_motion_latest"):
         out[k] = np.stack([np.asarray(r[k], np.float32) for r in rows]) if rows else np.zeros((0,), np.float32)
-    for k in ERROR_KEYS:
+    for k in ("attn_mem_rowsum_err", "attn_main_rowsum_err"):
         out[k] = np.asarray([r[k] for r in rows], np.float32)
+    pt = np.asarray([r["memmod_maxabs"] for r in rows], np.float32)
+    out["memmod_maxabs_pt"] = pt                                       # 逐点（K 个样本的最大值）
+    out["memmod_maxabs"] = np.float32(pt.max() if pt.size else 0.0)    # 局级标量，R3 rsprog_attn 的 ATTN_AGG 读这个
     return out
 
 
@@ -436,7 +410,7 @@ def check_npz_schema(arrays):
 
 
 def fingerprint(entry, model, ckpt, config, samples, seed):
-    payload = {"entry": {k: entry[k] for k in ("key", "e0", "ts", "us")}, "model": model, "ckpt": str(ckpt),
+    payload = {"entry": {k: entry[k] for k in ("k", "difficulty", "episode", "e0", "ts", "us")}, "model": model, "ckpt": str(ckpt),
                "config": config, "samples": int(samples), "seed": int(seed), "format": FORMAT_VERSION}
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
@@ -445,7 +419,7 @@ def fingerprint(entry, model, ckpt, config, samples, seed):
 def write_episode(path, arrays, meta):
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.parent / f".{path.stem}.{uuid.uuid4().hex}.tmp.npz"
-    extra = {"episode": np.int64(meta["episode"]), "difficulty": np.str_(meta["difficulty"]), "model": np.str_(meta["model"]),
+    extra = {"k": np.int64(meta["k"]), "episode": np.int64(meta["episode"]), "difficulty": np.str_(meta["difficulty"]), "model": np.str_(meta["model"]),
              "e0": np.int64(meta["e0"]), "action_samples": np.int64(meta["samples"]), "seed": np.int64(meta["seed"]),
              "fingerprint": np.str_(meta["fingerprint"])}
     np.savez(temporary, **arrays, **extra)
@@ -462,9 +436,20 @@ def existing_points(path, fp):
 
 
 def h5_path_of(entry, h5_root):
+    """与 R1 points 子命令同一查找顺序：<h5-root>/RouteStick/<d>/，再 <h5-root>/<d>/。"""
     if entry.get("h5"):
         return Path(entry["h5"])
-    return Path(h5_root) / entry["difficulty"] / "record_dataset_RouteStick.h5"
+    for cand in (Path(h5_root) / TASK / entry["difficulty"], Path(h5_root) / entry["difficulty"]):
+        path = cand / f"record_dataset_{TASK}.h5"
+        if path.is_file():
+            return path
+    raise FileNotFoundError(f"k={entry['k']} 在 {h5_root} 下找不到 {TASK}/{entry['difficulty']}/ 或 "
+                            f"{entry['difficulty']}/ 的 record_dataset_{TASK}.h5")
+
+
+def npz_path(out, model, k):
+    """与 R3 rsprog_probe 缺省 --npz-pattern "{model}/episode_{k}.npz" 一致。"""
+    return Path(out) / model / f"episode_{int(k)}.npz"
 
 
 def run_episodes(policy, adapter, points, keys, *, model, ckpt, config, h5_root, out, samples, seed):
@@ -475,12 +460,12 @@ def run_episodes(policy, adapter, points, keys, *, model, ckpt, config, h5_root,
         entry = points[key]
         if not entry["ts"]:
             continue
-        path = Path(out) / model / entry["difficulty"] / f"episode_{entry['episode']}.npz"
+        path = npz_path(out, model, key)
         fp = fingerprint(entry, model, ckpt, config, samples, seed)
         count = existing_points(path, fp)
         if count is not None:
             total += count
-            print(f"REPLAY_EPISODE_SKIP key={key} points={count}", flush=True)
+            print(f"REPLAY_EPISODE_SKIP k={key} points={count}", flush=True)
             continue
         started = time.perf_counter()
         with h5py.File(h5_path_of(entry, h5_root), "r") as h5:
@@ -489,16 +474,16 @@ def run_episodes(policy, adapter, points, keys, *, model, ckpt, config, h5_root,
         problems = check_npz_schema(arrays)
         if problems:
             raise RuntimeError(f"{key} npz 字段不符：{problems}")
-        write_episode(path, arrays, {"episode": entry["episode"], "difficulty": entry["difficulty"], "model": model,
+        write_episode(path, arrays, {"k": entry["k"], "episode": entry["episode"], "difficulty": entry["difficulty"], "model": model,
                                      "e0": entry["e0"], "samples": samples, "seed": seed, "fingerprint": fp})
         for k in ERROR_KEYS:
-            worst[k] = max(worst[k], float(arrays[k].max()) if len(arrays[k]) else 0.0)
+            worst[k] = max(worst[k], float(np.max(arrays[k])) if np.size(arrays[k]) else 0.0)
         total += len(rows)
         point_s = float(np.mean([r["seconds"] for r in rows]))
-        print(f"REPLAY_EPISODE key={key} points={len(rows)} M={arrays['attn_mem'].shape[-1]} "
+        print(f"REPLAY_EPISODE k={key} difficulty={entry['difficulty']} episode={entry['episode']} points={len(rows)} M={arrays['attn_mem'].shape[-1]} "
               f"seconds={time.perf_counter() - started:.1f} point_seconds={point_s:.2f} "
               f"rowsum_maxerr={max(float(arrays['attn_mem_rowsum_err'].max()), float(arrays['attn_main_rowsum_err'].max())):.3g} "
-              f"memmod_maxabs={float(arrays['memmod_maxabs'].max()):.3g}", flush=True)
+              f"memmod_maxabs={float(arrays['memmod_maxabs']):.3g}", flush=True)
     rowsum = max(worst["attn_mem_rowsum_err"], worst["attn_main_rowsum_err"])
     agg = rowsum <= ROWSUM_TOL and worst["memmod_maxabs"] <= MEMMOD_TOL
     print(f"ATTN_AGG_CAPTURE={'PASS' if agg else 'FAIL'} rowsum_maxerr={rowsum:.3g} memmod_maxabs={worst['memmod_maxabs']:.3g}",
@@ -528,7 +513,7 @@ def mem_blind_check(policy, adapter, h5_episode, entry, *, seed, max_points):
     replay_episode(policy, adapter, h5_episode, entry, seed=seed, samples=1, ts=ts, on_point=on_point, capture=False)
     ok = worst_prefix == 0.0 and worst_action > 0.0 and worst_zero == 0.0
     print(f"MEM_BLIND={'PASS' if ok else 'FAIL'} prefix_maxabs={worst_prefix:.9g} action_maxabs={worst_action:.6g} "
-          f"points={len(ts)} key={entry['key']}", flush=True)
+          f"points={len(ts)} k={entry['k']}", flush=True)
     return ok
 
 
@@ -557,7 +542,7 @@ def parity_check(policy, adapter, h5_episode, entry, *, seed, max_points):
     ok = bool(diffs) and maxabs <= PARITY_TOL
     print(f"REPLAY_PARITY_BF16_INFO points={len(diffs_bf16)} maxabs={max(diffs_bf16, default=float('nan')):.6g}", flush=True)
     print(f"REPLAY_PARITY={'PASS' if ok else 'FAIL'} points={len(diffs)} maxabs={maxabs:.9g} tol={PARITY_TOL:g} "
-          f"key={entry['key']}", flush=True)
+          f"k={entry['k']}", flush=True)
     return ok
 
 
@@ -642,9 +627,10 @@ def selftest():
     good = b[0] == (0, 11) and b[1] == (11, 27) and b[2] == (27, 43) and len(b) == 3
     ok &= good
     print(f"SELFTEST eval_batches={b} ok={int(good)}", flush=True)
-    entry = normalize_entry({"difficulty": "hard", "episode": 1003, "exec_start_idx": 10,
-                             "points": [{"u": 16}, {"t": 10, "u": 0}]})
-    good = entry["ts"] == [10, 26] and entry["us"] == [0, 16] and entry["noise_id"] == 2_001_003
+    entry = normalize_entry({"k": 103, "difficulty": "medium", "episode": 1003, "e0": 10, "n_frames": 200},
+                            [{"k": 103, "difficulty": "medium", "episode": 1003, "t": 26, "u": 16},
+                             {"k": 103, "difficulty": "medium", "episode": 1003, "t": 10, "u": 0}])
+    good = entry["ts"] == [10, 26] and entry["us"] == [0, 16] and entry["noise_id"] == 103
     ok &= good
     print(f"SELFTEST normalize ok={int(good)}", flush=True)
     d, rs, masked = mem_attention_equivalence()
@@ -692,8 +678,8 @@ def main(argv=None):
     parser.add_argument("--config", default=DEFAULT_CONFIG)
     parser.add_argument("--points", type=Path)
     parser.add_argument("--h5-root", type=Path)
-    parser.add_argument("--episodes", nargs="+", default=None, help="局键 <难度>/<局号>（局号唯一时可只写局号）")
-    parser.add_argument("--shard", default=None, help="i/n：按局键 sha256 取第 i 片")
+    parser.add_argument("--episodes", nargs="+", type=int, default=None, help="全局序号 k（R1 的 0–199）")
+    parser.add_argument("--shard", default=None, help="i/n：按 k 的 sha256 取第 i 片")
     parser.add_argument("--out", type=Path)
     parser.add_argument("--samples", type=int, default=K_SAMPLES)
     parser.add_argument("--seed", type=int, default=42)
