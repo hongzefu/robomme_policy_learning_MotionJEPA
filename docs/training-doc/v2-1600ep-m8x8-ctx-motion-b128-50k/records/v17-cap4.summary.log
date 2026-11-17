@@ -1,0 +1,53 @@
+LOCAL692_START mode=cap dry=0 run=v17-cap4 ckpt=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v17-smoke20/19 seed=7 store=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/demo-prefix/binfill-3b4de03a0b46 2026-11-16T03:38:30Z
+EVAL_ENV MMEVLA_MOTION_OVERFLOW=resample EXPECT_MOTION_STATS=1 EXPECT_DEMO_INJECT=1 CHUNK_EPISODES=20 MMEVLA_MOTION_PROV_RELAX=gpu_name,compute_cap,sm_count seed=7 max_steps=2000(run_shard.sh) EPISODE_WALL_S=2400 EVAL_TIMEOUT=14400 LOCAL_GPU_SHARE=4 XLA_PYTHON_CLIENT_MEM_FRACTION=0.2 POLICY=perceptual-framesamp-ctx-8frame-8x8-motion-v7ep72 POLICY_CONFIG=mme_vla_suite_b128_80k EXPECT_CKPT_ID=19 SHARDS=32 PER_GPU=4 MEM_FRACTION=0.2
+E0_GATE=PASS DEMO_PREFIX_SRC=PASS code_same=1 benchmark=b4e97f2 shards_ok=16/16 ok=142 failed=8 diff_vs_old=40
+[plan] 按 demo 前缀库剔除 BinFill 8 条（预生成未成功），其余三任务全收；合计 692 条
+PLAN_OK shards=32 total=692 per_shard=21 disjoint=True groups=14 demo_store=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/demo-prefix/binfill-3b4de03a0b46 identity=3b4de03a0b46
+  组分布: BinFill/easy=49 BinFill/hard=44 BinFill/medium=49 RouteStick/easy=50 RouteStick/hard=50 RouteStick/medium=50 RouteStick/xhard=50 VideoRepick/easy=50 VideoRepick/medium=50 VideoRepick/xhard=50 VideoUnmaskSwap/easy=50 VideoUnmaskSwap/hard=50 VideoUnmaskSwap/medium=50 VideoUnmaskSwap/xhard=50
+SHARD_MAP shard=s0 gpu=0 port_base=18011 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard0.json
+SHARD_MAP shard=s1 gpu=1 port_base=18018 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard1.json
+SHARD_MAP shard=s2 gpu=2 port_base=18025 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard2.json
+SHARD_MAP shard=s3 gpu=3 port_base=18032 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard3.json
+SHARD_MAP shard=s4 gpu=4 port_base=18039 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard4.json
+SHARD_MAP shard=s5 gpu=5 port_base=18046 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard5.json
+SHARD_MAP shard=s6 gpu=6 port_base=18053 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard6.json
+SHARD_MAP shard=s7 gpu=7 port_base=18060 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard7.json
+SHARD_MAP shard=s8 gpu=0 port_base=18067 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard8.json
+SHARD_MAP shard=s9 gpu=1 port_base=18074 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard9.json
+SHARD_MAP shard=s10 gpu=2 port_base=18081 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard10.json
+SHARD_MAP shard=s11 gpu=3 port_base=18088 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard11.json
+SHARD_MAP shard=s12 gpu=4 port_base=18095 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard12.json
+SHARD_MAP shard=s13 gpu=5 port_base=18102 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard13.json
+SHARD_MAP shard=s14 gpu=6 port_base=18109 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard14.json
+SHARD_MAP shard=s15 gpu=7 port_base=18116 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard15.json
+SHARD_MAP shard=s16 gpu=0 port_base=18123 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard16.json
+SHARD_MAP shard=s17 gpu=1 port_base=18130 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard17.json
+SHARD_MAP shard=s18 gpu=2 port_base=18137 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard18.json
+SHARD_MAP shard=s19 gpu=3 port_base=18144 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard19.json
+SHARD_MAP shard=s20 gpu=4 port_base=18151 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard20.json
+SHARD_MAP shard=s21 gpu=5 port_base=18158 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard21.json
+SHARD_MAP shard=s22 gpu=6 port_base=18165 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard22.json
+SHARD_MAP shard=s23 gpu=7 port_base=18172 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard23.json
+SHARD_MAP shard=s24 gpu=0 port_base=18179 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard24.json
+SHARD_MAP shard=s25 gpu=1 port_base=18186 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard25.json
+SHARD_MAP shard=s26 gpu=2 port_base=18193 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard26.json
+SHARD_MAP shard=s27 gpu=3 port_base=18200 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard27.json
+SHARD_MAP shard=s28 gpu=4 port_base=18207 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard28.json
+SHARD_MAP shard=s29 gpu=5 port_base=18214 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard29.json
+SHARD_MAP shard=s30 gpu=6 port_base=18221 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard30.json
+SHARD_MAP shard=s31 gpu=7 port_base=18228 plan=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/v17-cap4/plans/shard31.json
+CAP_PLAN file=cap0.json episode=BinFill/easy/155
+CAP_PLAN file=cap1.json episode=BinFill/easy/156
+CAP_PLAN file=cap2.json episode=BinFill/easy/157
+CAP_PLAN file=cap3.json episode=BinFill/easy/158
+SLOT_REGISTERED gpu=0 tag=cap0 pid=1576164 run=v17-cap4
+SLOT_REGISTERED gpu=0 tag=cap1 pid=1576170 run=v17-cap4
+SLOT_REGISTERED gpu=0 tag=cap2 pid=1576179 run=v17-cap4
+SLOT_REGISTERED gpu=0 tag=cap3 pid=1576189 run=v17-cap4
+SHARD_EXIT_CODE=0 shard=cap0 episode_ok=1 oom_lines=0
+SHARD_EXIT_CODE=0 shard=cap1 episode_ok=1 oom_lines=0
+SHARD_EXIT_CODE=1 shard=cap2 episode_ok=0 oom_lines=1
+SHARD_EXIT_CODE=0 shard=cap3 episode_ok=1 oom_lines=0
+CAP_TIME wall_s=984 failed=1
+EVAL_CAPACITY=FAIL per_gpu=4 peak_mem_gb=79.0 free_gb=1.0
+EXIT_CODE=1

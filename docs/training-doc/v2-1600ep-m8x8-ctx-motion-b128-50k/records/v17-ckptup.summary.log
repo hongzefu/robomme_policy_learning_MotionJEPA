@@ -1,0 +1,50 @@
+阶段0开始：预检 + 建 bucket
+[32m✓ Bucket created[0m
+  uri: hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1
+  url: https://huggingface.co/buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1
+  bucket create 成功
+  目标 bucket 现状: files=0
+阶段0完成
+阶段1开始：逐份等落盘 → 上传 → 本机读回校验
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m8x8-ctx-motion-b128-50k/stage/5000 -> hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/5000
+Sync plan: hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/5000 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m8x8-ctx-motion-b128-50k/verify/5000
+STEP_VERIFY=PASS sub=5000 files=21 bytes=11587506014
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m8x8-ctx-motion-b128-50k/stage/10000 -> hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/10000
+Sync plan: hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/10000 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m8x8-ctx-motion-b128-50k/verify/10000
+STEP_VERIFY=PASS sub=10000 files=21 bytes=11587290105
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m8x8-ctx-motion-b128-50k/stage/15000 -> hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/15000
+Sync plan: hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/15000 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m8x8-ctx-motion-b128-50k/verify/15000
+STEP_VERIFY=PASS sub=15000 files=21 bytes=11587108696
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m8x8-ctx-motion-b128-50k/stage/20000 -> hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/20000
+Sync plan: hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/20000 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m8x8-ctx-motion-b128-50k/verify/20000
+STEP_VERIFY=PASS sub=20000 files=19 bytes=11586937101
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m8x8-ctx-motion-b128-50k/stage/25000 -> hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/25000
+Sync plan: hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/25000 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m8x8-ctx-motion-b128-50k/verify/25000
+STEP_VERIFY=PASS sub=25000 files=21 bytes=11586818580
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m8x8-ctx-motion-b128-50k/stage/30000 -> hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/30000
+Sync plan: hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/30000 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m8x8-ctx-motion-b128-50k/verify/30000
+STEP_VERIFY=PASS sub=30000 files=20 bytes=11586587119
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m8x8-ctx-motion-b128-50k/stage/35000 -> hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/35000
+Sync plan: hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/35000 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m8x8-ctx-motion-b128-50k/verify/35000
+STEP_VERIFY=PASS sub=35000 files=20 bytes=11586441498
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m8x8-ctx-motion-b128-50k/stage/40000 -> hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/40000
+Sync plan: hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/40000 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m8x8-ctx-motion-b128-50k/verify/40000
+STEP_VERIFY=PASS sub=40000 files=20 bytes=11586223467
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m8x8-ctx-motion-b128-50k/stage/45000 -> hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/45000
+Sync plan: hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/45000 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m8x8-ctx-motion-b128-50k/verify/45000
+STEP_VERIFY=PASS sub=45000 files=22 bytes=11586093505
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m8x8-ctx-motion-b128-50k/stage/50000 -> hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/50000
+Sync plan: hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/50000 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m8x8-ctx-motion-b128-50k/verify/50000
+STEP_VERIFY=PASS sub=50000 files=20 bytes=11585951080
+阶段1完成
+阶段2开始：run 根下的平文件与非 step 目录
+  dst: hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/history_config.resolved.sha256
+  dst: hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/history_config.resolved.yaml
+  dst: hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/history_config.txt
+  dst: hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/motion_provenance.json
+  dst: hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1/wandb_id.txt
+Sync plan: hf://buckets/HongzeFu/robomme-vla-4task-m8x8-ctx-motion160-v7-50k-v1 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m8x8-ctx-motion-b128-50k/verify
+阶段2完成
+全部完成
+HF_VERIFY=PASS ckpts=10
+EXIT_CODE=0

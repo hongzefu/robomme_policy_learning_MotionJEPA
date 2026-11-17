@@ -1,0 +1,2176 @@
+RUN=v2-1600ep-m8x8-ctx-motion-b128-50k
+TRAIN_HEAD=fd20feb7424d3961ce5614790e186a8fb14a8ce5
+REPO=/scratch/hongze/robomme_policy_learning_MotionJEPA
+V1_STORE=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store
+STEPS=50001
+SMOKE=0
+START_UTC=2026-11-16T04:12:47Z
+TRAIN_ARGS= mme_vla_suite_b128_80k --exp-name v2-1600ep-m8x8-ctx-motion-b128-50k --assets-base-dir /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets --data.assets.assets-dir /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da --data.assets.asset-id robomme --checkpoint-base-dir /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs --dataset-path /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/framesamp-8x8 --model.history-config perceptual-framesamp-ctx-8frame-8x8-motion-v7ep72.yaml --num_train_steps=50001
+G0_RING=PASS ring=1 input_manifest 本地与 bucket 逐字节相同=True
+G0_RING=PASS ring=1 H5 文件数=4
+G0_RING=PASS ring=2 manifest_identity=4cd5a170b0ed9718922bfd7c9287e80b3681a0ea7489dfdb07ddeb3a53dbb918
+G0_RING=PASS ring=2 manifest.raw_dir 与 input_manifest.raw_dir 相同=True
+G0_RING=PASS ring=4 motion 根=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/motion 实体目录
+G0_RING=PASS ring=4 MMEVLA_MOTION_STORE 未设置
+G0_RING=PASS ring=4 store_meta.json sha256=d3a518011c80a115f7b398458a510a6f128f47e76c03fc251e59dab4c9c56268
+G0_RING=PASS ring=4 motion_token.f32.bin sha256=03fb46e150dd9015f264f9bd8f08b35883d84da40e9e8080147d2af5fef9b6c5
+G0_INFO ms.LAYOUT=motion-768-grid16-demopad17-v1 表 layout=motion-768-grid16-demopad17-v1（按字面量 motion-768-grid16-demopad17-v1 比）
+G0_RING=PASS ring=4 layout=motion-768-grid16-demopad17-v1 rows=71316
+G0_RING=PASS ring=4 encoder ckpt sha256=0c1986297ccc0ab1913910f33a09ec74ba4c208844d0f5d72dd7ba59e0d9e3ca provenance.encoder.checkpoint_sha256=0c1986297ccc0ab1913910f33a09ec74ba4c208844d0f5d72dd7ba59e0d9e3ca
+G0_RING=PASS ring=4 table manifest_sha256=4cd5a170b0ed9718922bfd7c9287e80b3681a0ea7489dfdb07ddeb3a53dbb918
+G0_RING=PASS ring=4 provenance.input_manifest_sha256=655e64b4fd033aea1ff79a1e5ad47f886a148592496759ed2a667fe167c57d86 sha(input_manifest)=655e64b4fd033aea1ff79a1e5ad47f886a148592496759ed2a667fe167c57d86
+G0_RING=PASS ring=4 provenance.raw_dir=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/raw-h5/4task-20260912-v2
+G0_RING=PASS ring=4 provenance 无 encoder_kind（非池化表）=True
+G0_RING=PASS ring=4 norm_stats sha256=856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173
+INPUT_SHA=PASS motion_bin=03fb46e1 store_meta=d3a51801 norm=856c75ea encoder=0c198629 rows=71316
+DATA_LINEAGE=PASS mode=v7-4ring encoder_ckpt=0c198629 encoder_source_pin=df992cdf vla_input_pin=655e64b4 files=4 members=1600 mismatches=0
+CONFIG_CROSSCHECK=PASS yaml_diff=integration_type,memory_token_dim yaml_sha256=2e98e191
+WAN_ENV=PASS motion_jepa=2a484ad encoder_src=d00267e1 module=af67fdd9
+CHECK_CWD=PASS 件=起跑位置 期望=/scratch/hongze/robomme_policy_learning_MotionJEPA 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA
+CHECK_TRAIN_PY=PASS 件=起跑位置 期望=存在且在 /scratch/hongze/robomme_policy_learning_MotionJEPA 下 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/train.py is_file=True
+CHECK_YAML_PATH=PASS 件=起跑位置 期望=存在且在 /scratch/hongze/robomme_policy_learning_MotionJEPA 下 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/config/robomme/perceptual-framesamp-ctx-8frame-8x8-motion-v7ep72.yaml is_file=True
+CHECK_YAML_SHA256=PASS 件=起跑位置 期望=2e98e191db566c2a0f5c107e28a871493f2207cd65d00600b88ae5eab7b6d2d3 实际=2e98e191db566c2a0f5c107e28a871493f2207cd65d00600b88ae5eab7b6d2d3
+CHECK_PYTHONPATH=PASS 件=起跑位置 期望=未设置，或每一项都在 /scratch/hongze/robomme_policy_learning_MotionJEPA 下 实际=<未设置>
+CHECK_PKG_MME_VLA_SUITE=PASS 件=起跑位置 期望=origin 在 /scratch/hongze/robomme_policy_learning_MotionJEPA 下 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/__init__.py
+CHECK_PKG_OPENPI=PASS 件=起跑位置 期望=origin 在 /scratch/hongze/robomme_policy_learning_MotionJEPA 下 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/__init__.py
+CHECK_PKG_OPENPI_CLIENT=PASS 件=起跑位置 期望=origin 在 /scratch/hongze/robomme_policy_learning_MotionJEPA 下 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/packages/openpi-client/src/openpi_client/__init__.py
+CHECK_ASSETS_DIR_ABS=PASS 件=数据参数 期望=绝对路径 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da
+CHECK_NORM_STATS_FILE=PASS 件=数据参数 期望=存在 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da/robomme/norm_stats.json 实际=存在
+CHECK_NORM_STATS_SHA256=PASS 件=数据参数 期望=856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173 实际=856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173
+CHECK_CLI_ASSETS_DIR=PASS 件=数据参数 期望=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da
+CHECK_CLI_ASSET_ID=PASS 件=数据参数 期望=robomme 实际=robomme
+CHECK_CLI_HISTORY_CONFIG=PASS 件=起跑位置 期望=perceptual-framesamp-ctx-8frame-8x8-motion-v7ep72.yaml 实际=perceptual-framesamp-ctx-8frame-8x8-motion-v7ep72.yaml
+CHECK_CLI_DATASET_PATH=PASS 件=数据 期望=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/framesamp-8x8 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/framesamp-8x8
+CHECK_SYS_PREFIX=PASS 件=起跑位置 期望=/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv
+CHECK_V1_STORE_REAL=PASS 件=起跑位置 期望=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store 是实体目录（开发副本那份是 symlink） 实际=实体目录
+CHECK_NOT_DEV_COPY=PASS 件=起跑位置 期望=仓库根不是 -temp 开发副本 实际=robomme_policy_learning_MotionJEPA
+CHECK_PKG_JAX_IN_VENV=PASS 件=起跑位置 期望=origin 在 /scratch/hongze/robomme_policy_learning_MotionJEPA/.venv 下 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/jax/__init__.py
+CHECK_REPO_HEAD=PASS 件=仓库状态 期望=fd20feb7424d3961ce5614790e186a8fb14a8ce5 实际=fd20feb7424d3961ce5614790e186a8fb14a8ce5
+CHECK_REPO_CLEAN=PASS 件=仓库状态 期望=git status --porcelain 为空 实际=空
+CHECK_DATASET_STORE_META=PASS 件=数据 期望=存在 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/framesamp-8x8/meta/store_meta.json 实际=存在
+CHECK_FRAMESAMP_SOURCE=PASS 件=数据 期望=MMEVLA_FRAMESAMP_SOURCE 指向已存在目录 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/source
+CHECK_FRAMESAMP_MANIFEST=PASS 件=数据 期望=MMEVLA_FRAMESAMP_MANIFEST 指向已存在文件 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/meta/episode_manifest.json
+CHECK_RUN_ROOT_ABSENT=PASS 件=留档 期望=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k 不存在 实际=不存在
+CHECK_MOTION_STORE_PATH=PASS 件=motion 数据 期望=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/motion 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/motion
+CHECK_MOTION_STORE_META_SHA256=PASS 件=motion 数据 期望=d3a518011c80a115f7b398458a510a6f128f47e76c03fc251e59dab4c9c56268 实际=d3a518011c80a115f7b398458a510a6f128f47e76c03fc251e59dab4c9c56268
+CHECK_MOTION_LAYOUT=PASS 件=motion 数据 期望=motion-768-grid16-demopad17-v1 实际=motion-768-grid16-demopad17-v1
+CHECK_MOTION_ROWS=PASS 件=motion 数据 期望=71316 实际=71316
+CHECK_MOTION_ENV_UNSET=PASS 件=motion 数据 期望=未设置 实际=<未设置>
+PREFLIGHT=PASS n=30
+GPU_SAMPLER_PID=1656650
+04:12:57.709 [I] Running on: ip-10-242-11-177.us-west-2.compute.internal                          (1656655:train.py:350)
+04:12:57.710 [I] TrainConfig: TrainConfig(name='mme_vla_suite_b128_80k', project_name='robomme-framesamp', exp_name='v2-1600ep-m8x8-ctx-motion-b128-50k', model=HistoryPi0Config(action_dim=32, action_horizon=20, max_token_len=64, dtype='bfloat16', paligemma_variant='gemma_2b', action_expert_variant='gemma_300m', pi05=True, discrete_state_input=False, memory_expert_variant='gemma_150m', use_history=True, history_config='perceptual-framesamp-ctx-8frame-8x8-motion-v7ep72.yaml'), weight_loader=CheckpointWeightLoader(params_path='/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params'), pytorch_weight_path=None, pytorch_training_precision='bfloat16', lr_schedule=CosineDecaySchedule(warmup_steps=5000, peak_lr=5e-05, decay_steps=80000, decay_lr=5e-05), optimizer=AdamW(b1=0.9, b2=0.95, eps=1e-08, weight_decay=1e-10, clip_gradient_norm=1.0), ema_decay=0.999, freeze_filter=PathRegex(pattern=re.compile('.*img.*'), sep='/'), data=RoboMMEDataConfig(repo_id='robomme', assets=AssetsConfig(assets_dir='/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da', asset_id='robomme'), base_config=DataConfig(repo_id=None, asset_id=None, norm_stats=None, repack_transforms=Group(inputs=(), outputs=()), data_transforms=Group(inputs=(), outputs=()), model_transforms=Group(inputs=(), outputs=()), use_quantile_norm=False, action_sequence_keys=('actions',), prompt_from_task=True, rlds_data_dir=None, action_space=None, filter_dict_path=None)), assets_base_dir='/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets', checkpoint_base_dir='/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs', seed=42, batch_size=128, num_workers=16, num_train_steps=50001, log_interval=100, save_interval=5000, keep_period=5000, overwrite=False, resume=False, wandb_enabled=True, policy_metadata=None, fsdp_devices=8, resum_ckpt_id=None, dataset_path='/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/framesamp-8x8') (1656655:train.py:351)
+INFO:2026-11-16 04:12:59,565:jax._src.xla_bridge:925: Unable to initialize backend 'rocm': module 'jaxlib.xla_extension' has no attribute 'GpuAllocatorConfig'
+04:12:59.565 [I] Unable to initialize backend 'rocm': module 'jaxlib.xla_extension' has no attribute 'GpuAllocatorConfig' (1656655:xla_bridge.py:925)
+INFO:2026-11-16 04:12:59,566:jax._src.xla_bridge:925: Unable to initialize backend 'tpu': INTERNAL: Failed to open libtpu.so: libtpu.so: cannot open shared object file: No such file or directory
+04:12:59.566 [I] Unable to initialize backend 'tpu': INTERNAL: Failed to open libtpu.so: libtpu.so: cannot open shared object file: No such file or directory (1656655:xla_bridge.py:925)
+TRAIN_MESH shape=(1, 8) devices=8 fsdp_devices=8 batch_size=128 num_workers=16
+04:13:01.196 [I] Created BasePyTreeCheckpointHandler: use_ocdbt=True, use_zarr3=False, pytree_metadata_options=PyTreeMetadataOptions(support_rich_types=False), array_metadata_store=<orbax.checkpoint._src.metadata.array_metadata_store.Store object at 0x7f3c6737e150> (1656655:base_pytree_checkpoint_handler.py:334)
+04:13:01.196 [I] [thread=MainThread] Failed to get flag value for EXPERIMENTAL_ORBAX_USE_DISTRIBUTED_PROCESS_ID. (1656655:multihost.py:390)
+04:13:01.197 [I] [process=0][thread=MainThread] CheckpointManager init: checkpointers=None, item_names=None, item_handlers={'assets': <openpi.training.checkpoints.CallbackHandler object at 0x7f3c4698f110>, 'params': <orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeCheckpointHandler object at 0x7f3c4698cf50>}, handler_registry=None (1656655:checkpoint_manager.py:620)
+04:13:01.197 [I] Deferred registration for item: "assets". Adding handler `<openpi.training.checkpoints.CallbackHandler object at 0x7f3c4698f110>` for item "assets" and save args `<class 'openpi.training.checkpoints.CallbackSave'>` and restore args `<class 'openpi.training.checkpoints.CallbackRestore'>` to `_handler_registry`. (1656655:composite_checkpoint_handler.py:234)
+04:13:01.197 [I] Deferred registration for item: "params". Adding handler `<orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeCheckpointHandler object at 0x7f3c4698cf50>` for item "params" and save args `<class 'orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeSaveArgs'>` and restore args `<class 'orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeRestoreArgs'>` to `_handler_registry`. (1656655:composite_checkpoint_handler.py:234)
+04:13:01.197 [I] Deferred registration for item: "metrics". Adding handler `<orbax.checkpoint._src.handlers.json_checkpoint_handler.JsonCheckpointHandler object at 0x7f3c46941050>` for item "metrics" and save args `<class 'orbax.checkpoint._src.handlers.json_checkpoint_handler.JsonSaveArgs'>` and restore args `<class 'orbax.checkpoint._src.handlers.json_checkpoint_handler.JsonRestoreArgs'>` to `_handler_registry`. (1656655:composite_checkpoint_handler.py:234)
+04:13:01.197 [I] Initialized registry DefaultCheckpointHandlerRegistry({('assets', <class 'openpi.training.checkpoints.CallbackSave'>): <openpi.training.checkpoints.CallbackHandler object at 0x7f3c4698f110>, ('assets', <class 'openpi.training.checkpoints.CallbackRestore'>): <openpi.training.checkpoints.CallbackHandler object at 0x7f3c4698f110>, ('params', <class 'orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeSaveArgs'>): <orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeCheckpointHandler object at 0x7f3c4698cf50>, ('params', <class 'orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeRestoreArgs'>): <orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeCheckpointHandler object at 0x7f3c4698cf50>, ('metrics', <class 'orbax.checkpoint._src.handlers.json_checkpoint_handler.JsonSaveArgs'>): <orbax.checkpoint._src.handlers.json_checkpoint_handler.JsonCheckpointHandler object at 0x7f3c46941050>, ('metrics', <class 'orbax.checkpoint._src.handlers.json_checkpoint_handler.JsonRestoreArgs'>): <orbax.checkpoint._src.handlers.json_checkpoint_handler.JsonCheckpointHandler object at 0x7f3c46941050>}). (1656655:composite_checkpoint_handler.py:502)
+04:13:01.197 [I] orbax-checkpoint version: 0.11.13                                                (1656655:abstract_checkpointer.py:35)
+04:13:01.198 [I] [process=0][thread=MainThread] Using barrier_sync_fn: <function get_barrier_sync_fn.<locals>.<lambda> at 0x7f3c4683dc60> timeout: 7200 secs and primary_host=0 for async checkpoint writes (1656655:async_checkpointer.py:170)
+04:13:01.198 [I] Found 0 checkpoint steps in /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k (1656655:checkpoint_manager.py:1701)
+04:13:01.198 [I] [process=0][thread=MainThread] CheckpointManager created,  primary_host=0, CheckpointManagerOptions=CheckpointManagerOptions(save_interval_steps=1, max_to_keep=1, keep_time_interval=None, keep_period=5000, should_keep_fn=None, best_fn=None, best_mode='max', keep_checkpoints_without_metrics=True, step_prefix=None, step_format_fixed_length=None, step_name_format=None, create=False, cleanup_tmp_directories=False, save_on_steps=frozenset(), single_host_load_and_broadcast=False, todelete_subdir=None, enable_background_delete=False, read_only=False, enable_async_checkpointing=True, async_options=AsyncOptions(timeout_secs=7200, barrier_sync_fn=None, post_finalization_callback=None, create_directories_asynchronously=True), multiprocessing_options=MultiprocessingOptions(primary_host=0, active_processes=None, barrier_sync_key_prefix=None), should_save_fn=None, file_options=FileOptions(path_permission_mode=None), save_root_metadata=True, temporary_path_class=None, save_decision_policy=None, prevent_write_metrics=False), root_directory=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k: <orbax.checkpoint.checkpoint_manager.CheckpointManager object at 0x7f3c46941c10> (1656655:checkpoint_manager.py:801)
+wandb: Currently logged in as: hongzefu (hongzefu-university-of-michigan) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.19.11
+wandb: Run data is saved locally in /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/wandb/run-20261116_041301-qw5h25dd
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run v2-1600ep-m8x8-ctx-motion-b128-50k
+wandb: ⭐️ View project at https://wandb.ai/hongzefu-university-of-michigan/robomme-framesamp
+wandb: 🚀 View run at https://wandb.ai/hongzefu-university-of-michigan/robomme-framesamp/runs/qw5h25dd
+04:13:02.474 [I] motion memory 开启：store=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/motion rows=71316 manifest=4cd5a170b0ed9718… (1656655:dataloader.py:93)
+max_token_len: 64
+04:13:02.595 [I] Loaded norm stats from /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da/robomme (1656655:config.py:275)
+04:13:02.597 [I] data_config: DataConfig(repo_id='robomme', asset_id='robomme', norm_stats={'state': NormStats(mean=array([ 0.00544689,  0.34402379, -0.00671877, -2.11373067,  0.00322757,
+        2.45563293,  0.78381395,  0.02388305]), std=array([0.16478151, 0.26347092, 0.11289434, 0.40329489, 0.07155797,
+       0.28879926, 0.52658856, 0.01676663]), q01=array([-0.37184694, -0.16709099, -0.30414039, -2.83378435, -0.17129615,
+        1.57079637, -0.55371888,  0.        ]), q99=array([ 0.39931992,  0.95670372,  0.25378957, -1.19168596,  0.20282241,
+        3.04267762,  2.12228779,  0.039992  ])), 'actions': NormStats(mean=array([ 1.37897587e-04,  2.37449654e-03, -2.68928474e-04, -1.81423891e-02,
+       -1.75017685e-05,  2.03041825e-02,  1.73073102e-04, -6.72034994e-02]), std=array([0.04495756, 0.1347107 , 0.03318233, 0.14564596, 0.03407279,
+       0.12839898, 0.10178235, 0.99773932]), q01=array([-0.14138138, -0.31630597, -0.11067081, -0.46341702, -0.1069543 ,
+       -0.28236278, -0.35101238, -1.        ]), q99=array([0.14234874, 0.35805632, 0.10676843, 0.43390816, 0.10698911,
+       0.44373546, 0.35252609, 0.9996    ]))}, repack_transforms=Group(inputs=[RepackTransform(structure={'observation/image': 'image', 'observation/wrist_image': 'wrist_image', 'observation/state': 'state', 'actions': 'actions', 'prompt': 'prompt', 'static_image_emb': 'static_image_emb', 'static_pos_emb': 'static_pos_emb', 'static_state_emb': 'static_state_emb', 'static_mask': 'static_mask', 'motion_emb': 'motion_emb', 'motion_pos': 'motion_pos', 'motion_mask': 'motion_mask', 'mem_order': 'mem_order'})], outputs=()), data_transforms=Group(inputs=(RoboMMEInputs(model_type=<ModelType.PI05: 'pi05'>), DeltaActions(mask=(True, True, True, True, True, True, True, False))), outputs=(AbsoluteActions(mask=(True, True, True, True, True, True, True, False)), RoboMMEOutputs())), model_transforms=Group(inputs=[InjectDefaultPrompt(prompt=None), ResizeImages(height=224, width=224), TokenizePromptWithState(tokenizer=<mme_vla_suite.training.config.PaligemmaTokenizer object at 0x7f3c46774910>, discrete_state_input=False), PadStatesAndActions(model_action_dim=32)], outputs=()), use_quantile_norm=True, action_sequence_keys=('actions',), prompt_from_task=True, rlds_data_dir=None, action_space=None, filter_dict_path=None) (1656655:train.py:420)
+04:13:02.624 [I] motion memory 开启：store=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/motion rows=71316 manifest=4cd5a170b0ed9718… (1656655:dataloader.py:93)
+04:13:02.710 [I] local_batch_size: 128                                                            (1656655:dataloader.py:165)
+04:14:44.129 [I] Initialized data loader:
+[0].images['base_0_rgb']: (128, 224, 224, 3)@float32
+[0].images['left_wrist_0_rgb']: (128, 224, 224, 3)@float32
+[0].image_masks['base_0_rgb']: (128,)@bool
+[0].image_masks['left_wrist_0_rgb']: (128,)@bool
+[0].state: (128, 32)@float32
+[0].tokenized_prompt: (128, 64)@int32
+[0].tokenized_prompt_mask: (128, 64)@bool
+[0].static_image_emb: (128, 512, 2048)@bfloat16
+[0].static_mask: (128, 512)@bool
+[0].static_pos_emb: (128, 512, 768)@float32
+[0].static_state_emb: (128, 512, 8)@float32
+[0].motion_emb: (128, 160, 768)@float32
+[0].motion_pos: (128, 160, 256)@float32
+[0].motion_mask: (128, 160)@bool
+[0].mem_order: (128, 672)@int32
+[1]: (128, 20, 32)@float32 (1656655:train.py:435)
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: context ======
+Perceptual Memory using frame_sampling type
+
+04:14:46.791 [I] Total Model Size: 3207.339126586914 MB                                           (1656655:train.py:220)
+04:14:46.791 [I] Trainable Model Size: 2811.751495361328 MB                                       (1656655:train.py:223)
+04:14:46.792 [I] Memory-related  Size: 9.25537109375 MB                                           (1656655:train.py:228)
+04:14:46.793 [I] Non-Memory Size: 2802.496124267578 MB                                            (1656655:train.py:231)
+04:14:46.820 [I] Sharding .params['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_0']['kernel'].value of shape (27, 1152, 4304) (255.34 MiB) along axis 2 (1656655:sharding.py:89)
+04:14:46.821 [I] Sharding .params['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_1']['kernel'].value of shape (27, 4304, 1152) (255.34 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.821 [I] Sharding .params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['key']['kernel'].value of shape (27, 1152, 16, 72) (68.34 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.821 [I] Sharding .params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['out']['kernel'].value of shape (27, 16, 72, 1152) (68.34 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.821 [I] Sharding .params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['query']['kernel'].value of shape (27, 1152, 16, 72) (68.34 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.821 [I] Sharding .params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['value']['kernel'].value of shape (27, 1152, 16, 72) (68.34 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.822 [I] Sharding .params['PaliGemma']['img']['head']['kernel'].value of shape (1152, 2048) (4.50 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.822 [I] Sharding .params['PaliGemma']['llm']['embedder']['input_embedding'].value of shape (257152, 2048) (2009.00 MiB) along axis 0 (1656655:sharding.py:89)
+04:14:46.822 [I] Sharding .params['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel'].value of shape (1024, 3072) (12.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.822 [I] Sharding .params['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w'].value of shape (18, 8, 256, 2048) (288.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.822 [I] Sharding .params['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w'].value of shape (18, 8, 256, 1024) (144.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.822 [I] Sharding .params['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w'].value of shape (18, 2, 1, 2048, 256) (72.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.823 [I] Sharding .params['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w'].value of shape (18, 2, 1, 1024, 256) (36.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.823 [I] Sharding .params['PaliGemma']['llm']['layers']['attn']['q_einsum']['w'].value of shape (18, 8, 2048, 256) (288.00 MiB) along axis 2 (1656655:sharding.py:89)
+04:14:46.823 [I] Sharding .params['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w'].value of shape (18, 8, 1024, 256) (144.00 MiB) along axis 2 (1656655:sharding.py:89)
+04:14:46.823 [I] Sharding .params['PaliGemma']['llm']['layers']['mlp']['gating_einsum'].value of shape (18, 2, 2048, 16384) (4608.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.823 [I] Sharding .params['PaliGemma']['llm']['layers']['mlp']['linear'].value of shape (18, 16384, 2048) (2304.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.823 [I] Sharding .params['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum'].value of shape (18, 2, 1024, 4096) (576.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.823 [I] Sharding .params['PaliGemma']['llm']['layers']['mlp_1']['linear'].value of shape (18, 4096, 1024) (288.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.824 [I] Sharding .params['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (1656655:sharding.py:89)
+04:14:46.824 [I] Sharding .params['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (1656655:sharding.py:89)
+04:14:46.824 [I] Sharding .params['mem_encoder']['feature_encoder']['encoder_static']['kernel'].value of shape (2816, 2048) (22.00 MiB) along axis 0 (1656655:sharding.py:89)
+04:14:46.824 [I] Sharding .params['mem_encoder']['motion_encoder_static']['kernel'].value of shape (1536, 2048) (12.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.824 [I] Sharding .params['time_mlp_in']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.825 [I] Sharding .params['time_mlp_out']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.825 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['embedder']['input_embedding'].value of shape (257152, 2048) (2009.00 MiB) along axis 0 (1656655:sharding.py:89)
+04:14:46.825 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel'].value of shape (1024, 3072) (12.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.825 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w'].value of shape (18, 8, 256, 2048) (288.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.825 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w'].value of shape (18, 8, 256, 1024) (144.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.825 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w'].value of shape (18, 2, 1, 2048, 256) (72.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.825 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w'].value of shape (18, 2, 1, 1024, 256) (36.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.826 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['attn']['q_einsum']['w'].value of shape (18, 8, 2048, 256) (288.00 MiB) along axis 2 (1656655:sharding.py:89)
+04:14:46.826 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w'].value of shape (18, 8, 1024, 256) (144.00 MiB) along axis 2 (1656655:sharding.py:89)
+04:14:46.826 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['mlp']['gating_einsum'].value of shape (18, 2, 2048, 16384) (4608.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.826 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['mlp']['linear'].value of shape (18, 16384, 2048) (2304.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.826 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum'].value of shape (18, 2, 1024, 4096) (576.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.826 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['mlp_1']['linear'].value of shape (18, 4096, 1024) (288.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.827 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (1656655:sharding.py:89)
+04:14:46.827 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (1656655:sharding.py:89)
+04:14:46.827 [I] Sharding .opt_state[1][0].mu['mem_encoder']['feature_encoder']['encoder_static']['kernel'].value of shape (2816, 2048) (22.00 MiB) along axis 0 (1656655:sharding.py:89)
+04:14:46.827 [I] Sharding .opt_state[1][0].mu['mem_encoder']['motion_encoder_static']['kernel'].value of shape (1536, 2048) (12.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.827 [I] Sharding .opt_state[1][0].mu['time_mlp_in']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.828 [I] Sharding .opt_state[1][0].mu['time_mlp_out']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.828 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['embedder']['input_embedding'].value of shape (257152, 2048) (2009.00 MiB) along axis 0 (1656655:sharding.py:89)
+04:14:46.828 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel'].value of shape (1024, 3072) (12.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.828 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w'].value of shape (18, 8, 256, 2048) (288.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.828 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w'].value of shape (18, 8, 256, 1024) (144.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.828 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w'].value of shape (18, 2, 1, 2048, 256) (72.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.829 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w'].value of shape (18, 2, 1, 1024, 256) (36.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.829 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['attn']['q_einsum']['w'].value of shape (18, 8, 2048, 256) (288.00 MiB) along axis 2 (1656655:sharding.py:89)
+04:14:46.829 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w'].value of shape (18, 8, 1024, 256) (144.00 MiB) along axis 2 (1656655:sharding.py:89)
+04:14:46.829 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['mlp']['gating_einsum'].value of shape (18, 2, 2048, 16384) (4608.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.829 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['mlp']['linear'].value of shape (18, 16384, 2048) (2304.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.829 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum'].value of shape (18, 2, 1024, 4096) (576.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.829 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['mlp_1']['linear'].value of shape (18, 4096, 1024) (288.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.830 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (1656655:sharding.py:89)
+04:14:46.830 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (1656655:sharding.py:89)
+04:14:46.830 [I] Sharding .opt_state[1][0].nu['mem_encoder']['feature_encoder']['encoder_static']['kernel'].value of shape (2816, 2048) (22.00 MiB) along axis 0 (1656655:sharding.py:89)
+04:14:46.830 [I] Sharding .opt_state[1][0].nu['mem_encoder']['motion_encoder_static']['kernel'].value of shape (1536, 2048) (12.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.830 [I] Sharding .opt_state[1][0].nu['time_mlp_in']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.830 [I] Sharding .opt_state[1][0].nu['time_mlp_out']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.831 [I] Sharding .ema_params['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_0']['kernel'].value of shape (27, 1152, 4304) (255.34 MiB) along axis 2 (1656655:sharding.py:89)
+04:14:46.831 [I] Sharding .ema_params['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_1']['kernel'].value of shape (27, 4304, 1152) (255.34 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.831 [I] Sharding .ema_params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['key']['kernel'].value of shape (27, 1152, 16, 72) (68.34 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.831 [I] Sharding .ema_params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['out']['kernel'].value of shape (27, 16, 72, 1152) (68.34 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.831 [I] Sharding .ema_params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['query']['kernel'].value of shape (27, 1152, 16, 72) (68.34 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.832 [I] Sharding .ema_params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['value']['kernel'].value of shape (27, 1152, 16, 72) (68.34 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.832 [I] Sharding .ema_params['PaliGemma']['img']['head']['kernel'].value of shape (1152, 2048) (4.50 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.832 [I] Sharding .ema_params['PaliGemma']['llm']['embedder']['input_embedding'].value of shape (257152, 2048) (2009.00 MiB) along axis 0 (1656655:sharding.py:89)
+04:14:46.832 [I] Sharding .ema_params['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel'].value of shape (1024, 3072) (12.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.832 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w'].value of shape (18, 8, 256, 2048) (288.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.832 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w'].value of shape (18, 8, 256, 1024) (144.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.833 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w'].value of shape (18, 2, 1, 2048, 256) (72.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.833 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w'].value of shape (18, 2, 1, 1024, 256) (36.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.833 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['attn']['q_einsum']['w'].value of shape (18, 8, 2048, 256) (288.00 MiB) along axis 2 (1656655:sharding.py:89)
+04:14:46.833 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w'].value of shape (18, 8, 1024, 256) (144.00 MiB) along axis 2 (1656655:sharding.py:89)
+04:14:46.833 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['mlp']['gating_einsum'].value of shape (18, 2, 2048, 16384) (4608.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.833 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['mlp']['linear'].value of shape (18, 16384, 2048) (2304.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.834 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum'].value of shape (18, 2, 1024, 4096) (576.00 MiB) along axis 3 (1656655:sharding.py:89)
+04:14:46.834 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['mlp_1']['linear'].value of shape (18, 4096, 1024) (288.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.834 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (1656655:sharding.py:89)
+04:14:46.834 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (1656655:sharding.py:89)
+04:14:46.834 [I] Sharding .ema_params['mem_encoder']['feature_encoder']['encoder_static']['kernel'].value of shape (2816, 2048) (22.00 MiB) along axis 0 (1656655:sharding.py:89)
+04:14:46.834 [I] Sharding .ema_params['mem_encoder']['motion_encoder_static']['kernel'].value of shape (1536, 2048) (12.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.835 [I] Sharding .ema_params['time_mlp_in']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.835 [I] Sharding .ema_params['time_mlp_out']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (1656655:sharding.py:89)
+04:14:46.836 [I] Created BasePyTreeCheckpointHandler: use_ocdbt=True, use_zarr3=False, pytree_metadata_options=PyTreeMetadataOptions(support_rich_types=False), array_metadata_store=<orbax.checkpoint._src.metadata.array_metadata_store.Store object at 0x7f3c6737e150> (1656655:base_pytree_checkpoint_handler.py:334)
+04:14:46.856 [I] Restoring checkpoint from /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params. (1656655:checkpointer.py:298)
+04:14:52.566 [I] [process=0] /jax/checkpoint/read/bytes_per_sec: 2.2 GiB/s (total bytes: 12.5 GiB) (time elapsed: 5 seconds) (per-host) (1656655:base_pytree_checkpoint_handler.py:114)
+04:14:52.567 [I] Finished restoring checkpoint in 5.71 seconds from /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params. (1656655:checkpointer.py:309)
+04:14:53.072 [I] Merging missing weight: mem_encoder/feature_encoder/encoder_static/kernel, shape: (2816, 2048), dtype: float32 (1656655:weight_loaders.py:103)
+04:14:53.072 [I] Merging missing weight: mem_encoder/motion_pos_proj/kernel, shape: (256, 768), dtype: float32 (1656655:weight_loaders.py:103)
+04:14:53.072 [I] Merging missing weight: mem_encoder/motion_encoder_static/bias, shape: (2048,), dtype: float32 (1656655:weight_loaders.py:103)
+04:14:53.072 [I] Merging missing weight: mem_encoder/feature_encoder/encoder_static/bias, shape: (2048,), dtype: float32 (1656655:weight_loaders.py:103)
+04:14:53.072 [I] Merging missing weight: mem_encoder/feature_encoder/pos_proj/kernel, shape: (768, 768), dtype: float32 (1656655:weight_loaders.py:103)
+04:14:53.072 [I] Merging missing weight: mem_encoder/motion_encoder_static/kernel, shape: (1536, 2048), dtype: float32 (1656655:weight_loaders.py:103)
+04:14:53.072 [I] Merging missing weight: mem_encoder/feature_encoder/pos_proj/bias, shape: (768,), dtype: float32 (1656655:weight_loaders.py:103)
+04:14:53.073 [I] Merging missing weight: mem_encoder/motion_pos_proj/bias, shape: (768,), dtype: float32 (1656655:weight_loaders.py:103)
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: context ======
+Perceptual Memory using frame_sampling type
+
+04:14:53.457 [I] Total Model Size: 3207.339126586914 MB                                           (1656655:train.py:220)
+04:14:53.458 [I] Trainable Model Size: 2811.751495361328 MB                                       (1656655:train.py:223)
+04:14:53.459 [I] Memory-related  Size: 9.25537109375 MB                                           (1656655:train.py:228)
+04:14:53.459 [I] Non-Memory Size: 2802.496124267578 MB                                            (1656655:train.py:231)
+/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/jax/_src/interpreters/mlir.py:1178: UserWarning: Some donated buffers were not usable: ShapedArray(bfloat16[27,1152,4304]), ShapedArray(bfloat16[27,4304,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,16,72,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[1152,2048]), ShapedArray(float32[257152,2048]), ShapedArray(float32[1024,3072]), ShapedArray(float32[18,8,256,2048]), ShapedArray(float32[18,8,256,1024]), ShapedArray(float32[18,2,1,2048,256]), ShapedArray(float32[18,2,1,1024,256]), ShapedArray(float32[18,8,2048,256]), ShapedArray(float32[18,8,1024,256]), ShapedArray(float32[18,2,2048,16384]), ShapedArray(float32[18,16384,2048]), ShapedArray(float32[18,2,1024,4096]), ShapedArray(float32[18,4096,1024]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[1024,1024]), ShapedArray(float32[1024,1024]).
+See an explanation at https://jax.readthedocs.io/en/latest/faq.html#buffer-donation.
+  warnings.warn("Some donated buffers were not usable:"
+04:15:06.954 [I] Initialized train state:
+['PaliGemma']['img']['Transformer']['encoder_norm']['bias'].value: (1152,)@bfloat16
+['PaliGemma']['img']['Transformer']['encoder_norm']['scale'].value: (1152,)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['LayerNorm_0']['bias'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['LayerNorm_0']['scale'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['LayerNorm_1']['bias'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['LayerNorm_1']['scale'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_0']['bias'].value: (27, 4304)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_0']['kernel'].value: (27, 1152, 4304)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_1']['bias'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_1']['kernel'].value: (27, 4304, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['key']['bias'].value: (27, 16, 72)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['key']['kernel'].value: (27, 1152, 16, 72)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['out']['bias'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['out']['kernel'].value: (27, 16, 72, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['query']['bias'].value: (27, 16, 72)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['query']['kernel'].value: (27, 1152, 16, 72)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['value']['bias'].value: (27, 16, 72)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['value']['kernel'].value: (27, 1152, 16, 72)@bfloat16
+['PaliGemma']['img']['embedding']['bias'].value: (1152,)@bfloat16
+['PaliGemma']['img']['embedding']['kernel'].value: (14, 14, 3, 1152)@bfloat16
+['PaliGemma']['img']['head']['bias'].value: (2048,)@bfloat16
+['PaliGemma']['img']['head']['kernel'].value: (1152, 2048)@bfloat16
+['PaliGemma']['img']['pos_embedding'].value: (1, 256, 1152)@bfloat16
+['PaliGemma']['llm']['embedder']['input_embedding'].value: (257152, 2048)@float32
+['PaliGemma']['llm']['final_norm']['scale'].value: (2048,)@float32
+['PaliGemma']['llm']['final_norm_1']['Dense_0']['bias'].value: (3072,)@float32
+['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel'].value: (1024, 3072)@float32
+['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w'].value: (18, 8, 256, 2048)@float32
+['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w'].value: (18, 8, 256, 1024)@float32
+['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w'].value: (18, 2, 1, 2048, 256)@float32
+['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w'].value: (18, 2, 1, 1024, 256)@float32
+['PaliGemma']['llm']['layers']['attn']['q_einsum']['w'].value: (18, 8, 2048, 256)@float32
+['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w'].value: (18, 8, 1024, 256)@float32
+['PaliGemma']['llm']['layers']['mlp']['gating_einsum'].value: (18, 2, 2048, 16384)@float32
+['PaliGemma']['llm']['layers']['mlp']['linear'].value: (18, 16384, 2048)@float32
+['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum'].value: (18, 2, 1024, 4096)@float32
+['PaliGemma']['llm']['layers']['mlp_1']['linear'].value: (18, 4096, 1024)@float32
+['PaliGemma']['llm']['layers']['pre_attention_norm']['scale'].value: (18, 2048)@float32
+['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['bias'].value: (18, 3072)@float32
+['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel'].value: (18, 1024, 3072)@float32
+['PaliGemma']['llm']['layers']['pre_ffw_norm']['scale'].value: (18, 2048)@float32
+['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['bias'].value: (18, 3072)@float32
+['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel'].value: (18, 1024, 3072)@float32
+['action_in_proj']['bias'].value: (1024,)@float32
+['action_in_proj']['kernel'].value: (32, 1024)@float32
+['action_out_proj']['bias'].value: (32,)@float32
+['action_out_proj']['kernel'].value: (1024, 32)@float32
+['mem_encoder']['feature_encoder']['encoder_static']['bias'].value: (2048,)@float32
+['mem_encoder']['feature_encoder']['encoder_static']['kernel'].value: (2816, 2048)@float32
+['mem_encoder']['feature_encoder']['pos_proj']['bias'].value: (768,)@float32
+['mem_encoder']['feature_encoder']['pos_proj']['kernel'].value: (768, 768)@float32
+['mem_encoder']['motion_encoder_static']['bias'].value: (2048,)@float32
+['mem_encoder']['motion_encoder_static']['kernel'].value: (1536, 2048)@float32
+['mem_encoder']['motion_pos_proj']['bias'].value: (768,)@float32
+['mem_encoder']['motion_pos_proj']['kernel'].value: (256, 768)@float32
+['time_mlp_in']['bias'].value: (1024,)@float32
+['time_mlp_in']['kernel'].value: (1024, 1024)@float32
+['time_mlp_out']['bias'].value: (1024,)@float32
+['time_mlp_out']['kernel'].value: (1024, 1024)@float32 (1656655:train.py:454)
+2026-11-16 04:15:06.965702: E external/xla/xla/python/profiler/internal/python_hooks.cc:412] Can't import tensorflow.python.profiler.trace
+2026-11-16 04:15:13.932753: E external/xla/xla/service/slow_operation_alarm.cc:73] Constant folding an instruction is taking > 1s:
+
+  %reduce-window.12 = s32[128,1268]{1,0} reduce-window(%broadcast.4788, %constant.2780), window={size=1x1268 pad=0_0x1267_0}, to_apply=%region_35.11012, metadata={op_name="jit(<unnamed wrapped function>)/jit(main)/jvp(jit(cumsum))/reduce_window_sum" source_file="/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/integration/history_pi0.py" source_line=57}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+2026-11-16 04:15:54.612809: E external/xla/xla/service/slow_operation_alarm.cc:140] The operation took 41.680161768s
+Constant folding an instruction is taking > 1s:
+
+  %reduce-window.12 = s32[128,1268]{1,0} reduce-window(%broadcast.4788, %constant.2780), window={size=1x1268 pad=0_0x1267_0}, to_apply=%region_35.11012, metadata={op_name="jit(<unnamed wrapped function>)/jit(main)/jvp(jit(cumsum))/reduce_window_sum" source_file="/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/integration/history_pi0.py" source_line=57}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+2026-11-16 04:15:56.613280: E external/xla/xla/service/slow_operation_alarm.cc:73] Constant folding an instruction is taking > 2s:
+
+  %reduce-window.13 = s32[128,1268]{1,0} reduce-window(%broadcast.4793, %constant.2781), window={size=1x1268 pad=0_0x1267_0}, to_apply=%region_35.10971, metadata={op_name="jit(<unnamed wrapped function>)/jit(main)/jvp(jit(cumsum))/reduce_window_sum" source_file="/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/integration/history_pi0.py" source_line=57}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+2026-11-16 04:16:36.454529: E external/xla/xla/service/slow_operation_alarm.cc:140] The operation took 41.841348367s
+Constant folding an instruction is taking > 2s:
+
+  %reduce-window.13 = s32[128,1268]{1,0} reduce-window(%broadcast.4793, %constant.2781), window={size=1x1268 pad=0_0x1267_0}, to_apply=%region_35.10971, metadata={op_name="jit(<unnamed wrapped function>)/jit(main)/jvp(jit(cumsum))/reduce_window_sum" source_file="/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/integration/history_pi0.py" source_line=57}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+
+
+Step 0: grad_norm=23.4196, llm_grad_norm=16.7145, loss=0.6635, mem_enc_norm=16.1771, param_norm=1803.4629
+
+
+Step 100: grad_norm=9.6924, llm_grad_norm=6.8338, loss=0.3007, mem_enc_norm=6.7773, param_norm=1803.4635
+
+
+Step 200: grad_norm=1.0329, llm_grad_norm=0.7417, loss=0.0714, mem_enc_norm=0.6985, param_norm=1803.4657
+2026-11-16 04:27:53.267778: E external/xla/xla/python/profiler/internal/python_hooks.cc:412] Can't import tensorflow.python.profiler.trace
+STEP_TIMING_DONE steps=300 host=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/v2-1600ep-m8x8-ctx-motion-b128-50k/step_timing.jsonl trace=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/v2-1600ep-m8x8-ctx-motion-b128-50k/step_trace
+
+
+Step 300: grad_norm=0.4965, llm_grad_norm=0.4114, loss=0.0356, mem_enc_norm=0.2579, param_norm=1803.4668
+
+
+Step 400: grad_norm=0.4563, llm_grad_norm=0.3979, loss=0.0278, mem_enc_norm=0.2038, param_norm=1803.4674
+
+
+Step 500: grad_norm=0.4028, llm_grad_norm=0.3544, loss=0.0241, mem_enc_norm=0.1729, param_norm=1803.4684
+
+
+Step 600: grad_norm=0.3746, llm_grad_norm=0.3324, loss=0.0216, mem_enc_norm=0.1524, param_norm=1803.4694
+
+
+Step 700: grad_norm=0.3373, llm_grad_norm=0.3012, loss=0.0201, mem_enc_norm=0.1293, param_norm=1803.4709
+
+
+Step 800: grad_norm=0.2964, llm_grad_norm=0.2653, loss=0.0189, mem_enc_norm=0.1072, param_norm=1803.4733
+
+
+Step 900: grad_norm=0.2833, llm_grad_norm=0.2527, loss=0.0176, mem_enc_norm=0.1059, param_norm=1803.4761
+
+
+Step 1000: grad_norm=0.2841, llm_grad_norm=0.2532, loss=0.0169, mem_enc_norm=0.1045, param_norm=1803.4796
+
+
+Step 1100: grad_norm=0.2640, llm_grad_norm=0.2358, loss=0.0160, mem_enc_norm=0.0953, param_norm=1803.4838
+
+
+Step 1200: grad_norm=0.2311, llm_grad_norm=0.2050, loss=0.0152, mem_enc_norm=0.0810, param_norm=1803.4890
+
+
+Step 1300: grad_norm=0.2168, llm_grad_norm=0.1931, loss=0.0147, mem_enc_norm=0.0760, param_norm=1803.4950
+
+
+Step 1400: grad_norm=0.2019, llm_grad_norm=0.1788, loss=0.0140, mem_enc_norm=0.0696, param_norm=1803.5022
+
+
+Step 1500: grad_norm=0.1997, llm_grad_norm=0.1749, loss=0.0138, mem_enc_norm=0.0734, param_norm=1803.5103
+
+
+Step 1600: grad_norm=0.1834, llm_grad_norm=0.1585, loss=0.0132, mem_enc_norm=0.0718, param_norm=1803.5197
+
+
+Step 1700: grad_norm=0.1876, llm_grad_norm=0.1596, loss=0.0126, mem_enc_norm=0.0804, param_norm=1803.5303
+
+
+Step 1800: grad_norm=0.1842, llm_grad_norm=0.1542, loss=0.0124, mem_enc_norm=0.0818, param_norm=1803.5427
+
+
+Step 1900: grad_norm=0.1540, llm_grad_norm=0.1268, loss=0.0120, mem_enc_norm=0.0687, param_norm=1803.5564
+
+
+Step 2000: grad_norm=0.1437, llm_grad_norm=0.1183, loss=0.0118, mem_enc_norm=0.0660, param_norm=1803.5715
+
+
+Step 2100: grad_norm=0.1709, llm_grad_norm=0.1324, loss=0.0110, mem_enc_norm=0.0941, param_norm=1803.5883
+
+
+Step 2200: grad_norm=0.1440, llm_grad_norm=0.1144, loss=0.0111, mem_enc_norm=0.0744, param_norm=1803.6073
+
+
+Step 2300: grad_norm=0.1282, llm_grad_norm=0.1007, loss=0.0107, mem_enc_norm=0.0671, param_norm=1803.6278
+
+
+Step 2400: grad_norm=0.1330, llm_grad_norm=0.1018, loss=0.0103, mem_enc_norm=0.0749, param_norm=1803.6509
+
+
+Step 2500: grad_norm=0.1391, llm_grad_norm=0.1055, loss=0.0102, mem_enc_norm=0.0816, param_norm=1803.6765
+
+
+Step 2600: grad_norm=0.1228, llm_grad_norm=0.0935, loss=0.0102, mem_enc_norm=0.0699, param_norm=1803.7034
+
+
+Step 2700: grad_norm=0.1213, llm_grad_norm=0.0928, loss=0.0099, mem_enc_norm=0.0691, param_norm=1803.7318
+
+
+Step 2800: grad_norm=0.1104, llm_grad_norm=0.0865, loss=0.0095, mem_enc_norm=0.0601, param_norm=1803.7609
+
+
+Step 2900: grad_norm=0.1088, llm_grad_norm=0.0819, loss=0.0094, mem_enc_norm=0.0629, param_norm=1803.7926
+
+
+Step 3000: grad_norm=0.1524, llm_grad_norm=0.1099, loss=0.0093, mem_enc_norm=0.0963, param_norm=1803.8268
+
+
+Step 3100: grad_norm=0.0972, llm_grad_norm=0.0738, loss=0.0087, mem_enc_norm=0.0553, param_norm=1803.8645
+
+
+Step 3200: grad_norm=0.1051, llm_grad_norm=0.0816, loss=0.0088, mem_enc_norm=0.0576, param_norm=1803.9031
+
+
+Step 3300: grad_norm=0.0965, llm_grad_norm=0.0730, loss=0.0089, mem_enc_norm=0.0545, param_norm=1803.9427
+
+
+Step 3400: grad_norm=0.0901, llm_grad_norm=0.0708, loss=0.0089, mem_enc_norm=0.0483, param_norm=1803.9873
+
+
+Step 3500: grad_norm=0.0945, llm_grad_norm=0.0740, loss=0.0087, mem_enc_norm=0.0504, param_norm=1804.0334
+
+
+Step 3600: grad_norm=0.0941, llm_grad_norm=0.0717, loss=0.0085, mem_enc_norm=0.0522, param_norm=1804.0812
+
+
+Step 3700: grad_norm=0.0842, llm_grad_norm=0.0650, loss=0.0085, mem_enc_norm=0.0448, param_norm=1804.1315
+
+
+Step 3800: grad_norm=0.0851, llm_grad_norm=0.0672, loss=0.0084, mem_enc_norm=0.0431, param_norm=1804.1860
+
+
+Step 3900: grad_norm=0.0810, llm_grad_norm=0.0634, loss=0.0083, mem_enc_norm=0.0415, param_norm=1804.2428
+
+
+Step 4000: grad_norm=0.0783, llm_grad_norm=0.0610, loss=0.0081, mem_enc_norm=0.0406, param_norm=1804.3019
+
+
+Step 4100: grad_norm=0.0733, llm_grad_norm=0.0595, loss=0.0079, mem_enc_norm=0.0334, param_norm=1804.3630
+
+
+Step 4200: grad_norm=0.0897, llm_grad_norm=0.0696, loss=0.0081, mem_enc_norm=0.0479, param_norm=1804.4275
+
+
+Step 4300: grad_norm=0.0786, llm_grad_norm=0.0620, loss=0.0080, mem_enc_norm=0.0394, param_norm=1804.4944
+
+
+Step 4400: grad_norm=0.0877, llm_grad_norm=0.0673, loss=0.0080, mem_enc_norm=0.0484, param_norm=1804.5665
+
+
+Step 4500: grad_norm=0.0615, llm_grad_norm=0.0494, loss=0.0076, mem_enc_norm=0.0251, param_norm=1804.6368
+
+
+Step 4600: grad_norm=0.0743, llm_grad_norm=0.0569, loss=0.0079, mem_enc_norm=0.0387, param_norm=1804.7122
+
+
+Step 4700: grad_norm=0.0739, llm_grad_norm=0.0603, loss=0.0079, mem_enc_norm=0.0334, param_norm=1804.7919
+
+
+Step 4800: grad_norm=0.0634, llm_grad_norm=0.0518, loss=0.0078, mem_enc_norm=0.0265, param_norm=1804.8770
+
+
+Step 4900: grad_norm=0.0648, llm_grad_norm=0.0515, loss=0.0078, mem_enc_norm=0.0293, param_norm=1804.9590
+
+
+Step 5000: grad_norm=0.0598, llm_grad_norm=0.0484, loss=0.0076, mem_enc_norm=0.0240, param_norm=1805.0455
+07:03:38.960 [I] [process=0][thread=MainThread][wait_until_finished] No Save Finalize thread to wait for. Returning. (1656655:checkpoint_manager.py:1987)
+07:03:38.961 [I] [process=0] Saving checkpoint at step 5000                                       (1656655:checkpoint_manager.py:1408)
+07:03:38.962 [I] [process=0] Started async saving checkpoint to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/5000. (1656655:async_checkpointer.py:439)
+07:03:38.963 [I] Using ThreadSafeKeyValueSignalingClient                                          (1656655:signaling_client.py:332)
+07:03:38.980 [I] Transferring arrays to host memory with options: use_replica_parallel=True, enable_pinned_host_transfer=False (1656655:replica_slices.py:341)
+07:03:38.980 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/5000.orbax-checkpoint-tmp-0 (1656655:atomicity.py:144)
+07:03:38.994 [I] Wrote Metadata={'item_handlers': None, 'metrics': {}, 'performance_metrics': {}, 'init_timestamp_nsecs': 1794812618993167507, 'commit_timestamp_nsecs': None, 'custom_metadata': {}}, json={"item_handlers": null, "metrics": {}, "performance_metrics": {}, "init_timestamp_nsecs": 1794812618993167507, "commit_timestamp_nsecs": null, "custom_metadata": {}} to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/5000.orbax-checkpoint-tmp-0/_CHECKPOINT_METADATA (1656655:checkpoint.py:186)
+07:03:38.995 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/5000.orbax-checkpoint-tmp-0/assets.orbax-checkpoint-tmp-1 (1656655:atomicity.py:144)
+07:03:38.996 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/5000.orbax-checkpoint-tmp-0/params.orbax-checkpoint-tmp-2 (1656655:atomicity.py:144)
+07:03:47.642 [I] [process=0] /jax/checkpoint/write/blocking_bytes_per_sec: 1.4 GiB/s (total bytes: 11.8 GiB) (time elapsed: 8 seconds) (per-host) (1656655:base_pytree_checkpoint_handler.py:114)
+07:03:47.651 [I] [process=0][thread=async_save] Background save thread started.                   (1656655:async_checkpointer.py:77)
+07:03:47.651 [I] Finished blocking save in 8.69 seconds. Continuing to save asynchronously to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/5000. (1656655:async_checkpointer.py:548)
+07:03:47.652 [I] [process=0][thread=MainThread][step=5000] Starting CheckpointManager Save Finalize thread=save_finalize (1656655:checkpoint_manager.py:1453)
+07:03:47.653 [I] [process=0][thread=save_finalize] Waiting for background save thread=async_save. (1656655:async_checkpointer.py:258)
+07:03:47.654 [I] {'step': 5000, 'event_type': 'save', 'directory': '/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k', 'reached_preemption': False, 'preemption_received_at': None, 'synchronous': False, 'wait_for_prev_start_time': 1794812618.9608588, 'wait_for_prev_duration_secs': 0.000453948974609375, 'checkpointer_blocking_start_time': 1794812618.9618895, 'checkpointer_blocking_duration_secs': 8.690831422805786, 'get_old_steps_start_time': 1794812627.6527715, 'get_old_steps_duration_secs': 1.1444091796875e-05, 'checkpoint_manager_blocking_start_time': 1794812618.960533, 'checkpoint_manager_blocking_duration_secs': 8.693691730499268} (1656655:standard_logger.py:34)
+07:03:47.688 [I] [process=0][thread=array_type_handler] Wrote 59 array_metadata.ArrayMetadata to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/5000.orbax-checkpoint-tmp-0/params.orbax-checkpoint-tmp-2/array_metadatas/process_0 (1656655:array_metadata_store.py:198)
+07:03:50.840 [I] [process=0] /jax/checkpoint/write/bytes_per_sec: 1013.8 MiB/s (total bytes: 11.8 GiB) (time elapsed: 11 seconds) (per-host) (1656655:base_pytree_checkpoint_handler.py:114)
+07:03:50.840 [I] [process=0][thread=async_save] 4 Handler Commit operations completed.            (1656655:async_checkpointer.py:87)
+07:03:50.841 [I] Read Metadata={'item_handlers': None, 'metrics': {}, 'performance_metrics': {}, 'init_timestamp_nsecs': 1794812618993167507, 'commit_timestamp_nsecs': None, 'custom_metadata': {}} from /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/5000.orbax-checkpoint-tmp-0/_CHECKPOINT_METADATA (1656655:checkpoint.py:226)
+07:03:50.841 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/5000.orbax-checkpoint-tmp-0/assets.orbax-checkpoint-tmp-1 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/5000.orbax-checkpoint-tmp-0/assets (1656655:atomicity.py:289)
+07:03:50.843 [I] Updated Metadata={'item_handlers': {'assets': 'openpi.training.checkpoints.CallbackHandler', 'params': 'orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeCheckpointHandler'}, 'metrics': {}, 'performance_metrics': {}, 'init_timestamp_nsecs': 1794812618993167507, 'commit_timestamp_nsecs': None, 'custom_metadata': {}} to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/5000.orbax-checkpoint-tmp-0/_CHECKPOINT_METADATA (1656655:checkpoint.py:245)
+07:03:50.844 [I] [process=0][thread=async_save] Skipped cross-host ArrayMetadata validation because only one process is found: process_index=0. (1656655:array_metadata_store.py:362)
+07:03:50.849 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/5000.orbax-checkpoint-tmp-0/params.orbax-checkpoint-tmp-2 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/5000.orbax-checkpoint-tmp-0/params (1656655:atomicity.py:289)
+07:03:50.849 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/5000.orbax-checkpoint-tmp-0 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/5000 (1656655:atomicity.py:289)
+07:03:50.850 [I] [process=0][thread=async_save] Finished saving checkpoint (finalized tmp dir) to `/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/5000`. (1656655:atomicity.py:573)
+07:03:50.850 [I] Finished asynchronous save (blocking + background) in 11.89 seconds to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/5000 (1656655:async_checkpointer.py:412)
+07:03:50.850 [I] [process=0][thread=async_save] Background save thread done.                      (1656655:async_checkpointer.py:143)
+07:03:50.850 [I] [process=0][thread=save_finalize] Done with waiting for background save thread=async_save. (1656655:async_checkpointer.py:266)
+07:03:50.851 [I] [process=0][thread=save_finalize] No errors found in background save thread=async_save. (1656655:async_checkpointer.py:276)
+07:03:50.851 [I] [process=0][thread=save_finalize][step=5000] CheckpointManager Save Finalize is syncing with other hosts... (1656655:checkpoint_manager.py:2095)
+07:03:50.851 [I] [process=0][thread=save_finalize][step=5000] CheckpointManager Save Finalize is done on all hosts. (1656655:checkpoint_manager.py:2110)
+
+
+Step 5100: grad_norm=0.0581, llm_grad_norm=0.0463, loss=0.0073, mem_enc_norm=0.0258, param_norm=1805.1353
+
+
+Step 5200: grad_norm=0.0682, llm_grad_norm=0.0550, loss=0.0075, mem_enc_norm=0.0308, param_norm=1805.2290
+
+
+Step 5300: grad_norm=0.0712, llm_grad_norm=0.0535, loss=0.0072, mem_enc_norm=0.0371, param_norm=1805.3179
+
+
+Step 5400: grad_norm=0.0531, llm_grad_norm=0.0434, loss=0.0071, mem_enc_norm=0.0215, param_norm=1805.4053
+
+
+Step 5500: grad_norm=0.0492, llm_grad_norm=0.0404, loss=0.0072, mem_enc_norm=0.0184, param_norm=1805.4916
+
+
+Step 5600: grad_norm=0.0566, llm_grad_norm=0.0460, loss=0.0072, mem_enc_norm=0.0224, param_norm=1805.5787
+
+
+Step 5700: grad_norm=0.0527, llm_grad_norm=0.0423, loss=0.0070, mem_enc_norm=0.0222, param_norm=1805.6665
+
+
+Step 5800: grad_norm=0.0503, llm_grad_norm=0.0416, loss=0.0069, mem_enc_norm=0.0184, param_norm=1805.7531
+
+
+Step 5900: grad_norm=0.0520, llm_grad_norm=0.0414, loss=0.0068, mem_enc_norm=0.0219, param_norm=1805.8401
+
+
+Step 6000: grad_norm=0.0585, llm_grad_norm=0.0470, loss=0.0068, mem_enc_norm=0.0252, param_norm=1805.9297
+
+
+Step 6100: grad_norm=0.0640, llm_grad_norm=0.0500, loss=0.0068, mem_enc_norm=0.0315, param_norm=1806.0187
+
+
+Step 6200: grad_norm=0.0627, llm_grad_norm=0.0490, loss=0.0068, mem_enc_norm=0.0306, param_norm=1806.1090
+
+
+Step 6300: grad_norm=0.0519, llm_grad_norm=0.0416, loss=0.0064, mem_enc_norm=0.0224, param_norm=1806.1943
+
+
+Step 6400: grad_norm=0.0505, llm_grad_norm=0.0408, loss=0.0065, mem_enc_norm=0.0199, param_norm=1806.2762
+
+
+Step 6500: grad_norm=0.0512, llm_grad_norm=0.0412, loss=0.0062, mem_enc_norm=0.0222, param_norm=1806.3650
+
+
+Step 6600: grad_norm=0.0450, llm_grad_norm=0.0363, loss=0.0064, mem_enc_norm=0.0181, param_norm=1806.4515
+
+
+Step 6700: grad_norm=0.0509, llm_grad_norm=0.0408, loss=0.0063, mem_enc_norm=0.0216, param_norm=1806.5387
+
+
+Step 6800: grad_norm=0.0454, llm_grad_norm=0.0372, loss=0.0064, mem_enc_norm=0.0163, param_norm=1806.6278
+
+
+Step 6900: grad_norm=0.0470, llm_grad_norm=0.0384, loss=0.0062, mem_enc_norm=0.0168, param_norm=1806.7153
+
+
+Step 7000: grad_norm=0.0490, llm_grad_norm=0.0388, loss=0.0059, mem_enc_norm=0.0206, param_norm=1806.7982
+
+
+Step 7100: grad_norm=0.0462, llm_grad_norm=0.0373, loss=0.0060, mem_enc_norm=0.0177, param_norm=1806.8828
+
+
+Step 7200: grad_norm=0.0584, llm_grad_norm=0.0446, loss=0.0060, mem_enc_norm=0.0291, param_norm=1806.9706
+
+
+Step 7300: grad_norm=0.0456, llm_grad_norm=0.0366, loss=0.0061, mem_enc_norm=0.0185, param_norm=1807.0538
+
+
+Step 7400: grad_norm=0.0440, llm_grad_norm=0.0360, loss=0.0058, mem_enc_norm=0.0167, param_norm=1807.1376
+
+
+Step 7500: grad_norm=0.0501, llm_grad_norm=0.0407, loss=0.0060, mem_enc_norm=0.0199, param_norm=1807.2234
+
+
+Step 7600: grad_norm=0.0537, llm_grad_norm=0.0427, loss=0.0059, mem_enc_norm=0.0244, param_norm=1807.3093
+
+
+Step 7700: grad_norm=0.0415, llm_grad_norm=0.0332, loss=0.0056, mem_enc_norm=0.0164, param_norm=1807.3936
+
+
+Step 7800: grad_norm=0.0543, llm_grad_norm=0.0425, loss=0.0057, mem_enc_norm=0.0243, param_norm=1807.4768
+
+
+Step 7900: grad_norm=0.0434, llm_grad_norm=0.0344, loss=0.0056, mem_enc_norm=0.0182, param_norm=1807.5654
+
+
+Step 8000: grad_norm=0.0459, llm_grad_norm=0.0365, loss=0.0056, mem_enc_norm=0.0187, param_norm=1807.6481
+
+
+Step 8100: grad_norm=0.0457, llm_grad_norm=0.0374, loss=0.0057, mem_enc_norm=0.0171, param_norm=1807.7356
+
+
+Step 8200: grad_norm=0.0465, llm_grad_norm=0.0380, loss=0.0058, mem_enc_norm=0.0180, param_norm=1807.8215
+
+
+Step 8300: grad_norm=0.0513, llm_grad_norm=0.0401, loss=0.0055, mem_enc_norm=0.0238, param_norm=1807.9082
+
+
+Step 8400: grad_norm=0.0529, llm_grad_norm=0.0413, loss=0.0055, mem_enc_norm=0.0246, param_norm=1807.9933
+
+
+Step 8500: grad_norm=0.0442, llm_grad_norm=0.0359, loss=0.0055, mem_enc_norm=0.0167, param_norm=1808.0737
+
+
+Step 8600: grad_norm=0.0460, llm_grad_norm=0.0371, loss=0.0054, mem_enc_norm=0.0184, param_norm=1808.1584
+
+
+Step 8700: grad_norm=0.0444, llm_grad_norm=0.0359, loss=0.0054, mem_enc_norm=0.0178, param_norm=1808.2427
+
+
+Step 8800: grad_norm=0.0417, llm_grad_norm=0.0337, loss=0.0054, mem_enc_norm=0.0166, param_norm=1808.3259
+
+
+Step 8900: grad_norm=0.0413, llm_grad_norm=0.0338, loss=0.0054, mem_enc_norm=0.0150, param_norm=1808.4103
+
+
+Step 9000: grad_norm=0.0451, llm_grad_norm=0.0363, loss=0.0052, mem_enc_norm=0.0183, param_norm=1808.4958
+
+
+Step 9100: grad_norm=0.0423, llm_grad_norm=0.0339, loss=0.0052, mem_enc_norm=0.0168, param_norm=1808.5809
+
+
+Step 9200: grad_norm=0.0413, llm_grad_norm=0.0331, loss=0.0053, mem_enc_norm=0.0164, param_norm=1808.6648
+
+
+Step 9300: grad_norm=0.0421, llm_grad_norm=0.0342, loss=0.0052, mem_enc_norm=0.0165, param_norm=1808.7490
+
+
+Step 9400: grad_norm=0.0479, llm_grad_norm=0.0381, loss=0.0051, mem_enc_norm=0.0212, param_norm=1808.8356
+
+
+Step 9500: grad_norm=0.0451, llm_grad_norm=0.0360, loss=0.0051, mem_enc_norm=0.0190, param_norm=1808.9205
+
+
+Step 9600: grad_norm=0.0441, llm_grad_norm=0.0348, loss=0.0052, mem_enc_norm=0.0183, param_norm=1809.0040
+
+
+Step 9700: grad_norm=0.0424, llm_grad_norm=0.0334, loss=0.0049, mem_enc_norm=0.0185, param_norm=1809.0853
+
+
+Step 9800: grad_norm=0.0418, llm_grad_norm=0.0336, loss=0.0047, mem_enc_norm=0.0172, param_norm=1809.1719
+
+
+Step 9900: grad_norm=0.0408, llm_grad_norm=0.0329, loss=0.0049, mem_enc_norm=0.0158, param_norm=1809.2562
+
+
+Step 10000: grad_norm=0.0426, llm_grad_norm=0.0340, loss=0.0049, mem_enc_norm=0.0182, param_norm=1809.3372
+09:48:01.127 [I] [process=0][thread=MainThread][wait_until_finished] No Save Finalize thread to wait for. Returning. (1656655:checkpoint_manager.py:1987)
+09:48:01.128 [I] [process=0] Saving checkpoint at step 10000                                      (1656655:checkpoint_manager.py:1408)
+09:48:01.129 [I] [process=0] Started async saving checkpoint to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/10000. (1656655:async_checkpointer.py:439)
+09:48:01.142 [I] Transferring arrays to host memory with options: use_replica_parallel=True, enable_pinned_host_transfer=False (1656655:replica_slices.py:341)
+09:48:01.142 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/10000.orbax-checkpoint-tmp-3 (1656655:atomicity.py:144)
+09:48:01.147 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/10000.orbax-checkpoint-tmp-3/assets.orbax-checkpoint-tmp-4 (1656655:atomicity.py:144)
+09:48:01.148 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/10000.orbax-checkpoint-tmp-3/params.orbax-checkpoint-tmp-5 (1656655:atomicity.py:144)
+09:48:04.990 [I] [process=0] /jax/checkpoint/write/blocking_bytes_per_sec: 3.0 GiB/s (total bytes: 11.8 GiB) (time elapsed: 3 seconds) (per-host) (1656655:base_pytree_checkpoint_handler.py:114)
+09:48:05.001 [I] [process=0][thread=async_save] Background save thread started.                   (1656655:async_checkpointer.py:77)
+09:48:05.001 [I] Finished blocking save in 3.87 seconds. Continuing to save asynchronously to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/10000. (1656655:async_checkpointer.py:548)
+09:48:05.002 [I] Preserving Checkpoint[step=5000 | time=2026-11-16 07:03:47.652752+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+09:48:05.003 [I] [process=0][thread=MainThread][step=10000] Starting CheckpointManager Save Finalize thread=save_finalize (1656655:checkpoint_manager.py:1453)
+09:48:05.003 [I] [process=0][thread=save_finalize] Waiting for background save thread=async_save. (1656655:async_checkpointer.py:258)
+09:48:05.004 [I] {'step': 10000, 'event_type': 'save', 'directory': '/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k', 'reached_preemption': False, 'preemption_received_at': None, 'synchronous': False, 'wait_for_prev_start_time': 1794822481.1277363, 'wait_for_prev_duration_secs': 0.0002605915069580078, 'checkpointer_blocking_start_time': 1794822481.1285412, 'checkpointer_blocking_duration_secs': 3.873840570449829, 'get_old_steps_start_time': 1794822485.0024097, 'get_old_steps_duration_secs': 0.0005278587341308594, 'checkpoint_manager_blocking_start_time': 1794822481.1273754, 'checkpoint_manager_blocking_duration_secs': 3.8765807151794434} (1656655:standard_logger.py:34)
+09:48:05.047 [I] [process=0][thread=array_type_handler] Wrote 59 array_metadata.ArrayMetadata to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/10000.orbax-checkpoint-tmp-3/params.orbax-checkpoint-tmp-5/array_metadatas/process_0 (1656655:array_metadata_store.py:198)
+09:48:07.623 [I] [process=0] /jax/checkpoint/write/bytes_per_sec: 1.8 GiB/s (total bytes: 11.8 GiB) (time elapsed: 6 seconds) (per-host) (1656655:base_pytree_checkpoint_handler.py:114)
+09:48:07.624 [I] [process=0][thread=async_save] 4 Handler Commit operations completed.            (1656655:async_checkpointer.py:87)
+09:48:07.624 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/10000.orbax-checkpoint-tmp-3/assets.orbax-checkpoint-tmp-4 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/10000.orbax-checkpoint-tmp-3/assets (1656655:atomicity.py:289)
+09:48:07.627 [I] [process=0][thread=async_save] Skipped cross-host ArrayMetadata validation because only one process is found: process_index=0. (1656655:array_metadata_store.py:362)
+09:48:07.633 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/10000.orbax-checkpoint-tmp-3/params.orbax-checkpoint-tmp-5 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/10000.orbax-checkpoint-tmp-3/params (1656655:atomicity.py:289)
+09:48:07.633 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/10000.orbax-checkpoint-tmp-3 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/10000 (1656655:atomicity.py:289)
+09:48:07.634 [I] [process=0][thread=async_save] Finished saving checkpoint (finalized tmp dir) to `/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/10000`. (1656655:atomicity.py:573)
+09:48:07.634 [I] Finished asynchronous save (blocking + background) in 6.51 seconds to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/10000 (1656655:async_checkpointer.py:412)
+09:48:07.635 [I] [process=0][thread=async_save] Background save thread done.                      (1656655:async_checkpointer.py:143)
+09:48:07.635 [I] [process=0][thread=save_finalize] Done with waiting for background save thread=async_save. (1656655:async_checkpointer.py:266)
+09:48:07.635 [I] [process=0][thread=save_finalize] No errors found in background save thread=async_save. (1656655:async_checkpointer.py:276)
+09:48:07.635 [I] [process=0][thread=save_finalize][step=10000] CheckpointManager Save Finalize is syncing with other hosts... (1656655:checkpoint_manager.py:2095)
+09:48:07.635 [I] [process=0][thread=save_finalize][step=10000] CheckpointManager Save Finalize is done on all hosts. (1656655:checkpoint_manager.py:2110)
+
+
+Step 10100: grad_norm=0.0396, llm_grad_norm=0.0320, loss=0.0049, mem_enc_norm=0.0161, param_norm=1809.4203
+
+
+Step 10200: grad_norm=0.0453, llm_grad_norm=0.0356, loss=0.0047, mem_enc_norm=0.0206, param_norm=1809.5031
+
+
+Step 10300: grad_norm=0.0412, llm_grad_norm=0.0326, loss=0.0048, mem_enc_norm=0.0174, param_norm=1809.5870
+
+
+Step 10400: grad_norm=0.0376, llm_grad_norm=0.0306, loss=0.0047, mem_enc_norm=0.0148, param_norm=1809.6653
+
+
+Step 10500: grad_norm=0.0415, llm_grad_norm=0.0332, loss=0.0047, mem_enc_norm=0.0164, param_norm=1809.7468
+
+
+Step 10600: grad_norm=0.0414, llm_grad_norm=0.0327, loss=0.0048, mem_enc_norm=0.0175, param_norm=1809.8289
+
+
+Step 10700: grad_norm=0.0390, llm_grad_norm=0.0310, loss=0.0046, mem_enc_norm=0.0162, param_norm=1809.9130
+
+
+Step 10800: grad_norm=0.0421, llm_grad_norm=0.0344, loss=0.0047, mem_enc_norm=0.0160, param_norm=1809.9958
+
+
+Step 10900: grad_norm=0.0367, llm_grad_norm=0.0296, loss=0.0046, mem_enc_norm=0.0145, param_norm=1810.0784
+
+
+Step 11000: grad_norm=0.0371, llm_grad_norm=0.0299, loss=0.0045, mem_enc_norm=0.0145, param_norm=1810.1627
+
+
+Step 11100: grad_norm=0.0457, llm_grad_norm=0.0366, loss=0.0046, mem_enc_norm=0.0203, param_norm=1810.2461
+
+
+Step 11200: grad_norm=0.0417, llm_grad_norm=0.0335, loss=0.0046, mem_enc_norm=0.0164, param_norm=1810.3279
+
+
+Step 11300: grad_norm=0.0406, llm_grad_norm=0.0326, loss=0.0046, mem_enc_norm=0.0171, param_norm=1810.4097
+
+
+Step 11400: grad_norm=0.0389, llm_grad_norm=0.0316, loss=0.0045, mem_enc_norm=0.0152, param_norm=1810.4979
+
+
+Step 11500: grad_norm=0.0381, llm_grad_norm=0.0305, loss=0.0044, mem_enc_norm=0.0157, param_norm=1810.5778
+
+
+Step 11600: grad_norm=0.0398, llm_grad_norm=0.0313, loss=0.0043, mem_enc_norm=0.0177, param_norm=1810.6575
+
+
+Step 11700: grad_norm=0.0452, llm_grad_norm=0.0351, loss=0.0045, mem_enc_norm=0.0219, param_norm=1810.7463
+
+
+Step 11800: grad_norm=0.0395, llm_grad_norm=0.0314, loss=0.0042, mem_enc_norm=0.0166, param_norm=1810.8240
+
+
+Step 11900: grad_norm=0.0391, llm_grad_norm=0.0309, loss=0.0044, mem_enc_norm=0.0165, param_norm=1810.9048
+
+
+Step 12000: grad_norm=0.0419, llm_grad_norm=0.0338, loss=0.0045, mem_enc_norm=0.0159, param_norm=1810.9868
+
+
+Step 12100: grad_norm=0.0388, llm_grad_norm=0.0304, loss=0.0042, mem_enc_norm=0.0180, param_norm=1811.0687
+
+
+Step 12200: grad_norm=0.0402, llm_grad_norm=0.0321, loss=0.0043, mem_enc_norm=0.0171, param_norm=1811.1445
+
+
+Step 12300: grad_norm=0.0410, llm_grad_norm=0.0328, loss=0.0043, mem_enc_norm=0.0168, param_norm=1811.2283
+
+
+Step 12400: grad_norm=0.0408, llm_grad_norm=0.0328, loss=0.0042, mem_enc_norm=0.0173, param_norm=1811.3109
+
+
+Step 12500: grad_norm=0.0461, llm_grad_norm=0.0354, loss=0.0041, mem_enc_norm=0.0236, param_norm=1811.3962
+
+
+Step 12600: grad_norm=0.0387, llm_grad_norm=0.0308, loss=0.0041, mem_enc_norm=0.0167, param_norm=1811.4777
+
+
+Step 12700: grad_norm=0.0421, llm_grad_norm=0.0342, loss=0.0043, mem_enc_norm=0.0173, param_norm=1811.5599
+
+
+Step 12800: grad_norm=0.0411, llm_grad_norm=0.0324, loss=0.0043, mem_enc_norm=0.0179, param_norm=1811.6426
+
+
+Step 12900: grad_norm=0.0395, llm_grad_norm=0.0318, loss=0.0042, mem_enc_norm=0.0159, param_norm=1811.7240
+
+
+Step 13000: grad_norm=0.0404, llm_grad_norm=0.0326, loss=0.0042, mem_enc_norm=0.0167, param_norm=1811.8033
+
+
+Step 13100: grad_norm=0.0438, llm_grad_norm=0.0341, loss=0.0041, mem_enc_norm=0.0199, param_norm=1811.8906
+
+
+Step 13200: grad_norm=0.0431, llm_grad_norm=0.0339, loss=0.0042, mem_enc_norm=0.0200, param_norm=1811.9695
+
+
+Step 13300: grad_norm=0.0363, llm_grad_norm=0.0288, loss=0.0041, mem_enc_norm=0.0157, param_norm=1812.0525
+
+
+Step 13400: grad_norm=0.0385, llm_grad_norm=0.0303, loss=0.0040, mem_enc_norm=0.0172, param_norm=1812.1331
+
+
+Step 13500: grad_norm=0.0491, llm_grad_norm=0.0382, loss=0.0039, mem_enc_norm=0.0246, param_norm=1812.2179
+
+
+Step 13600: grad_norm=0.0393, llm_grad_norm=0.0319, loss=0.0040, mem_enc_norm=0.0160, param_norm=1812.2960
+
+
+Step 13700: grad_norm=0.0408, llm_grad_norm=0.0323, loss=0.0041, mem_enc_norm=0.0179, param_norm=1812.3796
+
+
+Step 13800: grad_norm=0.0402, llm_grad_norm=0.0312, loss=0.0039, mem_enc_norm=0.0187, param_norm=1812.4609
+
+
+Step 13900: grad_norm=0.0444, llm_grad_norm=0.0352, loss=0.0040, mem_enc_norm=0.0200, param_norm=1812.5405
+
+
+Step 14000: grad_norm=0.0427, llm_grad_norm=0.0338, loss=0.0038, mem_enc_norm=0.0186, param_norm=1812.6241
+
+
+Step 14100: grad_norm=0.0418, llm_grad_norm=0.0331, loss=0.0040, mem_enc_norm=0.0186, param_norm=1812.7048
+
+
+Step 14200: grad_norm=0.0457, llm_grad_norm=0.0353, loss=0.0040, mem_enc_norm=0.0223, param_norm=1812.7858
+
+
+Step 14300: grad_norm=0.0391, llm_grad_norm=0.0307, loss=0.0037, mem_enc_norm=0.0177, param_norm=1812.8694
+
+
+Step 14400: grad_norm=0.0411, llm_grad_norm=0.0326, loss=0.0038, mem_enc_norm=0.0176, param_norm=1812.9504
+
+
+Step 14500: grad_norm=0.0389, llm_grad_norm=0.0308, loss=0.0038, mem_enc_norm=0.0174, param_norm=1813.0347
+
+
+Step 14600: grad_norm=0.0421, llm_grad_norm=0.0332, loss=0.0038, mem_enc_norm=0.0189, param_norm=1813.1138
+
+
+Step 14700: grad_norm=0.0409, llm_grad_norm=0.0320, loss=0.0039, mem_enc_norm=0.0193, param_norm=1813.1943
+
+
+Step 14800: grad_norm=0.0372, llm_grad_norm=0.0287, loss=0.0038, mem_enc_norm=0.0175, param_norm=1813.2736
+
+
+Step 14900: grad_norm=0.0420, llm_grad_norm=0.0333, loss=0.0040, mem_enc_norm=0.0191, param_norm=1813.3555
+
+
+Step 15000: grad_norm=0.0384, llm_grad_norm=0.0305, loss=0.0036, mem_enc_norm=0.0169, param_norm=1813.4410
+12:32:17.826 [I] [process=0][thread=MainThread][wait_until_finished] No Save Finalize thread to wait for. Returning. (1656655:checkpoint_manager.py:1987)
+12:32:17.826 [I] [process=0] Saving checkpoint at step 15000                                      (1656655:checkpoint_manager.py:1408)
+12:32:17.827 [I] [process=0] Started async saving checkpoint to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/15000. (1656655:async_checkpointer.py:439)
+12:32:17.840 [I] Transferring arrays to host memory with options: use_replica_parallel=True, enable_pinned_host_transfer=False (1656655:replica_slices.py:341)
+12:32:17.840 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/15000.orbax-checkpoint-tmp-6 (1656655:atomicity.py:144)
+12:32:17.845 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/15000.orbax-checkpoint-tmp-6/assets.orbax-checkpoint-tmp-7 (1656655:atomicity.py:144)
+12:32:17.846 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/15000.orbax-checkpoint-tmp-6/params.orbax-checkpoint-tmp-8 (1656655:atomicity.py:144)
+12:32:21.597 [I] [process=0] /jax/checkpoint/write/blocking_bytes_per_sec: 3.1 GiB/s (total bytes: 11.8 GiB) (time elapsed: 3 seconds) (per-host) (1656655:base_pytree_checkpoint_handler.py:114)
+12:32:21.607 [I] [process=0][thread=async_save] Background save thread started.                   (1656655:async_checkpointer.py:77)
+12:32:21.609 [I] Finished blocking save in 3.78 seconds. Continuing to save asynchronously to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/15000. (1656655:async_checkpointer.py:548)
+12:32:21.610 [I] Preserving Checkpoint[step=5000 | time=2026-11-16 07:03:47.652752+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+12:32:21.610 [I] Preserving Checkpoint[step=10000 | time=2026-11-16 09:48:05.002389+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+12:32:21.610 [I] [process=0][thread=MainThread][step=15000] Starting CheckpointManager Save Finalize thread=save_finalize (1656655:checkpoint_manager.py:1453)
+12:32:21.611 [I] [process=0][thread=save_finalize] Waiting for background save thread=async_save. (1656655:async_checkpointer.py:258)
+12:32:21.611 [I] {'step': 15000, 'event_type': 'save', 'directory': '/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k', 'reached_preemption': False, 'preemption_received_at': None, 'synchronous': False, 'wait_for_prev_start_time': 1794832337.8260932, 'wait_for_prev_duration_secs': 0.0002741813659667969, 'checkpointer_blocking_start_time': 1794832337.8270051, 'checkpointer_blocking_duration_secs': 3.783036947250366, 'get_old_steps_start_time': 1794832341.6100607, 'get_old_steps_duration_secs': 0.0005457401275634766, 'checkpoint_manager_blocking_start_time': 1794832337.825725, 'checkpoint_manager_blocking_duration_secs': 3.7858498096466064} (1656655:standard_logger.py:34)
+12:32:21.646 [I] [process=0][thread=array_type_handler] Wrote 59 array_metadata.ArrayMetadata to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/15000.orbax-checkpoint-tmp-6/params.orbax-checkpoint-tmp-8/array_metadatas/process_0 (1656655:array_metadata_store.py:198)
+12:32:24.151 [I] [process=0] /jax/checkpoint/write/bytes_per_sec: 1.9 GiB/s (total bytes: 11.8 GiB) (time elapsed: 6 seconds) (per-host) (1656655:base_pytree_checkpoint_handler.py:114)
+12:32:24.151 [I] [process=0][thread=async_save] 4 Handler Commit operations completed.            (1656655:async_checkpointer.py:87)
+12:32:24.152 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/15000.orbax-checkpoint-tmp-6/assets.orbax-checkpoint-tmp-7 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/15000.orbax-checkpoint-tmp-6/assets (1656655:atomicity.py:289)
+12:32:24.154 [I] [process=0][thread=async_save] Skipped cross-host ArrayMetadata validation because only one process is found: process_index=0. (1656655:array_metadata_store.py:362)
+12:32:24.158 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/15000.orbax-checkpoint-tmp-6/params.orbax-checkpoint-tmp-8 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/15000.orbax-checkpoint-tmp-6/params (1656655:atomicity.py:289)
+12:32:24.159 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/15000.orbax-checkpoint-tmp-6 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/15000 (1656655:atomicity.py:289)
+12:32:24.159 [I] [process=0][thread=async_save] Finished saving checkpoint (finalized tmp dir) to `/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/15000`. (1656655:atomicity.py:573)
+12:32:24.159 [I] Finished asynchronous save (blocking + background) in 6.33 seconds to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/15000 (1656655:async_checkpointer.py:412)
+12:32:24.160 [I] [process=0][thread=async_save] Background save thread done.                      (1656655:async_checkpointer.py:143)
+12:32:24.160 [I] [process=0][thread=save_finalize] Done with waiting for background save thread=async_save. (1656655:async_checkpointer.py:266)
+12:32:24.160 [I] [process=0][thread=save_finalize] No errors found in background save thread=async_save. (1656655:async_checkpointer.py:276)
+12:32:24.160 [I] [process=0][thread=save_finalize][step=15000] CheckpointManager Save Finalize is syncing with other hosts... (1656655:checkpoint_manager.py:2095)
+12:32:24.160 [I] [process=0][thread=save_finalize][step=15000] CheckpointManager Save Finalize is done on all hosts. (1656655:checkpoint_manager.py:2110)
+
+
+Step 15100: grad_norm=0.0528, llm_grad_norm=0.0405, loss=0.0038, mem_enc_norm=0.0275, param_norm=1813.5215
+
+
+Step 15200: grad_norm=0.0364, llm_grad_norm=0.0288, loss=0.0036, mem_enc_norm=0.0160, param_norm=1813.6017
+
+
+Step 15300: grad_norm=0.0581, llm_grad_norm=0.0434, loss=0.0038, mem_enc_norm=0.0320, param_norm=1813.6841
+
+
+Step 15400: grad_norm=0.0373, llm_grad_norm=0.0299, loss=0.0037, mem_enc_norm=0.0159, param_norm=1813.7612
+
+
+Step 15500: grad_norm=0.0395, llm_grad_norm=0.0311, loss=0.0037, mem_enc_norm=0.0185, param_norm=1813.8428
+
+
+Step 15600: grad_norm=0.0349, llm_grad_norm=0.0275, loss=0.0037, mem_enc_norm=0.0156, param_norm=1813.9209
+
+
+Step 15700: grad_norm=0.0373, llm_grad_norm=0.0299, loss=0.0036, mem_enc_norm=0.0157, param_norm=1813.9985
+
+
+Step 15800: grad_norm=0.0376, llm_grad_norm=0.0296, loss=0.0038, mem_enc_norm=0.0166, param_norm=1814.0776
+
+
+Step 15900: grad_norm=0.0368, llm_grad_norm=0.0290, loss=0.0036, mem_enc_norm=0.0164, param_norm=1814.1586
+
+
+Step 16000: grad_norm=0.0401, llm_grad_norm=0.0314, loss=0.0036, mem_enc_norm=0.0188, param_norm=1814.2361
+
+
+Step 16100: grad_norm=0.0362, llm_grad_norm=0.0288, loss=0.0034, mem_enc_norm=0.0159, param_norm=1814.3138
+
+
+Step 16200: grad_norm=0.0414, llm_grad_norm=0.0323, loss=0.0036, mem_enc_norm=0.0196, param_norm=1814.3951
+
+
+Step 16300: grad_norm=0.0348, llm_grad_norm=0.0276, loss=0.0035, mem_enc_norm=0.0152, param_norm=1814.4749
+
+
+Step 16400: grad_norm=0.0372, llm_grad_norm=0.0297, loss=0.0036, mem_enc_norm=0.0157, param_norm=1814.5548
+
+
+Step 16500: grad_norm=0.0398, llm_grad_norm=0.0313, loss=0.0036, mem_enc_norm=0.0184, param_norm=1814.6387
+
+
+Step 16600: grad_norm=0.0422, llm_grad_norm=0.0328, loss=0.0034, mem_enc_norm=0.0206, param_norm=1814.7185
+
+
+Step 16700: grad_norm=0.0353, llm_grad_norm=0.0280, loss=0.0035, mem_enc_norm=0.0151, param_norm=1814.7976
+
+
+Step 16800: grad_norm=0.0410, llm_grad_norm=0.0323, loss=0.0035, mem_enc_norm=0.0193, param_norm=1814.8781
+
+
+Step 16900: grad_norm=0.0388, llm_grad_norm=0.0307, loss=0.0036, mem_enc_norm=0.0176, param_norm=1814.9581
+
+
+Step 17000: grad_norm=0.0374, llm_grad_norm=0.0291, loss=0.0033, mem_enc_norm=0.0181, param_norm=1815.0349
+
+
+Step 17100: grad_norm=0.0424, llm_grad_norm=0.0328, loss=0.0034, mem_enc_norm=0.0207, param_norm=1815.1146
+
+
+Step 17200: grad_norm=0.0368, llm_grad_norm=0.0290, loss=0.0033, mem_enc_norm=0.0161, param_norm=1815.1959
+
+
+Step 17300: grad_norm=0.0410, llm_grad_norm=0.0323, loss=0.0035, mem_enc_norm=0.0184, param_norm=1815.2737
+
+
+Step 17400: grad_norm=0.0367, llm_grad_norm=0.0291, loss=0.0033, mem_enc_norm=0.0161, param_norm=1815.3552
+
+
+Step 17500: grad_norm=0.0391, llm_grad_norm=0.0307, loss=0.0034, mem_enc_norm=0.0179, param_norm=1815.4371
+
+
+Step 17600: grad_norm=0.0386, llm_grad_norm=0.0308, loss=0.0033, mem_enc_norm=0.0166, param_norm=1815.5161
+
+
+Step 17700: grad_norm=0.0383, llm_grad_norm=0.0303, loss=0.0034, mem_enc_norm=0.0175, param_norm=1815.5913
+
+
+Step 17800: grad_norm=0.0389, llm_grad_norm=0.0306, loss=0.0033, mem_enc_norm=0.0184, param_norm=1815.6719
+
+
+Step 17900: grad_norm=0.0392, llm_grad_norm=0.0307, loss=0.0034, mem_enc_norm=0.0173, param_norm=1815.7494
+
+
+Step 18000: grad_norm=0.0357, llm_grad_norm=0.0286, loss=0.0033, mem_enc_norm=0.0143, param_norm=1815.8281
+
+
+Step 18100: grad_norm=0.0360, llm_grad_norm=0.0286, loss=0.0032, mem_enc_norm=0.0160, param_norm=1815.9076
+
+
+Step 18200: grad_norm=0.0368, llm_grad_norm=0.0288, loss=0.0033, mem_enc_norm=0.0164, param_norm=1815.9817
+
+
+Step 18300: grad_norm=0.0380, llm_grad_norm=0.0296, loss=0.0033, mem_enc_norm=0.0179, param_norm=1816.0619
+
+
+Step 18400: grad_norm=0.0363, llm_grad_norm=0.0282, loss=0.0032, mem_enc_norm=0.0173, param_norm=1816.1403
+
+
+Step 18500: grad_norm=0.0389, llm_grad_norm=0.0314, loss=0.0033, mem_enc_norm=0.0170, param_norm=1816.2209
+
+
+Step 18600: grad_norm=0.0413, llm_grad_norm=0.0320, loss=0.0033, mem_enc_norm=0.0198, param_norm=1816.3002
+
+
+Step 18700: grad_norm=0.0405, llm_grad_norm=0.0322, loss=0.0033, mem_enc_norm=0.0171, param_norm=1816.3804
+
+
+Step 18800: grad_norm=0.0384, llm_grad_norm=0.0296, loss=0.0032, mem_enc_norm=0.0182, param_norm=1816.4592
+
+
+Step 18900: grad_norm=0.0368, llm_grad_norm=0.0287, loss=0.0033, mem_enc_norm=0.0168, param_norm=1816.5369
+
+
+Step 19000: grad_norm=0.0344, llm_grad_norm=0.0270, loss=0.0032, mem_enc_norm=0.0160, param_norm=1816.6167
+
+
+Step 19100: grad_norm=0.0369, llm_grad_norm=0.0295, loss=0.0031, mem_enc_norm=0.0154, param_norm=1816.6958
+
+
+Step 19200: grad_norm=0.0373, llm_grad_norm=0.0298, loss=0.0032, mem_enc_norm=0.0156, param_norm=1816.7725
+
+
+Step 19300: grad_norm=0.0382, llm_grad_norm=0.0299, loss=0.0030, mem_enc_norm=0.0177, param_norm=1816.8516
+
+
+Step 19400: grad_norm=0.0333, llm_grad_norm=0.0262, loss=0.0031, mem_enc_norm=0.0150, param_norm=1816.9325
+
+
+Step 19500: grad_norm=0.0361, llm_grad_norm=0.0291, loss=0.0032, mem_enc_norm=0.0148, param_norm=1817.0074
+
+
+Step 19600: grad_norm=0.0330, llm_grad_norm=0.0264, loss=0.0031, mem_enc_norm=0.0138, param_norm=1817.0867
+
+
+Step 19700: grad_norm=0.0358, llm_grad_norm=0.0282, loss=0.0031, mem_enc_norm=0.0161, param_norm=1817.1646
+
+
+Step 19800: grad_norm=0.0324, llm_grad_norm=0.0259, loss=0.0030, mem_enc_norm=0.0132, param_norm=1817.2412
+
+
+Step 19900: grad_norm=0.0370, llm_grad_norm=0.0294, loss=0.0033, mem_enc_norm=0.0160, param_norm=1817.3210
+
+
+Step 20000: grad_norm=0.0338, llm_grad_norm=0.0270, loss=0.0030, mem_enc_norm=0.0139, param_norm=1817.4025
+15:16:35.716 [I] [process=0][thread=MainThread][wait_until_finished] No Save Finalize thread to wait for. Returning. (1656655:checkpoint_manager.py:1987)
+15:16:35.717 [I] [process=0] Saving checkpoint at step 20000                                      (1656655:checkpoint_manager.py:1408)
+15:16:35.717 [I] [process=0] Started async saving checkpoint to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/20000. (1656655:async_checkpointer.py:439)
+15:16:35.730 [I] Transferring arrays to host memory with options: use_replica_parallel=True, enable_pinned_host_transfer=False (1656655:replica_slices.py:341)
+15:16:35.731 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/20000.orbax-checkpoint-tmp-9 (1656655:atomicity.py:144)
+15:16:35.736 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/20000.orbax-checkpoint-tmp-9/assets.orbax-checkpoint-tmp-10 (1656655:atomicity.py:144)
+15:16:35.736 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/20000.orbax-checkpoint-tmp-9/params.orbax-checkpoint-tmp-11 (1656655:atomicity.py:144)
+15:16:39.381 [I] [process=0] /jax/checkpoint/write/blocking_bytes_per_sec: 3.2 GiB/s (total bytes: 11.8 GiB) (time elapsed: 3 seconds) (per-host) (1656655:base_pytree_checkpoint_handler.py:114)
+15:16:39.392 [I] [process=0][thread=async_save] Background save thread started.                   (1656655:async_checkpointer.py:77)
+15:16:39.392 [I] Finished blocking save in 3.68 seconds. Continuing to save asynchronously to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/20000. (1656655:async_checkpointer.py:548)
+15:16:39.393 [I] Preserving Checkpoint[step=5000 | time=2026-11-16 07:03:47.652752+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+15:16:39.393 [I] Preserving Checkpoint[step=10000 | time=2026-11-16 09:48:05.002389+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+15:16:39.394 [I] Preserving Checkpoint[step=15000 | time=2026-11-16 12:32:21.610048+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+15:16:39.394 [I] [process=0][thread=MainThread][step=20000] Starting CheckpointManager Save Finalize thread=save_finalize (1656655:checkpoint_manager.py:1453)
+15:16:39.394 [I] [process=0][thread=save_finalize] Waiting for background save thread=async_save. (1656655:async_checkpointer.py:258)
+15:16:39.395 [I] {'step': 20000, 'event_type': 'save', 'directory': '/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k', 'reached_preemption': False, 'preemption_received_at': None, 'synchronous': False, 'wait_for_prev_start_time': 1794842195.7166197, 'wait_for_prev_duration_secs': 0.0002586841583251953, 'checkpointer_blocking_start_time': 1794842195.7172976, 'checkpointer_blocking_duration_secs': 3.6763508319854736, 'get_old_steps_start_time': 1794842199.3936725, 'get_old_steps_duration_secs': 0.0007207393646240234, 'checkpoint_manager_blocking_start_time': 1794842195.716446, 'checkpoint_manager_blocking_duration_secs': 3.678701877593994} (1656655:standard_logger.py:34)
+15:16:39.420 [I] [process=0][thread=array_type_handler] Wrote 59 array_metadata.ArrayMetadata to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/20000.orbax-checkpoint-tmp-9/params.orbax-checkpoint-tmp-11/array_metadatas/process_0 (1656655:array_metadata_store.py:198)
+15:16:42.411 [I] [process=0] /jax/checkpoint/write/bytes_per_sec: 1.8 GiB/s (total bytes: 11.8 GiB) (time elapsed: 6 seconds) (per-host) (1656655:base_pytree_checkpoint_handler.py:114)
+15:16:42.411 [I] [process=0][thread=async_save] 4 Handler Commit operations completed.            (1656655:async_checkpointer.py:87)
+15:16:42.412 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/20000.orbax-checkpoint-tmp-9/assets.orbax-checkpoint-tmp-10 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/20000.orbax-checkpoint-tmp-9/assets (1656655:atomicity.py:289)
+15:16:42.414 [I] [process=0][thread=async_save] Skipped cross-host ArrayMetadata validation because only one process is found: process_index=0. (1656655:array_metadata_store.py:362)
+15:16:42.419 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/20000.orbax-checkpoint-tmp-9/params.orbax-checkpoint-tmp-11 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/20000.orbax-checkpoint-tmp-9/params (1656655:atomicity.py:289)
+15:16:42.419 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/20000.orbax-checkpoint-tmp-9 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/20000 (1656655:atomicity.py:289)
+15:16:42.420 [I] [process=0][thread=async_save] Finished saving checkpoint (finalized tmp dir) to `/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/20000`. (1656655:atomicity.py:573)
+15:16:42.420 [I] Finished asynchronous save (blocking + background) in 6.70 seconds to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/20000 (1656655:async_checkpointer.py:412)
+15:16:42.420 [I] [process=0][thread=async_save] Background save thread done.                      (1656655:async_checkpointer.py:143)
+15:16:42.421 [I] [process=0][thread=save_finalize] Done with waiting for background save thread=async_save. (1656655:async_checkpointer.py:266)
+15:16:42.421 [I] [process=0][thread=save_finalize] No errors found in background save thread=async_save. (1656655:async_checkpointer.py:276)
+15:16:42.421 [I] [process=0][thread=save_finalize][step=20000] CheckpointManager Save Finalize is syncing with other hosts... (1656655:checkpoint_manager.py:2095)
+15:16:42.421 [I] [process=0][thread=save_finalize][step=20000] CheckpointManager Save Finalize is done on all hosts. (1656655:checkpoint_manager.py:2110)
+
+
+Step 20100: grad_norm=0.0409, llm_grad_norm=0.0314, loss=0.0031, mem_enc_norm=0.0198, param_norm=1817.4801
+
+
+Step 20200: grad_norm=0.0346, llm_grad_norm=0.0278, loss=0.0029, mem_enc_norm=0.0145, param_norm=1817.5575
+
+
+Step 20300: grad_norm=0.0374, llm_grad_norm=0.0300, loss=0.0031, mem_enc_norm=0.0164, param_norm=1817.6365
+
+
+Step 20400: grad_norm=0.0340, llm_grad_norm=0.0273, loss=0.0030, mem_enc_norm=0.0142, param_norm=1817.7137
+
+
+Step 20500: grad_norm=0.0463, llm_grad_norm=0.0360, loss=0.0031, mem_enc_norm=0.0233, param_norm=1817.7930
+
+
+Step 20600: grad_norm=0.0352, llm_grad_norm=0.0285, loss=0.0029, mem_enc_norm=0.0144, param_norm=1817.8750
+
+
+Step 20700: grad_norm=0.0414, llm_grad_norm=0.0323, loss=0.0031, mem_enc_norm=0.0201, param_norm=1817.9531
+
+
+Step 20800: grad_norm=0.0371, llm_grad_norm=0.0298, loss=0.0030, mem_enc_norm=0.0152, param_norm=1818.0312
+
+
+Step 20900: grad_norm=0.0371, llm_grad_norm=0.0296, loss=0.0030, mem_enc_norm=0.0161, param_norm=1818.1052
+
+
+Step 21000: grad_norm=0.0386, llm_grad_norm=0.0308, loss=0.0030, mem_enc_norm=0.0167, param_norm=1818.1851
+
+
+Step 21100: grad_norm=0.0367, llm_grad_norm=0.0292, loss=0.0029, mem_enc_norm=0.0150, param_norm=1818.2648
+
+
+Step 21200: grad_norm=0.0341, llm_grad_norm=0.0272, loss=0.0029, mem_enc_norm=0.0149, param_norm=1818.3417
+
+
+Step 21300: grad_norm=0.0364, llm_grad_norm=0.0295, loss=0.0030, mem_enc_norm=0.0146, param_norm=1818.4205
+
+
+Step 21400: grad_norm=0.0394, llm_grad_norm=0.0314, loss=0.0029, mem_enc_norm=0.0177, param_norm=1818.4990
+
+
+Step 21500: grad_norm=0.0375, llm_grad_norm=0.0294, loss=0.0030, mem_enc_norm=0.0176, param_norm=1818.5770
+
+
+Step 21600: grad_norm=0.0367, llm_grad_norm=0.0288, loss=0.0029, mem_enc_norm=0.0164, param_norm=1818.6559
+
+
+Step 21700: grad_norm=0.0342, llm_grad_norm=0.0266, loss=0.0027, mem_enc_norm=0.0159, param_norm=1818.7327
+
+
+Step 21800: grad_norm=0.0340, llm_grad_norm=0.0269, loss=0.0029, mem_enc_norm=0.0139, param_norm=1818.8112
+
+
+Step 21900: grad_norm=0.0408, llm_grad_norm=0.0318, loss=0.0030, mem_enc_norm=0.0192, param_norm=1818.8873
+
+
+Step 22000: grad_norm=0.0366, llm_grad_norm=0.0292, loss=0.0030, mem_enc_norm=0.0162, param_norm=1818.9684
+
+
+Step 22100: grad_norm=0.0330, llm_grad_norm=0.0265, loss=0.0029, mem_enc_norm=0.0134, param_norm=1819.0413
+
+
+Step 22200: grad_norm=0.0377, llm_grad_norm=0.0307, loss=0.0029, mem_enc_norm=0.0152, param_norm=1819.1163
+
+
+Step 22300: grad_norm=0.0369, llm_grad_norm=0.0293, loss=0.0030, mem_enc_norm=0.0160, param_norm=1819.1927
+
+
+Step 22400: grad_norm=0.0329, llm_grad_norm=0.0259, loss=0.0029, mem_enc_norm=0.0147, param_norm=1819.2689
+
+
+Step 22500: grad_norm=0.0337, llm_grad_norm=0.0274, loss=0.0028, mem_enc_norm=0.0129, param_norm=1819.3438
+
+
+Step 22600: grad_norm=0.0327, llm_grad_norm=0.0263, loss=0.0029, mem_enc_norm=0.0135, param_norm=1819.4224
+
+
+Step 22700: grad_norm=0.0451, llm_grad_norm=0.0358, loss=0.0030, mem_enc_norm=0.0209, param_norm=1819.5009
+
+
+Step 22800: grad_norm=0.0323, llm_grad_norm=0.0264, loss=0.0027, mem_enc_norm=0.0125, param_norm=1819.5762
+
+
+Step 22900: grad_norm=0.0383, llm_grad_norm=0.0300, loss=0.0028, mem_enc_norm=0.0181, param_norm=1819.6526
+
+
+Step 23000: grad_norm=0.0383, llm_grad_norm=0.0313, loss=0.0030, mem_enc_norm=0.0150, param_norm=1819.7307
+
+
+Step 23100: grad_norm=0.0338, llm_grad_norm=0.0272, loss=0.0028, mem_enc_norm=0.0138, param_norm=1819.8115
+
+
+Step 23200: grad_norm=0.0335, llm_grad_norm=0.0265, loss=0.0028, mem_enc_norm=0.0142, param_norm=1819.8864
+
+
+Step 23300: grad_norm=0.0339, llm_grad_norm=0.0277, loss=0.0027, mem_enc_norm=0.0133, param_norm=1819.9607
+
+
+Step 23400: grad_norm=0.0412, llm_grad_norm=0.0324, loss=0.0028, mem_enc_norm=0.0197, param_norm=1820.0370
+
+
+Step 23500: grad_norm=0.0351, llm_grad_norm=0.0277, loss=0.0028, mem_enc_norm=0.0157, param_norm=1820.1152
+
+
+Step 23600: grad_norm=0.0369, llm_grad_norm=0.0296, loss=0.0028, mem_enc_norm=0.0162, param_norm=1820.1925
+
+
+Step 23700: grad_norm=0.0361, llm_grad_norm=0.0290, loss=0.0028, mem_enc_norm=0.0154, param_norm=1820.2736
+
+
+Step 23800: grad_norm=0.0355, llm_grad_norm=0.0283, loss=0.0027, mem_enc_norm=0.0153, param_norm=1820.3511
+
+
+Step 23900: grad_norm=0.0383, llm_grad_norm=0.0304, loss=0.0028, mem_enc_norm=0.0173, param_norm=1820.4302
+
+
+Step 24000: grad_norm=0.0328, llm_grad_norm=0.0260, loss=0.0026, mem_enc_norm=0.0144, param_norm=1820.5079
+
+
+Step 24100: grad_norm=0.0365, llm_grad_norm=0.0295, loss=0.0028, mem_enc_norm=0.0152, param_norm=1820.5848
+
+
+Step 24200: grad_norm=0.0605, llm_grad_norm=0.0454, loss=0.0028, mem_enc_norm=0.0332, param_norm=1820.6680
+
+
+Step 24300: grad_norm=0.0345, llm_grad_norm=0.0272, loss=0.0027, mem_enc_norm=0.0157, param_norm=1820.7418
+
+
+Step 24400: grad_norm=0.0325, llm_grad_norm=0.0263, loss=0.0028, mem_enc_norm=0.0131, param_norm=1820.8170
+
+
+Step 24500: grad_norm=0.0369, llm_grad_norm=0.0298, loss=0.0028, mem_enc_norm=0.0149, param_norm=1820.8932
+
+
+Step 24600: grad_norm=0.0407, llm_grad_norm=0.0316, loss=0.0027, mem_enc_norm=0.0195, param_norm=1820.9731
+
+
+Step 24700: grad_norm=0.0392, llm_grad_norm=0.0308, loss=0.0027, mem_enc_norm=0.0174, param_norm=1821.0509
+
+
+Step 24800: grad_norm=0.0327, llm_grad_norm=0.0263, loss=0.0028, mem_enc_norm=0.0128, param_norm=1821.1251
+
+
+Step 24900: grad_norm=0.0321, llm_grad_norm=0.0259, loss=0.0027, mem_enc_norm=0.0124, param_norm=1821.2003
+
+
+Step 25000: grad_norm=0.0351, llm_grad_norm=0.0282, loss=0.0027, mem_enc_norm=0.0137, param_norm=1821.2773
+18:00:52.331 [I] [process=0][thread=MainThread][wait_until_finished] No Save Finalize thread to wait for. Returning. (1656655:checkpoint_manager.py:1987)
+18:00:52.332 [I] [process=0] Saving checkpoint at step 25000                                      (1656655:checkpoint_manager.py:1408)
+18:00:52.333 [I] [process=0] Started async saving checkpoint to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/25000. (1656655:async_checkpointer.py:439)
+18:00:52.345 [I] Transferring arrays to host memory with options: use_replica_parallel=True, enable_pinned_host_transfer=False (1656655:replica_slices.py:341)
+18:00:52.346 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/25000.orbax-checkpoint-tmp-12 (1656655:atomicity.py:144)
+18:00:52.351 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/25000.orbax-checkpoint-tmp-12/assets.orbax-checkpoint-tmp-13 (1656655:atomicity.py:144)
+18:00:52.351 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/25000.orbax-checkpoint-tmp-12/params.orbax-checkpoint-tmp-14 (1656655:atomicity.py:144)
+18:00:56.102 [I] [process=0] /jax/checkpoint/write/blocking_bytes_per_sec: 3.1 GiB/s (total bytes: 11.8 GiB) (time elapsed: 3 seconds) (per-host) (1656655:base_pytree_checkpoint_handler.py:114)
+18:00:56.110 [I] [process=0][thread=async_save] Background save thread started.                   (1656655:async_checkpointer.py:77)
+18:00:56.111 [I] Finished blocking save in 3.78 seconds. Continuing to save asynchronously to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/25000. (1656655:async_checkpointer.py:548)
+18:00:56.114 [I] Preserving Checkpoint[step=5000 | time=2026-11-16 07:03:47.652752+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+18:00:56.114 [I] Preserving Checkpoint[step=10000 | time=2026-11-16 09:48:05.002389+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+18:00:56.114 [I] Preserving Checkpoint[step=15000 | time=2026-11-16 12:32:21.610048+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+18:00:56.115 [I] Preserving Checkpoint[step=20000 | time=2026-11-16 15:16:39.393655+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+18:00:56.115 [I] [process=0][thread=MainThread][step=25000] Starting CheckpointManager Save Finalize thread=save_finalize (1656655:checkpoint_manager.py:1453)
+18:00:56.116 [I] [process=0][thread=save_finalize] Waiting for background save thread=async_save. (1656655:async_checkpointer.py:258)
+18:00:56.116 [I] {'step': 25000, 'event_type': 'save', 'directory': '/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k', 'reached_preemption': False, 'preemption_received_at': None, 'synchronous': False, 'wait_for_prev_start_time': 1794852052.331763, 'wait_for_prev_duration_secs': 0.00026726722717285156, 'checkpointer_blocking_start_time': 1794852052.3325465, 'checkpointer_blocking_duration_secs': 3.7815299034118652, 'get_old_steps_start_time': 1794852056.1141026, 'get_old_steps_duration_secs': 0.0014672279357910156, 'checkpoint_manager_blocking_start_time': 1794852052.3314476, 'checkpoint_manager_blocking_duration_secs': 3.785252094268799} (1656655:standard_logger.py:34)
+18:00:56.147 [I] [process=0][thread=array_type_handler] Wrote 59 array_metadata.ArrayMetadata to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/25000.orbax-checkpoint-tmp-12/params.orbax-checkpoint-tmp-14/array_metadatas/process_0 (1656655:array_metadata_store.py:198)
+18:00:59.194 [I] [process=0] /jax/checkpoint/write/bytes_per_sec: 1.7 GiB/s (total bytes: 11.8 GiB) (time elapsed: 6 seconds) (per-host) (1656655:base_pytree_checkpoint_handler.py:114)
+18:00:59.195 [I] [process=0][thread=async_save] 4 Handler Commit operations completed.            (1656655:async_checkpointer.py:87)
+18:00:59.195 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/25000.orbax-checkpoint-tmp-12/assets.orbax-checkpoint-tmp-13 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/25000.orbax-checkpoint-tmp-12/assets (1656655:atomicity.py:289)
+18:00:59.197 [I] [process=0][thread=async_save] Skipped cross-host ArrayMetadata validation because only one process is found: process_index=0. (1656655:array_metadata_store.py:362)
+18:00:59.202 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/25000.orbax-checkpoint-tmp-12/params.orbax-checkpoint-tmp-14 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/25000.orbax-checkpoint-tmp-12/params (1656655:atomicity.py:289)
+18:00:59.203 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/25000.orbax-checkpoint-tmp-12 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/25000 (1656655:atomicity.py:289)
+18:00:59.203 [I] [process=0][thread=async_save] Finished saving checkpoint (finalized tmp dir) to `/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/25000`. (1656655:atomicity.py:573)
+18:00:59.203 [I] Finished asynchronous save (blocking + background) in 6.87 seconds to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/25000 (1656655:async_checkpointer.py:412)
+18:00:59.203 [I] [process=0][thread=async_save] Background save thread done.                      (1656655:async_checkpointer.py:143)
+18:00:59.204 [I] [process=0][thread=save_finalize] Done with waiting for background save thread=async_save. (1656655:async_checkpointer.py:266)
+18:00:59.204 [I] [process=0][thread=save_finalize] No errors found in background save thread=async_save. (1656655:async_checkpointer.py:276)
+18:00:59.204 [I] [process=0][thread=save_finalize][step=25000] CheckpointManager Save Finalize is syncing with other hosts... (1656655:checkpoint_manager.py:2095)
+18:00:59.204 [I] [process=0][thread=save_finalize][step=25000] CheckpointManager Save Finalize is done on all hosts. (1656655:checkpoint_manager.py:2110)
+
+
+Step 25100: grad_norm=0.0307, llm_grad_norm=0.0248, loss=0.0027, mem_enc_norm=0.0122, param_norm=1821.3535
+
+
+Step 25200: grad_norm=0.0306, llm_grad_norm=0.0248, loss=0.0026, mem_enc_norm=0.0109, param_norm=1821.4270
+
+
+Step 25300: grad_norm=0.0356, llm_grad_norm=0.0290, loss=0.0028, mem_enc_norm=0.0124, param_norm=1821.5026
+
+
+Step 25400: grad_norm=0.0347, llm_grad_norm=0.0278, loss=0.0027, mem_enc_norm=0.0145, param_norm=1821.5789
+
+
+Step 25500: grad_norm=0.0342, llm_grad_norm=0.0273, loss=0.0027, mem_enc_norm=0.0141, param_norm=1821.6520
+
+
+Step 25600: grad_norm=0.0361, llm_grad_norm=0.0294, loss=0.0027, mem_enc_norm=0.0138, param_norm=1821.7288
+
+
+Step 25700: grad_norm=0.0304, llm_grad_norm=0.0247, loss=0.0026, mem_enc_norm=0.0120, param_norm=1821.8049
+
+
+Step 25800: grad_norm=0.0322, llm_grad_norm=0.0256, loss=0.0026, mem_enc_norm=0.0129, param_norm=1821.8783
+
+
+Step 25900: grad_norm=0.0332, llm_grad_norm=0.0260, loss=0.0026, mem_enc_norm=0.0147, param_norm=1821.9534
+
+
+Step 26000: grad_norm=0.0345, llm_grad_norm=0.0284, loss=0.0028, mem_enc_norm=0.0126, param_norm=1822.0273
+
+
+Step 26100: grad_norm=0.0307, llm_grad_norm=0.0245, loss=0.0026, mem_enc_norm=0.0125, param_norm=1822.1072
+
+
+Step 26200: grad_norm=0.0316, llm_grad_norm=0.0257, loss=0.0027, mem_enc_norm=0.0115, param_norm=1822.1808
+
+
+Step 26300: grad_norm=0.0306, llm_grad_norm=0.0251, loss=0.0026, mem_enc_norm=0.0107, param_norm=1822.2559
+
+
+Step 26400: grad_norm=0.0314, llm_grad_norm=0.0260, loss=0.0026, mem_enc_norm=0.0106, param_norm=1822.3314
+
+
+Step 26500: grad_norm=0.0310, llm_grad_norm=0.0255, loss=0.0026, mem_enc_norm=0.0112, param_norm=1822.4065
+
+
+Step 26600: grad_norm=0.0358, llm_grad_norm=0.0281, loss=0.0026, mem_enc_norm=0.0161, param_norm=1822.4835
+
+
+Step 26700: grad_norm=0.0342, llm_grad_norm=0.0273, loss=0.0025, mem_enc_norm=0.0137, param_norm=1822.5560
+
+
+Step 26800: grad_norm=0.0367, llm_grad_norm=0.0292, loss=0.0027, mem_enc_norm=0.0156, param_norm=1822.6306
+
+
+Step 26900: grad_norm=0.0332, llm_grad_norm=0.0272, loss=0.0026, mem_enc_norm=0.0128, param_norm=1822.7090
+
+
+Step 27000: grad_norm=0.0346, llm_grad_norm=0.0274, loss=0.0027, mem_enc_norm=0.0141, param_norm=1822.7841
+
+
+Step 27100: grad_norm=0.0359, llm_grad_norm=0.0281, loss=0.0026, mem_enc_norm=0.0169, param_norm=1822.8599
+
+
+Step 27200: grad_norm=0.0359, llm_grad_norm=0.0289, loss=0.0027, mem_enc_norm=0.0147, param_norm=1822.9351
+
+
+Step 27300: grad_norm=0.0341, llm_grad_norm=0.0276, loss=0.0026, mem_enc_norm=0.0134, param_norm=1823.0100
+
+
+Step 27400: grad_norm=0.0328, llm_grad_norm=0.0265, loss=0.0025, mem_enc_norm=0.0132, param_norm=1823.0878
+
+
+Step 27500: grad_norm=0.0279, llm_grad_norm=0.0227, loss=0.0026, mem_enc_norm=0.0098, param_norm=1823.1655
+
+
+Step 27600: grad_norm=0.0322, llm_grad_norm=0.0257, loss=0.0025, mem_enc_norm=0.0134, param_norm=1823.2385
+
+
+Step 27700: grad_norm=0.0329, llm_grad_norm=0.0266, loss=0.0027, mem_enc_norm=0.0134, param_norm=1823.3119
+
+
+Step 27800: grad_norm=0.0324, llm_grad_norm=0.0267, loss=0.0025, mem_enc_norm=0.0121, param_norm=1823.3815
+
+
+Step 27900: grad_norm=0.0305, llm_grad_norm=0.0250, loss=0.0026, mem_enc_norm=0.0104, param_norm=1823.4545
+
+
+Step 28000: grad_norm=0.0327, llm_grad_norm=0.0265, loss=0.0025, mem_enc_norm=0.0126, param_norm=1823.5281
+
+
+Step 28100: grad_norm=0.0327, llm_grad_norm=0.0268, loss=0.0026, mem_enc_norm=0.0125, param_norm=1823.6035
+
+
+Step 28200: grad_norm=0.0356, llm_grad_norm=0.0289, loss=0.0026, mem_enc_norm=0.0134, param_norm=1823.6808
+
+
+Step 28300: grad_norm=0.0339, llm_grad_norm=0.0275, loss=0.0024, mem_enc_norm=0.0135, param_norm=1823.7534
+
+
+Step 28400: grad_norm=0.0322, llm_grad_norm=0.0261, loss=0.0026, mem_enc_norm=0.0124, param_norm=1823.8314
+
+
+Step 28500: grad_norm=0.0312, llm_grad_norm=0.0254, loss=0.0024, mem_enc_norm=0.0116, param_norm=1823.9084
+
+
+Step 28600: grad_norm=0.0298, llm_grad_norm=0.0245, loss=0.0026, mem_enc_norm=0.0109, param_norm=1823.9816
+
+
+Step 28700: grad_norm=0.0330, llm_grad_norm=0.0270, loss=0.0025, mem_enc_norm=0.0114, param_norm=1824.0577
+
+
+Step 28800: grad_norm=0.0314, llm_grad_norm=0.0256, loss=0.0025, mem_enc_norm=0.0114, param_norm=1824.1323
+
+
+Step 28900: grad_norm=0.0326, llm_grad_norm=0.0264, loss=0.0024, mem_enc_norm=0.0129, param_norm=1824.2070
+
+
+Step 29000: grad_norm=0.0321, llm_grad_norm=0.0261, loss=0.0025, mem_enc_norm=0.0120, param_norm=1824.2814
+
+
+Step 29100: grad_norm=0.0302, llm_grad_norm=0.0250, loss=0.0025, mem_enc_norm=0.0105, param_norm=1824.3572
+
+
+Step 29200: grad_norm=0.0344, llm_grad_norm=0.0280, loss=0.0025, mem_enc_norm=0.0133, param_norm=1824.4332
+
+
+Step 29300: grad_norm=0.0633, llm_grad_norm=0.0503, loss=0.0026, mem_enc_norm=0.0315, param_norm=1824.5079
+
+
+Step 29400: grad_norm=0.0279, llm_grad_norm=0.0226, loss=0.0024, mem_enc_norm=0.0096, param_norm=1824.5812
+
+
+Step 29500: grad_norm=0.0322, llm_grad_norm=0.0268, loss=0.0024, mem_enc_norm=0.0113, param_norm=1824.6543
+
+
+Step 29600: grad_norm=0.0337, llm_grad_norm=0.0276, loss=0.0024, mem_enc_norm=0.0131, param_norm=1824.7285
+
+
+Step 29700: grad_norm=0.0325, llm_grad_norm=0.0266, loss=0.0024, mem_enc_norm=0.0120, param_norm=1824.7983
+
+
+Step 29800: grad_norm=0.0317, llm_grad_norm=0.0264, loss=0.0025, mem_enc_norm=0.0103, param_norm=1824.8695
+
+
+Step 29900: grad_norm=0.0287, llm_grad_norm=0.0228, loss=0.0023, mem_enc_norm=0.0111, param_norm=1824.9432
+
+
+Step 30000: grad_norm=0.0284, llm_grad_norm=0.0235, loss=0.0024, mem_enc_norm=0.0097, param_norm=1825.0161
+20:45:09.039 [I] [process=0][thread=MainThread][wait_until_finished] No Save Finalize thread to wait for. Returning. (1656655:checkpoint_manager.py:1987)
+20:45:09.039 [I] [process=0] Saving checkpoint at step 30000                                      (1656655:checkpoint_manager.py:1408)
+20:45:09.040 [I] [process=0] Started async saving checkpoint to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/30000. (1656655:async_checkpointer.py:439)
+20:45:09.053 [I] Transferring arrays to host memory with options: use_replica_parallel=True, enable_pinned_host_transfer=False (1656655:replica_slices.py:341)
+20:45:09.055 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/30000.orbax-checkpoint-tmp-15 (1656655:atomicity.py:144)
+20:45:09.058 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/30000.orbax-checkpoint-tmp-15/assets.orbax-checkpoint-tmp-16 (1656655:atomicity.py:144)
+20:45:09.058 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/30000.orbax-checkpoint-tmp-15/params.orbax-checkpoint-tmp-17 (1656655:atomicity.py:144)
+20:45:12.904 [I] [process=0] /jax/checkpoint/write/blocking_bytes_per_sec: 3.0 GiB/s (total bytes: 11.8 GiB) (time elapsed: 3 seconds) (per-host) (1656655:base_pytree_checkpoint_handler.py:114)
+20:45:12.912 [I] [process=0][thread=async_save] Background save thread started.                   (1656655:async_checkpointer.py:77)
+20:45:12.913 [I] Finished blocking save in 3.87 seconds. Continuing to save asynchronously to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/30000. (1656655:async_checkpointer.py:548)
+20:45:12.913 [I] Preserving Checkpoint[step=5000 | time=2026-11-16 07:03:47.652752+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+20:45:12.914 [I] Preserving Checkpoint[step=10000 | time=2026-11-16 09:48:05.002389+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+20:45:12.914 [I] Preserving Checkpoint[step=15000 | time=2026-11-16 12:32:21.610048+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+20:45:12.914 [I] Preserving Checkpoint[step=20000 | time=2026-11-16 15:16:39.393655+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+20:45:12.914 [I] Preserving Checkpoint[step=25000 | time=2026-11-16 18:00:56.114083+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+20:45:12.915 [I] [process=0][thread=MainThread][step=30000] Starting CheckpointManager Save Finalize thread=save_finalize (1656655:checkpoint_manager.py:1453)
+20:45:12.916 [I] [process=0][thread=save_finalize] Waiting for background save thread=async_save. (1656655:async_checkpointer.py:258)
+20:45:12.916 [I] {'step': 30000, 'event_type': 'save', 'directory': '/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k', 'reached_preemption': False, 'preemption_received_at': None, 'synchronous': False, 'wait_for_prev_start_time': 1794861909.0394814, 'wait_for_prev_duration_secs': 0.0002467632293701172, 'checkpointer_blocking_start_time': 1794861909.0400813, 'checkpointer_blocking_duration_secs': 3.8737239837646484, 'get_old_steps_start_time': 1794861912.913821, 'get_old_steps_duration_secs': 0.001132965087890625, 'checkpoint_manager_blocking_start_time': 1794861909.0393577, 'checkpoint_manager_blocking_duration_secs': 3.877243757247925} (1656655:standard_logger.py:34)
+20:45:12.953 [I] [process=0][thread=array_type_handler] Wrote 59 array_metadata.ArrayMetadata to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/30000.orbax-checkpoint-tmp-15/params.orbax-checkpoint-tmp-17/array_metadatas/process_0 (1656655:array_metadata_store.py:198)
+20:45:16.065 [I] [process=0] /jax/checkpoint/write/bytes_per_sec: 1.7 GiB/s (total bytes: 11.8 GiB) (time elapsed: 7 seconds) (per-host) (1656655:base_pytree_checkpoint_handler.py:114)
+20:45:16.066 [I] [process=0][thread=async_save] 4 Handler Commit operations completed.            (1656655:async_checkpointer.py:87)
+20:45:16.066 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/30000.orbax-checkpoint-tmp-15/assets.orbax-checkpoint-tmp-16 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/30000.orbax-checkpoint-tmp-15/assets (1656655:atomicity.py:289)
+20:45:16.069 [I] [process=0][thread=async_save] Skipped cross-host ArrayMetadata validation because only one process is found: process_index=0. (1656655:array_metadata_store.py:362)
+20:45:16.076 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/30000.orbax-checkpoint-tmp-15/params.orbax-checkpoint-tmp-17 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/30000.orbax-checkpoint-tmp-15/params (1656655:atomicity.py:289)
+20:45:16.076 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/30000.orbax-checkpoint-tmp-15 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/30000 (1656655:atomicity.py:289)
+20:45:16.077 [I] [process=0][thread=async_save] Finished saving checkpoint (finalized tmp dir) to `/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/30000`. (1656655:atomicity.py:573)
+20:45:16.077 [I] Finished asynchronous save (blocking + background) in 7.04 seconds to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/30000 (1656655:async_checkpointer.py:412)
+20:45:16.077 [I] [process=0][thread=async_save] Background save thread done.                      (1656655:async_checkpointer.py:143)
+20:45:16.078 [I] [process=0][thread=save_finalize] Done with waiting for background save thread=async_save. (1656655:async_checkpointer.py:266)
+20:45:16.078 [I] [process=0][thread=save_finalize] No errors found in background save thread=async_save. (1656655:async_checkpointer.py:276)
+20:45:16.078 [I] [process=0][thread=save_finalize][step=30000] CheckpointManager Save Finalize is syncing with other hosts... (1656655:checkpoint_manager.py:2095)
+20:45:16.078 [I] [process=0][thread=save_finalize][step=30000] CheckpointManager Save Finalize is done on all hosts. (1656655:checkpoint_manager.py:2110)
+
+
+Step 30100: grad_norm=0.0287, llm_grad_norm=0.0233, loss=0.0024, mem_enc_norm=0.0102, param_norm=1825.0905
+
+
+Step 30200: grad_norm=0.0316, llm_grad_norm=0.0258, loss=0.0025, mem_enc_norm=0.0106, param_norm=1825.1636
+
+
+Step 30300: grad_norm=0.0292, llm_grad_norm=0.0242, loss=0.0024, mem_enc_norm=0.0100, param_norm=1825.2362
+
+
+Step 30400: grad_norm=0.0308, llm_grad_norm=0.0253, loss=0.0025, mem_enc_norm=0.0106, param_norm=1825.3136
+
+
+Step 30500: grad_norm=0.0350, llm_grad_norm=0.0281, loss=0.0025, mem_enc_norm=0.0144, param_norm=1825.3862
+
+
+Step 30600: grad_norm=0.0282, llm_grad_norm=0.0230, loss=0.0023, mem_enc_norm=0.0099, param_norm=1825.4585
+
+
+Step 30700: grad_norm=0.0301, llm_grad_norm=0.0248, loss=0.0025, mem_enc_norm=0.0099, param_norm=1825.5310
+
+
+Step 30800: grad_norm=0.0335, llm_grad_norm=0.0270, loss=0.0024, mem_enc_norm=0.0130, param_norm=1825.6088
+
+
+Step 30900: grad_norm=0.0334, llm_grad_norm=0.0272, loss=0.0024, mem_enc_norm=0.0123, param_norm=1825.6837
+
+
+Step 31000: grad_norm=0.0297, llm_grad_norm=0.0245, loss=0.0024, mem_enc_norm=0.0100, param_norm=1825.7585
+
+
+Step 31100: grad_norm=0.0305, llm_grad_norm=0.0254, loss=0.0024, mem_enc_norm=0.0104, param_norm=1825.8318
+
+
+Step 31200: grad_norm=0.0308, llm_grad_norm=0.0252, loss=0.0023, mem_enc_norm=0.0110, param_norm=1825.9036
+
+
+Step 31300: grad_norm=0.0323, llm_grad_norm=0.0269, loss=0.0025, mem_enc_norm=0.0093, param_norm=1825.9790
+
+
+Step 31400: grad_norm=0.0287, llm_grad_norm=0.0234, loss=0.0023, mem_enc_norm=0.0110, param_norm=1826.0525
+
+
+Step 31500: grad_norm=0.0336, llm_grad_norm=0.0281, loss=0.0024, mem_enc_norm=0.0114, param_norm=1826.1290
+
+
+Step 31600: grad_norm=0.0301, llm_grad_norm=0.0252, loss=0.0024, mem_enc_norm=0.0095, param_norm=1826.2021
+
+
+Step 31700: grad_norm=0.0373, llm_grad_norm=0.0298, loss=0.0024, mem_enc_norm=0.0158, param_norm=1826.2728
+
+
+Step 31800: grad_norm=0.0289, llm_grad_norm=0.0241, loss=0.0023, mem_enc_norm=0.0091, param_norm=1826.3444
+
+
+Step 31900: grad_norm=0.0279, llm_grad_norm=0.0230, loss=0.0022, mem_enc_norm=0.0094, param_norm=1826.4155
+
+
+Step 32000: grad_norm=0.0307, llm_grad_norm=0.0253, loss=0.0024, mem_enc_norm=0.0106, param_norm=1826.4868
+
+
+Step 32100: grad_norm=0.0318, llm_grad_norm=0.0265, loss=0.0023, mem_enc_norm=0.0102, param_norm=1826.5651
+
+
+Step 32200: grad_norm=0.0289, llm_grad_norm=0.0232, loss=0.0024, mem_enc_norm=0.0102, param_norm=1826.6353
+
+
+Step 32300: grad_norm=0.0289, llm_grad_norm=0.0240, loss=0.0024, mem_enc_norm=0.0088, param_norm=1826.7068
+
+
+Step 32400: grad_norm=0.0288, llm_grad_norm=0.0242, loss=0.0023, mem_enc_norm=0.0085, param_norm=1826.7815
+
+
+Step 32500: grad_norm=0.0312, llm_grad_norm=0.0260, loss=0.0025, mem_enc_norm=0.0086, param_norm=1826.8534
+
+
+Step 32600: grad_norm=0.0320, llm_grad_norm=0.0266, loss=0.0024, mem_enc_norm=0.0114, param_norm=1826.9314
+
+
+Step 32700: grad_norm=0.0298, llm_grad_norm=0.0236, loss=0.0022, mem_enc_norm=0.0119, param_norm=1827.0051
+
+
+Step 32800: grad_norm=0.0311, llm_grad_norm=0.0255, loss=0.0024, mem_enc_norm=0.0095, param_norm=1827.0742
+
+
+Step 32900: grad_norm=0.0270, llm_grad_norm=0.0224, loss=0.0023, mem_enc_norm=0.0077, param_norm=1827.1445
+
+
+Step 33000: grad_norm=0.0309, llm_grad_norm=0.0259, loss=0.0023, mem_enc_norm=0.0090, param_norm=1827.2198
+
+
+Step 33100: grad_norm=0.0284, llm_grad_norm=0.0236, loss=0.0023, mem_enc_norm=0.0094, param_norm=1827.2948
+
+
+Step 33200: grad_norm=0.0316, llm_grad_norm=0.0261, loss=0.0023, mem_enc_norm=0.0109, param_norm=1827.3657
+
+
+Step 33300: grad_norm=0.0299, llm_grad_norm=0.0250, loss=0.0022, mem_enc_norm=0.0097, param_norm=1827.4370
+
+
+Step 33400: grad_norm=0.0307, llm_grad_norm=0.0252, loss=0.0022, mem_enc_norm=0.0108, param_norm=1827.5104
+
+
+Step 33500: grad_norm=0.0296, llm_grad_norm=0.0240, loss=0.0022, mem_enc_norm=0.0110, param_norm=1827.5842
+
+
+Step 33600: grad_norm=0.0276, llm_grad_norm=0.0227, loss=0.0022, mem_enc_norm=0.0095, param_norm=1827.6537
+
+
+Step 33700: grad_norm=0.0270, llm_grad_norm=0.0222, loss=0.0023, mem_enc_norm=0.0084, param_norm=1827.7256
+
+
+Step 33800: grad_norm=0.0307, llm_grad_norm=0.0251, loss=0.0022, mem_enc_norm=0.0119, param_norm=1827.7993
+
+
+Step 33900: grad_norm=0.0299, llm_grad_norm=0.0245, loss=0.0022, mem_enc_norm=0.0105, param_norm=1827.8724
+
+
+Step 34000: grad_norm=0.0310, llm_grad_norm=0.0252, loss=0.0023, mem_enc_norm=0.0118, param_norm=1827.9440
+
+
+Step 34100: grad_norm=0.0305, llm_grad_norm=0.0251, loss=0.0023, mem_enc_norm=0.0099, param_norm=1828.0154
+
+
+Step 34200: grad_norm=0.0319, llm_grad_norm=0.0253, loss=0.0023, mem_enc_norm=0.0130, param_norm=1828.0884
+
+
+Step 34300: grad_norm=0.0272, llm_grad_norm=0.0220, loss=0.0022, mem_enc_norm=0.0101, param_norm=1828.1593
+
+
+Step 34400: grad_norm=0.0318, llm_grad_norm=0.0262, loss=0.0024, mem_enc_norm=0.0107, param_norm=1828.2333
+
+
+Step 34500: grad_norm=0.0289, llm_grad_norm=0.0241, loss=0.0022, mem_enc_norm=0.0093, param_norm=1828.3069
+
+
+Step 34600: grad_norm=0.0312, llm_grad_norm=0.0254, loss=0.0023, mem_enc_norm=0.0116, param_norm=1828.3802
+
+
+Step 34700: grad_norm=0.0291, llm_grad_norm=0.0241, loss=0.0022, mem_enc_norm=0.0096, param_norm=1828.4540
+
+
+Step 34800: grad_norm=0.0298, llm_grad_norm=0.0246, loss=0.0023, mem_enc_norm=0.0098, param_norm=1828.5234
+
+
+Step 34900: grad_norm=0.0265, llm_grad_norm=0.0217, loss=0.0022, mem_enc_norm=0.0085, param_norm=1828.5957
+
+
+Step 35000: grad_norm=0.0297, llm_grad_norm=0.0246, loss=0.0023, mem_enc_norm=0.0096, param_norm=1828.6676
+23:29:29.003 [I] [process=0][thread=MainThread][wait_until_finished] No Save Finalize thread to wait for. Returning. (1656655:checkpoint_manager.py:1987)
+23:29:29.003 [I] [process=0] Saving checkpoint at step 35000                                      (1656655:checkpoint_manager.py:1408)
+23:29:29.004 [I] [process=0] Started async saving checkpoint to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/35000. (1656655:async_checkpointer.py:439)
+23:29:29.016 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/35000.orbax-checkpoint-tmp-18 (1656655:atomicity.py:144)
+23:29:29.017 [I] Transferring arrays to host memory with options: use_replica_parallel=True, enable_pinned_host_transfer=False (1656655:replica_slices.py:341)
+23:29:29.022 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/35000.orbax-checkpoint-tmp-18/assets.orbax-checkpoint-tmp-19 (1656655:atomicity.py:144)
+23:29:29.023 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/35000.orbax-checkpoint-tmp-18/params.orbax-checkpoint-tmp-20 (1656655:atomicity.py:144)
+23:29:32.124 [I] [process=0] /jax/checkpoint/write/blocking_bytes_per_sec: 3.8 GiB/s (total bytes: 11.8 GiB) (time elapsed: 3 seconds) (per-host) (1656655:base_pytree_checkpoint_handler.py:114)
+23:29:32.131 [I] [process=0][thread=async_save] Background save thread started.                   (1656655:async_checkpointer.py:77)
+23:29:32.131 [I] Finished blocking save in 3.13 seconds. Continuing to save asynchronously to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/35000. (1656655:async_checkpointer.py:548)
+23:29:32.132 [I] Preserving Checkpoint[step=5000 | time=2026-11-16 07:03:47.652752+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+23:29:32.132 [I] Preserving Checkpoint[step=10000 | time=2026-11-16 09:48:05.002389+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+23:29:32.132 [I] Preserving Checkpoint[step=15000 | time=2026-11-16 12:32:21.610048+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+23:29:32.132 [I] Preserving Checkpoint[step=20000 | time=2026-11-16 15:16:39.393655+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+23:29:32.133 [I] Preserving Checkpoint[step=25000 | time=2026-11-16 18:00:56.114083+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+23:29:32.133 [I] Preserving Checkpoint[step=30000 | time=2026-11-16 20:45:12.913810+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+23:29:32.133 [I] [process=0][thread=MainThread][step=35000] Starting CheckpointManager Save Finalize thread=save_finalize (1656655:checkpoint_manager.py:1453)
+23:29:32.134 [I] [process=0][thread=save_finalize] Waiting for background save thread=async_save. (1656655:async_checkpointer.py:258)
+23:29:32.134 [I] {'step': 35000, 'event_type': 'save', 'directory': '/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k', 'reached_preemption': False, 'preemption_received_at': None, 'synchronous': False, 'wait_for_prev_start_time': 1794871769.0030649, 'wait_for_prev_duration_secs': 0.0002536773681640625, 'checkpointer_blocking_start_time': 1794871769.0038388, 'checkpointer_blocking_duration_secs': 3.1283135414123535, 'get_old_steps_start_time': 1794871772.1321683, 'get_old_steps_duration_secs': 0.0014488697052001953, 'checkpoint_manager_blocking_start_time': 1794871769.0027509, 'checkpoint_manager_blocking_duration_secs': 3.1317849159240723} (1656655:standard_logger.py:34)
+23:29:32.170 [I] [process=0][thread=array_type_handler] Wrote 59 array_metadata.ArrayMetadata to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/35000.orbax-checkpoint-tmp-18/params.orbax-checkpoint-tmp-20/array_metadatas/process_0 (1656655:array_metadata_store.py:198)
+23:29:35.579 [I] [process=0] /jax/checkpoint/write/bytes_per_sec: 1.8 GiB/s (total bytes: 11.8 GiB) (time elapsed: 6 seconds) (per-host) (1656655:base_pytree_checkpoint_handler.py:114)
+23:29:35.579 [I] [process=0][thread=async_save] 4 Handler Commit operations completed.            (1656655:async_checkpointer.py:87)
+23:29:35.580 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/35000.orbax-checkpoint-tmp-18/assets.orbax-checkpoint-tmp-19 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/35000.orbax-checkpoint-tmp-18/assets (1656655:atomicity.py:289)
+23:29:36.169 [I] [process=0][thread=async_save] Skipped cross-host ArrayMetadata validation because only one process is found: process_index=0. (1656655:array_metadata_store.py:362)
+23:29:36.175 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/35000.orbax-checkpoint-tmp-18/params.orbax-checkpoint-tmp-20 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/35000.orbax-checkpoint-tmp-18/params (1656655:atomicity.py:289)
+23:29:36.176 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/35000.orbax-checkpoint-tmp-18 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/35000 (1656655:atomicity.py:289)
+23:29:36.176 [I] [process=0][thread=async_save] Finished saving checkpoint (finalized tmp dir) to `/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/35000`. (1656655:atomicity.py:573)
+23:29:36.176 [I] Finished asynchronous save (blocking + background) in 7.17 seconds to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/35000 (1656655:async_checkpointer.py:412)
+23:29:36.176 [I] [process=0][thread=async_save] Background save thread done.                      (1656655:async_checkpointer.py:143)
+23:29:36.177 [I] [process=0][thread=save_finalize] Done with waiting for background save thread=async_save. (1656655:async_checkpointer.py:266)
+23:29:36.177 [I] [process=0][thread=save_finalize] No errors found in background save thread=async_save. (1656655:async_checkpointer.py:276)
+23:29:36.177 [I] [process=0][thread=save_finalize][step=35000] CheckpointManager Save Finalize is syncing with other hosts... (1656655:checkpoint_manager.py:2095)
+23:29:36.177 [I] [process=0][thread=save_finalize][step=35000] CheckpointManager Save Finalize is done on all hosts. (1656655:checkpoint_manager.py:2110)
+
+
+Step 35100: grad_norm=0.0295, llm_grad_norm=0.0242, loss=0.0023, mem_enc_norm=0.0107, param_norm=1828.7435
+
+
+Step 35200: grad_norm=0.0329, llm_grad_norm=0.0270, loss=0.0022, mem_enc_norm=0.0117, param_norm=1828.8201
+
+
+Step 35300: grad_norm=0.0280, llm_grad_norm=0.0232, loss=0.0023, mem_enc_norm=0.0095, param_norm=1828.8890
+
+
+Step 35400: grad_norm=0.0301, llm_grad_norm=0.0248, loss=0.0023, mem_enc_norm=0.0105, param_norm=1828.9650
+
+
+Step 35500: grad_norm=0.0269, llm_grad_norm=0.0222, loss=0.0022, mem_enc_norm=0.0080, param_norm=1829.0354
+
+
+Step 35600: grad_norm=0.0270, llm_grad_norm=0.0226, loss=0.0023, mem_enc_norm=0.0076, param_norm=1829.1038
+
+
+Step 35700: grad_norm=0.0275, llm_grad_norm=0.0224, loss=0.0022, mem_enc_norm=0.0097, param_norm=1829.1769
+
+
+Step 35800: grad_norm=0.0281, llm_grad_norm=0.0230, loss=0.0022, mem_enc_norm=0.0099, param_norm=1829.2522
+
+
+Step 35900: grad_norm=0.0284, llm_grad_norm=0.0236, loss=0.0023, mem_enc_norm=0.0093, param_norm=1829.3243
+
+
+Step 36000: grad_norm=0.0288, llm_grad_norm=0.0237, loss=0.0022, mem_enc_norm=0.0087, param_norm=1829.3953
+
+
+Step 36100: grad_norm=0.0338, llm_grad_norm=0.0272, loss=0.0023, mem_enc_norm=0.0128, param_norm=1829.4679
+
+
+Step 36200: grad_norm=0.0344, llm_grad_norm=0.0282, loss=0.0023, mem_enc_norm=0.0124, param_norm=1829.5455
+
+
+Step 36300: grad_norm=0.0323, llm_grad_norm=0.0269, loss=0.0021, mem_enc_norm=0.0106, param_norm=1829.6152
+
+
+Step 36400: grad_norm=0.0254, llm_grad_norm=0.0207, loss=0.0022, mem_enc_norm=0.0090, param_norm=1829.6865
+
+
+Step 36500: grad_norm=0.0288, llm_grad_norm=0.0234, loss=0.0022, mem_enc_norm=0.0102, param_norm=1829.7540
+
+
+Step 36600: grad_norm=0.0296, llm_grad_norm=0.0244, loss=0.0023, mem_enc_norm=0.0091, param_norm=1829.8225
+
+
+Step 36700: grad_norm=0.0326, llm_grad_norm=0.0270, loss=0.0022, mem_enc_norm=0.0110, param_norm=1829.8959
+
+
+Step 36800: grad_norm=0.0280, llm_grad_norm=0.0232, loss=0.0021, mem_enc_norm=0.0088, param_norm=1829.9681
+
+
+Step 36900: grad_norm=0.0292, llm_grad_norm=0.0240, loss=0.0022, mem_enc_norm=0.0099, param_norm=1830.0408
+
+
+Step 37000: grad_norm=0.0295, llm_grad_norm=0.0248, loss=0.0022, mem_enc_norm=0.0086, param_norm=1830.1147
+
+
+Step 37100: grad_norm=0.0289, llm_grad_norm=0.0240, loss=0.0022, mem_enc_norm=0.0084, param_norm=1830.1865
+
+
+Step 37200: grad_norm=0.0287, llm_grad_norm=0.0239, loss=0.0023, mem_enc_norm=0.0085, param_norm=1830.2579
+
+
+Step 37300: grad_norm=0.0274, llm_grad_norm=0.0229, loss=0.0021, mem_enc_norm=0.0087, param_norm=1830.3303
+
+
+Step 37400: grad_norm=0.0306, llm_grad_norm=0.0251, loss=0.0022, mem_enc_norm=0.0105, param_norm=1830.4028
+
+
+Step 37500: grad_norm=0.0296, llm_grad_norm=0.0246, loss=0.0022, mem_enc_norm=0.0098, param_norm=1830.4750
+
+
+Step 37600: grad_norm=0.0274, llm_grad_norm=0.0223, loss=0.0022, mem_enc_norm=0.0089, param_norm=1830.5458
+
+
+Step 37700: grad_norm=0.0278, llm_grad_norm=0.0229, loss=0.0022, mem_enc_norm=0.0089, param_norm=1830.6194
+
+
+Step 37800: grad_norm=0.0287, llm_grad_norm=0.0242, loss=0.0022, mem_enc_norm=0.0073, param_norm=1830.6919
+
+
+Step 37900: grad_norm=0.0289, llm_grad_norm=0.0238, loss=0.0022, mem_enc_norm=0.0092, param_norm=1830.7603
+
+
+Step 38000: grad_norm=0.0283, llm_grad_norm=0.0238, loss=0.0021, mem_enc_norm=0.0074, param_norm=1830.8340
+
+
+Step 38100: grad_norm=0.0308, llm_grad_norm=0.0261, loss=0.0021, mem_enc_norm=0.0082, param_norm=1830.9049
+
+
+Step 38200: grad_norm=0.0266, llm_grad_norm=0.0218, loss=0.0021, mem_enc_norm=0.0090, param_norm=1830.9750
+
+
+Step 38300: grad_norm=0.0302, llm_grad_norm=0.0241, loss=0.0021, mem_enc_norm=0.0111, param_norm=1831.0449
+
+
+Step 38400: grad_norm=0.0273, llm_grad_norm=0.0228, loss=0.0021, mem_enc_norm=0.0082, param_norm=1831.1150
+
+
+Step 38500: grad_norm=0.0250, llm_grad_norm=0.0207, loss=0.0020, mem_enc_norm=0.0075, param_norm=1831.1862
+
+
+Step 38600: grad_norm=0.0269, llm_grad_norm=0.0229, loss=0.0021, mem_enc_norm=0.0072, param_norm=1831.2522
+
+
+Step 38700: grad_norm=0.0299, llm_grad_norm=0.0242, loss=0.0021, mem_enc_norm=0.0102, param_norm=1831.3226
+
+
+Step 38800: grad_norm=0.0298, llm_grad_norm=0.0246, loss=0.0022, mem_enc_norm=0.0090, param_norm=1831.3984
+
+
+Step 38900: grad_norm=0.0289, llm_grad_norm=0.0242, loss=0.0021, mem_enc_norm=0.0084, param_norm=1831.4684
+
+
+Step 39000: grad_norm=0.0278, llm_grad_norm=0.0235, loss=0.0021, mem_enc_norm=0.0076, param_norm=1831.5424
+
+
+Step 39100: grad_norm=0.0281, llm_grad_norm=0.0230, loss=0.0022, mem_enc_norm=0.0089, param_norm=1831.6134
+
+
+Step 39200: grad_norm=0.0291, llm_grad_norm=0.0237, loss=0.0021, mem_enc_norm=0.0097, param_norm=1831.6826
+
+
+Step 39300: grad_norm=0.0267, llm_grad_norm=0.0222, loss=0.0021, mem_enc_norm=0.0077, param_norm=1831.7534
+
+
+Step 39400: grad_norm=0.0273, llm_grad_norm=0.0228, loss=0.0021, mem_enc_norm=0.0092, param_norm=1831.8265
+
+
+Step 39500: grad_norm=0.0257, llm_grad_norm=0.0213, loss=0.0020, mem_enc_norm=0.0084, param_norm=1831.8986
+
+
+Step 39600: grad_norm=0.0279, llm_grad_norm=0.0232, loss=0.0022, mem_enc_norm=0.0074, param_norm=1831.9688
+
+
+Step 39700: grad_norm=0.0269, llm_grad_norm=0.0229, loss=0.0021, mem_enc_norm=0.0063, param_norm=1832.0391
+
+
+Step 39800: grad_norm=0.0292, llm_grad_norm=0.0243, loss=0.0021, mem_enc_norm=0.0091, param_norm=1832.1107
+
+
+Step 39900: grad_norm=0.0286, llm_grad_norm=0.0238, loss=0.0021, mem_enc_norm=0.0090, param_norm=1832.1812
+
+
+Step 40000: grad_norm=0.0263, llm_grad_norm=0.0218, loss=0.0021, mem_enc_norm=0.0072, param_norm=1832.2506
+02:13:48.236 [I] [process=0][thread=MainThread][wait_until_finished] No Save Finalize thread to wait for. Returning. (1656655:checkpoint_manager.py:1987)
+02:13:48.237 [I] [process=0] Saving checkpoint at step 40000                                      (1656655:checkpoint_manager.py:1408)
+02:13:48.237 [I] [process=0] Started async saving checkpoint to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/40000. (1656655:async_checkpointer.py:439)
+02:13:48.250 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/40000.orbax-checkpoint-tmp-21 (1656655:atomicity.py:144)
+02:13:48.250 [I] Transferring arrays to host memory with options: use_replica_parallel=True, enable_pinned_host_transfer=False (1656655:replica_slices.py:341)
+02:13:48.255 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/40000.orbax-checkpoint-tmp-21/assets.orbax-checkpoint-tmp-22 (1656655:atomicity.py:144)
+02:13:48.256 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/40000.orbax-checkpoint-tmp-21/params.orbax-checkpoint-tmp-23 (1656655:atomicity.py:144)
+02:13:51.683 [I] [process=0] /jax/checkpoint/write/blocking_bytes_per_sec: 3.4 GiB/s (total bytes: 11.8 GiB) (time elapsed: 3 seconds) (per-host) (1656655:base_pytree_checkpoint_handler.py:114)
+02:13:51.691 [I] [process=0][thread=async_save] Background save thread started.                   (1656655:async_checkpointer.py:77)
+02:13:51.691 [I] Finished blocking save in 3.45 seconds. Continuing to save asynchronously to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/40000. (1656655:async_checkpointer.py:548)
+02:13:51.692 [I] Preserving Checkpoint[step=5000 | time=2026-11-16 07:03:47.652752+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+02:13:51.692 [I] Preserving Checkpoint[step=10000 | time=2026-11-16 09:48:05.002389+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+02:13:51.692 [I] Preserving Checkpoint[step=15000 | time=2026-11-16 12:32:21.610048+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+02:13:51.693 [I] Preserving Checkpoint[step=20000 | time=2026-11-16 15:16:39.393655+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+02:13:51.693 [I] Preserving Checkpoint[step=25000 | time=2026-11-16 18:00:56.114083+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+02:13:51.693 [I] Preserving Checkpoint[step=30000 | time=2026-11-16 20:45:12.913810+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+02:13:51.693 [I] Preserving Checkpoint[step=35000 | time=2026-11-16 23:29:32.132158+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+02:13:51.694 [I] [process=0][thread=MainThread][step=40000] Starting CheckpointManager Save Finalize thread=save_finalize (1656655:checkpoint_manager.py:1453)
+02:13:51.694 [I] [process=0][thread=save_finalize] Waiting for background save thread=async_save. (1656655:async_checkpointer.py:258)
+02:13:51.695 [I] {'step': 40000, 'event_type': 'save', 'directory': '/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k', 'reached_preemption': False, 'preemption_received_at': None, 'synchronous': False, 'wait_for_prev_start_time': 1794881628.2364638, 'wait_for_prev_duration_secs': 0.0002989768981933594, 'checkpointer_blocking_start_time': 1794881628.2372494, 'checkpointer_blocking_duration_secs': 3.4550881385803223, 'get_old_steps_start_time': 1794881631.6923542, 'get_old_steps_duration_secs': 0.0017664432525634766, 'checkpoint_manager_blocking_start_time': 1794881628.2362206, 'checkpoint_manager_blocking_duration_secs': 3.4591171741485596} (1656655:standard_logger.py:34)
+02:13:51.735 [I] [process=0][thread=array_type_handler] Wrote 59 array_metadata.ArrayMetadata to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/40000.orbax-checkpoint-tmp-21/params.orbax-checkpoint-tmp-23/array_metadatas/process_0 (1656655:array_metadata_store.py:198)
+02:13:54.744 [I] [process=0] /jax/checkpoint/write/bytes_per_sec: 1.8 GiB/s (total bytes: 11.8 GiB) (time elapsed: 6 seconds) (per-host) (1656655:base_pytree_checkpoint_handler.py:114)
+02:13:54.744 [I] [process=0][thread=async_save] 4 Handler Commit operations completed.            (1656655:async_checkpointer.py:87)
+02:13:54.745 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/40000.orbax-checkpoint-tmp-21/assets.orbax-checkpoint-tmp-22 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/40000.orbax-checkpoint-tmp-21/assets (1656655:atomicity.py:289)
+02:13:54.747 [I] [process=0][thread=async_save] Skipped cross-host ArrayMetadata validation because only one process is found: process_index=0. (1656655:array_metadata_store.py:362)
+02:13:54.754 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/40000.orbax-checkpoint-tmp-21/params.orbax-checkpoint-tmp-23 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/40000.orbax-checkpoint-tmp-21/params (1656655:atomicity.py:289)
+02:13:54.754 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/40000.orbax-checkpoint-tmp-21 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/40000 (1656655:atomicity.py:289)
+02:13:54.755 [I] [process=0][thread=async_save] Finished saving checkpoint (finalized tmp dir) to `/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/40000`. (1656655:atomicity.py:573)
+02:13:54.755 [I] Finished asynchronous save (blocking + background) in 6.52 seconds to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/40000 (1656655:async_checkpointer.py:412)
+02:13:54.755 [I] [process=0][thread=async_save] Background save thread done.                      (1656655:async_checkpointer.py:143)
+02:13:54.755 [I] [process=0][thread=save_finalize] Done with waiting for background save thread=async_save. (1656655:async_checkpointer.py:266)
+02:13:54.755 [I] [process=0][thread=save_finalize] No errors found in background save thread=async_save. (1656655:async_checkpointer.py:276)
+02:13:54.755 [I] [process=0][thread=save_finalize][step=40000] CheckpointManager Save Finalize is syncing with other hosts... (1656655:checkpoint_manager.py:2095)
+02:13:54.755 [I] [process=0][thread=save_finalize][step=40000] CheckpointManager Save Finalize is done on all hosts. (1656655:checkpoint_manager.py:2110)
+
+
+Step 40100: grad_norm=0.0288, llm_grad_norm=0.0237, loss=0.0021, mem_enc_norm=0.0098, param_norm=1832.3184
+
+
+Step 40200: grad_norm=0.0259, llm_grad_norm=0.0216, loss=0.0021, mem_enc_norm=0.0078, param_norm=1832.3926
+
+
+Step 40300: grad_norm=0.0301, llm_grad_norm=0.0249, loss=0.0022, mem_enc_norm=0.0098, param_norm=1832.4614
+
+
+Step 40400: grad_norm=0.0257, llm_grad_norm=0.0215, loss=0.0021, mem_enc_norm=0.0079, param_norm=1832.5326
+
+
+Step 40500: grad_norm=0.0281, llm_grad_norm=0.0237, loss=0.0022, mem_enc_norm=0.0075, param_norm=1832.6011
+
+
+Step 40600: grad_norm=0.0274, llm_grad_norm=0.0231, loss=0.0020, mem_enc_norm=0.0081, param_norm=1832.6732
+
+
+Step 40700: grad_norm=0.0319, llm_grad_norm=0.0258, loss=0.0021, mem_enc_norm=0.0118, param_norm=1832.7428
+
+
+Step 40800: grad_norm=0.0283, llm_grad_norm=0.0236, loss=0.0021, mem_enc_norm=0.0088, param_norm=1832.8138
+
+
+Step 40900: grad_norm=0.0286, llm_grad_norm=0.0238, loss=0.0021, mem_enc_norm=0.0083, param_norm=1832.8848
+
+
+Step 41000: grad_norm=0.0284, llm_grad_norm=0.0231, loss=0.0021, mem_enc_norm=0.0096, param_norm=1832.9540
+
+
+Step 41100: grad_norm=0.0278, llm_grad_norm=0.0230, loss=0.0020, mem_enc_norm=0.0094, param_norm=1833.0258
+
+
+Step 41200: grad_norm=0.0302, llm_grad_norm=0.0250, loss=0.0021, mem_enc_norm=0.0088, param_norm=1833.0924
+
+
+Step 41300: grad_norm=0.0273, llm_grad_norm=0.0226, loss=0.0020, mem_enc_norm=0.0084, param_norm=1833.1653
+
+
+Step 41400: grad_norm=0.0303, llm_grad_norm=0.0246, loss=0.0021, mem_enc_norm=0.0112, param_norm=1833.2374
+
+
+Step 41500: grad_norm=0.0265, llm_grad_norm=0.0222, loss=0.0021, mem_enc_norm=0.0084, param_norm=1833.3070
+
+
+Step 41600: grad_norm=0.0294, llm_grad_norm=0.0245, loss=0.0021, mem_enc_norm=0.0094, param_norm=1833.3740
+
+
+Step 41700: grad_norm=0.0294, llm_grad_norm=0.0245, loss=0.0022, mem_enc_norm=0.0091, param_norm=1833.4468
+
+
+Step 41800: grad_norm=0.0276, llm_grad_norm=0.0232, loss=0.0021, mem_enc_norm=0.0074, param_norm=1833.5178
+
+
+Step 41900: grad_norm=0.0283, llm_grad_norm=0.0235, loss=0.0020, mem_enc_norm=0.0088, param_norm=1833.5881
+
+
+Step 42000: grad_norm=0.0297, llm_grad_norm=0.0249, loss=0.0021, mem_enc_norm=0.0087, param_norm=1833.6604
+
+
+Step 42100: grad_norm=0.0288, llm_grad_norm=0.0239, loss=0.0021, mem_enc_norm=0.0090, param_norm=1833.7322
+
+
+Step 42200: grad_norm=0.0260, llm_grad_norm=0.0219, loss=0.0021, mem_enc_norm=0.0073, param_norm=1833.8020
+
+
+Step 42300: grad_norm=0.0283, llm_grad_norm=0.0239, loss=0.0021, mem_enc_norm=0.0084, param_norm=1833.8724
+
+
+Step 42400: grad_norm=0.0285, llm_grad_norm=0.0240, loss=0.0021, mem_enc_norm=0.0087, param_norm=1833.9406
+
+
+Step 42500: grad_norm=0.0249, llm_grad_norm=0.0208, loss=0.0021, mem_enc_norm=0.0072, param_norm=1834.0109
+
+
+Step 42600: grad_norm=0.0287, llm_grad_norm=0.0244, loss=0.0022, mem_enc_norm=0.0073, param_norm=1834.0833
+
+
+Step 42700: grad_norm=0.0267, llm_grad_norm=0.0225, loss=0.0020, mem_enc_norm=0.0073, param_norm=1834.1576
+
+
+Step 42800: grad_norm=0.0255, llm_grad_norm=0.0214, loss=0.0020, mem_enc_norm=0.0061, param_norm=1834.2280
+
+
+Step 42900: grad_norm=0.0257, llm_grad_norm=0.0217, loss=0.0021, mem_enc_norm=0.0061, param_norm=1834.2943
+
+
+Step 43000: grad_norm=0.0283, llm_grad_norm=0.0235, loss=0.0021, mem_enc_norm=0.0078, param_norm=1834.3644
+
+
+Step 43100: grad_norm=0.0297, llm_grad_norm=0.0252, loss=0.0020, mem_enc_norm=0.0083, param_norm=1834.4341
+
+
+Step 43200: grad_norm=0.0291, llm_grad_norm=0.0239, loss=0.0020, mem_enc_norm=0.0106, param_norm=1834.5033
+
+
+Step 43300: grad_norm=0.0266, llm_grad_norm=0.0227, loss=0.0020, mem_enc_norm=0.0069, param_norm=1834.5687
+
+
+Step 43400: grad_norm=0.0255, llm_grad_norm=0.0212, loss=0.0020, mem_enc_norm=0.0082, param_norm=1834.6368
+
+
+Step 43500: grad_norm=0.0260, llm_grad_norm=0.0221, loss=0.0020, mem_enc_norm=0.0064, param_norm=1834.7072
+
+
+Step 43600: grad_norm=0.0267, llm_grad_norm=0.0224, loss=0.0021, mem_enc_norm=0.0079, param_norm=1834.7778
+
+
+Step 43700: grad_norm=0.0286, llm_grad_norm=0.0239, loss=0.0020, mem_enc_norm=0.0081, param_norm=1834.8496
+
+
+Step 43800: grad_norm=0.0250, llm_grad_norm=0.0211, loss=0.0020, mem_enc_norm=0.0065, param_norm=1834.9197
+
+
+Step 43900: grad_norm=0.0269, llm_grad_norm=0.0221, loss=0.0020, mem_enc_norm=0.0087, param_norm=1834.9889
+
+
+Step 44000: grad_norm=0.0281, llm_grad_norm=0.0237, loss=0.0019, mem_enc_norm=0.0081, param_norm=1835.0605
+
+
+Step 44100: grad_norm=0.0273, llm_grad_norm=0.0226, loss=0.0020, mem_enc_norm=0.0082, param_norm=1835.1318
+
+
+Step 44200: grad_norm=0.0276, llm_grad_norm=0.0227, loss=0.0021, mem_enc_norm=0.0081, param_norm=1835.2017
+
+
+Step 44300: grad_norm=0.0283, llm_grad_norm=0.0234, loss=0.0019, mem_enc_norm=0.0097, param_norm=1835.2759
+
+
+Step 44400: grad_norm=0.0280, llm_grad_norm=0.0233, loss=0.0021, mem_enc_norm=0.0078, param_norm=1835.3459
+
+
+Step 44500: grad_norm=0.0282, llm_grad_norm=0.0234, loss=0.0020, mem_enc_norm=0.0087, param_norm=1835.4137
+
+
+Step 44600: grad_norm=0.0301, llm_grad_norm=0.0256, loss=0.0021, mem_enc_norm=0.0078, param_norm=1835.4835
+
+
+Step 44700: grad_norm=0.0255, llm_grad_norm=0.0213, loss=0.0020, mem_enc_norm=0.0081, param_norm=1835.5543
+
+
+Step 44800: grad_norm=0.0260, llm_grad_norm=0.0219, loss=0.0020, mem_enc_norm=0.0077, param_norm=1835.6239
+
+
+Step 44900: grad_norm=0.0276, llm_grad_norm=0.0234, loss=0.0020, mem_enc_norm=0.0074, param_norm=1835.6929
+
+
+Step 45000: grad_norm=0.0260, llm_grad_norm=0.0217, loss=0.0020, mem_enc_norm=0.0070, param_norm=1835.7622
+04:58:13.518 [I] [process=0][thread=MainThread][wait_until_finished] No Save Finalize thread to wait for. Returning. (1656655:checkpoint_manager.py:1987)
+04:58:13.519 [I] [process=0] Saving checkpoint at step 45000                                      (1656655:checkpoint_manager.py:1408)
+04:58:13.520 [I] [process=0] Started async saving checkpoint to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/45000. (1656655:async_checkpointer.py:439)
+04:58:13.532 [I] Transferring arrays to host memory with options: use_replica_parallel=True, enable_pinned_host_transfer=False (1656655:replica_slices.py:341)
+04:58:13.532 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/45000.orbax-checkpoint-tmp-24 (1656655:atomicity.py:144)
+04:58:13.538 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/45000.orbax-checkpoint-tmp-24/assets.orbax-checkpoint-tmp-25 (1656655:atomicity.py:144)
+04:58:13.538 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/45000.orbax-checkpoint-tmp-24/params.orbax-checkpoint-tmp-26 (1656655:atomicity.py:144)
+04:58:16.854 [I] [process=0] /jax/checkpoint/write/blocking_bytes_per_sec: 3.5 GiB/s (total bytes: 11.8 GiB) (time elapsed: 3 seconds) (per-host) (1656655:base_pytree_checkpoint_handler.py:114)
+04:58:16.862 [I] [process=0][thread=async_save] Background save thread started.                   (1656655:async_checkpointer.py:77)
+04:58:16.862 [I] Finished blocking save in 3.34 seconds. Continuing to save asynchronously to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/45000. (1656655:async_checkpointer.py:548)
+04:58:16.863 [I] Preserving Checkpoint[step=5000 | time=2026-11-16 07:03:47.652752+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+04:58:16.863 [I] Preserving Checkpoint[step=10000 | time=2026-11-16 09:48:05.002389+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+04:58:16.863 [I] Preserving Checkpoint[step=15000 | time=2026-11-16 12:32:21.610048+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+04:58:16.863 [I] Preserving Checkpoint[step=20000 | time=2026-11-16 15:16:39.393655+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+04:58:16.864 [I] Preserving Checkpoint[step=25000 | time=2026-11-16 18:00:56.114083+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+04:58:16.864 [I] Preserving Checkpoint[step=30000 | time=2026-11-16 20:45:12.913810+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+04:58:16.864 [I] Preserving Checkpoint[step=35000 | time=2026-11-16 23:29:32.132158+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+04:58:16.864 [I] Preserving Checkpoint[step=40000 | time=2026-11-17 02:13:51.692343+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+04:58:16.865 [I] [process=0][thread=MainThread][step=45000] Starting CheckpointManager Save Finalize thread=save_finalize (1656655:checkpoint_manager.py:1453)
+04:58:16.865 [I] [process=0][thread=save_finalize] Waiting for background save thread=async_save. (1656655:async_checkpointer.py:258)
+04:58:16.865 [I] {'step': 45000, 'event_type': 'save', 'directory': '/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k', 'reached_preemption': False, 'preemption_received_at': None, 'synchronous': False, 'wait_for_prev_start_time': 1794891493.518968, 'wait_for_prev_duration_secs': 0.000255584716796875, 'checkpointer_blocking_start_time': 1794891493.51964, 'checkpointer_blocking_duration_secs': 3.3436052799224854, 'get_old_steps_start_time': 1794891496.8632596, 'get_old_steps_duration_secs': 0.0017547607421875, 'checkpoint_manager_blocking_start_time': 1794891493.5187817, 'checkpoint_manager_blocking_duration_secs': 3.3470349311828613} (1656655:standard_logger.py:34)
+04:58:16.940 [I] [process=0][thread=array_type_handler] Wrote 59 array_metadata.ArrayMetadata to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/45000.orbax-checkpoint-tmp-24/params.orbax-checkpoint-tmp-26/array_metadatas/process_0 (1656655:array_metadata_store.py:198)
+04:58:19.851 [I] [process=0] /jax/checkpoint/write/bytes_per_sec: 1.9 GiB/s (total bytes: 11.8 GiB) (time elapsed: 6 seconds) (per-host) (1656655:base_pytree_checkpoint_handler.py:114)
+04:58:19.851 [I] [process=0][thread=async_save] 4 Handler Commit operations completed.            (1656655:async_checkpointer.py:87)
+04:58:19.852 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/45000.orbax-checkpoint-tmp-24/assets.orbax-checkpoint-tmp-25 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/45000.orbax-checkpoint-tmp-24/assets (1656655:atomicity.py:289)
+04:58:19.854 [I] [process=0][thread=async_save] Skipped cross-host ArrayMetadata validation because only one process is found: process_index=0. (1656655:array_metadata_store.py:362)
+04:58:19.859 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/45000.orbax-checkpoint-tmp-24/params.orbax-checkpoint-tmp-26 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/45000.orbax-checkpoint-tmp-24/params (1656655:atomicity.py:289)
+04:58:19.859 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/45000.orbax-checkpoint-tmp-24 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/45000 (1656655:atomicity.py:289)
+04:58:19.860 [I] [process=0][thread=async_save] Finished saving checkpoint (finalized tmp dir) to `/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/45000`. (1656655:atomicity.py:573)
+04:58:19.860 [I] Finished asynchronous save (blocking + background) in 6.34 seconds to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/45000 (1656655:async_checkpointer.py:412)
+04:58:19.860 [I] [process=0][thread=async_save] Background save thread done.                      (1656655:async_checkpointer.py:143)
+04:58:19.860 [I] [process=0][thread=save_finalize] Done with waiting for background save thread=async_save. (1656655:async_checkpointer.py:266)
+04:58:19.860 [I] [process=0][thread=save_finalize] No errors found in background save thread=async_save. (1656655:async_checkpointer.py:276)
+04:58:19.861 [I] [process=0][thread=save_finalize][step=45000] CheckpointManager Save Finalize is syncing with other hosts... (1656655:checkpoint_manager.py:2095)
+04:58:19.861 [I] [process=0][thread=save_finalize][step=45000] CheckpointManager Save Finalize is done on all hosts. (1656655:checkpoint_manager.py:2110)
+
+
+Step 45100: grad_norm=0.0301, llm_grad_norm=0.0253, loss=0.0021, mem_enc_norm=0.0095, param_norm=1835.8339
+
+
+Step 45200: grad_norm=0.0274, llm_grad_norm=0.0229, loss=0.0020, mem_enc_norm=0.0076, param_norm=1835.9053
+
+
+Step 45300: grad_norm=0.0283, llm_grad_norm=0.0238, loss=0.0020, mem_enc_norm=0.0077, param_norm=1835.9768
+
+
+Step 45400: grad_norm=0.0324, llm_grad_norm=0.0262, loss=0.0020, mem_enc_norm=0.0117, param_norm=1836.0452
+
+
+Step 45500: grad_norm=0.0245, llm_grad_norm=0.0205, loss=0.0020, mem_enc_norm=0.0064, param_norm=1836.1150
+
+
+Step 45600: grad_norm=0.0265, llm_grad_norm=0.0222, loss=0.0020, mem_enc_norm=0.0065, param_norm=1836.1812
+
+
+Step 45700: grad_norm=0.0262, llm_grad_norm=0.0217, loss=0.0020, mem_enc_norm=0.0082, param_norm=1836.2522
+
+
+Step 45800: grad_norm=0.0247, llm_grad_norm=0.0205, loss=0.0019, mem_enc_norm=0.0074, param_norm=1836.3208
+
+
+Step 45900: grad_norm=0.0263, llm_grad_norm=0.0221, loss=0.0020, mem_enc_norm=0.0072, param_norm=1836.3906
+
+
+Step 46000: grad_norm=0.0252, llm_grad_norm=0.0208, loss=0.0019, mem_enc_norm=0.0085, param_norm=1836.4578
+
+
+Step 46100: grad_norm=0.0259, llm_grad_norm=0.0218, loss=0.0019, mem_enc_norm=0.0082, param_norm=1836.5271
+
+
+Step 46200: grad_norm=0.0263, llm_grad_norm=0.0219, loss=0.0019, mem_enc_norm=0.0074, param_norm=1836.5940
+
+
+Step 46300: grad_norm=0.0251, llm_grad_norm=0.0211, loss=0.0020, mem_enc_norm=0.0070, param_norm=1836.6638
+
+
+Step 46400: grad_norm=0.0258, llm_grad_norm=0.0218, loss=0.0019, mem_enc_norm=0.0066, param_norm=1836.7301
+
+
+Step 46500: grad_norm=0.0326, llm_grad_norm=0.0274, loss=0.0019, mem_enc_norm=0.0107, param_norm=1836.8004
+
+
+Step 46600: grad_norm=0.0286, llm_grad_norm=0.0242, loss=0.0020, mem_enc_norm=0.0076, param_norm=1836.8708
+
+
+Step 46700: grad_norm=0.0268, llm_grad_norm=0.0227, loss=0.0020, mem_enc_norm=0.0069, param_norm=1836.9388
+
+
+Step 46800: grad_norm=0.0258, llm_grad_norm=0.0216, loss=0.0020, mem_enc_norm=0.0069, param_norm=1837.0090
+
+
+Step 46900: grad_norm=0.0281, llm_grad_norm=0.0226, loss=0.0019, mem_enc_norm=0.0108, param_norm=1837.0790
+
+
+Step 47000: grad_norm=0.0262, llm_grad_norm=0.0216, loss=0.0019, mem_enc_norm=0.0062, param_norm=1837.1471
+
+
+Step 47100: grad_norm=0.0274, llm_grad_norm=0.0228, loss=0.0019, mem_enc_norm=0.0081, param_norm=1837.2159
+
+
+Step 47200: grad_norm=0.0310, llm_grad_norm=0.0264, loss=0.0020, mem_enc_norm=0.0082, param_norm=1837.2809
+
+
+Step 47300: grad_norm=0.0262, llm_grad_norm=0.0220, loss=0.0019, mem_enc_norm=0.0061, param_norm=1837.3490
+
+
+Step 47400: grad_norm=0.0263, llm_grad_norm=0.0220, loss=0.0019, mem_enc_norm=0.0067, param_norm=1837.4175
+
+
+Step 47500: grad_norm=0.0272, llm_grad_norm=0.0230, loss=0.0020, mem_enc_norm=0.0068, param_norm=1837.4878
+
+
+Step 47600: grad_norm=0.0277, llm_grad_norm=0.0237, loss=0.0019, mem_enc_norm=0.0057, param_norm=1837.5543
+
+
+Step 47700: grad_norm=0.0252, llm_grad_norm=0.0211, loss=0.0019, mem_enc_norm=0.0068, param_norm=1837.6196
+
+
+Step 47800: grad_norm=0.0281, llm_grad_norm=0.0238, loss=0.0020, mem_enc_norm=0.0065, param_norm=1837.6881
+
+
+Step 47900: grad_norm=0.0271, llm_grad_norm=0.0226, loss=0.0019, mem_enc_norm=0.0074, param_norm=1837.7567
+
+
+Step 48000: grad_norm=0.0286, llm_grad_norm=0.0243, loss=0.0019, mem_enc_norm=0.0083, param_norm=1837.8276
+
+
+Step 48100: grad_norm=0.0262, llm_grad_norm=0.0221, loss=0.0019, mem_enc_norm=0.0061, param_norm=1837.8975
+
+
+Step 48200: grad_norm=0.0268, llm_grad_norm=0.0227, loss=0.0020, mem_enc_norm=0.0067, param_norm=1837.9657
+
+
+Step 48300: grad_norm=0.0290, llm_grad_norm=0.0247, loss=0.0020, mem_enc_norm=0.0068, param_norm=1838.0369
+
+
+Step 48400: grad_norm=0.0241, llm_grad_norm=0.0205, loss=0.0019, mem_enc_norm=0.0051, param_norm=1838.1028
+
+
+Step 48500: grad_norm=0.0264, llm_grad_norm=0.0220, loss=0.0019, mem_enc_norm=0.0078, param_norm=1838.1697
+
+
+Step 48600: grad_norm=0.0259, llm_grad_norm=0.0222, loss=0.0019, mem_enc_norm=0.0061, param_norm=1838.2384
+
+
+Step 48700: grad_norm=0.0278, llm_grad_norm=0.0231, loss=0.0020, mem_enc_norm=0.0079, param_norm=1838.3070
+
+
+Step 48800: grad_norm=0.0265, llm_grad_norm=0.0222, loss=0.0019, mem_enc_norm=0.0078, param_norm=1838.3781
+
+
+Step 48900: grad_norm=0.0268, llm_grad_norm=0.0225, loss=0.0019, mem_enc_norm=0.0068, param_norm=1838.4456
+
+
+Step 49000: grad_norm=0.0285, llm_grad_norm=0.0236, loss=0.0020, mem_enc_norm=0.0090, param_norm=1838.5143
+
+
+Step 49100: grad_norm=0.0273, llm_grad_norm=0.0223, loss=0.0019, mem_enc_norm=0.0086, param_norm=1838.5837
+
+
+Step 49200: grad_norm=0.0250, llm_grad_norm=0.0207, loss=0.0019, mem_enc_norm=0.0068, param_norm=1838.6542
+
+
+Step 49300: grad_norm=0.0288, llm_grad_norm=0.0234, loss=0.0019, mem_enc_norm=0.0088, param_norm=1838.7211
+
+
+Step 49400: grad_norm=0.0256, llm_grad_norm=0.0216, loss=0.0018, mem_enc_norm=0.0071, param_norm=1838.7944
+
+
+Step 49500: grad_norm=0.0263, llm_grad_norm=0.0224, loss=0.0019, mem_enc_norm=0.0071, param_norm=1838.8607
+
+
+Step 49600: grad_norm=0.0264, llm_grad_norm=0.0225, loss=0.0019, mem_enc_norm=0.0061, param_norm=1838.9291
+
+
+Step 49700: grad_norm=0.0288, llm_grad_norm=0.0244, loss=0.0019, mem_enc_norm=0.0079, param_norm=1838.9950
+
+
+Step 49800: grad_norm=0.0299, llm_grad_norm=0.0254, loss=0.0019, mem_enc_norm=0.0088, param_norm=1839.0690
+
+
+Step 49900: grad_norm=0.0280, llm_grad_norm=0.0235, loss=0.0020, mem_enc_norm=0.0069, param_norm=1839.1379
+
+
+Step 50000: grad_norm=0.0258, llm_grad_norm=0.0218, loss=0.0018, mem_enc_norm=0.0073, param_norm=1839.2034
+07:42:30.087 [I] [process=0][thread=MainThread][wait_until_finished] No Save Finalize thread to wait for. Returning. (1656655:checkpoint_manager.py:1987)
+07:42:30.088 [I] [process=0] Saving checkpoint at step 50000                                      (1656655:checkpoint_manager.py:1408)
+07:42:30.088 [I] [process=0] Started async saving checkpoint to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/50000. (1656655:async_checkpointer.py:439)
+07:42:30.100 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/50000.orbax-checkpoint-tmp-27 (1656655:atomicity.py:144)
+07:42:30.102 [I] Transferring arrays to host memory with options: use_replica_parallel=True, enable_pinned_host_transfer=False (1656655:replica_slices.py:341)
+07:42:30.107 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/50000.orbax-checkpoint-tmp-27/assets.orbax-checkpoint-tmp-28 (1656655:atomicity.py:144)
+07:42:30.107 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/50000.orbax-checkpoint-tmp-27/params.orbax-checkpoint-tmp-29 (1656655:atomicity.py:144)
+07:42:33.435 [I] [process=0] /jax/checkpoint/write/blocking_bytes_per_sec: 3.5 GiB/s (total bytes: 11.8 GiB) (time elapsed: 3 seconds) (per-host) (1656655:base_pytree_checkpoint_handler.py:114)
+07:42:33.443 [I] [process=0][thread=async_save] Background save thread started.                   (1656655:async_checkpointer.py:77)
+07:42:33.443 [I] Finished blocking save in 3.36 seconds. Continuing to save asynchronously to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/50000. (1656655:async_checkpointer.py:548)
+07:42:33.444 [I] Preserving Checkpoint[step=5000 | time=2026-11-16 07:03:47.652752+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+07:42:33.444 [I] Preserving Checkpoint[step=10000 | time=2026-11-16 09:48:05.002389+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+07:42:33.444 [I] Preserving Checkpoint[step=15000 | time=2026-11-16 12:32:21.610048+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+07:42:33.445 [I] Preserving Checkpoint[step=20000 | time=2026-11-16 15:16:39.393655+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+07:42:33.445 [I] Preserving Checkpoint[step=25000 | time=2026-11-16 18:00:56.114083+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+07:42:33.447 [I] Preserving Checkpoint[step=30000 | time=2026-11-16 20:45:12.913810+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+07:42:33.447 [I] Preserving Checkpoint[step=35000 | time=2026-11-16 23:29:32.132158+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+07:42:33.448 [I] Preserving Checkpoint[step=40000 | time=2026-11-17 02:13:51.692343+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+07:42:33.449 [I] Preserving Checkpoint[step=45000 | time=2026-11-17 04:58:16.863250+00:00]: (Reason: on keep_period=5000). (1656655:checkpoint_manager.py:1949)
+07:42:33.451 [I] [process=0][thread=MainThread][step=50000] Starting CheckpointManager Save Finalize thread=save_finalize (1656655:checkpoint_manager.py:1453)
+07:42:33.452 [I] [process=0][thread=save_finalize] Waiting for background save thread=async_save. (1656655:async_checkpointer.py:258)
+07:42:33.453 [I] {'step': 50000, 'event_type': 'save', 'directory': '/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k', 'reached_preemption': False, 'preemption_received_at': None, 'synchronous': False, 'wait_for_prev_start_time': 1794901350.0876303, 'wait_for_prev_duration_secs': 0.00024819374084472656, 'checkpointer_blocking_start_time': 1794901350.0883315, 'checkpointer_blocking_duration_secs': 3.3559954166412354, 'get_old_steps_start_time': 1794901353.4443402, 'get_old_steps_duration_secs': 0.007440328598022461, 'checkpoint_manager_blocking_start_time': 1794901350.087424, 'checkpoint_manager_blocking_duration_secs': 3.3655877113342285} (1656655:standard_logger.py:34)
+07:42:33.454 [I] Waiting for checkpoint manager to finish                                         (1656655:train.py:519)
+07:42:33.455 [I] [process=0][thread=MainThread][step=50000][wait_until_finished] Waiting for Save Finalize thread (save_finalize) to complete. (1656655:checkpoint_manager.py:1998)
+07:42:33.481 [I] [process=0][thread=array_type_handler] Wrote 59 array_metadata.ArrayMetadata to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/50000.orbax-checkpoint-tmp-27/params.orbax-checkpoint-tmp-29/array_metadatas/process_0 (1656655:array_metadata_store.py:198)
+07:42:36.422 [I] [process=0] /jax/checkpoint/write/bytes_per_sec: 1.9 GiB/s (total bytes: 11.8 GiB) (time elapsed: 6 seconds) (per-host) (1656655:base_pytree_checkpoint_handler.py:114)
+07:42:36.423 [I] [process=0][thread=async_save] 4 Handler Commit operations completed.            (1656655:async_checkpointer.py:87)
+07:42:36.423 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/50000.orbax-checkpoint-tmp-27/assets.orbax-checkpoint-tmp-28 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/50000.orbax-checkpoint-tmp-27/assets (1656655:atomicity.py:289)
+07:42:36.425 [I] [process=0][thread=async_save] Skipped cross-host ArrayMetadata validation because only one process is found: process_index=0. (1656655:array_metadata_store.py:362)
+07:42:36.429 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/50000.orbax-checkpoint-tmp-27/params.orbax-checkpoint-tmp-29 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/50000.orbax-checkpoint-tmp-27/params (1656655:atomicity.py:289)
+07:42:36.429 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/50000.orbax-checkpoint-tmp-27 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/50000 (1656655:atomicity.py:289)
+07:42:36.430 [I] [process=0][thread=async_save] Finished saving checkpoint (finalized tmp dir) to `/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/50000`. (1656655:atomicity.py:573)
+07:42:36.430 [I] Finished asynchronous save (blocking + background) in 6.34 seconds to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k/50000 (1656655:async_checkpointer.py:412)
+07:42:36.430 [I] [process=0][thread=async_save] Background save thread done.                      (1656655:async_checkpointer.py:143)
+07:42:36.430 [I] [process=0][thread=save_finalize] Done with waiting for background save thread=async_save. (1656655:async_checkpointer.py:266)
+07:42:36.430 [I] [process=0][thread=save_finalize] No errors found in background save thread=async_save. (1656655:async_checkpointer.py:276)
+07:42:36.431 [I] [process=0][thread=save_finalize][step=50000] CheckpointManager Save Finalize is syncing with other hosts... (1656655:checkpoint_manager.py:2095)
+07:42:36.431 [I] [process=0][thread=save_finalize][step=50000] CheckpointManager Save Finalize is done on all hosts. (1656655:checkpoint_manager.py:2110)
+07:42:36.431 [I] [process=0][thread=MainThread][step=50000][wait_until_finished] Done waiting for Save Finalize thread (save_finalize) running at step=50000. (1656655:checkpoint_manager.py:2010)
+wandb:                                                                                
+wandb: 
+wandb: Run history:
+wandb:     grad_norm █▄▃▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb: llm_grad_norm █▅▄▃▃▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:          loss █▆▅▃▃▂▂▂▂▂▂▂▂▂▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:  mem_enc_norm ▇█▄▃▂▂▂▂▃▂▂▂▂▂▂▂▂▂▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:    param_norm ▁▁▁▁▁▁▁▂▂▂▃▃▃▃▃▄▄▄▄▄▄▄▄▄▄▅▅▅▆▆▆▆▇▇▇▇████
+wandb: 
+wandb: Run summary:
+wandb:     grad_norm 0.02582
+wandb: llm_grad_norm 0.02184
+wandb:          loss 0.00185
+wandb:  mem_enc_norm 0.00728
+wandb:    param_norm 1839.20337
+wandb: 
+wandb: 🚀 View run v2-1600ep-m8x8-ctx-motion-b128-50k at: https://wandb.ai/hongzefu-university-of-michigan/robomme-framesamp/runs/qw5h25dd
+wandb: ⭐️ View project at: https://wandb.ai/hongzefu-university-of-michigan/robomme-framesamp
+wandb: Synced 5 W&B file(s), 1 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./v1-store/logs/wandb/wandb/run-20261116_041301-qw5h25dd/logs
+CKPT_LOAD=PASS step=50000 integration=context motion=1 leaves=59 resolved_sha256=21791b2964c868119784d086f5ce2334405596d8fa20586e217c4703f018d0e3
+TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10
+END_UTC=2026-11-17T07:43:08Z
+EXIT_CODE=0
+EXIT_CODE=0

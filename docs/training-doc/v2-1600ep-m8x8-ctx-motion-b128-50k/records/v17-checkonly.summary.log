@@ -1,0 +1,53 @@
+CHECK_ONLY_START RUN=v2-1600ep-m8x8-ctx-motion-b128-50k TRAIN_HEAD=fd20feb7424d3961ce5614790e186a8fb14a8ce5 START_UTC=2026-11-16T03:13:09Z
+G0_RING=PASS ring=1 input_manifest 本地与 bucket 逐字节相同=True
+G0_RING=PASS ring=1 H5 文件数=4
+G0_RING=PASS ring=2 manifest_identity=4cd5a170b0ed9718922bfd7c9287e80b3681a0ea7489dfdb07ddeb3a53dbb918
+G0_RING=PASS ring=2 manifest.raw_dir 与 input_manifest.raw_dir 相同=True
+G0_RING=PASS ring=4 motion 根=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/motion 实体目录
+G0_RING=PASS ring=4 MMEVLA_MOTION_STORE 未设置
+G0_RING=PASS ring=4 store_meta.json sha256=d3a518011c80a115f7b398458a510a6f128f47e76c03fc251e59dab4c9c56268
+G0_RING=PASS ring=4 motion_token.f32.bin sha256=03fb46e150dd9015f264f9bd8f08b35883d84da40e9e8080147d2af5fef9b6c5
+G0_INFO ms.LAYOUT=motion-768-grid16-demopad17-v1 表 layout=motion-768-grid16-demopad17-v1（按字面量 motion-768-grid16-demopad17-v1 比）
+G0_RING=PASS ring=4 layout=motion-768-grid16-demopad17-v1 rows=71316
+G0_RING=PASS ring=4 encoder ckpt sha256=0c1986297ccc0ab1913910f33a09ec74ba4c208844d0f5d72dd7ba59e0d9e3ca provenance.encoder.checkpoint_sha256=0c1986297ccc0ab1913910f33a09ec74ba4c208844d0f5d72dd7ba59e0d9e3ca
+G0_RING=PASS ring=4 table manifest_sha256=4cd5a170b0ed9718922bfd7c9287e80b3681a0ea7489dfdb07ddeb3a53dbb918
+G0_RING=PASS ring=4 provenance.input_manifest_sha256=655e64b4fd033aea1ff79a1e5ad47f886a148592496759ed2a667fe167c57d86 sha(input_manifest)=655e64b4fd033aea1ff79a1e5ad47f886a148592496759ed2a667fe167c57d86
+G0_RING=PASS ring=4 provenance.raw_dir=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/raw-h5/4task-20260912-v2
+G0_RING=PASS ring=4 provenance 无 encoder_kind（非池化表）=True
+G0_RING=PASS ring=4 norm_stats sha256=856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173
+INPUT_SHA=PASS motion_bin=03fb46e1 store_meta=d3a51801 norm=856c75ea encoder=0c198629 rows=71316
+DATA_LINEAGE=PASS mode=v7-4ring encoder_ckpt=0c198629 encoder_source_pin=df992cdf vla_input_pin=655e64b4 files=4 members=1600 mismatches=0
+CONFIG_CROSSCHECK=PASS yaml_diff=integration_type,memory_token_dim yaml_sha256=2e98e191
+WAN_ENV=PASS motion_jepa=2a484ad encoder_src=d00267e1 module=af67fdd9
+CHECK_CWD=PASS 件=起跑位置 期望=/scratch/hongze/robomme_policy_learning_MotionJEPA 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA
+CHECK_TRAIN_PY=PASS 件=起跑位置 期望=存在且在 /scratch/hongze/robomme_policy_learning_MotionJEPA 下 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/train.py is_file=True
+CHECK_YAML_PATH=PASS 件=起跑位置 期望=存在且在 /scratch/hongze/robomme_policy_learning_MotionJEPA 下 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/config/robomme/perceptual-framesamp-ctx-8frame-8x8-motion-v7ep72.yaml is_file=True
+CHECK_YAML_SHA256=PASS 件=起跑位置 期望=2e98e191db566c2a0f5c107e28a871493f2207cd65d00600b88ae5eab7b6d2d3 实际=2e98e191db566c2a0f5c107e28a871493f2207cd65d00600b88ae5eab7b6d2d3
+CHECK_PYTHONPATH=PASS 件=起跑位置 期望=未设置，或每一项都在 /scratch/hongze/robomme_policy_learning_MotionJEPA 下 实际=<未设置>
+CHECK_PKG_MME_VLA_SUITE=PASS 件=起跑位置 期望=origin 在 /scratch/hongze/robomme_policy_learning_MotionJEPA 下 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/__init__.py
+CHECK_PKG_OPENPI=PASS 件=起跑位置 期望=origin 在 /scratch/hongze/robomme_policy_learning_MotionJEPA 下 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/__init__.py
+CHECK_PKG_OPENPI_CLIENT=PASS 件=起跑位置 期望=origin 在 /scratch/hongze/robomme_policy_learning_MotionJEPA 下 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/packages/openpi-client/src/openpi_client/__init__.py
+CHECK_ASSETS_DIR_ABS=PASS 件=数据参数 期望=绝对路径 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da
+CHECK_NORM_STATS_FILE=PASS 件=数据参数 期望=存在 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da/robomme/norm_stats.json 实际=存在
+CHECK_NORM_STATS_SHA256=PASS 件=数据参数 期望=856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173 实际=856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173
+CHECK_CLI_ASSETS_DIR=PASS 件=数据参数 期望=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da
+CHECK_CLI_ASSET_ID=PASS 件=数据参数 期望=robomme 实际=robomme
+CHECK_CLI_HISTORY_CONFIG=PASS 件=起跑位置 期望=perceptual-framesamp-ctx-8frame-8x8-motion-v7ep72.yaml 实际=perceptual-framesamp-ctx-8frame-8x8-motion-v7ep72.yaml
+CHECK_CLI_DATASET_PATH=PASS 件=数据 期望=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/framesamp-8x8 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/framesamp-8x8
+CHECK_SYS_PREFIX=PASS 件=起跑位置 期望=/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv
+CHECK_V1_STORE_REAL=PASS 件=起跑位置 期望=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store 是实体目录（开发副本那份是 symlink） 实际=实体目录
+CHECK_NOT_DEV_COPY=PASS 件=起跑位置 期望=仓库根不是 -temp 开发副本 实际=robomme_policy_learning_MotionJEPA
+CHECK_PKG_JAX_IN_VENV=PASS 件=起跑位置 期望=origin 在 /scratch/hongze/robomme_policy_learning_MotionJEPA/.venv 下 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/jax/__init__.py
+CHECK_REPO_HEAD=PASS 件=仓库状态 期望=fd20feb7424d3961ce5614790e186a8fb14a8ce5 实际=fd20feb7424d3961ce5614790e186a8fb14a8ce5
+CHECK_REPO_CLEAN=PASS 件=仓库状态 期望=git status --porcelain 为空 实际=空
+CHECK_DATASET_STORE_META=PASS 件=数据 期望=存在 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/framesamp-8x8/meta/store_meta.json 实际=存在
+CHECK_FRAMESAMP_SOURCE=PASS 件=数据 期望=MMEVLA_FRAMESAMP_SOURCE 指向已存在目录 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/source
+CHECK_FRAMESAMP_MANIFEST=PASS 件=数据 期望=MMEVLA_FRAMESAMP_MANIFEST 指向已存在文件 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/meta/episode_manifest.json
+CHECK_RUN_ROOT_ABSENT=PASS 件=留档 期望=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-ctx-motion-b128-50k 不存在 实际=不存在
+CHECK_MOTION_STORE_PATH=PASS 件=motion 数据 期望=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/motion 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/motion
+CHECK_MOTION_STORE_META_SHA256=PASS 件=motion 数据 期望=d3a518011c80a115f7b398458a510a6f128f47e76c03fc251e59dab4c9c56268 实际=d3a518011c80a115f7b398458a510a6f128f47e76c03fc251e59dab4c9c56268
+CHECK_MOTION_LAYOUT=PASS 件=motion 数据 期望=motion-768-grid16-demopad17-v1 实际=motion-768-grid16-demopad17-v1
+CHECK_MOTION_ROWS=PASS 件=motion 数据 期望=71316 实际=71316
+CHECK_MOTION_ENV_UNSET=PASS 件=motion 数据 期望=未设置 实际=<未设置>
+PREFLIGHT=PASS n=30
+CHECK_ONLY=PASS run=v2-1600ep-m8x8-ctx-motion-b128-50k head=fd20feb7424d3961ce5614790e186a8fb14a8ce5
