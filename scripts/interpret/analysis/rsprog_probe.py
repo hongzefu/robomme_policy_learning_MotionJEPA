@@ -209,8 +209,23 @@ def time_features(samples, kind):
 
 # ---------------------------------------------------------------- 打乱对照
 
+def derangement(members, generator):
+    """组内错位排列（拒绝采样，在全部错位排列上均匀）；只有 1 个成员时返回 [None]。"""
+    if len(members) < 2:
+        return [None] * len(members)
+    index = np.arange(len(members))
+    while True:
+        order = generator.permutation(len(members))
+        if not (order == index).any():
+            return [members[i] for i in order.tolist()]
+
+
+SHUFFLE_SCHEME = "同难度内错位换路线；打乱标签按 tau_time=u/(50L′) 重算，u≥50L′ 的点为 NaN"
+
+
 def shuffled_labels(samples, shuffles=SHUFFLES, seed=SEED):
-    """同难度内整局换路线（L 与逐步走法一起换），按本局 u 重算 τ、j、剩余与走法；u ≥ 50L′ 的点标签记 NaN。"""
+    """同难度内错位换路线（置换无不动点，L 与逐步走法一起换），按本局 u 重算 τ = u/(50L′)、j、剩余与走法；
+    u ≥ 50L′ 的点标签记 NaN；某难度只有 1 局时该局打乱标签全为 NaN。"""
     generator = np.random.default_rng(seed)
     keys = samples["keys"]
     difficulty_of = {k: samples["difficulty"][samples["group_index"] == i][0] for i, k in enumerate(keys)}
@@ -220,11 +235,13 @@ def shuffled_labels(samples, shuffles=SHUFFLES, seed=SEED):
         mapping = {}
         for difficulty in sorted(set(difficulty_of.values())):
             members = [k for k in keys if difficulty_of[k] == difficulty]
-            for k, donor in zip(members, generator.permutation(members).tolist()):
+            for k, donor in zip(members, derangement(members, generator)):
                 mapping[k] = donor
         labels = {name: np.full(len(samples["u"]), np.nan) for name in LABELS}
         for row, (k, u) in enumerate(zip(samples["k"].tolist(), samples["u"].tolist())):
             donor = mapping[k]
+            if donor is None:
+                continue
             L, moves = L_of[donor], samples["moves"][donor]
             j = u // STEP_FRAMES
             if j >= L:
@@ -475,7 +492,7 @@ def summarize(samples, results, models, counts, repeats=REPEATS):
     leak = group_leak(samples)
     summary = {"plan": "1117-routestick-progress-probe-attn", "counts": counts, "group_leak": leak,
                "move_classes": samples["move_classes"], "outer_folds": OUTER_FOLDS, "inner_folds": INNER_FOLDS,
-               "repeats": repeats, "shuffles": len(_STATE.get("shuffled", [])), "main_model": MAIN_MODEL,
+               "repeats": repeats, "shuffles": {"n": len(_STATE.get("shuffled", [])), "scheme": SHUFFLE_SCHEME}, "main_model": MAIN_MODEL,
                "main_labels": list(MAIN_LABELS), "time_baseline": {}, "models": {}}
     for kind_name, res in (("u", time_u), ("uL", time_uL)):
         summary["time_baseline"][kind_name] = {
@@ -545,7 +562,7 @@ def verdicts(summary):
             base = summary["time_baseline"]["u"][label]
             shuffled = entry["action"].get("shuffled", {}).get(label, {}).get("values", [])
             ok = (summary["group_leak"] == 0 and block["selected"]["mean"] is not None and base["mean"] is not None
-                  and math.isfinite(block["selected"]["mean"]) and len(shuffled) == summary["shuffles"] and summary["shuffles"] > 0)
+                  and math.isfinite(block["selected"]["mean"]) and len(shuffled) == summary["shuffles"]["n"] and summary["shuffles"]["n"] > 0)
             value = block["selected"]["mean"]
             lines.append(f"PROBE={'PASS' if ok else 'FAIL'} model={model} label={label} group=action "
                          f"value={_fmt(value)} minus_u={_fmt(block['minus_u']['mean'])} "

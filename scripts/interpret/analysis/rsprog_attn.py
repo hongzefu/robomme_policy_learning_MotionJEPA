@@ -6,7 +6,7 @@
     默认值即 R1 实际键名，--field 仅备用。
   * R2 的每局 npz（<replay-root>/<模型>/episode_<k>.npz）：u、attn_mem (N,18,M)、mem_type/mem_t0/mem_t1 (N,M)、
     mem_len (N,)、attn_main (N,18,3)（lang、image、action）、film_rel (N,18,2)（总量、motion 部分）。
-    可选标量 memmod_maxabs（R2 replay 的 mem_mod_vec 一致性自检），存在就读进 ATTN_AGG。
+    标量 memmod_maxabs（R2 replay 的 mem_mod_vec 一致性自检）读进 ATTN_AGG；任一局缺这个键即判 FAIL（memmod_maxabs=na）。
   * R1 的 scripts.interpret.rsprog_points.mem_token_segments(mem_type, mem_t0, mem_t1, demo_bounds, exec_start=e0)：
     返回逐 token 示范段号（1 起），0 = 执行帧 / 过渡窗，−1 = 补齐；逐点传入有效 token。
 
@@ -17,7 +17,7 @@ modulation 下记忆只经 MemoryAttention 进动作专家（§3、§6）：
   (b) 行 = 执行中的第 j 步（1 起），列 = 被读的示范段 j′，格子 = share ÷ uniform（层平均 L0–L17），帧流 single 权重
       （按 mem_token_segments 归段），motion 流 overlap 权重（窗与示范段有重叠就整窗计入该段，与 subgoal_attention 原图同口径）。
       share/uniform 的定义、D（对角富集）与 bootstrap 从 analysis/subgoal_attention.py 导入；每格至少 MIN_CELL_EPISODES 局才画。
-判定行 ATTN_AGG：attn_mem 在有效 token 上和为 1、attn_main 三组和为 1（误差 ≤ 1e-4），R2 的 memmod 自检（若有）≤ 1e-3，
+判定行 ATTN_AGG：attn_mem 在有效 token 上和为 1、attn_main 三组和为 1（误差 ≤ 1e-4），R2 的 memmod 自检（每局必须有）≤ 1e-3，
 画出的格子最少局数 ≥ 5。
 """
 from __future__ import annotations
@@ -167,13 +167,15 @@ def point_readouts(ep, row, demo_bounds, segmenter, segments_base=1, exec_start=
 
 def analyse_model(points, replay_root, pattern, model, segmenter, segments_base=1):
     """返回逐局读数列表与 ATTN_AGG 统计。"""
-    episodes, rowsum, mainsum, memmod, points_used = [], 0.0, 0.0, [], 0
+    episodes, rowsum, mainsum, memmod, points_used, memmod_missing = [], 0.0, 0.0, [], 0, 0
     for k, meta in sorted(points.items()):
         ep = load_episode(replay_root, pattern, model, k)
         if ep is None:
             continue
         if "memmod_maxabs" in ep:
             memmod.append(float(np.max(ep["memmod_maxabs"])))
+        else:
+            memmod_missing += 1
         m = len(meta["demo_bounds"])
         record = {"k": k, "L": meta["L"], "m": m, "difficulty": meta["difficulty"], "ratio": {s: [] for s in STREAM_TYPE},
                   "film": [], "main": [], "records": {}, "records_l": {}}
@@ -201,7 +203,7 @@ def analyse_model(points, replay_root, pattern, model, segmenter, segments_base=
         record["main"] = np.mean(np.stack(record["main"]), axis=0)          # (18, 3)
         episodes.append(record)
     return episodes, {"rowsum_maxerr": max(rowsum, mainsum), "attn_mem_rowsum_maxerr": rowsum, "attn_main_sum_maxerr": mainsum,
-                      "memmod_maxabs": max(memmod) if memmod else None, "points": points_used, "episodes": len(episodes)}
+                      "memmod_maxabs": max(memmod) if memmod else None, "memmod_missing_episodes": memmod_missing, "points": points_used, "episodes": len(episodes)}
 
 
 def _episode_mean(arrays):
@@ -272,10 +274,12 @@ def panel_b(episodes, stream, weighting, repeats=BOOT_REPEATS, seed=BOOT_SEED, m
 def attn_agg_line(checks, panels_b):
     rowsum = max(c["rowsum_maxerr"] for c in checks.values())
     memmods = [c["memmod_maxabs"] for c in checks.values() if c["memmod_maxabs"] is not None]
+    missing = sum(c.get("memmod_missing_episodes", 0) for c in checks.values())
     cells = [p["min_cell_eps"] for model in panels_b.values() for p in model.values() if p and p["main"] and p["min_cell_eps"] is not None]
     min_cell = min(cells) if cells else None
-    ok = rowsum <= ROWSUM_TOL and (not memmods or max(memmods) <= MEMMOD_TOL) and min_cell is not None and min_cell >= MIN_CELL_EPISODES
-    memmod_text = f"{max(memmods):.2e}" if memmods else "na"
+    memmod_ok = bool(memmods) and missing == 0 and max(memmods) <= MEMMOD_TOL     # 缺自检即 FAIL，不静默放行
+    ok = rowsum <= ROWSUM_TOL and memmod_ok and min_cell is not None and min_cell >= MIN_CELL_EPISODES
+    memmod_text = f"{max(memmods):.2e}" if memmods and missing == 0 else "na"
     return (f"ATTN_AGG={'PASS' if ok else 'FAIL'} rowsum_maxerr={rowsum:.2e} memmod_maxabs={memmod_text} "
             f"min_cell_eps={min_cell if min_cell is not None else 'na'}")
 

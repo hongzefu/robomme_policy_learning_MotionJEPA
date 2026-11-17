@@ -336,3 +336,33 @@ def test_real_mem_token_segments_matches_stub(data):
     summary = RA.run(points, root, root / "attn-real", segmenter=R1.mem_token_segments, repeats=50, plot=False)
     assert summary["verdict"].startswith("ATTN_AGG=PASS")
     assert summary["panel_b"]["A"]["frame:single"]["D"]["mean"] > RA.D_THRESHOLD
+
+
+def test_derangement_has_no_fixed_point():
+    generator = np.random.default_rng(0)
+    for size in (2, 3, 7, 50):
+        members = list(range(100, 100 + size))
+        for _ in range(20):
+            donors = RP.derangement(members, generator)
+            assert sorted(donors) == members and all(a != b for a, b in zip(members, donors))
+    assert RP.derangement([5], generator) == [None]
+
+
+def test_shuffled_labels_singleton_difficulty_is_nan(probe):
+    _, summary, _, samples = probe
+    assert summary["shuffles"]["n"] == 4 and "错位" in summary["shuffles"]["scheme"]
+    single = dict(samples)
+    keep = samples["k"] == samples["keys"][0]
+    single["difficulty"] = np.where(keep, "solo", samples["difficulty"])
+    for shuffled in RP.shuffled_labels(single, shuffles=2):
+        assert np.isnan(shuffled["tau"][keep]).all()
+        assert np.isfinite(shuffled["tau"][~keep]).any()
+
+
+def test_attn_agg_fails_without_memmod():
+    checks = {"A": {"rowsum_maxerr": 1e-8, "memmod_maxabs": None, "memmod_missing_episodes": 3}}
+    panels = {"A": {"motion": {"main": True, "min_cell_eps": 9}}}
+    line = RA.attn_agg_line(checks, panels)
+    assert line.startswith("ATTN_AGG=FAIL") and "memmod_maxabs=na" in line
+    checks["A"].update(memmod_maxabs=2e-4, memmod_missing_episodes=0)
+    assert RA.attn_agg_line(checks, panels).startswith("ATTN_AGG=PASS")
