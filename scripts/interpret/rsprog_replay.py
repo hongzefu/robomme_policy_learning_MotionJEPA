@@ -24,7 +24,7 @@ npz（<out>/<A|B>/episode_<k>.npz，k 为 R1 全局序号 0–199，与 R3 rspro
   attn_mem                 (N,18,M)     f32   每层 MemoryAttention 份额（头、动作位、去噪步、K 平均），补齐位为 0
   mem_type                 (N,M)        int8  0 帧 token、1 motion token、−1 补齐
   mem_t0、mem_t1           (N,M)        int32 帧 token 为帧号（两列相同）；motion token 为窗口首末帧
-                                              （示范段窗口末帧截到 e0−1，与 demo_tail_pad=repeat_last 的真实帧一致）；补齐 −1
+                                              （t1 = t0 + 窗口帧数 − 1，不按 e0 截断，截断由 R1 mem_token_segments 自己做）；补齐 −1
   mem_len                  (N,)         int32
   attn_main                (N,18,3)     f32   动作 token 主注意力在 (lang, image, action) 上的份额，头、动作位、去噪步、K 平均
   film_rel                 (N,18,2)     f32   [:, :, 0] = ‖F(x,m) − F(x,0)‖/‖F(x,0)‖；[:, :, 1] = ‖Σ_motion α·V‖/‖Σ_all α·V‖
@@ -222,7 +222,6 @@ def memory_token_table(policy, observation, t, *, valid_from_adapter=None):
         valid = np.concatenate([static, np.asarray(observation.motion_mask).reshape(-1).astype(bool)])[order]
     if valid_from_adapter is not None and not np.array_equal(np.asarray(valid_from_adapter, bool), valid):
         raise RuntimeError(f"t={t} 适配器的 mem_valid 与观测 mask 不一致")
-    es = int(policy.mem_buffer.exec_start_idx) if policy.motion_enabled else 0
     window = int(policy.mem_buffer.motion_window) if policy.motion_enabled else 0
     S = order.size
     mtype = np.where(order >= n_frame_tok, 1, 0).astype(np.int8)
@@ -235,7 +234,6 @@ def memory_token_table(policy, observation, t, *, valid_from_adapter=None):
     if mo.any():
         start = np.asarray(motion_times, np.int64)[order[mo] - n_frame_tok]
         end = start + window - 1
-        end = np.where(start < es, np.minimum(end, es - 1), end)
         t0[mo], t1[mo] = start, end
     sentinel = (t0 == MEM_ORDER_SENTINEL)
     if (valid & sentinel).any():

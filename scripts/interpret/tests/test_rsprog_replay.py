@@ -153,7 +153,7 @@ def test_memory_token_table_types_and_times():
     starts = tab["t0"][mot]
     assert sorted(starts.tolist()) == sorted(vis)
     for s, e in zip(tab["t0"][mot], tab["t1"][mot]):
-        assert e == (min(s + 32, e0 - 1) if s < e0 else s + 32)
+        assert e == s + 32                                   # 不按 e0 截断（R1 归段自己截）
     fr = v & (tab["type"] == 0)
     assert np.array_equal(tab["t0"][fr], tab["t1"][fr])
     assert set(tab["t0"][fr].tolist()) == set(frames)
