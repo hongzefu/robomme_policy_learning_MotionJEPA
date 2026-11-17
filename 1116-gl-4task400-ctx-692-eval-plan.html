@@ -168,6 +168,8 @@ blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid var(--line);colo
 <tr><td>F2</td><td>g6b 固定 10 片、每卡 2 片，压测默认 32 片；按原写法，链在每关都传 <code>EVAL_NGPU=4</code>，校验 <code>SHARDS==NGPU*PER_GPU</code> 会把冒烟和压测拦下</td><td>校验只在正式模式（<code>MODE=eval</code>）且设了 <code>EVAL_NGPU</code> 时生效；链只在第 4 关传 <code>EVAL_NGPU/EVAL_SHARDS</code>。g6b 和压测只用 GPU0，不受影响</td></tr>
 <tr><td>F3</td><td>cgroup <code>memory.peak</code> 是历史高水位，会包含刚结束的训练峰值，扣不掉基线；谁判内存、判定行叫什么也没写清</td><td>压测期间每 2 秒采样作业 cgroup 的 <code>memory.current</code>，取「压测期间最大值 − 压测前一刻值」作为同卡 N 片的总增量 <code>host_delta_gb</code>，写进 <code>EVAL_CAPACITY</code> 行（脚本仍只按显存判 PASS/FAIL）。链脚本另出判定行 <code>HOST_MEM=PASS|FAIL per_gpu=N host_delta_gb=&lt;x&gt; projected_gb=&lt;4x&gt; limit=115</code>，<code>projected = host_delta × 4</code>。V6 要 <code>EVAL_CAPACITY=PASS</code> 和 <code>HOST_MEM=PASS</code> 都成立；读不到 cgroup 就判 FAIL</td></tr>
 </table>
+<h2>十〇′、追加修订：去掉 Slurm 分支的 GPU 独占检查（11-16 当晚，你说「加上并开工」）</h2>
+<p><code>run_shard.sh</code> 在 <code>SLURM_JOB_ID</code> 非空时：① 跳过 <code>check_local_gpu</code>（即 AWS 用的 <code>LOCAL_GPU_SHARE</code> flock 登记检查）；② 改做「卡上不得有任何计算进程」检查（<code>nvidia-smi --query-compute-apps</code>，不认 <code>CUDA_VISIBLE_DEVICES</code>，看到 4 卡全部进程）。同卡多片同时起时，晚到的片若撞上先到片的 server 已起，就会退 2，结果取决于启动先后。修法不改代码：链在第 2–4 关的 srun 命令里一律以 <code>env -u SLURM_JOB_ID</code> 起 <code>local_692_pool.sh</code>，让 GL 与 AWS 走同一条检查路径（占位登记 + 进程树归属）。<code>--gpu_cmode=shared</code> 照传，compute_mode 检查随 Slurm 分支一起不再执行。另把「ssh 断开连带停掉 srun」登记进风险表，不改挂法。</p>
 <h2>十一、待你确认（写计划时）</h2>
 <ol>
 <li>每卡 3 片、退路 2 片（K4）是否可以？还是要像 AWS 一样先试 4 片？</li>
@@ -235,7 +237,8 @@ tmux new-session -d -s g4c-ev-setup "set -o pipefail; bash $W/scripts/evaluation
 
 # E3：链（每条 run 一份脚本，ctx512 示例）
 tmux new-session -d -s g4c-ev512-chain "set -o pipefail; bash $G/v1-store/jobs/g4c-ev512-chain.sh 2&gt;&amp;1 | tee $G/v1-store/logs/g4c-ev512-chain.log; echo \"EXIT_CODE=\$?\" &gt;&gt; $G/v1-store/logs/g4c-ev512-chain.log"
-#   链内每关：ssh greatlakes srun --jobid=65943150 --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=shared \
+#   链内第 2–4 关：ssh greatlakes srun --jobid=65943150 --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=shared \
+#     env -u SLURM_JOB_ID \   （十〇′：走 AWS 同款 LOCAL_GPU_SHARE 检查）
 #     （EVAL_NGPU、EVAL_SHARDS 只在第 4 关正式评估传；第 2、3 关 g6b/压测不传）
 #     env EVAL_NGPU=4 EVAL_SHARDS=&lt;12|8&gt; EVAL_PER_GPU=&lt;3|2&gt; EVAL_MEM_FRACTION=&lt;0.30|0.45&gt; EXPECT_MOTION_STATS=0 MMEVLA_MOTION_OVERFLOW= \
 #         POLICY=perceptual-framesamp-context-8frame-8x8 POLICY_CONFIG=mme_vla_suite_b128_60k DEMO_PREFIX_ORIGINAL=1 RUN_NAME=gl692-ctx512-50k \
@@ -255,6 +258,7 @@ ssh greatlakes scancel 65943150; ssh greatlakes 'squeue -u hongzefu'</pre>
 <tr><th>风险</th><th>影响</th><th>处置</th></tr>
 <tr><td>128 GB 内存撑不住 12 片</td><td>OOM killer 杀片</td><td>V6 用压测期间 cgroup 增量 ×4 外推（<code>HOST_MEM</code>），超 115 GB 退到 8 片</td></tr>
 <tr><td>卡位锁文件 <code>flock</code> 落在 turbo NFS 上</td><td>锁失效时同卡超额</td><td>V5 的 share2 和 V6 压测都经过同一把锁，能先暴露问题；若锁失效，链停下交你，不另加机制</td></tr>
+<tr><td>aspen→GL 的 ssh 断开</td><td>srun 随之被停，该关中断</td><td>训练同样挂法已稳定数日，不改；中断即链停下、保留日志，按工程故障自行处理并在汇报里写明</td></tr>
 <tr><td>节点上有别人的进程占用端口</td><td>连错服务</td><td><code>run_shard.sh</code> 按 18011+7k 取端口；节点 GPU 归本作业独占，端口冲突概率低；出现 <code>Errno 98</code> 即停</td></tr>
 <tr><td>装环境耗时或失败</td><td>赶不上 ctx512 结束</td><td>链等训练结束和环境就绪两个条件，晚开不影响结果；占位还有约 2 天余量</td></tr>
 <tr><td>A40 推理慢于估计</td><td>评估超过 10 小时</td><td>占位余量足够；只记录，不处置</td></tr>
