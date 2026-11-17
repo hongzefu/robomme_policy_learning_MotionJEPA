@@ -17,10 +17,12 @@ _spec.loader.exec_module(cc)
 CONTEXT_CFG = SimpleNamespace(token_per_image=64, integration_type='context')
 MODUL_CFG = SimpleNamespace(token_per_image=64, integration_type='modulation')
 CTX_RUNS = ('v2-1600ep-m8x8-ctx-motion-b128-50k', 'v17-smoke20')
+# 1116 计划第二部分 1.3：GL 训的 context 无 motion run，单列，不并入 CTX_RUNS（test_context_entries_fields 断言 motion True）
+CTX_NOMOTION_RUNS = ('v2-1600ep-m8x8-ctx-b128-50k-gl', 'v2-1600ep-m16x8x8-ctx-b128-50k-gl')
 MODUL_RUN = 'robomme-vla-modul-motion-80k-v1'
 
 
-@pytest.mark.parametrize('name', CTX_RUNS)
+@pytest.mark.parametrize('name', CTX_RUNS + CTX_NOMOTION_RUNS)
 def test_context_snapshot_passes_context_entry(name):
     cc.assert_integration(CONTEXT_CFG, cc.RUNS[name])
 
@@ -28,7 +30,7 @@ def test_context_snapshot_passes_context_entry(name):
 def test_modulation_snapshot_passes_existing_entries():
     # 已有条目都不写 integration，缺省按 modulation，行为与改动前一致
     for name, run in cc.RUNS.items():
-        if name in CTX_RUNS:
+        if name in CTX_RUNS + CTX_NOMOTION_RUNS:
             continue
         assert 'integration' not in run
         cc.assert_integration(MODUL_CFG, run)
@@ -60,3 +62,18 @@ def test_context_entries_fields(name):
     # 已回填（v17 a085c88 复算）：必须是 64 位小写十六进制
     assert run['resolved_sha256'] == '21791b2964c868119784d086f5ce2334405596d8fa20586e217c4703f018d0e3'
     assert len(run['resolved_sha256']) == 64 and all(c in '0123456789abcdef' for c in run['resolved_sha256'])
+
+
+@pytest.mark.parametrize('name,budget,config', [
+    ('v2-1600ep-m8x8-ctx-b128-50k-gl', 512, 'mme_vla_suite_b128_60k'),
+    ('v2-1600ep-m16x8x8-ctx-b128-50k-gl', 1024, 'mme_vla_suite_b128_80k'),
+])
+def test_context_nomotion_entries_fields(name, budget, config):
+    run = cc.RUNS[name]
+    assert run['integration'] == 'context' and run['motion'] is False and run['budget'] == budget
+    assert run['steps'] == ('50000',) and run['config'] == config
+    assert run['norm_stats_sha256'] == '856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173'
+    assert not any(k.startswith('motion_') for k in run)
+    assert len(run['resolved_sha256']) == 64 and all(c in '0123456789abcdef' for c in run['resolved_sha256'])
+    with pytest.raises(AssertionError):
+        cc.assert_integration(MODUL_CFG, run)
