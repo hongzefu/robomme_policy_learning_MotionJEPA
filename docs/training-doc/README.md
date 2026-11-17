@@ -105,7 +105,8 @@
 
 | 目录 | 内容 | 状态 |
 |---|---|---|
-| [`v2-1600ep-m8x8-ctx-motion-b128-50k/`](v2-1600ep-m8x8-ctx-motion-b128-50k/launch.md) | 54.62% 那条 512+motion160（v7 ep72）modul run 改 context、其余一致，50k；计划 `1115-4task-ctx-motion160-v7-50k-plan.html` | 起跑前（Beta） |
+| [`v2-1600ep-m8x8-ctx-motion-b128-50k/`](v2-1600ep-m8x8-ctx-motion-b128-50k/result.md) | 54.62% 那条 512+motion160（v7 ep72）modul run 改 context、其余一致，50k；计划 `1115-4task-ctx-motion160-v7-50k-plan.html` | 训完 `TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10`，公开 bucket `HF_VERIFY=PASS ckpts=10` |
+| [`local692-ctx-motion160-50k/`](local692-ctx-motion160-50k/result.md) | 上面 @50000 本机 692 局（seed 7，每卡 3 份 24 片） | **254/692 = 36.71%** |
 
 ## 二、环境 A：motion 接入依据（2×RTX 6000 Ada + turbo，只读）
 
