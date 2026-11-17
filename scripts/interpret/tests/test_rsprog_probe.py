@@ -366,3 +366,30 @@ def test_attn_agg_fails_without_memmod():
     assert line.startswith("ATTN_AGG=FAIL") and "memmod_maxabs=na" in line
     checks["A"].update(memmod_maxabs=2e-4, memmod_missing_episodes=0)
     assert RA.attn_agg_line(checks, panels).startswith("ATTN_AGG=PASS")
+
+
+def test_panel_a_scales():
+    # 块①：上界 = max(2, ⌈最大值⌉)，只标 0、1、上界
+    assert RA.ratio_scale([[0.2, 20.69], [1.0, np.nan]]) == (21, [0, 1, 21])
+    assert RA.ratio_scale([0.8, 1.3]) == (2, [0, 1, 2])
+    # 块② 第一行：18 格里有一个 370% 离群格 → 上界取去掉最大格后的值并取整到 5，角标指出被截断的层
+    film = np.array([0.1] * 8 + [36.2, 370.3, 7.3, 186.8, 116.7, 150.1, 262.4, 148.3, 122.6, 1.2])
+    top, peak, layer = RA.film_scale(film)
+    assert top == 265.0 and peak == pytest.approx(370.3) and layer == 9
+
+
+def test_panel_a_colorbar_ticks_sparse(tmp_path):
+    """真实数据形态（motion 份额 ÷ 均分到 20 以上、FiLM 有离群格、motion 比例超过 100%）出图不报错，色标无 minor 刻度。"""
+    layers = {"ratio_motion": list(np.linspace(0.2, 20.7, 18)), "ratio_frame": list(np.linspace(1.0, 0.3, 18)),
+              "film_total": [0.1] * 9 + [370.0] + [120.0] * 8, "film_motion": [80.0] * 17 + [135.0]}
+    for index, name in enumerate(RA.MAIN_ROWS):
+        layers[f"main_{name}"] = [100 / 3] * 18
+    paths = RA.plot_panel_a({"layers": layers, "n_episodes": 3}, "A", tmp_path, "attn-a-test")
+    assert all(p.stat().st_size > 1000 for p in paths)
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import TwoSlopeNorm
+    fig = plt.figure()
+    cb = RA._cbar(fig, [0.1, 0.1, 0.05, 0.8], "coolwarm", TwoSlopeNorm(vmin=0, vcenter=1, vmax=21), [0, 1, 21], "x")
+    assert [round(t) for t in cb.get_ticks()] == [0, 1, 21]
+    assert len(cb.ax.yaxis.get_minorticklocs()) == 0
+    plt.close(fig)

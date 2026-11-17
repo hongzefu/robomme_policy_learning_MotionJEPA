@@ -12,7 +12,8 @@
 
 modulation 下记忆只经 MemoryAttention 进动作专家（§3、§6）：
   (a) 横轴 L0–L17，三块：① action←motion、action←frames：MemoryAttention 份额 ÷ 按 token 数均分份额；
-      ② film_rel 两行（%）；③ attn_main 三行（% of reader's attention，平方根色标 0–70）。都按局等权：点内（R2 已对头、
+      ② film_rel 两行、各自色标：FiLM 相对改变量（%，上界取 99 百分位，截断最大值写在角标）与 motion 在记忆读取中的
+      比例 ‖Σmotion αV‖ ÷ ‖Σall αV‖（%，0–100；JSON 键仍为 film_motion）；③ attn_main 三行（% of reader's attention，平方根色标 0–70）。都按局等权：点内（R2 已对头、
       动作位、去噪步、噪声平均）→ 局内各点平均 → 局间平均。
   (b) 行 = 执行中的第 j 步（1 起），列 = 被读的示范段 j′，格子 = share ÷ uniform（层平均 L0–L17），帧流 single 权重
       （按 mem_token_segments 归段），motion 流 overlap 权重（窗与示范段有重叠就整窗计入该段，与 subgoal_attention 原图同口径）。
@@ -318,8 +319,10 @@ def _cbar(fig, rect, cmap, norm, ticks, label, size=7.5):
     cax = fig.add_axes(rect)
     cb = fig.colorbar(ScalarMappable(norm=norm, cmap=cmap), cax=cax, ticks=ticks)
     cb.ax.tick_params(labelsize=size, colors=GREY, length=2.5)
-    cb.set_label(label, fontsize=size, color=GREY, labelpad=4, linespacing=1.1)
+    if label:
+        cb.set_label(label, fontsize=size, color=GREY, labelpad=4, linespacing=1.1)
     cb.outline.set_linewidth(0.8)
+    cb.ax.minorticks_off()          # TwoSlopeNorm 等非线性色标会自动生成成串的 minor 刻度，只留给定的整数刻度
     return cb
 
 
@@ -330,37 +333,70 @@ def _nice_max(values, floor):
     return max(floor, float(np.ceil(top / 5.0) * 5.0))
 
 
+FILM_CLIP_PERCENTILE = 99      # 块② 第一行色标上界：18 层格子值的 99 百分位（method="lower"，即去掉最大的那一格）
+
+
+def ratio_scale(values):
+    """块①：发散色标中心 1，上界 max(2, 实际最大值向上取整)，只标 0、1、上界。"""
+    finite = np.asarray(values, float)
+    finite = finite[np.isfinite(finite)]
+    top = max(2, int(np.ceil(finite.max()))) if finite.size else 2
+    return top, [0, 1, top]
+
+
+def film_scale(values, percentile=FILM_CLIP_PERCENTILE):
+    """块② 第一行：上界取格子值的 percentile 百分位并向上取整到 5；返回 (上界, 实际最大值, 最大值所在层或 None=未截断)。"""
+    finite = np.asarray(values, float)
+    keep = np.isfinite(finite)
+    if not keep.any():
+        return 5.0, None, None
+    top = float(np.ceil(max(np.percentile(finite[keep], percentile, method="lower"), 1e-9) / 5.0) * 5.0)
+    peak = float(finite[keep].max())
+    layer = int(np.nanargmax(np.where(keep, finite, -np.inf)))
+    return top, peak, (layer if peak > top else None)
+
+
 def plot_panel_a(a, model, output, stem):
+    """(a)：块① MemoryAttention 份额 ÷ 均分（发散色标）；块② 两行各自色标——FiLM 相对改变量（%，上界取 99 百分位，
+    截断的最大值在角标写出）与 motion 在记忆读取中的比例（‖Σmotion αV‖ ÷ ‖Σall αV‖，%，0–100）；块③ 主注意力。"""
     plt = _plt()
     div, TwoSlopeNorm, PowerNorm, Normalize = _colormaps()
     layers = a["layers"]
     blk1 = np.vstack([layers["ratio_motion"], layers["ratio_frame"]])
-    blk2 = np.vstack([layers["film_total"], layers["film_motion"]])
+    film = np.asarray(layers["film_total"], float)[None]
+    motion_share = np.asarray(layers["film_motion"], float)[None]
     blk3 = np.vstack([layers[f"main_{name}"] for name in MAIN_ROWS])
-    ratio_max = max(3.0, float(np.ceil(np.nanmax(blk1)))) if np.isfinite(blk1).any() else 3.0
-    film_max = _nice_max(blk2, 10.0)
+    ratio_top, ratio_ticks = ratio_scale(blk1)
+    film_top, film_peak, film_clip = film_scale(film[0])
+    film_note = None if film_clip is None else f"max {film_peak:.0f}% at L{film_clip} (clipped)"
+    share_peak = float(np.nanmax(motion_share)) if np.isfinite(motion_share).any() else None
+    share_note = (f"max {share_peak:.0f}% at L{int(np.nanargmax(motion_share))} (clipped)"
+                  if share_peak is not None and share_peak > 100 else None)
+    # (标题, 行标签, 数据, 色图, 归一化, 刻度, 色标标签, 截断角标, 行高英寸)；单行块的单位写在标题里，色标不加竖排标签
+    # （单行高度放不下两行竖排文字），截断角标写在该行右下方。
     blocks = [("action reads memory (MemoryAttention)", ["action ← motion", "action ← frames"], blk1, div,
-               TwoSlopeNorm(vmin=0, vcenter=1, vmax=ratio_max), list(range(0, int(ratio_max) + 1)), "share ÷\nuniform"),
-              ("memory's effect on action (FiLM)", ["memory → action", "of which motion"], blk2, "Purples",
-               Normalize(0, film_max), [0, film_max / 2, film_max], "FiLM rel.\nchange (%)"),
+               TwoSlopeNorm(vmin=0, vcenter=1, vmax=ratio_top), ratio_ticks, "share ÷\nuniform", None, 0.27),
+              ("memory's effect on action: FiLM rel. change (%)", ["memory → action"], film, "Purples",
+               Normalize(0, film_top), [0, film_top], None, film_note, 0.36),
+              ("motion share of memory read (%): ‖Σmotion αV‖ ÷ ‖Σall αV‖", ["motion share"], motion_share,
+               "Oranges", Normalize(0, 100), [0, 50, 100], None, share_note, 0.36),
               ("action reads prefix (main attention)", ["action ← lang", "action ← image", "action ← action"], blk3, "Blues",
-               PowerNorm(0.5, vmin=0, vmax=70), [0, 5, 20, 40, 70], "% of reader's\nattention")]
-    row_in, gap_in, top_in, bottom_in = 0.27, 0.40, 0.62, 0.85     # 版式按英寸排，避免留白随行数漂移
-    fig_h = top_in + row_in * sum(len(b[1]) for b in blocks) + gap_in * (len(blocks) - 1) + bottom_in
+               PowerNorm(0.5, vmin=0, vmax=70), [0, 5, 20, 40, 70], "% of reader's\nattention", None, 0.27)]
+    gap_in, top_in, bottom_in = 0.40, 0.62, 0.85     # 版式按英寸排，避免留白随行数漂移
+    fig_h = top_in + sum(b[8] * len(b[1]) for b in blocks) + gap_in * (len(blocks) - 1) + bottom_in
     fig = plt.figure(figsize=(6.5, fig_h))
     x0, width, cbx, cbw = 0.285, 0.535, 0.855, 0.022
-    row_h = row_in / fig_h
     y = 1 - top_in / fig_h
-    for i, (title, rows, data, cmap, norm, ticks, label) in enumerate(blocks):
-        h = row_h * len(rows)
+    for i, (title, rows, data, cmap, norm, ticks, label, note, row_in) in enumerate(blocks):
+        h = row_in * len(rows) / fig_h
         ax = fig.add_axes([x0, y - h, width, h])
         _heat(ax, data, cmap, norm)
         ax.set_yticks(np.arange(len(rows)) + 0.5)
         ax.set_yticklabels(rows, fontsize=9.5, color="#222222")
-        if rows[1].startswith("of which"):
-            ax.get_yticklabels()[1].set_color(GREY)
-            ax.get_yticklabels()[1].set_style("italic")
         ax.text(0, 1.0, title, transform=ax.transAxes, ha="left", va="bottom", fontsize=7.5, color="#777777")
+        if note:
+            ax.text(1.0, -0.06, note, transform=ax.transAxes, ha="right", va="top", fontsize=7, color="#a3361b",
+                    style="italic")
         if i == len(blocks) - 1:
             ax.set_xticks([0.5, 5.5, 10.5, 15.5])
             ax.set_xticklabels(["L0", "L5", "L10", "L15"], fontsize=9, color=GREY)
@@ -368,7 +404,7 @@ def plot_panel_a(a, model, output, stem):
             bottom = y - h
         else:
             ax.set_xticks([])
-        _cbar(fig, [cbx, y - h, cbw, h], cmap, norm, ticks, label)
+        _cbar(fig, [cbx, y - h, cbw, h], cmap, norm, ticks, label, size=7 if len(rows) == 1 else 7.5)
         y -= h + gap_in / fig_h
     fig.text(0.02, 1 - 0.22 / fig_h, "(a)", fontsize=13, fontweight="bold", va="center")
     fig.text(x0, 1 - 0.22 / fig_h, f"{MODEL_NAME.get(model, model)}  (n = {a['n_episodes']} episodes)", fontsize=10, va="center",
