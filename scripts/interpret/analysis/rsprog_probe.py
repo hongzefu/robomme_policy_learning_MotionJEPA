@@ -1,9 +1,10 @@
 """RouteStick 进度探针与新版 Fig. 4（计划 1117-routestick-progress-probe-attn 第一部分 §3、§5，第二部分 B1 第 4 行）。
 
 主环境 CPU，只用 numpy（出图另需 matplotlib）。输入：
-  * R1 的 rsprog_points.json：每局 k、seed、difficulty、L、路线、示范段与执行段边界、e0；每点 u、j、τ、剩余步数、
-    当前步 / 下一步走法（四类）、所在按钮；顶层另有同帧异史配对表。字段名做成参数（--field、--pairs-key），
-    默认值见 DEFAULT_FIELDS。
+  * R1 的 rsprog_points.json（schema rsprog-points-1）：顶层 episodes[]（k、difficulty、L、demo_bounds…）、
+    顶层 points[]（k、t、u、j（0 起）、tau、remaining、cur_move、next_move（末步 null）…）、pairs[]（k、t_a、t_b、
+    front_maxdiff、wrist_maxdiff，按 H5 timestep t 对齐）、dropped[]（剔除局，本脚本排除）。默认值即 R1 实际键名，
+    见 DEFAULT_FIELDS；--field 仅备用。
   * R2 的每局 npz：<replay-root>/<模型>/episode_<k>.npz（--npz-pattern 可改），本脚本读 u、hidden_prefix (N,19,2,W)
     （组 0 = image、1 = lang）、hidden_action (N,18,W_a)、hidden_memmod (N,18,W_a)、mem_frame_mean、mem_motion_mean、
     mem_motion_latest (N,1024)。点按 (k, u) 与标签表对齐；两个模型取共同点集。
@@ -59,11 +60,14 @@ LABELS = REGRESSION + CLASSIFICATION
 MAIN_LABELS = ("tau", "next")
 SHUFFLE_GROUPS = ("action",)
 
+# 默认按 R1 实际输出（schema rsprog-points-1，scripts/interpret/rsprog_points.py 模块 docstring 第二节）：
+# 顶层 episodes[]、points[]（点不挂在局下）、pairs[]（用 H5 timestep t 对齐，t = e0 + u）、dropped[]（剔除局）。
 DEFAULT_FIELDS = {
     "episodes": "episodes", "k": "k", "difficulty": "difficulty", "L": "L", "points": "points",
-    "u": "u", "j": "j", "tau": "tau", "remaining": "remaining", "cur": "cur_move", "next": "next_move",
-    "pairs": "same_frame_pairs", "pair_k": "k", "pair_u_a": "u_a", "pair_u_b": "u_b",
+    "t": "t", "u": "u", "j": "j", "tau": "tau", "remaining": "remaining", "cur": "cur_move", "next": "next_move",
+    "pairs": "pairs", "pair_k": "k", "pair_t_a": "t_a", "pair_t_b": "t_b", "dropped": "dropped",
 }
+PIX_TOL = 8   # 同帧异史严格档：front/wrist 逐像素最大差都 ≤ 8（R1 输出已只留过阈值的配对，这里再核一次）
 
 _STATE = {}
 
@@ -71,28 +75,34 @@ _STATE = {}
 # ---------------------------------------------------------------- 读入
 
 def load_points(path, fields=None):
-    """读 R1 的标签表，摊平成逐点数组。返回 samples（未与回放库对齐）。"""
+    """读 R1 的标签表，摊平成逐点列表；排除 dropped[] 里的局。返回 {"rows", "pairs_raw"}。
+
+    点在顶层 points[]（每点带 k）；L 与难度取自所属局。pairs_raw 是 (k, t_a, t_b)。
+    """
     f = {**DEFAULT_FIELDS, **(fields or {})}
     data = json.loads(Path(path).read_text(encoding="utf-8"))
+    dropped = {int(entry[f["k"]]) for entry in data.get(f["dropped"], []) or []}
+    episodes = {int(ep[f["k"]]): ep for ep in data[f["episodes"]] if int(ep[f["k"]]) not in dropped}
     rows = []
-    episodes = data[f["episodes"]]
-    if isinstance(episodes, dict):
-        episodes = [dict(value, **{f["k"]: value.get(f["k"], key)}) for key, value in episodes.items()]
-    for ep in episodes:
-        k = int(ep[f["k"]])
-        for point in ep[f["points"]]:
-            nxt = point.get(f["next"])
-            rows.append({"k": k, "difficulty": str(ep[f["difficulty"]]), "L": int(ep[f["L"]]), "u": int(point[f["u"]]),
-                         "j": int(point[f["j"]]), "tau": float(point[f["tau"]]),
-                         "remaining": float(point.get(f["remaining"], int(ep[f["L"]]) - int(point[f["j"]]))),
-                         "cur": str(point[f["cur"]]), "next": None if nxt is None else str(nxt)})
+    for point in data[f["points"]]:
+        k = int(point[f["k"]])
+        if k not in episodes:
+            continue
+        ep = episodes[k]
+        L, j, nxt = int(ep[f["L"]]), int(point[f["j"]]), point.get(f["next"])
+        rows.append({"k": k, "difficulty": str(ep[f["difficulty"]]), "L": L, "t": int(point[f["t"]]),
+                     "u": int(point[f["u"]]), "j": j, "tau": float(point[f["tau"]]),
+                     "remaining": float(point.get(f["remaining"], L - j)),
+                     "cur": str(point[f["cur"]]), "next": None if nxt is None else str(nxt)})
+    tol = data.get("pix_tol", PIX_TOL)
     pairs = []
     for entry in data.get(f["pairs"], []) or []:
-        if isinstance(entry, dict):
-            pairs.append((int(entry[f["pair_k"]]), int(entry[f["pair_u_a"]]), int(entry[f["pair_u_b"]])))
-        else:
-            pairs.append(tuple(int(v) for v in entry[:3]))
-    return {"rows": rows, "pairs_raw": pairs}
+        if entry.get("front_maxdiff", 0) > tol or entry.get("wrist_maxdiff", 0) > tol:
+            continue
+        k = int(entry[f["pair_k"]])
+        if k in episodes:
+            pairs.append((k, int(entry[f["pair_t_a"]]), int(entry[f["pair_t_b"]])))
+    return {"rows": rows, "pairs_raw": pairs, "dropped": sorted(dropped)}
 
 
 def npz_path(replay_root, pattern, model, k):
@@ -122,7 +132,7 @@ def build_samples(points, banks):
         available = keys if available is None else available & keys
     available = available or set()
     keep = sorted((r for r in rows if (r["k"], r["u"]) in available), key=lambda r: (r["k"], r["u"]))
-    counts = {"label_points": len(rows), "matched_points": len(keep),
+    counts = {"label_points": len(rows), "matched_points": len(keep), "dropped_episodes": len(points.get("dropped", [])),
               "episodes": len({r["k"] for r in keep}), "dropped": len(rows) - len(keep)}
     if not keep:
         raise SystemExit("找不到标签表与回放库的共同点；核对 --npz-pattern 与 (k, u)")
@@ -145,7 +155,7 @@ def build_samples(points, banks):
     samples["move_classes"] = move_classes
     samples["n_classes"] = len(move_classes)
     samples["moves"] = episode_moves(keep, code)
-    row_of = {(r["k"], r["u"]): i for i, r in enumerate(keep)}
+    row_of = {(r["k"], r["t"]): i for i, r in enumerate(keep)}
     pair_rows = [(row_of[(k, a)], row_of[(k, b)]) for k, a, b in points["pairs_raw"] if (k, a) in row_of and (k, b) in row_of]
     samples["pairs"] = np.asarray(pair_rows, dtype=np.int64).reshape(-1, 2)
     counts["pairs"] = len(points["pairs_raw"])
@@ -749,7 +759,7 @@ def main(argv=None):
     parser.add_argument("--models", nargs="+", default=list(MODELS))
     parser.add_argument("--npz-pattern", default="{model}/episode_{k}.npz", help="相对 replay-root 的每局 npz 路径模板")
     parser.add_argument("--field", action="append", help="字段名覆盖，如 next=next_move；可重复")
-    parser.add_argument("--pairs-key", default=None, help="同帧异史配对表在 JSON 顶层的键（默认 same_frame_pairs）")
+    parser.add_argument("--pairs-key", default=None, help="同帧异史配对表在 JSON 顶层的键（默认 pairs）")
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--shuffles", type=int, default=SHUFFLES)
     parser.add_argument("--repeats", type=int, default=REPEATS)

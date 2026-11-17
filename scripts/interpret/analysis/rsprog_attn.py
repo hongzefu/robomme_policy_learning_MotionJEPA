@@ -1,13 +1,14 @@
 """RouteStick 注意力图 (a)(b)（计划 1117-routestick-progress-probe-attn 第一部分 §6、§7，第二部分 B1 第 5 行）。
 
 只用 CPU。输入：
-  * R1 的 rsprog_points.json：每局 k、L、示范段边界 demo_bounds（默认按半开区间 [s, e) 读，帧号与 mem_t0/mem_t1 同一坐标）、
-    每点 u、j（0 起）。字段名可用 --field 覆盖。
+  * R1 的 rsprog_points.json（schema rsprog-points-1）：顶层 episodes[]（k、L、e0、demo_bounds = 示范第 j′=1..L 段的
+    闭区间 [s, e]，H5 timestep，与 mem_t0/mem_t1 同一坐标）、顶层 points[]（k、u、j（0 起））、dropped[]（排除）。
+    默认值即 R1 实际键名，--field 仅备用。
   * R2 的每局 npz（<replay-root>/<模型>/episode_<k>.npz）：u、attn_mem (N,18,M)、mem_type/mem_t0/mem_t1 (N,M)、
     mem_len (N,)、attn_main (N,18,3)（lang、image、action）、film_rel (N,18,2)（总量、motion 部分）。
     可选标量 memmod_maxabs（R2 replay 的 mem_mod_vec 一致性自检），存在就读进 ATTN_AGG。
-  * R1 的 scripts.interpret.rsprog_points.mem_token_segments(mem_type, mem_t0, mem_t1, demo_bounds)：
-    本文件按「返回逐 token 示范段号（0 起），负数表示不属示范段（执行帧 / 执行窗 / 跨段过渡）」使用，逐点传入有效 token。
+  * R1 的 scripts.interpret.rsprog_points.mem_token_segments(mem_type, mem_t0, mem_t1, demo_bounds, exec_start=e0)：
+    返回逐 token 示范段号（1 起），0 = 执行帧 / 过渡窗，−1 = 补齐；逐点传入有效 token。
 
 modulation 下记忆只经 MemoryAttention 进动作专家（§3、§6）：
   (a) 横轴 L0–L17，三块：① action←motion、action←frames：MemoryAttention 份额 ÷ 按 token 数均分份额；
@@ -39,8 +40,10 @@ STREAM_TYPE = {"frame": 0, "motion": 1}
 MIN_CELL_EPISODES = 5
 ROWSUM_TOL, MEMMOD_TOL = 1e-4, 1e-3
 MAIN_ROWS = ("lang", "image", "action")
+# 默认即 R1 实际输出（schema rsprog-points-1）：顶层 episodes[]、顶层 points[]、dropped[]；demo_bounds 为示范第
+# j′=1..L 段的闭区间 [s, e]（H5 timestep），e0 为执行起点。
 DEFAULT_FIELDS = {"episodes": "episodes", "k": "k", "L": "L", "difficulty": "difficulty", "demo_bounds": "demo_bounds",
-                  "points": "points", "u": "u", "j": "j"}
+                  "e0": "e0", "points": "points", "u": "u", "j": "j", "dropped": "dropped"}
 
 
 # ---------------------------------------------------------------- 读入
@@ -56,17 +59,22 @@ def default_segmenter(spec=DEFAULT_SEGMENTER):
 
 
 def load_points(path, fields=None):
+    """每局：L、难度、示范段闭区间、e0 与 {u: j}；排除 dropped[] 里的局。"""
     f = {**DEFAULT_FIELDS, **(fields or {})}
     data = json.loads(Path(path).read_text(encoding="utf-8"))
-    episodes = data[f["episodes"]]
-    if isinstance(episodes, dict):
-        episodes = [dict(value, **{f["k"]: value.get(f["k"], key)}) for key, value in episodes.items()]
+    dropped = {int(entry[f["k"]]) for entry in data.get(f["dropped"], []) or []}
     out = {}
-    for ep in episodes:
+    for ep in data[f["episodes"]]:
         k = int(ep[f["k"]])
+        if k in dropped:
+            continue
         out[k] = {"k": k, "L": int(ep[f["L"]]), "difficulty": str(ep.get(f["difficulty"], "")),
                   "demo_bounds": [tuple(int(v) for v in pair) for pair in ep[f["demo_bounds"]]],
-                  "j_of_u": {int(p[f["u"]]): int(p[f["j"]]) for p in ep[f["points"]]}}
+                  "e0": int(ep[f["e0"]]) if f["e0"] in ep else None, "j_of_u": {}}
+    for point in data[f["points"]]:
+        k = int(point[f["k"]])
+        if k in out:
+            out[k]["j_of_u"][int(point[f["u"]])] = int(point[f["j"]])
     return out
 
 
@@ -81,10 +89,11 @@ def load_episode(replay_root, pattern, model, k):
 # ---------------------------------------------------------------- 逐点读数
 
 def overlap_weights(t0, t1, demo_bounds):
-    """motion 窗 [t0, t1]（闭区间）与各示范段 [s, e) 的重叠：有重叠的段权重 1（overlap 计权）。"""
+    """motion 窗 [t0, t1] 与各示范段 [s, e]（都是闭区间）的重叠：有重叠的段权重 1（overlap 计权）。
+    窗口截到 e0 之前（与 subgoal_attention.segments_of_window 同口径），示范段本就止于 e0 − 1。"""
     weights = np.zeros(len(demo_bounds))
     for index, (start, end) in enumerate(demo_bounds):
-        if min(t1 + 1, end) - max(t0, start) > 0:
+        if min(t1, end) - max(t0, start) + 1 > 0:
             weights[index] = 1.0
     return weights
 
@@ -124,7 +133,7 @@ def stream_share(mass, index, weights):
     return share, uniform
 
 
-def point_readouts(ep, row, demo_bounds, segmenter, segments_base=0):
+def point_readouts(ep, row, demo_bounds, segmenter, segments_base=1, exec_start=None):
     """一个推理点的 (a) 与 (b) 读数。"""
     n = int(ep["mem_len"][row])
     mem_type = ep["mem_type"][row, :n]
@@ -138,7 +147,8 @@ def point_readouts(ep, row, demo_bounds, segmenter, segments_base=0):
         count = int(mask.sum())
         ratio[stream] = attn[:, mask].sum(-1) / (count / n) if count else np.full(LAYERS, np.nan)
     out["ratio"] = ratio
-    segments = np.asarray(segmenter(mem_type, t0, t1, demo_bounds)).astype(int) - segments_base
+    # R1：段号 1 起，0 = 执行帧 / 过渡窗，−1 = 补齐；减去起点后 0..L−1 为示范段，负数都不归段。
+    segments = np.asarray(segmenter(mem_type, t0, t1, demo_bounds, exec_start=exec_start)).astype(int) - segments_base
     out["b"] = {}
     for stream in STREAMS:
         for weighting in ("single", "overlap") if stream == "motion" else ("single",):
@@ -155,7 +165,7 @@ def point_readouts(ep, row, demo_bounds, segmenter, segments_base=0):
 
 # ---------------------------------------------------------------- 逐局、跨局
 
-def analyse_model(points, replay_root, pattern, model, segmenter, segments_base=0):
+def analyse_model(points, replay_root, pattern, model, segmenter, segments_base=1):
     """返回逐局读数列表与 ATTN_AGG 统计。"""
     episodes, rowsum, mainsum, memmod, points_used = [], 0.0, 0.0, [], 0
     for k, meta in sorted(points.items()):
@@ -171,7 +181,7 @@ def analyse_model(points, replay_root, pattern, model, segmenter, segments_base=
             if int(u) not in meta["j_of_u"]:
                 continue
             j = meta["j_of_u"][int(u)]
-            readout = point_readouts(ep, row, meta["demo_bounds"], segmenter, segments_base)
+            readout = point_readouts(ep, row, meta["demo_bounds"], segmenter, segments_base, meta["e0"])
             points_used += 1
             rowsum, mainsum = max(rowsum, readout["rowsum_err"]), max(mainsum, readout["main_err"])
             for stream in STREAM_TYPE:
@@ -457,7 +467,7 @@ def _jsonable(value):
 
 
 def run(points_path, replay_root, output, models=MODELS, pattern="{model}/episode_{k}.npz", fields=None, segmenter=None,
-        segments_base=0, repeats=BOOT_REPEATS, min_episodes=MIN_CELL_EPISODES, plot=True):
+        segments_base=1, repeats=BOOT_REPEATS, min_episodes=MIN_CELL_EPISODES, plot=True):
     segmenter = segmenter or default_segmenter()
     points = load_points(points_path, fields)
     summary = {"plan": "1117-routestick-progress-probe-attn", "repeats": repeats, "min_cell_episodes": min_episodes,
@@ -508,7 +518,7 @@ def main(argv=None):
     parser.add_argument("--npz-pattern", default="{model}/episode_{k}.npz")
     parser.add_argument("--field", action="append", help="字段名覆盖，如 demo_bounds=demo_segments；可重复")
     parser.add_argument("--segmenter", default=DEFAULT_SEGMENTER, help="归段函数「模块:函数」")
-    parser.add_argument("--segments-base", type=int, default=0, help="mem_token_segments 返回段号的起点（0 或 1）")
+    parser.add_argument("--segments-base", type=int, default=1, help="mem_token_segments 返回段号的起点（R1 为 1）")
     parser.add_argument("--repeats", type=int, default=BOOT_REPEATS)
     parser.add_argument("--min-cell-episodes", type=int, default=MIN_CELL_EPISODES)
     parser.add_argument("--no-plot", action="store_true")

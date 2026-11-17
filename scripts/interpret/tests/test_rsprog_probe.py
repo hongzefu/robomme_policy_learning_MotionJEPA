@@ -1,8 +1,11 @@
 """rsprog_probe / rsprog_attn 的合成数据单测（计划 1117 B1 第 4、5 行、B4 R3）：只用 CPU，不读任何真实数据。
 
-合成数据带已知信号：模型 A 动作组第 10 层线性编码 τ 与下一步走法、第 17 层编码当前步走法（正对照）；前缀 image
-只编码执行偏移 u（时间）；模型 B 只有第 17 层的当前步走法。注意力：执行第 j 步时 attn_mem 对示范第 j 段的 token 加权
-（对角富集）。R1 的 mem_token_segments 尚未合入，这里用本地 stub（按计划 B4 R1 行的归段规则）。
+合成数据按 R1 实际输出模式（schema rsprog-points-1，scripts/interpret/rsprog_points.py 模块 docstring）造：顶层
+episodes[]、points[]、pairs[]（按 H5 timestep t 对齐）、dropped[]；demo_bounds 为示范第 j′=1..L 段的闭区间。
+带已知信号：模型 A 动作组第 10 层线性编码 τ 与下一步走法、第 17 层编码当前步走法（正对照）；前缀 image 只编码执行
+偏移 u（时间）；模型 B 只有第 17 层的当前步走法。注意力：执行第 j 步时 attn_mem 对示范第 j 段的 token 加权（对角富集）。
+归段默认用本地 stub（与 R1 mem_token_segments 同规则：段号 1 起，0 = 执行帧 / 过渡窗，−1 = 补齐）；R1 模块可导入时
+另有一条测试用真实函数对拍 stub 并整跑一次。
 """
 from __future__ import annotations
 
@@ -21,21 +24,24 @@ L_OF = {"easy": (2, 3), "medium": (3, 4), "hard": (3, 4), "xhard": (4, 4)}
 MOVES = ("A", "B", "C", "D")
 N_EP = 40
 ENRICH = 4.0
+DROPPED_K = N_EP          # 多造一局并列进 dropped[]，应被排除
 
 
-def stub_segments(mem_type, mem_t0, mem_t1, demo_bounds):
-    """计划 B4 R1 行的归段规则：帧按所在段；motion 窗 ≥ 22/33 帧落在某示范段才归该段，否则 −2（过渡）；执行 −1。"""
+def stub_segments(mem_type, mem_t0, mem_t1, demo_bounds, exec_start=None):
+    """R1 mem_token_segments 的同规则替身：帧 → 所在示范段（1 起，执行帧 0）；motion 窗截到 e0 后落在同一示范段的帧数
+    ≥ ⌈2/3·窗长⌉ 才归该段，否则 0；补齐 −1。demo_bounds 为闭区间。"""
+    e0 = int(exec_start) if exec_start is not None else int(demo_bounds[-1][1]) + 1
     out = np.full(len(mem_type), -1, dtype=int)
     for i, (kind, t0, t1) in enumerate(zip(mem_type, mem_t0, mem_t1)):
-        for seg, (s, e) in enumerate(demo_bounds):
-            if kind == 0 and s <= t0 < e:
+        if kind < 0:
+            continue
+        out[i] = 0
+        need = int(np.ceil(2.0 / 3.0 * (t1 - t0 + 1) - 1e-9))
+        for seg, (s, e) in enumerate(demo_bounds, start=1):
+            if kind == 0 and s <= t0 <= e and t0 < e0:
                 out[i] = seg
-            if kind == 1:
-                inside = min(t1 + 1, e) - max(t0, s)
-                if inside >= 22:
-                    out[i] = seg
-                elif inside > 0 and out[i] == -1:
-                    out[i] = -2
+            if kind == 1 and min(t1, e, e0 - 1) - max(t0, s) + 1 >= need:
+                out[i] = seg
     return out
 
 
@@ -45,28 +51,39 @@ def make_data(tmp_path, n_episodes=N_EP, seed=0):
     basis_move = rng.normal(size=(4, WA)) * 2.0
     basis_cur = rng.normal(size=(4, WA)) * 2.0
     basis_u = rng.normal(size=W)
-    episodes, pairs = [], []
-    for k in range(n_episodes):
+    episodes, points, pairs = [], [], []
+    for k in range(n_episodes + 1):
         difficulty = DIFFS[k % 4]
         L = int(rng.integers(L_OF[difficulty][0], L_OF[difficulty][1] + 1))
         moves = [MOVES[int(v)] for v in rng.integers(0, 4, size=L)]
-        demo = [(STEP * i, STEP * (i + 1)) for i in range(L)]
         e0 = STEP * L
-        points = []
+        ep = {"k": k, "seed": 3400000 + 100 * k, "env_seed": 1000 + k, "difficulty": difficulty, "episode": 1000 + k % 50,
+              "L": L, "moves": moves, "demo_bounds": [[STEP * i, STEP * i + STEP - 1] for i in range(L)],
+              "exec_bounds": [[e0 + STEP * i, e0 + STEP * i + STEP - 1] for i in range(L)], "e0": e0,
+              "n_frames": e0 + STEP * L, "irregular": False}
+        pts = []
         for u in range(0, STEP * L, 16):
             j = u // STEP
-            points.append({"t": e0 + u, "u": u, "j": j, "tau": u / (STEP * L), "remaining": L - j, "cur_move": moves[j],
-                           "next_move": moves[j + 1] if j + 1 < L else None, "button": int(j % 5)})
-        starts = [p["u"] for p in points if p["u"] % STEP < 16]
+            pts.append({"k": k, "difficulty": difficulty, "episode": ep["episode"], "t": e0 + u, "u": u, "j": j,
+                        "tau": u / (STEP * L), "tau_time": u / (STEP * L), "remaining": L - j, "cur_move": moves[j],
+                        "next_move": moves[j + 1] if j + 1 < L else None, "button_slot": j % 5,
+                        "step_start": u % STEP < 16})
+        starts = [p for p in pts if p["step_start"]]
         if len(starts) >= 2:
-            pairs.append({"k": k, "u_a": starts[0], "u_b": starts[1]})
-        episodes.append({"k": k, "seed": 3400000 + 100 * k, "difficulty": difficulty, "L": L, "route": moves,
-                         "demo_bounds": [list(b) for b in demo], "exec_bounds": [[e0 + STEP * i, e0 + STEP * (i + 1)] for i in range(L)],
-                         "e0": e0, "points": points})
+            pairs.append({"k": k, "t_a": starts[0]["t"], "t_b": starts[1]["t"], "j_a": starts[0]["j"], "j_b": starts[1]["j"],
+                          "button_slot": 0, "front_maxdiff": 3, "wrist_maxdiff": 5})
+        if len(starts) >= 3:     # 超过像素阈值的配对：应被剔除
+            pairs.append({"k": k, "t_a": starts[0]["t"], "t_b": starts[2]["t"], "j_a": 0, "j_b": 2, "button_slot": 0,
+                          "front_maxdiff": 12, "wrist_maxdiff": 2})
+        episodes.append(ep)
+        points += pts
         for model in ("A", "B"):
-            write_npz(tmp_path / model / f"episode_{k}.npz", model, episodes[-1], rng, basis_tau, basis_move, basis_cur, basis_u)
+            write_npz(tmp_path / model / f"episode_{k}.npz", model, ep, pts, rng, basis_tau, basis_move, basis_cur, basis_u)
+    data = {"schema": "rsprog-points-1", "pix_tol": 8, "stride": 16, "seglen": STEP, "episodes": episodes,
+            "points": points, "pairs": pairs,
+            "dropped": [{"k": DROPPED_K, "difficulty": DIFFS[DROPPED_K % 4], "episode": 1000, "reason": "mismatch"}]}
     path = tmp_path / "rsprog_points.json"
-    path.write_text(json.dumps({"episodes": episodes, "same_frame_pairs": pairs}), encoding="utf-8")
+    path.write_text(json.dumps(data), encoding="utf-8")
     return path
 
 
@@ -81,9 +98,8 @@ def memory_tokens(ep, u):
     return np.asarray(types), np.asarray(t0s), np.asarray(t1s)
 
 
-def write_npz(path, model, ep, rng, basis_tau, basis_move, basis_cur, basis_u):
+def write_npz(path, model, ep, pts, rng, basis_tau, basis_move, basis_cur, basis_u):
     path.parent.mkdir(parents=True, exist_ok=True)
-    pts = ep["points"]
     N = len(pts)
     tokens = [memory_tokens(ep, p["u"]) for p in pts]
     M = max(len(t[0]) for t in tokens)
@@ -105,10 +121,9 @@ def write_npz(path, model, ep, rng, basis_tau, basis_move, basis_cur, basis_u):
                 action[i, 10] += basis_move[MOVES.index(p["next_move"])]
         types, t0, t1 = tokens[i]
         n = len(types)
-        segs = stub_segments(types, t0, t1, ep["demo_bounds"])
+        segs = stub_segments(types, t0, t1, ep["demo_bounds"], exec_start=ep["e0"])
         weight = np.ones(n)
-        lo, hi = ep["demo_bounds"][p["j"]]
-        on_diag = ((types == 0) & (t0 >= lo) & (t0 < hi)) | ((types == 1) & (segs == p["j"]))
+        on_diag = segs == p["j"] + 1
         weight[on_diag] *= ENRICH
         attn = weight[None, :] * rng.uniform(0.8, 1.2, size=(18, n))
         attn_mem[i, :, :n] = attn / attn.sum(-1, keepdims=True)
@@ -144,7 +159,11 @@ def test_points_load_and_pairs(data):
     loaded = RP.load_points(points)
     assert len(loaded["rows"]) > 300
     assert all(r["next"] is None or r["next"] in MOVES for r in loaded["rows"])
+    assert DROPPED_K not in {r["k"] for r in loaded["rows"]} and loaded["dropped"] == [DROPPED_K]
+    # 每局一个过阈值配对；超过像素阈值的那条与 dropped 局的配对都被排除；配对用 t 而不是 u
     assert len(loaded["pairs_raw"]) == N_EP
+    rows = {(r["k"], r["t"]) for r in loaded["rows"]}
+    assert all((k, a) in rows and (k, b) in rows for k, a, b in loaded["pairs_raw"])
 
 
 def test_no_group_leak_and_folds(probe):
@@ -153,7 +172,8 @@ def test_no_group_leak_and_folds(probe):
     for key in samples["keys"]:
         assert len(set(samples["outer"][samples["groups"] == str(key)].tolist())) == 1
     assert set(samples["outer"].tolist()) == set(range(RP.OUTER_FOLDS))
-    assert summary["counts"]["dropped"] == 0
+    assert summary["counts"]["dropped"] == 0 and summary["counts"]["dropped_episodes"] == 1
+    assert summary["counts"]["episodes"] == N_EP and summary["counts"]["pairs_matched"] == N_EP
 
 
 def test_probe_reads_planted_signal(probe):
@@ -273,7 +293,7 @@ def test_ratio_is_one_under_uniform_attention():
           "mem_t0": np.array([list(range(0, 300, 10)) + list(range(0, 160, 16))]),
           "mem_t1": np.array([list(range(0, 300, 10)) + list(range(32, 192, 16))]),
           "attn_mem": np.full((1, 18, 40), 1 / 40), "attn_main": np.full((1, 18, 3), 1 / 3)}
-    readout = RA.point_readouts(ep, 0, [(0, 50), (50, 100), (100, 150)], stub_segments)
+    readout = RA.point_readouts(ep, 0, [(0, 49), (50, 99), (100, 149)], stub_segments, exec_start=150)
     assert np.allclose(readout["ratio"]["motion"], 1.0) and np.allclose(readout["ratio"]["frame"], 1.0)
     share = readout["b"][("frame", "single")]
     assert np.allclose(share["share"] / share["uniform"], 1.0)
@@ -286,3 +306,33 @@ def test_attn_figures(attn):
         for suffix in ("png", "pdf"):
             assert (out / f"{stem}.{suffix}").stat().st_size > 1000
     assert (out / "rsprog-attn-summary.json").exists()
+
+
+def test_overlap_weights_closed_interval():
+    bounds = [(0, 49), (50, 99)]
+    assert RA.overlap_weights(17, 49, bounds).tolist() == [1.0, 0.0]      # 窗末帧恰为段末帧
+    assert RA.overlap_weights(49, 81, bounds).tolist() == [1.0, 1.0]      # 首帧 49 仍属第 1 段
+    assert RA.overlap_weights(100, 132, bounds).tolist() == [0.0, 0.0]    # 执行窗
+
+
+def test_attn_dropped_excluded(attn):
+    _, summary = attn
+    assert summary["checks"]["A"]["episodes"] == N_EP
+
+
+def test_real_mem_token_segments_matches_stub(data):
+    """R1 合入后用真实 mem_token_segments：与 stub 逐 token 一致，并整跑一次注意力分析。"""
+    R1 = pytest.importorskip("scripts.interpret.rsprog_points")
+    root, points = data
+    payload = json.loads(points.read_text(encoding="utf-8"))
+    for ep in payload["episodes"][:8]:
+        for u in (0, 16, 48, STEP * ep["L"] - 2):
+            types, t0, t1 = memory_tokens(ep, u)
+            real = R1.mem_token_segments(types, t0, t1, ep["demo_bounds"], exec_start=ep["e0"])
+            assert np.array_equal(np.asarray(real), stub_segments(types, t0, t1, ep["demo_bounds"], exec_start=ep["e0"]))
+    padded = R1.mem_token_segments(np.array([0, 1, -1]), np.array([10, 0, 0]), np.array([10, 32, 0]), [[0, 49], [50, 99]],
+                                   exec_start=100)
+    assert np.asarray(padded).tolist() == [1, 1, -1]
+    summary = RA.run(points, root, root / "attn-real", segmenter=R1.mem_token_segments, repeats=50, plot=False)
+    assert summary["verdict"].startswith("ATTN_AGG=PASS")
+    assert summary["panel_b"]["A"]["frame:single"]["D"]["mean"] > RA.D_THRESHOLD
