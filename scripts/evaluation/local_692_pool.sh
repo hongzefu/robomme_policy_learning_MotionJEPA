@@ -12,7 +12,12 @@
 #        DRY_RUN=1（只打印计划、片→卡/端口映射与预标清单，不起任何分片、不写评估目录）、
 #        EVAL_SHARDS（正式评估逻辑分片数，默认 32）、EVAL_PER_GPU（每卡同时片数，默认 4，即 LOCAL_GPU_SHARE）、
 #        EVAL_MEM_FRACTION（正式评估每片 XLA_PYTHON_CLIENT_MEM_FRACTION，默认 0.2）；G6b 模式不读这三个，保持原行为；
-#        压测模式读 EVAL_PER_GPU（同卡份数）与 EVAL_MEM_FRACTION，EVAL_SHARDS 只用于生成取局用的分片计划
+#        压测模式读 EVAL_PER_GPU（同卡份数）与 EVAL_MEM_FRACTION，EVAL_SHARDS 只用于生成取局用的分片计划；
+#        （1116 计划第二部分 1.1 新增）EVAL_NGPU（正式评估用卡数，默认 8；显式设置时要求 EVAL_SHARDS == EVAL_NGPU×EVAL_PER_GPU）、
+#        G6B_SHARE_FRACTION（G6b 同卡 2 片那一步的显存占比，默认 0.45）、
+#        MMEVLA_MOTION_OVERFLOW（默认 resample，设为空串表示关闭）、EXPECT_MOTION_STATS（默认 1）、
+#        POLICY_CONFIG（默认 mme_vla_suite_b128_80k）、
+#        DEMO_PREFIX_ORIGINAL=1（原始前缀库：$STORE/index.json 的 sha256 等于 DEMO_PREFIX_INDEX_SHA256 时跳过 E0.txt 检查）
 #
 # 流程（正式）：
 #   ① $STORE/E0.txt 首行必须是 DEMO_PREFIX_SRC=PASS（E0，训练前已完成），否则不起跑；
@@ -20,7 +25,7 @@
 #   ③ C5：从 docs/training-doc/finalckpt-nomotion59999-gl/records/preseeded-errors.json 只取去重后的 9 个
 #      (task, difficulty, episode) 身份（不复用其 by_shard），按本次计划查所属分片，写该片 progress.json 预标 "error"
 #      并 ALLOW_RESUME=1；判定行 PRESEED=PASS episodes=9 placed=9 duplicates=0，不过即不起跑；
-#   ④ C4：分片 k 用 GPU k%8；每卡一个占位文件 $EVAL_ROOT/gpu-slots/gpu<g>（同名 .lock 做 flock）：
+#   ④ C4：分片 k 用 GPU k%NGPU（NGPU=EVAL_NGPU，默认 8）；每卡一个占位文件 $EVAL_ROOT/gpu-slots/gpu<g>（同名 .lock 做 flock）：
 #      先在锁内预占卡位（含本片 <= $PER_GPU，按分片计数），再后台起 run_shard.sh，把它自身的 PID 作为进程树根写入
 #      （server、sidecar 都是它的子孙），片结束在锁内释放；run_shard.sh 的 LOCAL_GPU_SHARE>=2 分支只认这份登记；
 #   ⑤ wait 全部分片，逐片记 SHARD_EXIT_CODE；只含预标 error 的分片非零退出属预期；
@@ -51,12 +56,20 @@ SEED="${2:-7}"
 [[ "$DRY" == 1 || -d "$CKPT/params" ]] || { echo "checkpoint 缺 params/：$CKPT"; exit 2; }
 CKPT_ID="$(basename "$CKPT")"
 if [[ "$MODE" == g6b ]]; then
-    SHARDS=10; PER_GPU=2; MEM_FRACTION=0.45   # G6b 保持原行为（runbook D2），不读 EVAL_* 覆盖
+    # G6b 不读 EVAL_* 覆盖（runbook D2）；同卡 2 片那一步的显存占比可由 G6B_SHARE_FRACTION 覆盖（1116 计划 1.1）
+    SHARDS=10; PER_GPU=2; MEM_FRACTION="${G6B_SHARE_FRACTION:-0.45}"
 else
     SHARDS="${EVAL_SHARDS:-32}"; PER_GPU="${EVAL_PER_GPU:-4}"; MEM_FRACTION="${EVAL_MEM_FRACTION:-0.2}"
 fi
 [[ "$SHARDS" =~ ^[1-9][0-9]*$ ]] || { echo "EVAL_SHARDS 必须是正整数：$SHARDS"; exit 2; }
-[[ "$PER_GPU" =~ ^[0-9]+$ && "$PER_GPU" -ge 2 ]] || { echo "EVAL_PER_GPU 必须是 >=2 的整数：$PER_GPU"; exit 2; }
+[[ "$PER_GPU" =~ ^[0-9]+$ && "$PER_GPU" -ge 1 ]] || { echo "EVAL_PER_GPU 必须是 >=1 的整数：$PER_GPU"; exit 2; }
+# 正式评估用卡数（1116 计划 1.1）：分片 k 用 GPU k%NGPU；默认 8 与原行为相同
+NGPU="${EVAL_NGPU:-8}"
+[[ "$NGPU" =~ ^[1-9][0-9]*$ ]] || { echo "EVAL_NGPU 必须是正整数：$NGPU"; exit 2; }
+# 仅正式模式（含 DRY_RUN=1）且显式设置 EVAL_NGPU 时要求片数恰好铺满卡位，否则卡位满时 run_slot 返回 97
+if [[ "$MODE" == eval && -n "${EVAL_NGPU+x}" ]] && (( SHARDS != NGPU * PER_GPU )); then
+    echo "EVAL_SHARDS=$SHARDS 必须等于 EVAL_NGPU×EVAL_PER_GPU=$NGPU×$PER_GPU=$((NGPU * PER_GPU))，不起跑"; exit 2
+fi
 if [[ "$MODE" == g6b ]]; then RUN_NAME="${RUN_NAME:-v17-g6b}"
 elif [[ "$MODE" == cap ]]; then RUN_NAME="${RUN_NAME:-v17-cap$PER_GPU}"
 else RUN_NAME="${RUN_NAME:-local692-ctx-motion160-50k}"; fi
@@ -68,10 +81,12 @@ RETRY_RUN="$RUN_NAME-retry1"
 RETRY_ROOT="$EVAL_REPO/v1-store/evaluation/$RETRY_RUN"
 
 # 计划 §4 F8 必要参数（与历史 GL 口径一致，gl_hold_pool.sh 同样写死 EVAL_TIMEOUT=14400）
-export MMEVLA_MOTION_OVERFLOW=resample EXPECT_MOTION_STATS=1 EXPECT_DEMO_INJECT=1 CHUNK_EPISODES=20 \
+# MMEVLA_MOTION_OVERFLOW 用「-」不用「:-」：显式设为空串表示关闭（1116 计划 1.1，无 motion run）
+export MMEVLA_MOTION_OVERFLOW="${MMEVLA_MOTION_OVERFLOW-resample}" EXPECT_MOTION_STATS="${EXPECT_MOTION_STATS:-1}" \
+       EXPECT_DEMO_INJECT=1 CHUNK_EPISODES=20 \
        MMEVLA_MOTION_PROV_RELAX=gpu_name,compute_cap,sm_count EPISODE_WALL_S=2400 EVAL_TIMEOUT=14400 \
        LOCAL_GPU_SHARE="$PER_GPU" XLA_PYTHON_CLIENT_MEM_FRACTION="$MEM_FRACTION" ALLOW_RESUME=1 \
-       POLICY="${POLICY:-perceptual-framesamp-ctx-8frame-8x8-motion-v7ep72}" POLICY_CONFIG=mme_vla_suite_b128_80k \
+       POLICY="${POLICY:-perceptual-framesamp-ctx-8frame-8x8-motion-v7ep72}" POLICY_CONFIG="${POLICY_CONFIG:-mme_vla_suite_b128_80k}" \
        EXPECT_CKPT_ID="$CKPT_ID" DEMO_PREFIX_STORE="$STORE"
 unset ROBOMME_GPU_RASTER SAPIEN_DISABLE_RAY_TRACING
 echo "LOCAL692_START mode=$MODE dry=$DRY run=$RUN_NAME ckpt=$CKPT seed=$SEED store=$STORE $(date -u +%FT%TZ)"
@@ -79,11 +94,11 @@ echo "EVAL_ENV MMEVLA_MOTION_OVERFLOW=$MMEVLA_MOTION_OVERFLOW EXPECT_MOTION_STAT
      "CHUNK_EPISODES=$CHUNK_EPISODES MMEVLA_MOTION_PROV_RELAX=$MMEVLA_MOTION_PROV_RELAX seed=$SEED max_steps=2000(run_shard.sh)" \
      "EPISODE_WALL_S=$EPISODE_WALL_S EVAL_TIMEOUT=$EVAL_TIMEOUT LOCAL_GPU_SHARE=$LOCAL_GPU_SHARE" \
      "XLA_PYTHON_CLIENT_MEM_FRACTION=$XLA_PYTHON_CLIENT_MEM_FRACTION POLICY=$POLICY POLICY_CONFIG=$POLICY_CONFIG EXPECT_CKPT_ID=$EXPECT_CKPT_ID" \
-     "SHARDS=$SHARDS PER_GPU=$PER_GPU MEM_FRACTION=$MEM_FRACTION"
+     "SHARDS=$SHARDS PER_GPU=$PER_GPU NGPU=$NGPU MEM_FRACTION=$MEM_FRACTION"
 
 # ── 内嵌 Python（经 CLIENT_UV 运行；只用标准库）──────────────────────────────────────────
 read -r -d '' PYHELP <<'PY'
-import json, shutil, sys
+import json, os, shutil, sys
 from pathlib import Path
 
 def plan_groups(path):
@@ -252,7 +267,8 @@ def cmd_summary(eval_root):
     err_keys = {f"{e['group']}/{e['episode']}" for e in errors}
     n, k = int(log["episodes"]), int(log["successes"])
     print(f"EVAL692=PASS episodes={n} success={k} rate={k / n:.4f} preseeded_errors={len(err_keys & pre)} "
-          f"new_errors={len(err_keys - pre)} retried={len(retries)} expect_motion_stats=1", flush=True)
+          f"new_errors={len(err_keys - pre)} retried={len(retries)} "
+          f"expect_motion_stats={os.environ.get('EXPECT_MOTION_STATS', '1')}", flush=True)
 
 def cmd_g6b_plans(plan_dir, out_dir):
     # G6b：shard0 / shard1 各取第一条 BinFill（走 demo 注入与 motion demo 窗），各写 1 局计划
@@ -302,9 +318,23 @@ def cmd_peak(csv_path):
     vals = [float(x) for x in Path(csv_path).read_text().split() if x.replace(".", "", 1).isdigit()]
     print(f"{max(vals) / 1024:.1f}" if vals else "nan")
 
+def cmd_cap_host(base_path, samples_path):
+    # 压测主机内存增量（1116 计划 1.1 F3）：基线文件 1 个字节数、采样文件每行 1 个字节数；
+    # 打印 (采样最大值 - 基线) / 2^30，即 GiB（与 peak_mem_gb 的 MiB/1024 同为二进制单位），一位小数；任一缺失打印 unknown
+    def nums(p):
+        try:
+            return [int(x) for x in Path(p).read_text().split() if x.isdigit()]
+        except OSError:
+            return []
+    base, samples = nums(base_path), nums(samples_path)
+    if not base or not samples:
+        print("unknown")
+        return
+    print(f"{(max(samples) - base[0]) / 2**30:.1f}")
+
 cmds = {"preseed": cmd_preseed, "scan": cmd_scan, "integrate": cmd_integrate, "summary": cmd_summary,
         "g6b_plans": cmd_g6b_plans, "episode_ok": cmd_episode_ok, "peak": cmd_peak,
-        "cap_plans": cmd_cap_plans, "cap_mem": cmd_cap_mem}
+        "cap_plans": cmd_cap_plans, "cap_mem": cmd_cap_mem, "cap_host": cmd_cap_host}
 cmds[sys.argv[1]](*sys.argv[2:])
 PY
 py() { "${CLIENT_UV[@]}" -c "$PYHELP" "$@"; }
@@ -342,11 +372,21 @@ run_slot() {  # $1=gpu $2=tag $3=shard_index $4=plan $5=run_name $6=log $7=rc �
 }
 
 # ── ① E0 闸 ──
-E0_LINE="$(head -n 1 "$STORE/E0.txt" 2>/dev/null)"
-if [[ "$E0_LINE" != "DEMO_PREFIX_SRC=PASS "* ]]; then
-    echo "E0_GATE=FAIL store=$STORE line=${E0_LINE:-missing}（前缀库未按同代码生成或未完成，不起跑）"; exit 2
+if [[ "${DEMO_PREFIX_ORIGINAL:-0}" == 1 ]]; then
+    # 原始前缀库（1116 计划 1.1）：不查 E0.txt，改核 $STORE/index.json 的 sha256 等于登记值
+    WANT_INDEX_SHA="${DEMO_PREFIX_INDEX_SHA256:-3ef6b165cc999c6a434283b963d336406b43f59a0fd30161621931b347343f27}"
+    GOT_INDEX_SHA="$(sha256sum "$STORE/index.json" 2>/dev/null | awk '{print $1}')"
+    if [[ -z "$GOT_INDEX_SHA" || "$GOT_INDEX_SHA" != "$WANT_INDEX_SHA" ]]; then
+        echo "E0_GATE=FAIL reason=index_sha store=$STORE index_sha256=${GOT_INDEX_SHA:-missing} expected=$WANT_INDEX_SHA（不起跑）"; exit 2
+    fi
+    echo "E0_GATE=SKIP reason=original_store store=$STORE index_sha256=$GOT_INDEX_SHA"
+else
+    E0_LINE="$(head -n 1 "$STORE/E0.txt" 2>/dev/null)"
+    if [[ "$E0_LINE" != "DEMO_PREFIX_SRC=PASS "* ]]; then
+        echo "E0_GATE=FAIL store=$STORE line=${E0_LINE:-missing}（前缀库未按同代码生成或未完成，不起跑）"; exit 2
+    fi
+    echo "E0_GATE=PASS $E0_LINE"
 fi
-echo "E0_GATE=PASS $E0_LINE"
 
 # ── 评估目录：全新 run 名，不覆盖（第 6 条）；DRY_RUN 只写临时目录 ──
 if [[ "$DRY" == 1 ]]; then
@@ -366,7 +406,7 @@ PLAN_LINE="$(grep '^PLAN_OK ' "$PLAN_DIR/make_shard_plan.log")"
 [[ "$PLAN_RC" == 0 && -n "$PLAN_LINE" ]] || { echo "PLAN_OK 缺失或 make_shard_plan.py rc=$PLAN_RC，不起跑"; exit 2; }
 TOTAL="$(sed -n 's/^PLAN_OK .* total=\([0-9]*\) .*/\1/p' <<< "$PLAN_LINE")"
 for ((K=0; K<SHARDS; K++)); do
-    echo "SHARD_MAP shard=s$K gpu=$((K % 8)) port_base=$((18011 + K * 7)) plan=$PLAN_DIR/shard$K.json"
+    echo "SHARD_MAP shard=s$K gpu=$((K % NGPU)) port_base=$((18011 + K * 7)) plan=$PLAN_DIR/shard$K.json"
 done
 
 if [[ "$MODE" == g6b ]]; then
@@ -374,7 +414,7 @@ if [[ "$MODE" == g6b ]]; then
     py g6b_plans "$PLAN_DIR" "$PLAN_DIR" || { echo "G6B 计划生成失败"; exit 2; }
     if [[ "$DRY" == 1 ]]; then
         echo "DRY g6b ① LOCAL_GPU_SHARE=1 XLA_PYTHON_CLIENT_MEM_FRACTION=0.7 CUDA_VISIBLE_DEVICES=0 SHARD_INDEX=0 run_shard.sh $RUN_NAME $CKPT g6b-single.json $SEED g1"
-        echo "DRY g6b ② LOCAL_GPU_SHARE=2 XLA_PYTHON_CLIENT_MEM_FRACTION=0.45 GPU 0：g2a(SHARD_INDEX=0, g6b-a.json) + g2b(SHARD_INDEX=1, g6b-b.json) 同时起"
+        echo "DRY g6b ② LOCAL_GPU_SHARE=2 XLA_PYTHON_CLIENT_MEM_FRACTION=$MEM_FRACTION GPU 0：g2a(SHARD_INDEX=0, g6b-a.json) + g2b(SHARD_INDEX=1, g6b-b.json) 同时起"
         echo "DRY g6b 显存：nvidia-smi -i 0 --query-gpu=memory.used --format=csv,noheader,nounits -lms 500（单进程）"
         exit 0
     fi
@@ -423,6 +463,35 @@ if [[ "$MODE" == cap ]]; then
     nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader,nounits -i 0 -lms 500 \
         > "$EVAL_ROOT/logs/cap-mem.csv" 2>&1 &
     MON=$!
+    # 主机内存（1116 计划 1.1 F3）：取本进程 cgroup 路径截到 step_<n> 一级，读该级 memory.stat 的 anon+shmem
+    # （cgroup v1 读 memory 控制器目录的 total_rss+total_shmem）；不读 SLURM_JOB_ID。起片前读一次基线，压测期间每 2 秒读一次。
+    HOST_MEM_FILE=""; HOST_MEM_KEYS=""
+    CG_V2="$(sed -n 's/^0:://p' /proc/self/cgroup 2>/dev/null | head -n 1)"
+    CG_V1="$(awk -F: '$2 ~ /(^|,)memory(,|$)/ {print $3; exit}' /proc/self/cgroup 2>/dev/null)"
+    if [[ "$CG_V2" == */step_* ]]; then
+        CG_STEP="${CG_V2%%/step_*}/step_$(cut -d/ -f1 <<< "${CG_V2#*/step_}")"
+        [[ -r "/sys/fs/cgroup$CG_STEP/memory.stat" ]] && { HOST_MEM_FILE="/sys/fs/cgroup$CG_STEP/memory.stat"; HOST_MEM_KEYS="anon shmem"; }
+    fi
+    if [[ -z "$HOST_MEM_FILE" && "$CG_V1" == */step_* ]]; then
+        CG_STEP="${CG_V1%%/step_*}/step_$(cut -d/ -f1 <<< "${CG_V1#*/step_}")"
+        [[ -r "/sys/fs/cgroup/memory$CG_STEP/memory.stat" ]] && { HOST_MEM_FILE="/sys/fs/cgroup/memory$CG_STEP/memory.stat"; HOST_MEM_KEYS="total_rss total_shmem"; }
+    fi
+    host_mem_read() {  # 打印两键之和（字节）；文件或键缺失时不打印
+        [[ -n "$HOST_MEM_FILE" ]] || return 0
+        awk -v keys="$HOST_MEM_KEYS" 'BEGIN {split(keys, k, " ")} $1 == k[1] {a = $2; na = 1} $1 == k[2] {b = $2; nb = 1}
+             END {if (na && nb) print a + b}' "$HOST_MEM_FILE" 2>/dev/null
+    }
+    host_mem_read > "$EVAL_ROOT/logs/cap-host-base.txt"
+    : > "$EVAL_ROOT/logs/cap-host-mem.txt"
+    # 采样子 shell：收到 TERM 即杀掉当前 sleep 并退出，不留孤儿
+    ( trap 'kill "$SP" 2>/dev/null; exit 0' TERM
+      SP=""
+      while :; do
+          host_mem_read >> "$EVAL_ROOT/logs/cap-host-mem.txt"
+          sleep 2 & SP=$!
+          wait "$SP"
+      done ) &
+    HMON=$!
     T0=$(date +%s)
     PIDS=()
     for ((K=0; K<PER_GPU; K++)); do
@@ -432,6 +501,9 @@ if [[ "$MODE" == cap ]]; then
     for P in "${PIDS[@]}"; do wait "$P"; done
     T1=$(date +%s)
     kill "$MON" 2>/dev/null; wait "$MON" 2>/dev/null
+    kill "$HMON" 2>/dev/null; wait "$HMON" 2>/dev/null
+    HOST_DELTA="$(py cap_host "$EVAL_ROOT/logs/cap-host-base.txt" "$EVAL_ROOT/logs/cap-host-mem.txt")"
+    [[ -n "$HOST_DELTA" ]] || HOST_DELTA=unknown
     FAILED=0
     for ((K=0; K<PER_GPU; K++)); do
         RC="$(cat "$EVAL_ROOT/logs/cap$K.rc")"
@@ -444,7 +516,9 @@ if [[ "$MODE" == cap ]]; then
     V=FAIL
     if [[ "$FAILED" == 0 && "$FREE" != nan ]] && awk -v f="$FREE" 'BEGIN {exit !(f >= 4)}'; then V=PASS; fi
     echo "CAP_TIME wall_s=$((T1 - T0)) failed=$FAILED"
-    echo "EVAL_CAPACITY=$V per_gpu=$PER_GPU peak_mem_gb=$PEAK free_gb=$FREE" | tee "$EVAL_ROOT/EVAL_CAPACITY.txt"
+    # host_delta_gb 单位 GiB；PASS/FAIL 仍只按显存条件判，主机内存由链脚本另出 HOST_MEM 判定
+    echo "EVAL_CAPACITY=$V per_gpu=$PER_GPU peak_mem_gb=$PEAK free_gb=$FREE host_delta_gb=$HOST_DELTA" \
+         "mem_metric=anon+shmem mem_scope=step mem_path=${HOST_MEM_FILE:-none}" | tee "$EVAL_ROOT/EVAL_CAPACITY.txt"
     [[ "$V" == PASS ]] || exit 1
     exit 0
 fi
@@ -463,7 +537,7 @@ py preseed "$PLAN_DIR" "$PRESEED_SRC" "$EVAL_ROOT" "$POLICY" "$CKPT_ID" "$SEED" 
 # ── ④⑤ $SHARDS 片同跑、收齐退出码 ──
 PIDS=()
 for ((K=0; K<SHARDS; K++)); do
-    run_slot "$((K % 8))" "s$K" "$K" "$PLAN_DIR/shard$K.json" "$RUN_NAME" "$EVAL_ROOT/logs/s$K.log" "$EVAL_ROOT/logs/s$K.rc" &
+    run_slot "$((K % NGPU))" "s$K" "$K" "$PLAN_DIR/shard$K.json" "$RUN_NAME" "$EVAL_ROOT/logs/s$K.log" "$EVAL_ROOT/logs/s$K.rc" &
     PIDS+=("$!")
 done
 for P in "${PIDS[@]}"; do wait "$P"; done
@@ -478,7 +552,7 @@ fi
 PIDS=()
 for ((K=0; K<SHARDS; K++)); do
     [[ -f "$EVAL_ROOT/s$K/retry1-plan.json" ]] || continue
-    run_slot "$((K % 8))" "s$K" "$K" "$EVAL_ROOT/s$K/retry1-plan.json" "$RETRY_RUN" \
+    run_slot "$((K % NGPU))" "s$K" "$K" "$EVAL_ROOT/s$K/retry1-plan.json" "$RETRY_RUN" \
         "$EVAL_ROOT/logs/s$K-retry1.log" "$EVAL_ROOT/logs/s$K-retry1.rc" &
     PIDS+=("$!")
 done
@@ -504,5 +578,5 @@ done
     --expect-total "$TOTAL" 2>&1 | tee "$EVAL_ROOT/logs/merge.log"
 [[ "${PIPESTATUS[0]}" == 0 ]] || { echo "EVAL692=FAIL reason=merge"; exit 1; }
 py summary "$EVAL_ROOT" | tee "$EVAL_ROOT/EVAL692.txt"
-[[ "${PIPESTATUS[0]}" == 0 ]] || exit 1
+[[ "${PIPESTATUS[0]}" == 0 ]] || { echo "EVAL692=FAIL reason=summary"; exit 1; }
 echo "LOCAL692_DONE $(date -u +%FT%TZ)"

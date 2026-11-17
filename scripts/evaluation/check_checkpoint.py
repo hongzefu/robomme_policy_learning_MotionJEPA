@@ -233,6 +233,22 @@ RUNS = {
         motion_budget=160,
         motion_source_run='wan-full1600-filter2-b176x4-72ep-a/checkpoint_epoch_72.pt#encoder',
     ),
+    # ── 1111 计划训练、1116 计划（1116-gl-4task400-ctx-692-eval-plan.html 第二部分 1.2）评估：GreatLakes 上训的
+    # context 无 motion run（同 4task-v2-1600ep 库、同 norm_stats），只评 @50000。motion 关闭，不写 motion_* 字段，
+    # 按 integration='context' 核快照融合方式；token_per_image 64（8×8）。resolved_sha256 取 run 根
+    # history_config.resolved.sha256 文件内容，合入后在主检出以 --resolved-sha256 复算对应 YAML 核对。
+    # 8 帧：budget 512 = 8 × 64，config mme_vla_suite_b128_60k（1111 计划训练口径）
+    'v2-1600ep-m8x8-ctx-b128-50k-gl': dict(
+        steps=('50000',), motion=False, config='mme_vla_suite_b128_60k', budget=512, integration='context',
+        resolved_sha256='9fa83497c0ce1e5b493b248c79e3c9b67efe03f9c7de2b84bf192a4932050d15',
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+    ),
+    # 16 帧：budget 1024 = 16 × 64，config mme_vla_suite_b128_80k
+    'v2-1600ep-m16x8x8-ctx-b128-50k-gl': dict(
+        steps=('50000',), motion=False, config='mme_vla_suite_b128_80k', budget=1024, integration='context',
+        resolved_sha256='70208fa373a470b5e0a19385d4a1db0984d3ed3bc70b8a635fe4f4cedf31e016',
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+    ),
 }
 
 
