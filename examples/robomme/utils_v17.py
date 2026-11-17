@@ -1,0 +1,154 @@
+# 合入 v17 时 eval_v17.py 专用：由 95faf61^2（即 fd20feb）的 examples/robomme/utils.py 字节原样搬来，
+# 保证 eval_v17 客户端与 v17 行为逐行一致；主线 utils.py 是 v4.2 版，勿混用、勿在此改动。
+import os
+import numpy as np
+import cv2
+import imageio
+import re
+import collections
+from typing import Tuple, Optional
+
+
+
+TASK_WITH_VIDEO_DEMO = [
+    "VideoUnmask", "VideoUnmaskSwap", "VideoPlaceButton", "VideoPlaceOrder",
+    "VideoRepick", "MoveCube", "InsertPeg", "PatternLock", "RouteStick"
+]
+
+TASK_NAME_LIST=  [      
+    "BinFill",
+    "StopCube",
+    "PickXtimes",
+    "SwingXtimes",
+    
+    "ButtonUnmask",
+    "VideoUnmask",
+    "VideoUnmaskSwap",
+    "ButtonUnmaskSwap",
+    
+    "PickHighlight",
+    "VideoRepick",
+    "VideoPlaceButton",
+    "VideoPlaceOrder",
+    
+    "MoveCube",
+    "InsertPeg",
+    "PatternLock",
+    "RouteStick"
+]
+
+def pack_buffer(image_buffer, state_buffer, exec_start_idx=0):
+    image_output = np.stack(image_buffer, axis=0).astype(np.uint8)[:, None]
+    state_output = np.stack(state_buffer, axis=0).astype(np.float32)
+    return {
+        "images": image_output,
+        "state": state_output,
+        "add_buffer": True,
+        "exec_start_idx": exec_start_idx,
+    }
+    
+def check_args(args):
+    assert args.obs_horizon == 16
+
+
+
+class EpisodeState:
+    def __init__(self):
+        self.image_buffer = []
+        self.wrist_image_buffer = []
+        self.state_buffer = []
+        self.action_plan = collections.deque()
+        self.count = 0
+        self.exec_start_idx = 0
+        # ── motion 窗统计（0922-binfill-demo-prefix-plan.md C 节）──
+        # 这四个字段**绝不能**放进 clear_buffers：那个方法每个 action chunk 调一次，清掉就只剩最后一次推理的数。
+        # exec_start_idx_initial 单独存一份，正是因为 clear_buffers 会把 exec_start_idx 归零。
+        self.exec_start_idx_initial = 0
+        self.motion_infers = 0
+        self.motion_k_max = 0
+        self.motion_downsample_steps = 0
+        self.motion_budget = 0
+        self.motion_overflow = ""
+
+    def add_observation(self, img: np.ndarray, wrist_img: np.ndarray, state: np.ndarray):
+        self.image_buffer.append(img.copy())
+        self.wrist_image_buffer.append(wrist_img.copy())
+        self.state_buffer.append(state.copy())
+
+    def clear_buffers(self):
+        self.image_buffer.clear()
+        self.wrist_image_buffer.clear()
+        self.state_buffer.clear()
+        self.exec_start_idx = 0
+
+    def get_current_obs(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        return self.image_buffer[-1], self.wrist_image_buffer[-1], self.state_buffer[-1]
+
+
+
+
+
+class RolloutRecorder:
+    def __init__(self, save_dir: str, task_goal: str, fps: int = 30):
+        self.save_dir = save_dir
+        save_dir.mkdir(parents=True, exist_ok=True)
+        self.total_images = []
+        self.fps = fps
+        self.task_goal = task_goal
+        
+    def record(self, image: np.ndarray, wrist_image: np.ndarray, state: np.ndarray, action: np.ndarray=None, is_video_demo: bool=False):
+        
+        concat_image = np.concatenate([image, wrist_image], axis=1)
+        if is_video_demo: # add a red border
+            concat_image = cv2.rectangle(concat_image, (0, 0), (concat_image.shape[1], concat_image.shape[0]), (255, 0, 0), 10)
+        
+        frame_text = "Frame: " + str(len(self.total_images))
+        frame_text_area = self.add_text_area(frame_text, concat_image.shape)
+        
+        goal_text = "Task Goal: " + self.task_goal
+        goal_text_area = self.add_text_area(goal_text, concat_image.shape)
+        
+        state_text = "State: " + ','.join([f"{i:.4f}" for i in state])
+        state_text_area = self.add_text_area(state_text, concat_image.shape)
+        
+        action_text = 'Action: ' + ','.join([f"{i:.4f}" for i in action]) if action is not None else "Action:None"
+        action_text_area = self.add_text_area(action_text, concat_image.shape)
+        # Concatenate text area on top of image
+        concat_image = np.concatenate([frame_text_area, goal_text_area, action_text_area, state_text_area, concat_image], axis=0)
+        self.total_images.append(concat_image)
+    
+    def add_text_area(self, text: str, concat_image_shape: tuple):        
+        # Calculate text wrapping
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.5
+        thickness = 1
+        max_width = concat_image_shape[1] - 20  # Leave 10px margin on each side
+        lines = []
+        words = text.replace(',', ' ').split()
+        current_line = words[0]
+        for word in words[1:]:
+            test_line = current_line + ' ' + word
+            (text_width, _), _ = cv2.getTextSize(test_line, font, font_scale, thickness)
+            
+            if text_width <= max_width:
+                current_line = test_line
+            else:
+                lines.append(current_line)
+                current_line = word
+        
+        lines.append(current_line)  # Add the last line
+        
+        # Create text area with dynamic height
+        line_height = 20
+        text_area_height = max(50, len(lines) * line_height + 10)
+        text_area = np.zeros((text_area_height, concat_image_shape[1], 3), dtype=np.uint8)
+        
+        # Draw each line
+        for i, line in enumerate(lines):
+            y_position = 15 + i * line_height
+            text_area = cv2.putText(text_area, line, (10, y_position), font, font_scale, (255, 255, 255), thickness)
+        
+        return text_area
+             
+    def save_video(self, filename: str):
+        imageio.mimsave(os.path.join(self.save_dir, filename), self.total_images, fps=self.fps)

@@ -1,6 +1,7 @@
 # 合入 v17（fd20feb）时由 examples/robomme/eval.py 原样搬来：v17 的 GL 分片评测（scripts/evaluation/run.sh、
 # run_shard.sh 的 --args.* 参数、episode_plan / demo 前缀注入 / motion_stats.json）依赖这份旧式客户端；
 # 主线 examples/robomme/eval.py 是 v4.2 的有界协议客户端，两者协议不同，故分文件并存。
+# 依赖同目录的 utils_v17.py / env_runner_v17.py（v17 原版），不用主线 v4.2 版 utils.py / env_runner.py。
 import contextlib
 import dataclasses
 import json
@@ -14,15 +15,15 @@ from typing import Optional, Any, Tuple
 import numpy as np
 
 from openpi_client import websocket_client_policy as _websocket_client_policy
-from utils import (
+from utils_v17 import (
     pack_buffer,
     check_args,
     TASK_NAME_LIST,
     TASK_WITH_VIDEO_DEMO,
     EpisodeState,
 )
-from utils import RolloutRecorder
-from env_runner import EnvRunner, SpecEnvRunner
+from utils_v17 import RolloutRecorder
+from env_runner_v17 import EnvRunner, SpecEnvRunner
 
 
 class EpisodeWallClockTimeout(RuntimeError):
