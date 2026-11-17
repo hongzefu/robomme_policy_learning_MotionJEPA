@@ -98,7 +98,8 @@ blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid var(--line);colo
 <tr><td><code>scripts/evaluation/local_692_pool.sh</code></td><td>分片→卡映射、<code>SHARD_MAP</code> 空跑输出</td><td>新增 <code>EVAL_NGPU</code>，把 <code>K % 8</code> 改成 <code>K % EVAL_NGPU</code></td><td>8，行为不变</td><td>4</td></tr>
 <tr><td>同上</td><td>评估环境 export 一行</td><td><code>EXPECT_MOTION_STATS</code>、<code>MMEVLA_MOTION_OVERFLOW</code>、<code>POLICY_CONFIG</code> 改成可覆盖</td><td>1 / resample / b128_80k，行为不变</td><td>0 / 空 / b128_60k 或 b128_80k</td></tr>
 <tr><td>同上</td><td>① E0 闸</td><td>新增 <code>DEMO_PREFIX_ORIGINAL=1</code>：跳过 E0，打印 <code>E0_GATE=SKIP reason=original_store store=&lt;路径&gt;</code></td><td>不设，照旧要求 E0=PASS</td><td>1</td></tr>
-<tr><td>同上</td><td><code>--g6b-capacity</code> 压测</td><td>压测期间多起一个持久采样，读作业 cgroup 的内存峰值，写进 <code>EVAL_CAPACITY</code> 判定行（<code>host_peak_gb=</code>）</td><td>多一个字段，判据不变</td><td>按 §三 的两条判</td></tr>
+<tr><td>同上</td><td><code>--g6b-capacity</code> 压测</td><td>只在压测期间每 2 秒读一次作业 cgroup 的 <code>memory.current</code>，压测结束即停，把增量写进 <code>EVAL_CAPACITY</code> 判定行（<code>host_delta_gb=</code>）；正式 692 局不读内存</td><td>多一个字段，判据不变</td><td>按 §三 的两条判</td></tr>
+<tr><td>同上</td><td><code>cmd_summary</code> 的 EVAL692 行</td><td><code>expect_motion_stats=</code> 改为打印实际 <code>EXPECT_MOTION_STATS</code> 值（F1）</td><td>1，输出不变</td><td>0</td></tr>
 <tr><td><code>scripts/evaluation/check_checkpoint.py</code></td><td><code>RUNS</code></td><td>登记两条：<code>v2-1600ep-m8x8-ctx-b128-50k-gl</code>（steps <code>50000</code>，motion False，config <code>mme_vla_suite_b128_60k</code>，budget 512，integration context，resolved <code>9fa83497…0d15</code>）；<code>v2-1600ep-m16x8x8-ctx-b128-50k-gl</code>（同上，config <code>b128_80k</code>，budget 1024，resolved <code>70208fa3…e016</code>）；两条 norm_stats 都是 <code>856c75ea…d173</code></td><td>旧条目不动</td><td>—</td></tr>
 <tr><td><code>scripts/evaluation/test_check_checkpoint_integration.py</code></td><td>新增用例</td><td>两条新登记能查到，integration=context、budget 正确</td><td>—</td><td>—</td></tr>
 </table>
@@ -140,7 +141,7 @@ blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid var(--line);colo
 <tr><td>V3</td><td>评估副本就是评估提交，环境指向副本</td><td>worktree <code>git rev-parse HEAD</code> 等于合并提交，<code>git status --porcelain</code> 为空；两套环境 python 打印 <code>mme_vla_suite.__file__</code> 在副本 <code>src/</code> 下；子模块与 gitlink 一致</td><td>跑的就是审过的代码</td><td><code>EVAL_WT=PASS head=&lt;sha&gt; editable=wt</code></td></tr>
 <tr><td>V4</td><td>ckpt 可评</td><td>链第 1 关（<code>check_checkpoint.py</code> 由 <code>run_shard.sh</code> 在起服务前自动调用）</td><td>训练完整，配置快照为 context、budget 对</td><td><code>TRAIN_DONE=PASS ckpts=10</code>、<code>CKPT_CHECK</code> 通过</td></tr>
 <tr><td>V5</td><td>加载冒烟</td><td><code>--g6b</code></td><td>能加载、握手通过、同卡 2 片能共存</td><td><code>EVAL_LOAD_SMOKE=PASS episodes=1 handshake=PASS share2=PASS</code></td></tr>
-<tr><td>V6</td><td>并发档位</td><td><code>--g6b-capacity</code></td><td>正式并发不会 OOM 或撞内存限额</td><td><code>EVAL_CAPACITY=PASS per_gpu=&lt;3|2&gt; peak_mem_gb= free_gb= host_peak_gb=</code></td></tr>
+<tr><td>V6</td><td>并发档位</td><td><code>--g6b-capacity</code></td><td>正式并发不会 OOM 或撞内存限额</td><td><code>EVAL_CAPACITY=PASS per_gpu=&lt;3|2&gt; peak_mem_gb= free_gb= host_delta_gb=</code> 且链脚本 <code>HOST_MEM=PASS per_gpu=N host_delta_gb=&lt;x&gt; projected_gb=&lt;4x&gt; limit=115</code></td></tr>
 <tr><td>V7</td><td>692 局结果</td><td>正式运行</td><td>成功率可信、可与对照组比</td><td><code>EVAL692=PASS episodes=692 success=&lt;k&gt; rate=&lt;x&gt; preseeded_errors=9 new_errors=&lt;n&gt; retried=&lt;n&gt; expect_motion_stats=0</code></td></tr>
 </table>
 
@@ -159,8 +160,8 @@ blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid var(--line);colo
 <h2>九、子代理分工与合并（简述）</h2>
 <p>只拆出一块写代码的活：子代理 E1 在自己的 worktree 改 <code>local_692_pool.sh</code>、<code>check_checkpoint.py</code> 和测试文件，提交前缀 <code>sub/E1:</code>。合并前，我核对改动范围并复跑 V1、V2，再派一个 sonnet 审查 diff；审查通过后 <code>--no-ff</code> 合入 <code>v4.2-plswap-full</code>，合并后跑一遍 pytest 再 push。装环境、布链、启动评估都由我在主会话里做，因为这几步依赖 GL 上的路径和占位，要按顺序进行。</p>
 
-<h2>十、开工审查结果与待裁决（11-16 美东 19:40）</h2>
-<p><code>PLAN_CONSISTENCY_REVIEW=FAIL base=60c49b691bfdaabe3d95acf9aacfcb6f676245a6 findings=5 blocking=3</code>。两条文字项已直接改：F4（测试 <code>CTX_RUNS</code> 同步，见 1.3）、F5（§二 diff 口径）。三条阻断项涉及接口或验收，下面是推荐改法，等你裁决：</p>
+<h2>十、开工审查结果与裁决（11-16 美东 19:40 审查；当晚你裁定「按推荐改」）</h2>
+<p><code>PLAN_CONSISTENCY_REVIEW=FAIL base=60c49b691bfdaabe3d95acf9aacfcb6f676245a6 findings=5 blocking=3</code>。两条文字项已直接改：F4（测试 <code>CTX_RUNS</code> 同步，见 1.3）、F5（§二 diff 口径）。三条阻断项涉及接口或验收，你已裁定按下表推荐改法执行，已改进 §四、§七 与第二部分 1.1、runbook。另按你的追加要求：<b>内存只在压测时读，正式 692 局全程不读内存</b>（不加任何持续采样或校验），见红线 R-MEM。</p>
 <table>
 <tr><th>#</th><th>问题</th><th>推荐改法</th></tr>
 <tr><td>F1</td><td><code>cmd_summary</code> 把 <code>expect_motion_stats=1</code> 写死在 EVAL692 行里，只改环境变量后 V7 的 <code>expect_motion_stats=0</code> 永远对不上</td><td>1.1 加一项：EVAL692 行改为打印实际的 <code>EXPECT_MOTION_STATS</code> 值（默认仍是 1，AWS 侧输出不变）</td></tr>
@@ -189,11 +190,14 @@ blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid var(--line);colo
 <h2>一、逐文件改动清单（E1）</h2>
 <h3>1.1 <code>scripts/evaluation/local_692_pool.sh</code></h3>
 <ul>
-<li>开头参数区：<code>NGPU="${EVAL_NGPU:-8}"</code>，校验为正整数；<code>SHARDS</code> 必须等于 <code>NGPU*PER_GPU</code>，否则退 2 并提示（防止卡位满时返回 97）。只有 <code>EVAL_NGPU</code> 被显式设置时才检查这一条，默认路径保持原行为。</li>
+<li>开头参数区：<code>NGPU="${EVAL_NGPU:-8}"</code>，校验为正整数；<code>SHARDS</code> 必须等于 <code>NGPU*PER_GPU</code>，否则退 2 并提示（防止卡位满时返回 97）。只有正式模式（<code>MODE=eval</code>，含 <code>DRY_RUN=1</code>）且 <code>EVAL_NGPU</code> 被显式设置时才检查这一条（F2）；<code>--g6b</code>、<code>--g6b-capacity</code> 不检查，默认路径保持原行为。</li>
+<li><code>cmd_summary</code>：EVAL692 行的 <code>expect_motion_stats=1</code> 字面量改为 <code>expect_motion_stats=${EXPECT_MOTION_STATS:-1}</code>（F1）。</li>
 <li>所有 <code>$((K % 8))</code>（正式起片、retry1 重跑、<code>SHARD_MAP</code> 空跑行）改成 <code>$((K % NGPU))</code>；g6b 和压测只用 GPU0，不变。</li>
 <li>export 行：<code>MMEVLA_MOTION_OVERFLOW="${MMEVLA_MOTION_OVERFLOW-resample}"</code>（空串表示关闭），<code>EXPECT_MOTION_STATS="${EXPECT_MOTION_STATS:-1}"</code>，<code>POLICY_CONFIG="${POLICY_CONFIG:-mme_vla_suite_b128_80k}"</code>；<code>EVAL_ENV</code> 回显行照常打印实际值。</li>
 <li>① E0 闸：<code>DEMO_PREFIX_ORIGINAL=1</code> 时打印 <code>E0_GATE=SKIP reason=original_store store=$STORE</code>，同时要求 <code>$STORE/index.json</code> 存在，然后继续；否则保持原逻辑。</li>
-<li><code>--g6b-capacity</code>：与 nvidia-smi 采样并列，起一个持久采样，每 2 秒读一次作业 cgroup 的 <code>memory.peak</code>（cgroup v2；不存在时用 <code>memory.max_usage_in_bytes</code>，两者都没有则写 <code>host_peak_gb=unknown</code> 并判 FAIL），结束即停；<code>EVAL_CAPACITY</code> 行加 <code>host_peak_gb=</code>。压测前先记基线，<code>host_peak_gb</code> 取压测期间峰值减基线。脚本只判原有的显存条件；§三 的内存外推由链脚本按 <code>host_peak_gb/N*N_total</code> 判，脚本不知道 4 卡外推。</li>
+<li><code>--g6b-capacity</code>（F3）：压测起片前读一次作业 cgroup 的 <code>memory.current</code>（cgroup v2；不存在时用 v1 <code>memory.usage_in_bytes</code>）作基线；压测期间与 nvidia-smi 采样并列，每 2 秒读一次，压测结束即停；<code>host_delta_gb = 压测期间最大值 − 基线</code>，写进 <code>EVAL_CAPACITY</code> 行。读不到时写 <code>host_delta_gb=unknown</code>。脚本仍只按原有显存条件判 PASS/FAIL。</li>
+<li>链脚本（E3）读 <code>EVAL_CAPACITY</code> 行，另出 <code>HOST_MEM=PASS|FAIL per_gpu=N host_delta_gb=&lt;x&gt; projected_gb=&lt;x×4&gt; limit=115</code>；<code>unknown</code> 判 FAIL。V6 要两行都 PASS。</li>
+<li><b>红线 R-MEM</b>：内存采样只存在于 <code>--g6b-capacity</code> 分支；正式 692 局（<code>MODE=eval</code>）与 g6b 冒烟不读内存、不加任何持续采样或校验进程。</li>
 </ul>
 <h3>1.2 <code>scripts/evaluation/check_checkpoint.py</code></h3>
 <p>在 <code>RUNS</code> 末尾按既有体例加两条，带中文注释，注明来源计划 1111 和本计划。<code>resolved_sha256</code> 取 run 根 <code>history_config.resolved.sha256</code> 文件内容（已读：512 为 <code>9fa83497c0ce1e5b493b248c79e3c9b67efe03f9c7de2b84bf192a4932050d15</code>，1024 为 <code>70208fa373a470b5e0a19385d4a1db0984d3ed3bc70b8a635fe4f4cedf31e016</code>）。合入后在主检出用 <code>check_checkpoint.py --resolved-sha256 src/mme_vla_suite/models/config/robomme/perceptual-framesamp-context-{8,16}frame-8x8.yaml</code> 复算，逐位一致才算通过。<code>token_per_image==64</code> 两条都满足（8×8）。</p>
@@ -232,6 +236,7 @@ tmux new-session -d -s g4c-ev-setup "set -o pipefail; bash $W/scripts/evaluation
 # E3：链（每条 run 一份脚本，ctx512 示例）
 tmux new-session -d -s g4c-ev512-chain "set -o pipefail; bash $G/v1-store/jobs/g4c-ev512-chain.sh 2&gt;&amp;1 | tee $G/v1-store/logs/g4c-ev512-chain.log; echo \"EXIT_CODE=\$?\" &gt;&gt; $G/v1-store/logs/g4c-ev512-chain.log"
 #   链内每关：ssh greatlakes srun --jobid=65943150 --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=shared \
+#     （EVAL_NGPU、EVAL_SHARDS 只在第 4 关正式评估传；第 2、3 关 g6b/压测不传）
 #     env EVAL_NGPU=4 EVAL_SHARDS=&lt;12|8&gt; EVAL_PER_GPU=&lt;3|2&gt; EVAL_MEM_FRACTION=&lt;0.30|0.45&gt; EXPECT_MOTION_STATS=0 MMEVLA_MOTION_OVERFLOW= \
 #         POLICY=perceptual-framesamp-context-8frame-8x8 POLICY_CONFIG=mme_vla_suite_b128_60k DEMO_PREFIX_ORIGINAL=1 RUN_NAME=gl692-ctx512-50k \
 #         bash $W/scripts/evaluation/local_692_pool.sh $G/v1-store/train-runs/mme_vla_suite_b128_60k/v2-1600ep-m8x8-ctx-b128-50k-gl/50000 7
@@ -239,7 +244,7 @@ tmux new-session -d -s g4c-ev512-chain "set -o pipefail; bash $G/v1-store/jobs/g
 
 # 监听：每份日志一个 Monitor
 tail -n +1 -F $G/v1-store/logs/g4c-ev512-chain.log | stdbuf -oL tr '\r' '\n' \
-  | grep --line-buffered -E "CHAIN_|EVAL_LOAD_SMOKE=|EVAL_CAPACITY=|EVAL692=|E0_GATE=|EXIT_CODE=|Traceback|out of memory|Killed|oom"
+  | grep --line-buffered -E "CHAIN_|EVAL_LOAD_SMOKE=|EVAL_CAPACITY=|HOST_MEM=|EVAL692=|E0_GATE=|EXIT_CODE=|Traceback|out of memory|Killed|oom"
 
 # E5：收尾
 ssh greatlakes scancel 65943150; ssh greatlakes 'squeue -u hongzefu'</pre>
@@ -248,7 +253,7 @@ ssh greatlakes scancel 65943150; ssh greatlakes 'squeue -u hongzefu'</pre>
 <h2>五、风险登记</h2>
 <table>
 <tr><th>风险</th><th>影响</th><th>处置</th></tr>
-<tr><td>128 GB 内存撑不住 12 片</td><td>OOM killer 杀片</td><td>V6 用 cgroup 峰值外推，退到 8 片</td></tr>
+<tr><td>128 GB 内存撑不住 12 片</td><td>OOM killer 杀片</td><td>V6 用压测期间 cgroup 增量 ×4 外推（<code>HOST_MEM</code>），超 115 GB 退到 8 片</td></tr>
 <tr><td>卡位锁文件 <code>flock</code> 落在 turbo NFS 上</td><td>锁失效时同卡超额</td><td>V5 的 share2 和 V6 压测都经过同一把锁，能先暴露问题；若锁失效，链停下交你，不另加机制</td></tr>
 <tr><td>节点上有别人的进程占用端口</td><td>连错服务</td><td><code>run_shard.sh</code> 按 18011+7k 取端口；节点 GPU 归本作业独占，端口冲突概率低；出现 <code>Errno 98</code> 即停</td></tr>
 <tr><td>装环境耗时或失败</td><td>赶不上 ctx512 结束</td><td>链等训练结束和环境就绪两个条件，晚开不影响结果；占位还有约 2 天余量</td></tr>
