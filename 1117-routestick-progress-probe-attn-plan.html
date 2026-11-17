@@ -257,7 +257,19 @@
 <h2>B10 开工审查与修订记录</h2>
 <p>用户 2026-11-17 美东开工令：「同意开始」。开工审查锚定 <code>9a96b36</code>：<code>PLAN_CONSISTENCY_REVIEW=FAIL base=9a96b36 findings=11 blocking=4</code>。四条 blocking（回放分片写成每模型只覆盖一半、npz 字段缺注意力项、<code>--episode-specs</code> 单组与清单格式混用及 seed 映射未写、R1 验收自证）都是文字与接口补全，不改评估语义；按用户 11-17 原话「除了会影响评估结果语义的问题，其他的你都自己来决策」由主会话直接修订。七条 wording 一并改；另把 D 的实现出处更正为 <code>analysis/subgoal_attention.py</code>，补 GEN_SPEC 与 POSITIVE_CONTROL 的失败处置。红线编号改为 X1–X10，避免与子任务 R1–R3 撞名。</p>
 <h2>B11 实施中调整（完工后追加，不改写上文）</h2>
-<p>（空）</p>
+<p>完工于 2026-11-17 美东约 18:40，结果见 <code>docs/evaluation-doc/rs-progress-probe-1117/result.md</code>。下列调整都不改评估语义，按用户 11-17「除了会影响评估结果语义的问题，其他的你都自己来决策」自行处置；用户实施中另有一条指令「所有的gpu任务全部改到gl上跑」。</p>
+<div class="tbl"><table>
+<tr><th>旧</th><th>新</th><th>理由</th></tr>
+<tr><td>单组 spec + <code>--difficulty &lt;d&gt;</code></td><td>清单 manifest（4 组）</td><td><code>--difficulty</code> 只接受 easy/medium/hard 比例串，xhard 只能经清单；清单模式忽略 <code>--episodes 1</code>，冒烟即全量，200 局全部 attempt 0</td></tr>
+<tr><td>生成放 GL、用 official-sim 环境</td><td>aspen 新建 <code>v1-store/envs/bench-b4e97f2</code>，在 benchmark <code>git archive</code> 副本里生成</td><td>旧环境缺 pebble、GL 建环境缺 Python.h；单局 hard 37.6 s，aspen 足够；脚本要求输出在 benchmark 仓库根内</td></tr>
+<tr><td>B6 第 5 步 aspen 1 片 + GL 2 片</td><td>aspen 两片中途停掉，剩余局按点数均分接在 GL 四个占位</td><td>用户「所有的gpu任务全部改到gl上跑」；aspen 单局慢 3–4 倍</td></tr>
+<tr><td>显存比例 0.40</td><td>aspen A 0.75、B 0.62；GL 0.80</td><td>bf16 policy + f32 模型 0.40 放不下</td></tr>
+<tr><td>provenance 严格比对</td><td><code>MMEVLA_MOTION_PROV_RELAX=gpu_name,compute_cap,sm_count,driver</code></td><td>沿用 steer-4task-1115 aspen spec 的同一放行口径</td></tr>
+<tr><td>R2 motion <code>mem_t1</code> 截到示范末</td><td>存未截断 t0+32</td><td>合并前审查：截断会降低跨示范尾窗口的归段门槛</td></tr>
+<tr><td>§6 film_rel 基线写 RMSNorm(x)</td><td>F(x, 0)（cond 置零）</td><td><code>cond=None</code> 分支用另一套 scale 参数，生产路径不走</td></tr>
+<tr><td>(a) 块①逐整数刻度、块②共用色标</td><td>稀疏刻度；块②拆两行各自色标并截断离群格</td><td>真实数据出图目视发现刻度重叠、两行单位不同</td></tr>
+</table></div>
+<p>与计划预期不符、如实记录：严格档配对 0 对（566 个同按钮候选全部超过像素差 8，最小 170）；τ 主读数不超过时间基线（A 动作 0.539 对 [u] 0.706）。阈值与判据都没有改。</p>
 
 </main>
 </body>
