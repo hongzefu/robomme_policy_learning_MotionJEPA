@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-13T18:50:56Z",
-    "america_new_york": "2026-11-13T13:50:56-05:00"
+    "utc": "2026-11-18T04:50:00Z",
+    "america_new_york": "2026-11-17T23:50:00-05:00"
   },
   "repo": {
-    "branch": "v15-4task-modul-wanraw9-s32-50k",
-    "base_head": "66eb506"
+    "branch": "v18-4task-modul-e2eenc-s16-50k",
+    "base_head": "6d9e36a"
   },
   "freeze": {
     "active": false,
@@ -312,6 +312,51 @@
           "what": "（非授权建议，可选）raw latent 归一化，或拆分「不池化」与「stride 16→32」两变量的对照",
           "command": "另立计划，需用户开工令",
           "verdict_line": "EVAL692=PASS"
+        }
+      ]
+    },
+    "e2eenc-s16-50k": {
+      "plan": {
+        "file": "1117-e2e-enc-train-plan.html",
+        "sha": "c618671"
+      },
+      "state": "implementing",
+      "state_changed_at": "2026-11-18T04:50:00Z",
+      "state_reason": "用户看过定稿 c618671 后下令开工；阶段 A：v18 自 c618671 建出（主检出），A0 现状已满足（NativeMEM 23:09 美东结束、8 卡 0 MiB）",
+      "owner": {
+        "session": "https://claude.ai/code/session_01WvPQiSdfuvk3pVkwnNg4yV",
+        "host": "ip-10-242-11-177"
+      },
+      "depends_on": [],
+      "pre_handoff": [],
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [
+        {
+          "kind": "register",
+          "date": "2026-11-17",
+          "quote": "状态机也要登记",
+          "scope": "登记进状态机，任务 id e2eenc-s16-50k"
+        },
+        {
+          "kind": "go",
+          "date": "2026-11-17",
+          "quote": "我同意开工之后就尽可能一路跑到底，除非有训练语义上的不同，就是重大变化，否则的话尽可能就一路跑到底了。",
+          "scope": "开工后的停止规则（计划第一部分五节停止表）"
+        },
+        {
+          "kind": "go",
+          "date": "2026-11-17",
+          "quote": "开工",
+          "scope": "计划 1117-e2e-enc-train-plan.html @c618671 全部步骤（一级授权，含 G7 正式训练与 G8 评估）"
+        }
+      ],
+      "pending_decisions": [],
+      "next_steps": [
+        {
+          "what": "RB-A4 派 S5a（e2e_wait_nm.sh），合入后起 e2e-trig",
+          "command": "见计划四节 RB-A4",
+          "verdict_line": "NM_DONE=PASS GPU_FREE=PASS gpus=8"
         }
       ]
     }
