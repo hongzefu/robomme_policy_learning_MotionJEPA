@@ -98,3 +98,11 @@ e2e-export、e2e-g1、e2e-h5fetch、e2e-g9、e2e-g0、e2e-g3-a01、e2e-g4-a01、
 - 起跑前 G6 报告已向用户给出（见上 G6 节）；按一级授权不等回复。
 - e2e-shmmon（--limit-gb 293、--formal-rec、--judge-step 2000）先起，随后 e2e-train 链脚本；TRAIN_HEAD = 本 Beta commit。
 - 评估档：32 片、每卡 4 片、EVAL_MEM_FRACTION=0.2、CHUNK_EPISODES=5、EVAL_TIMEOUT=14400（链脚本缺省值）。
+
+## 正式训练早期记录（2026-11-18 美东）
+- 03:24:18 起跑（FORMAL_LAUNCHED head=e84f472，commitV18.4Beta）；tmux e2e-train（链脚本）、e2e-shmmon。
+- Step 0：loss=0.0888（MotionMEM 80k 同为 0.0888）、grad_norm=1.1299（MotionMEM 1.1137）、e2e_enc_grad_norm=0.0656（input_proj 0.0629 / blocks 0.0130 / output_proj 0.0135 / final_norm 0.0003）、clip_coef=0.8850。
+- Step 100：loss=0.0564、grad_norm=0.4595（MotionMEM 0.0565 / 0.4598）。Step 2000：loss=0.0115、grad_norm=0.0726、enc update/param=2e-4。
+- 步速（metrics.jsonl 第 100–500 步）1.1161 s/步，外推剩余约 15.35 h。
+- SHM（用户裁定的正式训练前 2000 步判定）：`SHM_PEAK=PASS peak_gb=230.1 limit=330 growth_last1500=0.00% window=formal_steps_0_2000 samples=167`，`SHM_FORMAL_JUDGED rc=0`；无需 RB-D2 退路。GPU 利用率采样 99%。
+- 注意：训练期间只提交文档（runner 只在起跑时核 HEAD；评估分片要求工作区 clean）。
