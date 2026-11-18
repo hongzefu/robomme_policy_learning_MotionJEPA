@@ -660,12 +660,400 @@ def test_memmap_rss_does_not_grow_with_table(tmp_path, capsys):
     _say(capsys, f"MEMMAP_RSS=PASS table_mb={size_mb:.0f} rss_delta_mb={delta:.2f}")
 
 
+# ══ 1117 计划 S2：步长 16 bf16 raw 表（raw_bf16、新布局、导出、读表契约、provenance、校验、K_DIST）══════════════
+
+from mme_vla_suite.shared import raw_bf16  # noqa: E402
+
+KDIST = ROOT / "scripts/dataset/e2e_k_dist.py"
+S2_BASE_SHA = "dd39f3d"                      # 本分支基线（S2 改动之前），s32 路径字节不变的对照物
+REAL_LIB = pathlib.Path("/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da")
+BF16 = raw_bf16.BF16
+
+
+def _rne_ref_bits(x: np.ndarray) -> np.ndarray:
+    """逐位手算 RNE：bf16 位 = (f32 位 + 0x7FFF + 第 16 位) >> 16（有限、不溢出的输入）。"""
+    b = np.asarray(x, np.float32).view(np.uint32).astype(np.uint64)
+    return ((b + 0x7FFF + ((b >> 16) & 1)) >> 16).astype(np.uint16)
+
+
+def test_raw9_f32_to_bf16_rne_hand_cases():
+    bits = lambda v: np.uint32(v).view(np.float32)          # noqa: E731
+    cases = [  # (f32 位, 期望 bf16 位, 说明)
+        (0x3F800000, 0x3F80, "1.0 精确"),
+        (0x3F808000, 0x3F80, "1+2^-8：恰半 ulp、尾数偶 → 舍向偶（向下）"),
+        (0x3F818000, 0x3F82, "1+2^-7+2^-8：恰半 ulp、尾数奇 → 舍向偶（向上）"),
+        (0x3F808001, 0x3F81, "略超半 ulp → 向上"),
+        (0x3F807FFF, 0x3F80, "略低半 ulp → 向下"),
+        (0xBF818000, 0xBF82, "负数平局同样舍向偶"),
+        (0x00000000, 0x0000, "+0"),
+        (0x80000000, 0x8000, "-0 保留符号"),
+        (0x00008000, 0x0000, "次正规平局、尾数偶 → 0"),
+        (0x00018000, 0x0002, "次正规平局、尾数奇 → 向上"),
+        (0x00008001, 0x0001, "次正规略超半 ulp → 最小次正规"),
+        (0x00010000, 0x0001, "最小 bf16 次正规精确"),
+        (0x007FFFFF, 0x0080, "最大 f32 次正规 → 进位成最小正规"),
+        (0x7F7F7FFF, 0x7F7F, "大值略低半 ulp → 最大有限 bf16"),
+    ]
+    x = np.array([bits(c[0]) for c in cases], np.float32)
+    got = raw_bf16.raw9_f32_to_bf16(x)
+    assert got.dtype == BF16 and got.shape == x.shape
+    for (f, want, why), g in zip(cases, got.view(np.uint16).tolist()):
+        assert g == want, (hex(f), hex(g), hex(want), why)
+    assert np.array_equal(got.view(np.uint16), _rne_ref_bits(x))
+    # 随机全位型（含次正规、±0）对拍逐位手算；形状 (9,16,32,32) 不变；接受 python 列表与 f64 输入（先转 f32）
+    rng = np.random.default_rng(3)
+    r = rng.integers(0, 2**32, size=200_000, dtype=np.uint64).astype(np.uint32)
+    r[:5000] &= 0x807FFFFF                                    # 强制一批次正规数
+    r = r[((r >> 23) & 0xFF) < 0xFE]                          # 去掉 Inf/NaN 与会溢出的最高指数段
+    xs = r.view(np.float32)
+    assert np.array_equal(raw_bf16.raw9_f32_to_bf16(xs).view(np.uint16), _rne_ref_bits(xs))
+    z = rng.standard_normal((9, 16, 32, 32)).astype(np.float32)
+    zb = raw_bf16.raw9_f32_to_bf16(z)
+    assert zb.shape == (9, 16, 32, 32) and zb.tobytes() == z.astype(BF16).tobytes()
+    assert raw_bf16.raw9_f32_to_bf16([1.0, 2.0]).view(np.uint16).tolist() == [0x3F80, 0x4000]
+    for bad in (np.float32(np.nan), np.float32(np.inf), np.float32(-np.inf)):
+        arr = z.copy()
+        arr[3, 2, 1, 0] = bad
+        with pytest.raises(ValueError):
+            raw_bf16.raw9_f32_to_bf16(arr)
+    _PASSED.add("bf16_rne")
+
+
+def test_layout_spec_bf16_and_raw_set():
+    s = ms.LAYOUT_SPECS[ms.LAYOUT_RAW9BF16]
+    assert ms.LAYOUT_RAW9BF16 == "motion-raw9bf16-grid16-demopad17-v1"
+    assert (s.grid_stride, s.row_shape, s.dtype, s.row_bytes) == (16, (9, 16, 32, 32), "bfloat16", 294_912)
+    assert s.np_dtype == BF16 and s.fields() == ms.LAYOUT_SPECS[ms.LAYOUT].fields()
+    for name in ("motion-768-grid16-v1", ms.LAYOUT, ms.LAYOUT_RAW9):
+        assert ms.LAYOUT_SPECS[name].dtype == "float32" and ms.LAYOUT_SPECS[name].np_dtype == np.float32
+    assert ms.RAW_LAYOUTS == {ms.LAYOUT_RAW9, ms.LAYOUT_RAW9BF16}
+    assert 71316 * s.row_bytes == 21_031_944_192
+    with pytest.raises(ValueError):
+        ms.layout_np_dtype("float16")
+    _PASSED.add("layout_bf16")
+
+
+def run_export16(L, out: pathlib.Path, workers: int, *extra):
+    cmd = [sys.executable, str(EXPORT), "--latents", str(L.latents), "--manifest", str(L.manifest),
+           "--checksums", str(L.checksums / "sha256-source-files.txt"), "--motion-ref", str(L.pool),
+           "--workers", str(workers), "--out", str(out), *extra]
+    return subprocess.run(cmd, capture_output=True, text=True)
+
+
+@pytest.fixture(scope="module")
+def raw16_out(lib, tmp_path_factory):
+    tmp = tmp_path_factory.mktemp("raw16out")
+    outs = {}
+    for w in (1, 3):
+        out = tmp / f"out-w{w}"
+        r = run_export16(lib, out, w, "--stride", "16", "--out-dtype", "bfloat16")
+        assert r.returncode == 0, r.stdout + r.stderr
+        outs[w] = (out, r.stdout)
+    return outs
+
+
+def test_export16_bf16_rows_index_provenance(lib, raw16_out, capsys):
+    (a, out_a), (b, _) = raw16_out[1], raw16_out[3]
+    for rel in (ms.MOTION_TABLE_RELPATH, ms.INDEX_RELPATH, ms.ROW_DIGESTS_RELPATH):
+        assert (a / rel).read_bytes() == (b / rel).read_bytes(), rel                # --workers 1 与 3 字节相同
+    assert _meta_wo_exporter(a) == _meta_wo_exporter(b)
+    meta, ref = ms.MotionMeta.load(a), ms.MotionMeta.load(lib.pool)
+    assert meta.status == "verified" and meta.raw["layout"] == ms.LAYOUT_RAW9BF16 and meta.grid_stride == 16
+    t = meta.raw["tables"][ms.MOTION_KEY]
+    assert (t["dtype"], t["row_bytes"], t["row_shape"]) == ("bfloat16", 294_912, [9, 16, 32, 32])
+    assert meta.num_rows == ref.num_rows and (a / ms.MOTION_TABLE_RELPATH).stat().st_size == meta.num_rows * 294_912
+    # index 与 768 维表逐行相等（含 spec 三键与步长）
+    assert meta.spec.fields() == ref.spec.fields() and meta.grid_stride == ref.grid_stride
+    assert [_entry_key(e) for e in meta.entries] == [_entry_key(e) for e in ref.entries]
+    # 每行 = astype(bf16)(源第 m 个 chunk)（独立参照，不经 raw_bf16）
+    table = np.fromfile(a / ms.MOTION_TABLE_RELPATH, dtype=BF16).reshape((-1,) + wr.RAW9_INPUT_SHAPE)
+    n = 0
+    for e in meta.entries:
+        for seg in ms.SEGMENTS:
+            s = getattr(e, seg)
+            if s.num_grid == 0:
+                continue
+            src = np.fromfile(lib.latents / f"{ms.segment_key(e.h5_file, e.raw_ep_idx, seg)}.bin",
+                              dtype=np.float32).reshape((-1,) + wr.RAW9_INPUT_SHAPE)
+            assert src.shape[0] == s.num_grid
+            for m in range(s.num_grid):
+                assert table[s.row_base + m].tobytes() == src[m].astype(BF16).tobytes()
+                n += 1
+    assert n == meta.num_rows
+    p = meta.provenance
+    assert (p["table_kind"], p["table_op"], p["parameter_count"]) == ("wan_raw_bf16_s16_v1", "f32_to_bf16_reorder", 0)
+    assert p["raw9_source_sha256"] == wr.source_sha256() and p["source_m_rule"] == "all" and p["dtype"] == "bfloat16"
+    assert not {"encoder_kind", "readout", "encoder_ckpt"} & set(p)
+    exp_budget = max(ms.max_visible_count(e) for e in ref.entries)
+    assert p["budget_max"] == exp_budget
+    last = out_a.strip().splitlines()[-1]
+    assert last.startswith(f"EXPORT_RAW16=PASS rows={meta.num_rows} demo=") and " dtype=bf16 row_bytes=294912 " in last
+    assert f" budget_max={exp_budget} " in last
+    _PASSED.add("export16")
+    _say(capsys, f"EXPORT_RAW16_UNIT=PASS workers=1,3 rows={n} budget_max={exp_budget}")
+
+
+def test_export16_refuses_bad_modes_and_existing_out(lib, raw16_out, tmp_path):
+    for extra in (("--stride", "16"), ("--out-dtype", "bfloat16"), ("--stride", "32", "--out-dtype", "bfloat16")):
+        r = run_export16(lib, tmp_path / "x", 1, *extra)
+        assert r.returncode != 0 and "不支持" in r.stderr and not (tmp_path / "x").exists(), extra
+    r = run_export16(lib, raw16_out[1][0], 1, "--stride", "16", "--out-dtype", "bfloat16")
+    assert r.returncode != 0 and "输出根已存在" in r.stderr
+
+
+def _baseline_tree(tmp: pathlib.Path, sha: str) -> pathlib.Path:
+    """git archive 取出基线 sha 的导出脚本与 src/mme_vla_suite（旧 motion_store），按其自身位置推仓库根运行。"""
+    tmp.mkdir(parents=True)
+    arc = subprocess.run(["git", "-C", str(ROOT), "archive", sha, "pyproject.toml",
+                          "scripts/dataset/export_wan_raw9_s32.py", "src/mme_vla_suite"],
+                         capture_output=True, check=True).stdout
+    subprocess.run(["tar", "-x", "-C", str(tmp)], input=arc, check=True)
+    return tmp
+
+
+def test_export_s32_default_bytes_equal_baseline(lib, raw9_out, tmp_path, capsys):
+    """默认 / 显式 ``--stride 32 --out-dtype float32`` 与基线 dd39f3d（导出脚本 + motion_store）输出逐字节相同。"""
+    base = _baseline_tree(tmp_path / "base", S2_BASE_SHA)
+    out_b = tmp_path / "out-base"
+    cmd = [sys.executable, str(base / "scripts/dataset/export_wan_raw9_s32.py"), "--latents", str(lib.latents),
+           "--manifest", str(lib.manifest), "--checksums", str(lib.checksums / "sha256-source-files.txt"),
+           "--motion-ref", str(lib.pool), "--workers", "2", "--out", str(out_b)]
+    rb = subprocess.run(cmd, capture_output=True, text=True)
+    assert rb.returncode == 0, rb.stdout + rb.stderr
+    out_e = tmp_path / "out-explicit"
+    re_ = run_export16(lib, out_e, 2, "--stride", "32", "--out-dtype", "float32")
+    assert re_.returncode == 0, re_.stdout + re_.stderr
+    out_d = raw9_out[1][0]                                     # 新代码默认参数的产物
+    for o in (out_d, out_e):
+        for rel in (ms.MOTION_TABLE_RELPATH, ms.INDEX_RELPATH, ms.ROW_DIGESTS_RELPATH):
+            assert (o / rel).read_bytes() == (out_b / rel).read_bytes(), (o, rel)
+        mo, mb = _meta_wo_exporter(o), _meta_wo_exporter(out_b)
+        for m in (mo, mb):                                     # 只有 provenance 里的源码摘要随 S2 改动之外的文件变，
+            m["provenance"].pop("raw9_source_sha256")          # wan_raw9.py 未改，二者也应相同——单独断言
+        assert mo == mb, o
+    assert json.loads((out_d / ms.META_RELPATH).read_text())["provenance"]["raw9_source_sha256"] == \
+        json.loads((out_b / ms.META_RELPATH).read_text())["provenance"]["raw9_source_sha256"]
+    assert rb.stdout.strip().splitlines()[-1] == re_.stdout.strip().splitlines()[-1]   # EXPORT_RAW9 判定行逐字相同
+    _PASSED.add("s32_regress")
+    _say(capsys, f"S32_EXPORT_REGRESS=PASS baseline={S2_BASE_SHA} outputs=default,explicit")
+
+
+@pytest.mark.skipif(not (REAL_LIB / "motion-wan-raw9-s32/meta/store_meta.json").is_file(), reason="本机无真实 1600ep 库")
+def test_real_subset_s32_rows_equal_table_and_bf16_even(tmp_path, capsys):
+    """真实数据子集：新代码 export_segment 在 s32/f32 模式写出的行 == 现有 s32 表对应行（table_sha256=0e6657af…）；
+    s16/bf16 模式写出的偶数 m 行 == astype(bf16)(s32 表对应行)。只读 v1-store，输出写 tmp 稀疏文件。"""
+    exp = _load_by_path("export_raw9_mod_for_s2", EXPORT)
+    s32_meta = ms.MotionMeta.load(REAL_LIB / "motion-wan-raw9-s32")
+    assert s32_meta.table_sha256 == "0e6657af118e65c762b86dfd86ce0794289108b3be37ad5017fe9c26d1442d19"
+    ref = ms.MotionMeta.load(REAL_LIB / "motion")
+    s16_entries = ms.build_index_entries(json.loads(pathlib.Path(ref.manifest_path).read_text()),
+                                         ms.LAYOUT_SPECS[ms.LAYOUT_RAW9BF16])
+    pick = [0, 1, 777, 1599]
+    s32_table = np.memmap(REAL_LIB / "motion-wan-raw9-s32" / ms.MOTION_TABLE_RELPATH, dtype=np.float32, mode="r",
+                          shape=(s32_meta.num_rows,) + wr.RAW9_INPUT_SHAPE)
+    rows32 = rows16 = 0
+    for stride, dtype, entries in ((32, "float32", list(s32_meta.entries)), (16, "bfloat16", s16_entries)):
+        jobs = exp.segment_jobs([ref.entries[g] for g in pick], [entries[g] for g in pick], stride)
+        spec = ms.LAYOUT_SPECS[exp.MODES[(stride, dtype)]]
+        tmp = tmp_path / f"t{stride}.bin"
+        with open(tmp, "wb") as f:                                # 稀疏文件，只有被写的行占盘
+            f.truncate(ms.index_totals(entries)["rows"] * spec.row_bytes)
+        for j in jobs:
+            j.update(latents_root=str(REAL_LIB / "wan-latents"), table_tmp=str(tmp), out_dtype=dtype,
+                     out_row_bytes=spec.row_bytes)
+            res = exp.export_segment(j)
+            out = np.memmap(tmp, dtype=spec.np_dtype, mode="r", shape=(ms.index_totals(entries)["rows"],) +
+                            wr.RAW9_INPUT_SHAPE)
+            g, seg = j["g"], j["segment"]
+            s32s = getattr(s32_meta.entries[g], seg)
+            if stride == 32:
+                for i in range(res["num_grid"]):
+                    assert out[j["row_base"] + i].tobytes() == s32_table[s32s.row_base + i].tobytes()
+                    rows32 += 1
+            else:
+                for m in range(0, res["num_grid"], 2):
+                    assert out[j["row_base"] + m].tobytes() == \
+                        np.asarray(s32_table[s32s.row_base + m // 2]).astype(BF16).tobytes()
+                    rows16 += 1
+            del out
+    del s32_table
+    assert rows32 == rows16 > 0
+    _PASSED.add("real_subset")
+    _say(capsys, f"REAL_SUBSET_S32_AND_S16_EVEN=PASS episodes={pick} s32_rows={rows32} s16_even_rows={rows16}")
+
+
+def test_bf16_store_memmap_rows_into_contract(raw16_out, tmp_path):
+    a = raw16_out[1][0]
+    st = ms.MotionStore(a, verify_level="full")
+    assert isinstance(st.table, np.memmap) and st.table.dtype == BF16 and not st.table.flags["WRITEABLE"]
+    ref = np.fromfile(a / ms.MOTION_TABLE_RELPATH, dtype=BF16).reshape((-1,) + wr.RAW9_INPUT_SHAPE)
+    r = [st.num_rows - 1, 0, 2]
+    got = st.rows(r)
+    assert type(got) is np.ndarray and got.dtype == BF16 and got.tobytes() == ref[r].tobytes()
+    buf = np.zeros((4 * 9, 16384), BF16)                                     # e2e 预分配：(k·9,16384) 的前 3·9 行
+    out = buf[:27].reshape(3, *wr.RAW9_INPUT_SHAPE)
+    assert st.rows_into(r, out) is out
+    assert buf[:27].tobytes() == ref[r].tobytes() and not buf[27:].view(np.uint16).any()
+    for bad in (np.zeros((3,) + wr.RAW9_INPUT_SHAPE, np.float32), np.zeros((3,) + wr.RAW9_INPUT_SHAPE, np.float16),
+                np.zeros((2,) + wr.RAW9_INPUT_SHAPE, BF16)):
+        with pytest.raises(ValueError):
+            st.rows_into(r, bad)
+    st.close()
+    # store_meta 声明错误 dtype / 行字节即拒（布局 dtype 严格比对）
+    for name, fn in {"dtype_f32": lambda m: m["tables"][ms.MOTION_KEY].update(dtype="float32"),
+                     "dtype_bf16_name": lambda m: m["tables"][ms.MOTION_KEY].update(dtype="bf16"),
+                     "rowbytes": lambda m: m["tables"][ms.MOTION_KEY].update(row_bytes=589_824)}.items():
+        bad = _tamper_meta(a, tmp_path / name, fn)
+        with pytest.raises(ValueError):
+            ms.MotionMeta.load(bad)
+    _PASSED.add("bf16_rows_into")
+
+
+@pytest.mark.parametrize("name,fn", [
+    ("add_encoder_kind", lambda p: p.update(encoder_kind="wan_raw9")),
+    ("add_readout", lambda p: p.update(readout="wan_raw9_flat16384_s32_v1")),
+    ("table_kind_wrong", lambda p: p.update(table_kind="wan_raw9")),
+    ("table_kind_missing", lambda p: p.pop("table_kind")),
+    ("table_op_wrong", lambda p: p.update(table_op="reorder")),
+    ("param_1", lambda p: p.update(parameter_count=1)),
+    ("param_false", lambda p: p.update(parameter_count=False)),
+    ("raw9_sha", lambda p: p.update(raw9_source_sha256="0" * 64)),
+])
+def test_e2e_provenance_rejects_tamper(raw16_out, tmp_path, name, fn):
+    bad = _tamper_meta(raw16_out[1][0], tmp_path / name, lambda m: fn(m["provenance"]))
+    with pytest.raises(ValueError):
+        ms.MotionMeta.load(bad)
+
+
+def test_e2e_provenance_contract_and_swap(lib, raw16_out, raw9_out, tmp_path):
+    e2e, raw9 = raw16_out[1][0], raw9_out[1][0]
+    ms.MotionMeta.load(e2e)                                                   # 合法 e2e 表穿过 MotionMeta.load
+    p16 = json.loads((e2e / ms.META_RELPATH).read_text())["provenance"]
+    p32 = json.loads((raw9 / ms.META_RELPATH).read_text())["provenance"]
+    ms.check_e2e_table_provenance(p16, layout=ms.LAYOUT_RAW9BF16)
+    with pytest.raises(ValueError):
+        ms.check_e2e_table_provenance(p16, layout=ms.LAYOUT_RAW9)
+    # 新旧 provenance 整体互换：两边都失败
+    with pytest.raises(ValueError):
+        ms.MotionMeta.load(_tamper_meta(e2e, tmp_path / "e2e_with_raw9", lambda m: m.update(provenance=dict(p32))))
+    with pytest.raises(ValueError):
+        ms.MotionMeta.load(_tamper_meta(raw9, tmp_path / "raw9_with_e2e", lambda m: m.update(provenance=dict(p16))))
+    # 旧 raw9 表把 encoder_kind/readout 换成 table_kind：失败
+    def swap_kind(m):
+        m["provenance"].pop("encoder_kind")
+        m["provenance"].pop("readout")
+        m["provenance"]["table_kind"] = ms.E2E_TABLE_KIND
+    with pytest.raises(ValueError):
+        ms.MotionMeta.load(_tamper_meta(raw9, tmp_path / "raw9_kind_swap", swap_kind))
+    # 768 布局表带上 e2e provenance（table_kind）：布局与来源双向绑定，失败
+    with pytest.raises(ValueError):
+        ms.MotionMeta.load(_tamper_meta(lib.pool, tmp_path / "pool_e2e", lambda m: m.update(provenance=dict(p16))))
+    # 旧 raw9 表继续通过原校验（check_raw9_provenance 不动）
+    ms.MotionMeta.load(raw9)
+    ms.check_raw9_provenance(p32, layout=ms.LAYOUT_RAW9)
+    _PASSED.add("e2e_provenance")
+
+
+def run_verify16(L, table: pathlib.Path, s32: pathlib.Path | None, s32_sha: str | None, *extra):
+    cmd = [sys.executable, str(VERIFY), "--stride", "16", "--table", str(table), "--latents", str(L.latents),
+           "--checksums", str(L.checksums / "sha256-source-files.txt"), "--workers", "3",
+           "--motion-ref", str(L.pool), "--expect-rows", str(ms.MotionMeta.load(L.pool).num_rows), *extra]
+    if s32 is not None:
+        cmd += ["--s32-table", str(s32), "--expect-s32-table-sha256", s32_sha]
+    return subprocess.run(cmd, capture_output=True, text=True)
+
+
+def test_verify16_pass_and_fail_modes(lib, raw16_out, raw9_out, tmp_path, capsys):
+    good, s32 = raw16_out[1][0], raw9_out[1][0]
+    s32_meta, ref = ms.MotionMeta.load(s32), ms.MotionMeta.load(lib.pool)
+    sha32 = s32_meta.table_sha256
+    r = run_verify16(lib, good, s32, sha32)
+    assert r.returncode == 0, r.stdout + r.stderr
+    lines = r.stdout.strip().splitlines()
+    bmax = max(ms.max_visible_count(e) for e in ref.entries)
+    demo = sum(e.demo.num_grid for e in ref.entries)
+    exe = sum(e.exec.num_grid for e in ref.entries)
+    assert f"INDEX_VS_MOTION768=PASS rows={ref.num_rows} mismatches=0" in lines
+    assert f"S16_EVEN_VS_S32=PASS rows={s32_meta.num_rows} mismatches=0" in lines
+    assert lines[-1] == (f"EXPORT_RAW16=PASS rows={ref.num_rows} dtype=bf16 row_bytes=294912 demo={demo} exec={exe} "
+                         f"budget_max={bmax} budget_limit=160 mismatch=0")
+    fails = {}
+    # (a) 新表篡改 1 字节（同步改表 sha 绕过 full 档）→ EXPORT_RAW16 FAIL
+    bad = tmp_path / "byte"
+    subprocess.run(["cp", "-r", str(good), str(bad)], check=True)
+    raw = bytearray((bad / ms.MOTION_TABLE_RELPATH).read_bytes())
+    raw[294_912 + 777] ^= 0x01
+    _resha_table(bad, np.frombuffer(bytes(raw), np.uint8))
+    fails["byte"] = (run_verify16(lib, bad, s32, sha32), "EXPORT_RAW16=FAIL")
+    # (b) 用截断（非 RNE）转换重写新表 → 内容校验 FAIL
+    bad = tmp_path / "trunc"
+    subprocess.run(["cp", "-r", str(good), str(bad)], check=True)
+    meta = ms.MotionMeta.load(good)
+    arr = np.empty((meta.num_rows,) + wr.RAW9_INPUT_SHAPE, np.uint16)
+    for e in meta.entries:
+        for seg in ms.SEGMENTS:
+            s = getattr(e, seg)
+            if s.num_grid:
+                src = np.fromfile(lib.latents / f"{ms.segment_key(e.h5_file, e.raw_ep_idx, seg)}.bin", np.uint32)
+                arr[s.row_base:s.row_base + s.num_grid] = (src >> 16).astype(np.uint16).reshape(
+                    (-1,) + wr.RAW9_INPUT_SHAPE)
+    _resha_table(bad, arr)
+    fails["trunc"] = (run_verify16(lib, bad, s32, sha32), "EXPORT_RAW16=FAIL")
+    # (c) s32 表偶数行被改（同步改其 sha 并作为期望传入）→ S16_EVEN_VS_S32 FAIL
+    bad32 = tmp_path / "s32bad"
+    subprocess.run(["cp", "-r", str(s32), str(bad32)], check=True)
+    raw = bytearray((bad32 / ms.MOTION_TABLE_RELPATH).read_bytes())
+    raw[wr.RAW9_ROW_BYTES + 4 * 100 + 3] ^= 0x01              # 第 1 行一个 f32 的高字节（指数位），bf16 后必然不同
+    _resha_table(bad32, np.frombuffer(bytes(raw), np.uint8))
+    sha_bad = ms.MotionMeta.load(bad32).table_sha256
+    fails["s32_even"] = (run_verify16(lib, good, bad32, sha_bad), "S16_EVEN_VS_S32=FAIL")
+    # (d) s32 表 sha 与期望不符 → 拒
+    fails["s32_sha"] = (run_verify16(lib, good, s32, "0" * 64), "EXPORT_RAW16=FAIL reason=")
+    # (e) budget 上限过小 → FAIL
+    fails["budget"] = (run_verify16(lib, good, None, None, "--budget-limit", str(bmax - 1)), "EXPORT_RAW16=FAIL")
+    for name, (res, needle) in fails.items():
+        assert res.returncode == 1 and needle in res.stdout, (name, res.stdout, res.stderr)
+    # 不给 --s32-table 时只出两行，仍 PASS
+    r2 = run_verify16(lib, good, None, None)
+    assert r2.returncode == 0 and "S16_EVEN_VS_S32" not in r2.stdout, r2.stdout + r2.stderr
+    _PASSED.add("verify16")
+    _say(capsys, f"VERIFY_RAW16_UNIT=PASS pass=1 fail_modes={','.join(fails)}")
+
+
+def test_k_dist_script(lib, raw16_out, capsys):
+    ref = ms.MotionMeta.load(lib.pool)
+    k = []
+    for e in ref.entries:                                        # 独立暴力：demo 整段已见 + exec 前视窗尾 ≤ t
+        es = e.exec_start_idx
+        nd = sum(1 for m in range(e.demo.num_grid) if 16 * m + 16 <= es - 1)
+        for t in range(es, e.num_timesteps):
+            k.append(nd + sum(1 for m in range(e.exec.num_grid) if 16 * m + 32 <= t - es))
+    k = np.asarray(k)
+    want = f"{k.mean():.6f},{np.percentile(k, 50):g},{np.percentile(k, 95):g},{k.max()}"
+    p50, p95 = np.percentile(k, 50), np.percentile(k, 95)
+    for root in (lib.pool, raw16_out[1][0]):                     # 768 表与 s16 表 index 逐行相同，结果一致
+        args = [sys.executable, str(KDIST), "--motion", str(root), "--budget", "160",
+                "--expect-mean", f"{k.mean():.6f}", "--expect-p50", repr(float(p50)), "--expect-p95",
+                repr(float(p95)), "--expect-max", str(k.max())]
+        r = subprocess.run(args, capture_output=True, text=True)
+        assert r.returncode == 0, r.stdout + r.stderr
+        assert r.stdout.splitlines()[0].startswith(f"K_DIST={want} samples={k.size} ")
+        assert r.stdout.splitlines()[1].startswith("K_DIST_VS_AUDIT=PASS")
+    r = subprocess.run([sys.executable, str(KDIST), "--motion", str(lib.pool)], capture_output=True, text=True)
+    assert r.returncode == 1 and "K_DIST_VS_AUDIT=FAIL" in r.stdout                 # 审计默认值对夹具必不符
+    _PASSED.add("k_dist")
+    _say(capsys, f"K_DIST_UNIT=PASS fixture={want} samples={k.size}")
+
+
 # ══ 汇总判定行（必须是本文件最后一个用例）════════════════════════════════════════════
 
 
 REQUIRED = {"flatten", "token_times_budget", "layout_spec", "visible_rows_s32", "old_stride16_equal", "export",
             "memmap_rows_into", "raw9_provenance", "verify", "motion_gates", "init_history_config", "train_diag",
-            "rss"}
+            "rss", "bf16_rne", "layout_bf16", "export16", "s32_regress", "bf16_rows_into", "e2e_provenance",
+            "verify16", "k_dist"}
+if (REAL_LIB / "motion-wan-raw9-s32/meta/store_meta.json").is_file():
+    REQUIRED.add("real_subset")
 
 
 def test_zz_raw9_store_unit_summary(capsys):
