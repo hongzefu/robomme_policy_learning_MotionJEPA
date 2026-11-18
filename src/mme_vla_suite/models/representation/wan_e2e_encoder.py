@@ -12,7 +12,7 @@
   (``checkpoint_epoch_72.pt#encoder``) 的 ``latents_mean`` / ``latents_std`` buffer；与 Wan VAE config 的
   四位小数常数只差舍入级（max|Δmean| = 4.17e-7、max|Δstd| = 3.22e-5，计划 P8）。
 - 共享 ``input_proj``: Linear(16384→768, 无 bias)。
-- ``layers`` 个 pre-norm 因果块（深度为配置项；正式训练 YAML = 1，G1 第二次对拍 / G3 临时 8）：
+- ``layers`` 个 pre-norm 因果块（参数树键 ``blocks/block_{i}``，torch 键 ``blocks.{i}``；深度为配置项；正式训练 YAML = 1，G1 第二次对拍 / G3 临时 8）：
   ``x + attn(norm1(x))``、``x + ffn(norm2(x))``，无 layer scale；RMSNorm eps 1e-6；
   注意力 to_qkv Linear(768→2304)、to_out Linear(768→768)、12 头 × 64、因果、无 qk-norm；
   1D RoPE base 10000、位置 0..8、只作用于 q/k、rotate-half ``[x1·cos − x2·sin, x2·cos + x1·sin]``；
@@ -233,6 +233,38 @@ class EncoderBlock(nnx.Module):
         return x
 
 
+def block_attr(i: int) -> str:
+    """第 i 个块在参数树中的字符串键（``blocks/block_{i}``）；torch 侧对应 ``blocks.{i}.*``。"""
+    return f"block_{int(i)}"
+
+
+class EncoderBlocks(nnx.Module):
+    """按序存放 ``depth`` 个 ``EncoderBlock`` 的容器，子模块属性名 ``block_0``…（参数树只有字符串键）。
+
+    支持 ``len`` / 迭代 / 整数下标，用法与原 Python list 相同。块按 0..depth-1 顺序构造，共享同一 ``rngs``。
+    """
+
+    def __init__(self, depth, dim, heads, dim_head, mlp_ratio, dropout, *, dtype, param_dtype, rngs):
+        self.depth = int(depth)
+        for i in range(self.depth):
+            setattr(self, block_attr(i), EncoderBlock(dim, heads, dim_head, mlp_ratio, dropout,
+                                                      dtype=dtype, param_dtype=param_dtype, rngs=rngs))
+
+    def __len__(self) -> int:
+        return self.depth
+
+    def __getitem__(self, i: int) -> "EncoderBlock":
+        i = int(i)
+        if i < 0:
+            i += self.depth
+        if not 0 <= i < self.depth:
+            raise IndexError(f"块下标 {i} 越界（depth={self.depth}）")
+        return getattr(self, block_attr(i))
+
+    def __iter__(self):
+        return (getattr(self, block_attr(i)) for i in range(self.depth))
+
+
 class WanLatentMotionEncoderJax(nnx.Module):
     """(n, 9, 16384) bf16/f32 raw Wan latent → (n, 768) motion token（compute dtype）。
 
@@ -258,11 +290,10 @@ class WanLatentMotionEncoderJax(nnx.Module):
         self.latents_std = LATENTS_STD
         width = int(cfg.width)
         self.input_proj = _linear(E2E_RAW_DIM, width, dtype=self.dtype, param_dtype=param_dtype, rngs=rngs)
-        self.blocks = [
-            EncoderBlock(width, int(cfg.heads), int(cfg.dim_head), cfg.mlp_ratio, float(cfg.dropout),
-                         dtype=self.dtype, param_dtype=param_dtype, rngs=rngs)
-            for _ in range(self.depth)
-        ]
+        # 块容器：参数树键为字符串 blocks/block_{i}/…（F1：Python list 会产生整数键，openpi 真实权重加载器
+        # flatten_dict(sep="/") 报 TypeError）；构造顺序与 RNG 消耗与原 list 版逐位相同。
+        self.blocks = EncoderBlocks(self.depth, width, int(cfg.heads), int(cfg.dim_head), cfg.mlp_ratio,
+                                    float(cfg.dropout), dtype=self.dtype, param_dtype=param_dtype, rngs=rngs)
         self.final_norm = RMSNorm(width, param_dtype=param_dtype)
         self.output_proj = _linear(width, int(cfg.motion_dim), dtype=self.dtype,
                                    param_dtype=param_dtype, rngs=rngs)
@@ -403,7 +434,7 @@ def nnx_grads_to_torch_layout(model: WanLatentMotionEncoderJax, grads_state) -> 
 
     lin(grads_state["input_proj"], "input_proj.weight")
     for i in range(model.depth):
-        b = grads_state["blocks"][i]
+        b = grads_state["blocks"][block_attr(i)]
         for suffix, (sub, name) in _BLOCK_LINEARS.items():
             lin(b[sub][name], f"blocks.{i}.{suffix}")
         for suffix, name in _BLOCK_NORMS.items():

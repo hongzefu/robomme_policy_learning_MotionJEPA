@@ -247,6 +247,64 @@ def test_state_dict_mapping_rejects_bad_keys():
         E.load_torch_state_dict(m, sd_badstat)
 
 
+# ── F1：参数树只有字符串键（openpi 真实权重加载器 flatten_dict(sep="/") 的前提）──────────────────────
+@pytest.mark.parametrize("depth", [1, 8])
+def test_param_tree_keys_are_str(depth):
+    from flax.traverse_util import flatten_dict
+
+    m = _enc(depth)
+    flat = flatten_dict(nnx.state(m, nnx.Param).to_pure_dict(), sep="/")   # 整数键会在这里 TypeError
+    arrays = {k: v for k, v in flat.items() if v is not None}
+    want_blocks = {f"blocks/{E.block_attr(i)}" for i in range(depth)}
+    got_blocks = {"/".join(k.split("/")[:2]) for k in arrays if k.startswith("blocks/")}
+    assert got_blocks == want_blocks
+    assert len(arrays) == 3 + 7 * depth and len(m.blocks) == depth
+    assert [b is m.blocks[i] for i, b in enumerate(m.blocks)] == [True] * depth
+    # torch 键映射与参数树一一对应：param_groups 覆盖全部数组叶，梯度布局键 = torch state dict 键
+    groups = E.param_groups(m)
+    assert sorted(groups) == sorted(["input_proj", "final_norm", "output_proj"] + [f"block{i}" for i in range(depth)])
+    assert sum(len(g) for g in groups.values()) == len(arrays)
+    grads = nnx.state(m, nnx.Param)
+    tl = E.nnx_grads_to_torch_layout(m, grads)
+    torch_keys = {k for k in REF.build_reference(depth).state_dict()
+                  if not k.endswith(("cos_cache", "sin_cache", "latents_mean", "latents_std"))}
+    assert set(tl) == torch_keys
+
+
+def test_real_spec_tree_through_merge_params():
+    """G4 失败路径：真实规格（mme_vla_suite_b128_80k + e2eenc YAML）的参数形状树经
+    ``weight_loaders._merge_params`` 合并（只含非 encoder 键的合成 loaded），再按 train.py
+    ``_load_weights_and_validate`` 做 ``check_pytree_equality``。"""
+    import dataclasses
+
+    from flax.traverse_util import flatten_dict
+    from omegaconf import OmegaConf
+
+    import openpi.shared.array_typing as at
+    from mme_vla_suite.models.representation import percep_mem as pm
+    from mme_vla_suite.training import config as _config
+    from openpi.training import weight_loaders
+
+    yaml = WT / "src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-8frame-8x8-e2eenc.yaml"
+    cfg = _config.get_config("mme_vla_suite_b128_80k")
+    mc = dataclasses.replace(cfg.model, history_config=OmegaConf.load(yaml), use_history=True)
+    model = nnx.eval_shape(mc.create, jax.random.key(0))
+    shape_tree = nnx.state(model).to_pure_dict()          # 同 train.py：train_state_shape.params.to_pure_dict()
+    flat_ref = flatten_dict(shape_tree, sep="/")            # 改前在此 TypeError: sequence item 3 …
+    enc_pre = f"mem_encoder/{pm.E2E_ENCODER_ATTR}/"
+    enc = sorted(k for k, v in flat_ref.items() if k.startswith(enc_pre) and v is not None)
+    assert len(enc) == 10 and sum(k.startswith(enc_pre + "blocks/block_0/") for k in enc) == 7
+    loaded = {k: np.broadcast_to(np.zeros((), v.dtype), v.shape)
+              for k, v in flat_ref.items() if v is not None and not k.startswith(enc_pre)}
+    from flax.traverse_util import unflatten_dict
+    merged = weight_loaders._merge_params(unflatten_dict(loaded, sep="/"), shape_tree, missing_regex=".*")
+    at.check_pytree_equality(expected=shape_tree, got=merged, check_shapes=True, check_dtypes=True)
+    fm = flatten_dict(merged, sep="/")
+    assert all(isinstance(fm[k], jax.ShapeDtypeStruct) for k in enc)          # encoder 叶取自形状树（随机初值）
+    assert all(isinstance(fm[k], np.ndarray) for k in loaded)                 # 其余叶取自 loaded
+    print(f"\nE2E_MERGE_PARAMS=PASS ref_leaves={len(flat_ref)} loaded={len(loaded)} enc_from_init={len(enc)}")
+
+
 # ── vendored 参考 ──────────────────────────────────────────────────────────────────────────────
 def test_vendored_file_provenance():
     """vendored 正文逐字还原 d3213de：去掉文件头与附加段、把 mixin 块换回原 import 行后 sha256 等于原文件。"""
