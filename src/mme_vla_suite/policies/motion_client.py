@@ -12,6 +12,10 @@
 - raw9 kind（`encoder_kind="wan_raw9"`，计划 1112-4task-modul-wanraw9-s32-50k-plan.html 第二部分 1.1 第 17 行）：argv 同池化 kind；
   握手比 encoder_kind / readout / raw9_source_sha256 与 vae 段；`__call__` 收 589,824 B（`P.RAW9_RESPONSE_BYTES`）→
   (9,16,32,32) f32 → `wan_raw9.flatten_raw9` → 返回 (9,16384) f32 副本（每窗 9 个 token）。
+- e2e kind（`encoder_kind="wan_e2e"`，计划 1117-e2e-enc-train-plan.html 第二部分「一」motion_client.py 行）：argv / 握手同 raw9 kind
+  （比 encoder_kind / readout 与 e2e 快照相等，raw9_source_sha256 与 wan_raw9 源码 sha 相等）；`__call__` 收 589,824 B → (9,16,32,32) f32
+  → `flatten_raw9` → 立即调 `raw_bf16.raw9_f32_to_bf16`（与离线导出同一函数，R9；在线唯一的 fp32→bf16 转换点）→ 返回 (9,16384) bf16。
+  之后升 fp32 → 标准化 → bf16 encoder 全在模型内（与训练同一路径），本模块不做别的数值处理。
 - 跨硬件放行：`MMEVLA_MOTION_PROV_RELAX=gpu_name,compute_cap,sm_count` 时这三个硬件键不等只记 WARN（见 `check_provenance`）。
 """
 
@@ -50,6 +54,11 @@ PROV_SAME_ENC = ("checkpoint", "checkpoint_sha256", "checkpoint_epoch", "arch", 
 POOL_ENCODER_KINDS = ("wan_fixedpool768",)
 # 不池化 kind（计划 1112 第二部分 1.1 第 17 行）：值与 shared/wan_raw9.py 的 RAW9_ENCODER_KIND 相同；kind 白名单 = 两者并集。
 RAW9_ENCODER_KINDS = ("wan_raw9",)
+# E2E-Enc kind（计划 1117）：sidecar 侧与 raw9 同一通路（fp32 raw 原样回传），客户端收到后转 bf16（R9）。
+E2E_ENCODER_KINDS = ("wan_e2e",)
+E2E_READOUT = "wan_e2e_enc768_s16_v1"
+# 回传 raw latent 的 kind 全集（响应长度 589,824 B、握手比 raw9_source_sha256）
+RAW_LATENT_KINDS = RAW9_ENCODER_KINDS + E2E_ENCODER_KINDS
 
 
 class MotionEncoderClient:
@@ -57,24 +66,36 @@ class MotionEncoderClient:
                  expected_ckpt_sha256: str | None = None, store_provenance: dict | None = None, stub: bool = False,
                  v1_store: str | pathlib.Path | None = None, handshake_timeout: float = P.HANDSHAKE_TIMEOUT_S,
                  source_run: str | None = None, encoder_kind: str | None = None, readout: str | None = None,
-                 expected_pool_sha256: str | None = None, expected_raw9_sha256: str | None = None):
+                 expected_pool_sha256: str | None = None, expected_raw9_sha256: str | None = None,
+                 keep_last_raw_f32: bool = False):
         self._lock = threading.Lock()
         self.stub = bool(stub)
         # encoder_kind=None：旧 encoder 路径，启动参数与握手比对逐字不变；池化 kind 不接受 encoder 侧参数
         if encoder_kind is not None:
-            if encoder_kind not in POOL_ENCODER_KINDS + RAW9_ENCODER_KINDS:
+            if encoder_kind not in POOL_ENCODER_KINDS + RAW_LATENT_KINDS:
                 raise ValueError(f"未知 motion encoder_kind: {encoder_kind!r}")
             if source_run is not None or encoder_run_dir is not None or expected_ckpt_sha256 is not None:
                 raise ValueError("池化 kind 不使用 source_run / encoder_run_dir / expected_ckpt_sha256")
-            if encoder_kind in RAW9_ENCODER_KINDS:
+            if encoder_kind in RAW_LATENT_KINDS:
                 if not readout or not expected_raw9_sha256:
-                    raise ValueError("raw9 kind 必须给出 readout 与 expected_raw9_sha256")
+                    raise ValueError("raw9 / e2e kind 必须给出 readout 与 expected_raw9_sha256")
+                if encoder_kind in E2E_ENCODER_KINDS and readout != E2E_READOUT:
+                    raise ValueError(f"e2e kind 的 readout 必须为 {E2E_READOUT!r}，得到 {readout!r}")
             elif not readout or not expected_pool_sha256:
                 raise ValueError("池化 kind 必须给出 readout 与 expected_pool_sha256")
         self.encoder_kind = encoder_kind
         self.readout = readout
         self.expected_pool_sha256 = expected_pool_sha256
         self.expected_raw9_sha256 = expected_raw9_sha256
+        # e2e：在线唯一的 fp32→bf16 转换函数（R9），构造期即导入（模块缺失时当场失败，不等第一次请求）
+        self._bf16_fn = None
+        if encoder_kind in E2E_ENCODER_KINDS:
+            from mme_vla_suite.shared.raw_bf16 import raw9_f32_to_bf16
+            self._bf16_fn = raw9_f32_to_bf16
+        self.keep_last_raw_f32 = bool(keep_last_raw_f32)
+        self.last_raw_f32 = None                              # keep_last_raw_f32=True 时留最近一窗的 (9,16384) f32（G5 逐窗核转换）
+        self.bytes_sent = 0
+        self.bytes_recv = 0
         # v1-store 根：显式参数 > MMEVLA_V1_STORE（worktree 开发时指到主树）> 仓库内 v1-store
         v1 = pathlib.Path(v1_store or os.environ.get("MMEVLA_V1_STORE") or (_REPO_ROOT / "v1-store"))
         if source_run is not None:
@@ -140,7 +161,7 @@ class MotionEncoderClient:
         """池化 / raw9 kind 的握手比对：sidecar 上报的 encoder_kind / readout / 源码 sha256 与 run 快照逐值相等
         （池化 kind 比 pool_source_sha256，raw9 kind 比 raw9_source_sha256）。"""
         diffs = []
-        sha_item = (("raw9_source_sha256", self.expected_raw9_sha256) if self.encoder_kind in RAW9_ENCODER_KINDS
+        sha_item = (("raw9_source_sha256", self.expected_raw9_sha256) if self.encoder_kind in RAW_LATENT_KINDS
                     else ("pool_source_sha256", self.expected_pool_sha256))
         for key, want in (("encoder_kind", self.encoder_kind), ("readout", self.readout), sha_item):
             got = self.provenance.get(key)
@@ -186,11 +207,29 @@ class MotionEncoderClient:
                 raise RuntimeError(f"sidecar 已退出（rc={self._proc.returncode}）")
             deadline = time.monotonic() + P.REQUEST_TIMEOUT_S
             t0 = time.perf_counter()
-            P.send_all(self._sock, P.encode_request(start_frame, payload))
-            raw9 = getattr(self, "encoder_kind", None) in RAW9_ENCODER_KINDS
+            req = P.encode_request(start_frame, payload)
+            P.send_all(self._sock, req)
+            kind = getattr(self, "encoder_kind", None)
+            raw9 = kind in RAW_LATENT_KINDS
             raw = P.recv_response(self._sock, deadline, P.RAW9_RESPONSE_BYTES) if raw9 else P.recv_response(self._sock, deadline)
             self.total_s += time.perf_counter() - t0
             self.n_calls += 1
+            self.bytes_sent = getattr(self, "bytes_sent", 0) + len(req)
+            self.bytes_recv = getattr(self, "bytes_recv", 0) + len(raw)
+        if kind in E2E_ENCODER_KINDS:
+            # 589,824 B → (9,16,32,32) f32 → (9,16384) f32 视图 → raw9_f32_to_bf16（R9 唯一转换点）→ (9,16384) bf16
+            from mme_vla_suite.shared import wan_raw9
+            z = np.frombuffer(raw, dtype=np.float32).reshape(wan_raw9.RAW9_INPUT_SHAPE).copy()
+            flat = wan_raw9.flatten_raw9(z)
+            if getattr(self, "keep_last_raw_f32", False):
+                self.last_raw_f32 = flat
+            fn = getattr(self, "_bf16_fn", None)
+            if fn is None:
+                from mme_vla_suite.shared.raw_bf16 import raw9_f32_to_bf16 as fn
+            out = fn(flat)
+            if out.shape != (wan_raw9.RAW9_TOKENS_PER_WINDOW, wan_raw9.RAW9_TOKEN_DIM) or out.dtype.name != "bfloat16":
+                raise RuntimeError(f"raw9_f32_to_bf16 返回形制 {out.shape} {out.dtype} != (9,16384) bfloat16")
+            return out
         if raw9:
             # 589,824 B → (9,16,32,32) f32 副本 → C→H→W 展平为 (9,16384)（零拷贝视图，不改字节）
             from mme_vla_suite.shared import wan_raw9

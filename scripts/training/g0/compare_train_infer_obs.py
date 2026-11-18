@@ -42,6 +42,25 @@ L4 判定口径（用户 2026-09-14 已裁决）：
 按任务名轮转取 5 个互异 es（每个任务取其未占用 es 中最小者，同 (任务, es) 取 T 最长——DEFAULT_EPISODES「各 es 取 T 最长」口径），
 本机覆盖不足时按同一规则用全库清单补齐并打印缺失的 `H5_EPISODE {...}` 行（含 tar_object/member/h5_sha256/h5_bytes），非零退出。
 `--dry-run`：只打印选中 episodes、`H5_COVERAGE=` 与 `DRY_RUN episodes=<n> complete=yes|no episodes_arg=<...>`，不建 policy、不用 GPU。
+
+E2E-Enc 分支（计划 1117-e2e-enc-train-plan.html 第二部分「一」本文件行、三节 G5）：快照 `motion.encoder_kind == "wan_e2e"` 时
+（`--motion sidecar --motion-subdir motion-wan-raw9-s16`，stride 16、budget 160）决策时刻上限 `MAX_STEPS_E2E = 2000`（旧口径仍 1300）；
+store 档查表闭包返回表里 bf16 (9,16,32,32) 行的 (9,16384) 视图（不做 dtype 转换）；sidecar 档构造 e2e 客户端
+（收 fp32 后立即调 `raw_bf16.raw9_f32_to_bf16`），比对对象是客户端转换后的 bf16 (9,16384) 槽对训练集 bf16 行（逐字节），
+并逐窗核客户端用的转换函数就是 `raw_bf16.raw9_f32_to_bf16`（`E2E_BF16_CONVERT` 阻断行）；策略内 encoder 在 bf16 restore 下的输出
+由 L3 的 `PREFIX_T_VS_I`（modulation 含 mem_tok）覆盖；另记 `E2E_ENC_TRAIN_VS_ONLINE=RECORDED`（训练精度路径 f32 参数批量 vs
+在线 bf16 参数逐窗的 encoder token rel_rmse，只记不判）。
+
+`--acceptance`（G5 验收模式）：锁定覆盖清单，必须显式给 --episodes、--ckpt、--lib、--store-subdir、--train-config、--norm-stats、
+--h5-root、--episode-map-dir、--history-yaml、--motion、--motion-subdir、--motion-gpu、--out（不靠默认值），--max-points 只能为 0；
+关掉 `resolve_episodes` 的静默回退与 `plan_episodes` 的自动补样——指定样本缺失、(h5,raw) 重复或 exec_start_idx 重复即
+`TIC_ACCEPTANCE=FAIL` 非零退出、不换样；覆盖条件（`acceptance_coverage`）：四任务各 ≥1 局、BinFill 局有补尾窗（padded demo 窗）、
+max_visible_k ≥ 120、含全库 c_env 最长的一局（训练集最长局 c_env < 2000，真实长局只要求覆盖到其最大 k）。
+通过时汇总行为 `TIC_SIDECAR=PASS blocking=<n>/<n> tasks=4/4 tail_pad_windows>=1 max_visible_k=<k> …`。
+
+`--perf-report <jsonl>…`（G5b 汇总入口）：读 `MMEVLA_PERF_LOG` 让 policy 服务进程逐次写的 JSONL（每片一份）与
+`--perf-gpu-csv`（`nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader,nounits -lms 1000 -i <卡>` 的采样），打印
+`E2E_ONLINE_PERF=PASS p95_ms=<x> shards_per_gpu=<n> peak_gb=<x>`（另记 add_buffer、策略推理、单局墙钟三项耗时、请求字节与降采样次数，不判）。
 """
 
 from __future__ import annotations
@@ -76,6 +95,27 @@ DEFAULT_EPISODES = "ButtonUnmaskSwap:3,VideoUnmask:3,VideoUnmaskSwap:5,VideoUnma
 THR_REL_FRO = 1e-3
 THR_ULP_P99 = 4.0
 MAX_STEPS = 1300              # examples/robomme/eval.py::Args.max_steps（与 eval_rhythm_gates.py 同值）
+MAX_STEPS_E2E = 2000          # E2E-Enc 评估 max_steps（计划 1117 P7：seed 7、max_steps 2000）；只在 e2e 快照下生效
+E2E_KIND = "wan_e2e"
+E2E_SUBDIR = "motion-wan-raw9-s16"
+ACCEPT_MIN_K = 120            # G5 覆盖条件：至少一局 max_visible_k ≥ 120
+ACCEPT_REQUIRED_FLAGS = ("--episodes", "--ckpt", "--lib", "--store-subdir", "--train-config", "--norm-stats", "--h5-root",
+                         "--episode-map-dir", "--history-yaml", "--motion", "--motion-subdir", "--motion-gpu", "--out")
+
+
+class AcceptanceError(SystemExit):
+    """--acceptance 下的覆盖 / 选样失败：打印 TIC_ACCEPTANCE=FAIL 后非零退出，不回退、不换样。"""
+
+    def __init__(self, reason: str):
+        print(f"TIC_ACCEPTANCE=FAIL reason={reason}", flush=True)
+        super().__init__(1)
+
+
+def max_steps_for(motion_cfg) -> int:
+    """e2e 快照（motion.encoder_kind == wan_e2e）用 2000，其余沿用 1300。"""
+    if motion_cfg is not None and motion_cfg.get("encoder_kind", None) == E2E_KIND:
+        return MAX_STEPS_E2E
+    return MAX_STEPS
 
 
 # ─────────────────────────── 通用小工具（派生自 compare_siglip_replay.py） ───────────────────────────
@@ -242,8 +282,9 @@ class Verdict:
 # ─────────────────────────── 决策时刻清单（独立生成，与 dataset 逐点核对） ───────────────────────────
 
 
-def resolve_episodes(manifest: dict, spec_str: str) -> tuple[list[dict], str]:
-    """解析 --episodes；任一项缺失 / (h5,raw) 重复 / es 取值重复时，改按库 manifest 每个 es 取 T 最长的一集。"""
+def resolve_episodes(manifest: dict, spec_str: str, strict: bool = False) -> tuple[list[dict], str]:
+    """解析 --episodes；任一项缺失 / (h5,raw) 重复 / es 取值重复时，改按库 manifest 每个 es 取 T 最长的一集。
+    ``strict=True``（--acceptance）：上述任一情形直接 AcceptanceError，不回退。"""
     eps = manifest["episodes"]
     picked: list[dict] = []
     reason = ""
@@ -269,6 +310,8 @@ def resolve_episodes(manifest: dict, spec_str: str) -> tuple[list[dict], str]:
         seen_pair.add((h5, int(raw)))
         seen_es.add(int(e["exec_start_idx"]))
         picked.append(e)
+    if reason and strict:
+        raise AcceptanceError(f"指定样本不可用（{reason}），验收模式禁止回退换样")
     if reason:
         best: dict[int, dict] = {}
         for e in eps:
@@ -297,13 +340,13 @@ def expected_taus(es: int, t_env: int, max_steps: int = MAX_STEPS) -> list[int]:
     return [es + 16 * j for j in range(last_count // 16 + 1)] if last_count >= 0 else []
 
 
-def build_points(picked: list[dict], max_points: int) -> list[dict]:
-    """按真实评估节奏推每集的决策时刻，并留 C % 16 诊断字段。"""
+def build_points(picked: list[dict], max_points: int, max_steps: int = MAX_STEPS) -> list[dict]:
+    """按真实评估节奏推每集的决策时刻，并留 C % 16 诊断字段。``max_steps`` 为评估步数上限（e2e 为 2000）。"""
     out = []
     for e in picked:
         es = int(e["exec_start_idx"])
         T = int(e["num_timesteps"])
-        taus = expected_taus(es, T)
+        taus = expected_taus(es, T, max_steps)
         c_env = T - 1 - es
         if max_points > 0:
             taus = taus[:max_points]
@@ -402,7 +445,7 @@ def episodes_arg(picked: list[dict]) -> str:
 
 
 def plan_episodes(manifest: dict, episodes: str | None, h5_root: pathlib.Path | None,
-                  map_dir: pathlib.Path | None, verify_sha: bool = True) -> dict:
+                  map_dir: pathlib.Path | None, verify_sha: bool = True, strict: bool = False) -> dict:
     """定下要跑的 episodes 与各自的帧来源。
 
     不给 h5_root：``resolve_episodes(manifest, episodes or DEFAULT_EPISODES)``，合并 H5 读法不变。
@@ -410,8 +453,10 @@ def plan_episodes(manifest: dict, episodes: str | None, h5_root: pathlib.Path | 
     不足时用全库清单按同一规则补齐，补上的即缺失项。选中项逐个核 map timestep_count、h5_bytes、h5_sha256。
     返回 {picked, source, single: {(h5_file, raw): {"path","src_group"}}, missing: [map 行+清单字段], arg}。
     """
+    if strict and not episodes:
+        raise AcceptanceError("验收模式必须显式给 --episodes（锁定覆盖清单，禁止自动选样）")
     if h5_root is None:
-        picked, source = resolve_episodes(manifest, episodes or DEFAULT_EPISODES)
+        picked, source = resolve_episodes(manifest, episodes or DEFAULT_EPISODES, strict=strict)
         return {"picked": picked, "source": source, "single": None, "missing": [], "arg": episodes_arg(picked)}
     if map_dir is None:
         raise SystemExit("错误: 给出 --h5-root 时必须同时给 --episode-map-dir")
@@ -425,7 +470,7 @@ def plan_episodes(manifest: dict, episodes: str | None, h5_root: pathlib.Path | 
         return r
 
     if episodes:
-        picked, source = resolve_episodes(manifest, episodes)
+        picked, source = resolve_episodes(manifest, episodes, strict=strict)
     else:
         local = [e for e in manifest["episodes"]
                  if int(e["raw_ep_idx"]) in maps[_task_of(e["h5_file"])] and _local_ok(h5_root, row_of(e))]
@@ -456,6 +501,180 @@ def plan_episodes(manifest: dict, episodes: str | None, h5_root: pathlib.Path | 
                 raise SystemExit(f"错误: H5 sha256 不符: {path} {got} != {r['h5_sha256']}")
         single[(e["h5_file"], int(e["raw_ep_idx"]))] = {"path": path, "src_group": r["src_group"], "member": r["member"]}
     return {"picked": picked, "source": source, "single": single, "missing": missing, "arg": episodes_arg(picked)}
+
+
+# ─────────────────────────── --acceptance 覆盖条件（G5） ───────────────────────────
+
+
+def visible_windows(es: int, t: int, stride: int, window: int, demo_min_real: int) -> list[int]:
+    """t 时刻合法 motion 起点（全域帧号，升序）——与 FrameSampMemory.visible_motion_frames / motion_store.visible_motion_rows 同式。"""
+    out = list(range(0, max(es - (demo_min_real - 1), 0), stride))
+    u = 0
+    while u + (window - 1) <= t - es:
+        out.append(es + u)
+        u += stride
+    return out
+
+
+def acceptance_coverage(manifest: dict, picked: list[dict], motion_cfg, max_steps: int, max_points: int = 0) -> dict:
+    """G5 覆盖条件（锁定清单逐项核，不补样）：
+    ① 四任务各 ≥ 1 局（任务全集取自库 manifest）；② BinFill 局有补尾窗（demo 段 real < window 的起点，padded demo 窗）；
+    ③ max_visible_k ≥ ACCEPT_MIN_K（各局最后一个决策时刻的可见窗数，k 随 t 单调）；④ 含全库 c_env 最长的一局
+    （训练集最长局 c_env < 2000，「2000 步长局」只要求覆盖到真实最长局的最大 k）；⑤ exec_start_idx 互不相同；⑥ max_points == 0。
+    返回 dict（含 ok、reasons、各计数）。"""
+    stride, window = int(motion_cfg["stride"]), int(motion_cfg["window_frames"])
+    dmin = int(motion_cfg.get("demo_min_real_frames", window))
+    budget = int(motion_cfg["budget"])
+    tasks_all = sorted({_task_of(e["h5_file"]) for e in manifest["episodes"]})
+    tasks = sorted({_task_of(e["h5_file"]) for e in picked})
+    es_list = [int(e["exec_start_idx"]) for e in picked]
+    c_max = max(int(e["num_timesteps"]) - 1 - int(e["exec_start_idx"]) for e in manifest["episodes"])
+    per = []
+    for e in picked:
+        es, T = int(e["exec_start_idx"]), int(e["num_timesteps"])
+        taus = expected_taus(es, T, max_steps)
+        last = taus[-1] if taus else es
+        frames = visible_windows(es, last, stride, window, dmin)
+        pad = sum(1 for f in frames if f < es and es - f < window)
+        per.append({"task": _task_of(e["h5_file"]), "raw_ep_idx": int(e["raw_ep_idx"]), "es": es, "T": T,
+                    "c_env": T - 1 - es, "last_tau": last, "k": len(frames), "tail_pad_windows": pad,
+                    "k_over_budget": len(frames) > budget})
+    tail_pad = sum(r["tail_pad_windows"] for r in per)
+    binfill_pad = sum(r["tail_pad_windows"] for r in per if r["task"] == "BinFill")
+    max_k = max((r["k"] for r in per), default=0)
+    long_c = max((r["c_env"] for r in per), default=-1)
+    reasons = []
+    if tasks != tasks_all:
+        reasons.append(f"tasks={len(tasks)}/{len(tasks_all)} 缺 {sorted(set(tasks_all) - set(tasks))}")
+    if binfill_pad < 1:
+        reasons.append("BinFill 补尾窗局缺失（BinFill 局 padded demo 窗数为 0）")
+    if max_k < ACCEPT_MIN_K:
+        reasons.append(f"max_visible_k={max_k} < {ACCEPT_MIN_K}")
+    if long_c != c_max:
+        reasons.append(f"未含全库最长局（清单最长 c_env={long_c}，全库 {c_max}）")
+    if len(set(es_list)) != len(es_list):
+        reasons.append(f"exec_start_idx 重复 {sorted(es_list)}")
+    if max_points != 0:
+        reasons.append(f"--max-points={max_points}（验收模式只能为 0）")
+    return {"ok": not reasons, "reasons": reasons, "tasks": len(tasks), "tasks_total": len(tasks_all),
+            "tail_pad_windows": tail_pad, "binfill_tail_pad_windows": binfill_pad, "max_visible_k": max_k,
+            "long_c_env": long_c, "manifest_max_c_env": c_max, "es_unique": len(set(es_list)), "episodes": len(picked),
+            "max_steps": max_steps, "per_episode": per}
+
+
+def coverage_tag(cov: dict) -> str:
+    """汇总行里的覆盖段：满足时写计划三节的字面 `tasks=4/4 tail_pad_windows>=1 max_visible_k=<k>`。"""
+    pad = "tail_pad_windows>=1" if cov["binfill_tail_pad_windows"] >= 1 else f"tail_pad_windows={cov['tail_pad_windows']}"
+    return f"tasks={cov['tasks']}/{cov['tasks_total']} {pad} max_visible_k={cov['max_visible_k']}"
+
+
+def coverage_line(cov: dict) -> str:
+    return (f"TIC_ACCEPTANCE_COVERAGE={'PASS' if cov['ok'] else 'FAIL'} {coverage_tag(cov)} "
+            f"tail_pad_windows_n={cov['tail_pad_windows']} binfill_tail_pad_windows={cov['binfill_tail_pad_windows']} "
+            f"long_c_env={cov['long_c_env']}/{cov['manifest_max_c_env']} es_unique={cov['es_unique']}/{cov['episodes']} "
+            f"max_steps={cov['max_steps']} min_k={ACCEPT_MIN_K}" + ("" if cov["ok"] else f" reasons={cov['reasons']}"))
+
+
+def explicit_flags(argv: list[str]) -> set[str]:
+    """argv 里显式出现的长选项名（含 --flag=value 写法）。"""
+    return {a.split("=", 1)[0] for a in argv if a.startswith("--")}
+
+
+def check_acceptance_args(argv: list[str], args) -> None:
+    """--acceptance：入口必须显式给齐 G4 checkpoint、库、framesamp-8x8 表、训练配置、norm stats、H5 映射、history YAML 等，不靠默认值。"""
+    given = explicit_flags(argv)
+    missing = [f for f in ACCEPT_REQUIRED_FLAGS if f not in given]
+    if missing:
+        raise AcceptanceError(f"验收模式缺显式参数 {missing}")
+    if args.motion != "sidecar":
+        raise AcceptanceError(f"验收模式必须 --motion sidecar（得到 {args.motion}）")
+    if args.store_subdir != "framesamp-8x8":
+        raise AcceptanceError(f"验收模式必须 --store-subdir framesamp-8x8（得到 {args.store_subdir}）")
+    if args.max_points != 0:
+        raise AcceptanceError(f"验收模式 --max-points 只能为 0（得到 {args.max_points}）")
+
+
+def yaml_resolved_sha256(path) -> str:
+    """与 train.py::init_history_config / check_checkpoint.resolved_sha256_of_yaml 同口径。"""
+    import hashlib
+    from omegaconf import OmegaConf
+    return hashlib.sha256(OmegaConf.to_yaml(OmegaConf.load(str(path)), resolve=True).encode("utf-8")).hexdigest()
+
+
+# ─────────────────────────── --perf-report（G5b 汇总） ───────────────────────────
+
+
+def _pct(xs, q) -> float:
+    return float(np.percentile(np.asarray(xs, np.float64), q)) if len(xs) else float("nan")
+
+
+def perf_report(logs: list[str], gpu_csv: str | None, shards_per_gpu: int) -> tuple[bool, str, dict]:
+    """汇总 MMEVLA_PERF_LOG 的 JSONL（每片一份）与 nvidia-smi 采样，给出 E2E_ONLINE_PERF 行。
+    PASS 条件：日志份数 == shards_per_gpu、每份至少 1 次策略推理、无 error 事件；给了 GPU 采样且峰值 < 卡总显存
+    （未超显存）。p95_ms 为全部片的单次策略推理耗时 p95；peak_gb 为该卡 memory.used 峰值（GiB，1024³）。"""
+    infer_ms, add_ms, walls, req_bytes, ds_steps, ds_k, max_step = [], [], [], 0, 0, 0, 0
+    per_log, reasons = [], []
+    proc_peak = 0
+    for path in logs:
+        recs = [json.loads(line) for line in pathlib.Path(path).read_text(encoding="utf-8").splitlines() if line.strip()]
+        inf = [r for r in recs if r.get("event") == "infer"]
+        eps = [r for r in recs if r.get("event") == "episode"]
+        errs = [r for r in recs if r.get("event") == "error"]
+        if not inf:
+            reasons.append(f"{path} 无策略推理记录")
+        if errs:
+            reasons.append(f"{path} 有 error 事件 {len(errs)}")
+        infer_ms += [float(r["infer_ms"]) for r in inf]
+        done = {int(r["episode_idx"]) for r in eps}
+        for r in eps:
+            add_ms += [float(x) for x in r["add_buffer_ms"]]
+            walls.append(float(r["wall_s"]))
+            req_bytes += int(r.get("request_bytes") or 0)
+            ds_steps += int(r.get("motion_downsample_steps") or 0)
+            ds_k = max(ds_k, int(r.get("motion_downsample_max_k") or 0))
+            max_step = max(max_step, int(r.get("last_step_idx") or 0))
+            if r.get("peak_bytes_in_use"):
+                proc_peak = max(proc_peak, int(r["peak_bytes_in_use"]))
+        # 服务进程被外部结束、最后一局没有 episode 行时，用该局最后一条 infer 行补算墙钟与字节
+        open_eps = {}
+        for r in inf:
+            if int(r["episode_idx"]) not in done:
+                open_eps[int(r["episode_idx"])] = r
+            if r.get("peak_bytes_in_use"):
+                proc_peak = max(proc_peak, int(r["peak_bytes_in_use"]))
+            max_step = max(max_step, int(r.get("step_idx") or 0))
+        for r in open_eps.values():
+            walls.append(float(r["t_rel_s"]))
+            req_bytes += int(r.get("request_bytes") or 0)
+        per_log.append({"path": str(path), "infer": len(inf), "episodes": len(eps), "open_episodes": len(open_eps)})
+    if len(logs) != shards_per_gpu:
+        reasons.append(f"日志份数 {len(logs)} != shards_per_gpu {shards_per_gpu}")
+    peak_gb = total_gb = float("nan")
+    if gpu_csv:
+        used, total = [], []
+        for line in pathlib.Path(gpu_csv).read_text(encoding="utf-8").splitlines():
+            parts = [x.strip() for x in line.split(",")]
+            if len(parts) >= 2 and parts[0].replace(".", "", 1).isdigit():
+                used.append(float(parts[0]))
+                total.append(float(parts[1]))
+        if not used:
+            reasons.append(f"GPU 采样文件无有效行: {gpu_csv}")
+        else:
+            peak_gb, total_gb = max(used) / 1024.0, max(total) / 1024.0
+            if max(used) >= max(total):
+                reasons.append(f"该卡显存打满 peak={max(used):.0f}MiB total={max(total):.0f}MiB")
+    else:
+        reasons.append("缺 --perf-gpu-csv（该卡峰值显存无证据）")
+    ok = not reasons
+    line = (f"E2E_ONLINE_PERF={'PASS' if ok else 'FAIL'} p95_ms={_pct(infer_ms, 95):.1f} shards_per_gpu={shards_per_gpu} "
+            f"peak_gb={peak_gb:.2f} | infer_p50_ms={_pct(infer_ms, 50):.1f} infer_n={len(infer_ms)} "
+            f"add_buffer_p50_ms={_pct(add_ms, 50):.1f} add_buffer_p95_ms={_pct(add_ms, 95):.1f} "
+            f"add_buffer_total_s={sum(add_ms) / 1000.0:.1f} episode_wall_s={[round(w, 1) for w in walls]} "
+            f"request_mb={req_bytes / 1e6:.1f} motion_downsample_steps={ds_steps} motion_downsample_max_k={ds_k} "
+            f"max_step_idx={max_step} proc_peak_gb={proc_peak / 1024 ** 3:.2f} card_total_gb={total_gb:.2f}"
+            + ("" if ok else f" reasons={reasons}"))
+    return ok, line, {"per_log": per_log, "reasons": reasons, "infer_ms": infer_ms, "add_buffer_ms": add_ms,
+                      "episode_wall_s": walls, "request_bytes": req_bytes, "peak_gb": peak_gb, "card_total_gb": total_gb}
 
 
 def report_plan(plan: dict, raw_dir: pathlib.Path) -> bool:
@@ -613,7 +832,26 @@ def main() -> int:
     ap.add_argument("--f32-diag-points-per-episode", type=int, default=1,
                     help="每集取前 N 个决策点做 f32 阻断验证；正式验收传 3，0 会因缺证据失败")
     ap.add_argument("--out", default=str(_V1 / "reports/tic/compare_train_infer_obs.json"), help="输出 json 路径")
+    ap.add_argument("--acceptance", action="store_true",
+                    help="G5 验收模式：锁定覆盖清单、全部入口显式给出、禁止回退与自动补样（见模块说明）")
+    ap.add_argument("--history-yaml", default=None,
+                    help="history YAML（如 …-8x8-e2eenc.yaml）；给出时其 resolved sha256 必须等于 run 快照（验收模式必需）")
+    ap.add_argument("--perf-report", nargs="+", default=None,
+                    help="G5b：汇总各片 MMEVLA_PERF_LOG JSONL，打印 E2E_ONLINE_PERF 行后退出（不建 policy）")
+    ap.add_argument("--perf-gpu-csv", default=None, help="G5b：该卡 nvidia-smi memory.used,memory.total 采样（csv,noheader,nounits）")
+    ap.add_argument("--shards-per-gpu", type=int, default=4, help="G5b：同卡并发片数（4；三片退路为 3）")
     args = ap.parse_args()
+
+    if args.perf_report:
+        ok, line, detail = perf_report(args.perf_report, args.perf_gpu_csv, int(args.shards_per_gpu))
+        print(line, flush=True)
+        if "--out" in explicit_flags(sys.argv):
+            pathlib.Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+            pathlib.Path(args.out).write_text(json.dumps({"line": line, **detail}, ensure_ascii=False, indent=1) + "\n",
+                                             encoding="utf-8")
+        return 0 if ok else 1
+    if args.acceptance:
+        check_acceptance_args(sys.argv, args)
 
     os.chdir(_REPO_ROOT)      # train_config.data.assets.assets_dir 是仓库相对路径，必须从仓库根解析
     lib = pathlib.Path(args.lib).resolve()
@@ -624,7 +862,29 @@ def main() -> int:
     h5_root = pathlib.Path(args.h5_root).resolve() if args.h5_root else None
     map_dir = pathlib.Path(args.episode_map_dir).resolve() if args.episode_map_dir else None
     manifest0 = json.load(open(lib / "meta" / "episode_manifest.json", encoding="utf-8"))
-    plan = plan_episodes(manifest0, args.episodes, h5_root, map_dir)
+    plan = plan_episodes(manifest0, args.episodes, h5_root, map_dir, strict=args.acceptance)
+    coverage = None
+    if args.history_yaml:
+        import omegaconf as _oc
+        _hy = _oc.OmegaConf.load(args.history_yaml)
+        _hy_sha = yaml_resolved_sha256(args.history_yaml)
+        _snap = run_root / "history_config.resolved.sha256"
+        if _snap.is_file() and _snap.read_text().split()[0] != _hy_sha:
+            msg = f"--history-yaml resolved sha256 {_hy_sha[:16]}… != run 快照 {_snap.read_text().split()[0][:16]}…"
+            if args.acceptance:
+                raise AcceptanceError(msg)
+            raise SystemExit("错误: " + msg)
+        if args.acceptance and not _snap.is_file():
+            raise AcceptanceError(f"run 缺 history_config.resolved.sha256: {run_root}")
+        print(f"HISTORY_YAML sha256={_hy_sha[:16]} yaml={args.history_yaml} snapshot_equal=1")
+        if args.acceptance:
+            _mc = _hy.get("motion", None)
+            if _mc is None or not _mc.get("enabled", False):
+                raise AcceptanceError("验收模式的 history YAML 必须开启 motion")
+            coverage = acceptance_coverage(manifest0, plan["picked"], _mc, max_steps_for(_mc), args.max_points)
+            print(coverage_line(coverage), flush=True)
+            if not coverage["ok"]:
+                raise AcceptanceError("覆盖条件不满足: " + "; ".join(coverage["reasons"]))
     if args.dry_run or h5_root is not None:
         complete = report_plan(plan, pathlib.Path(manifest0["raw_dir"]))
         if args.dry_run:
@@ -698,11 +958,17 @@ def main() -> int:
     mstore = ms.MotionStore(motion_root, meta=mmeta) if motion_enabled else None
     # wan_raw9 表行是 (9,16,32,32)，在线缓冲存的是展平后的 (9,16384)；其余 kind 行即 token，原样返回
     raw9_kind = motion_enabled and hc.motion.get("encoder_kind", None) == "wan_raw9"
+    e2e_kind = motion_enabled and hc.motion.get("encoder_kind", None) == E2E_KIND
     if raw9_kind:
         from mme_vla_suite.shared import wan_raw9 as _wan_raw9
+    max_steps = max_steps_for(hc.motion if motion_enabled else None)
+    if args.acceptance and not e2e_kind:
+        raise AcceptanceError(f"验收模式只用于 e2e 快照（motion.encoder_kind={hc.motion.get('encoder_kind', None) if motion_enabled else None}）")
 
     def _motion_row(r: int) -> np.ndarray:
         row = mstore.rows(np.asarray([int(r)], dtype=np.int64))[0]
+        if e2e_kind:
+            return e2e_row_view(row)
         return _wan_raw9.flatten_raw9(row) if raw9_kind else row
     fstore = ds_raw._ensure_store()
     manifest = json.load(open(lib / "meta" / "episode_manifest.json", encoding="utf-8"))
@@ -719,20 +985,22 @@ def main() -> int:
 
     # ── 决策时刻清单：脚本独立生成，随后与 FrameSampDataset 的 (g,t) 存在性逐点核对 ───────────────
     picked, ep_source = plan["picked"], plan["source"]
-    eps = build_points(picked, args.max_points)
+    eps = build_points(picked, args.max_points, max_steps)
     n_points = sum(len(e["taus"]) for e in eps)
     entries = ds_raw._motion_entries
     n_windows = 0
+    k_actual_max = 0
     for e in eps:
         if motion_enabled:
             rows_last, _ = ms.visible_motion_rows(entries[e["g"]], e["taus"][-1])
             n_windows += int(len(rows_last))
+            k_actual_max = max(k_actual_max, int(len(rows_last)))
         for t in e["taus"]:
             hit = np.flatnonzero((ds_raw._epis_of == e["g"]) & (ds_raw._step_of == t))
             if len(hit) != 1:
                 raise SystemExit(f"错误: 决策时刻 (g={e['g']}, t={t}) 在 FrameSampDataset 中命中 {len(hit)} 条样本")
     print(f"POINTS episodes={len(eps)} points={n_points} windows={n_windows} "
-          f"c_mod16={[e['c_mod16'] for e in eps]} max_steps={MAX_STEPS}")
+          f"c_mod16={[e['c_mod16'] for e in eps]} max_steps={max_steps}")
     print(f"EPISODES source={ep_source} " + " ".join(
         f"{e['h5_file'].replace('record_dataset_', '').replace('.h5', '')}:{e['raw_ep_idx']}"
         f"(g={e['g']},es={e['es']},T={e['T']},pts={len(e['taus'])})" for e in eps))
@@ -794,7 +1062,15 @@ def main() -> int:
             raise ValueError("sidecar 模式必须显式给 --motion-gpu")
         from mme_vla_suite.policies.motion_client import MotionEncoderClient
         t0 = time.perf_counter()
-        if raw9_kind:
+        if e2e_kind:
+            # e2e：握手比 run 快照的 kind / readout 与 run motion_provenance.json 的 raw9_source_sha256；vae 段比表 provenance（缺则用 run 的）
+            run_prov = json.loads((run_root / "motion_provenance.json").read_text(encoding="utf-8"))
+            client = MotionEncoderClient(online_gpu=args.motion_gpu,
+                                         store_provenance={"vae": mmeta.provenance.get("vae") or run_prov.get("vae")},
+                                         encoder_kind=E2E_KIND, readout=str(hc.motion.readout),
+                                         expected_raw9_sha256=run_prov["raw9_source_sha256"], keep_last_raw_f32=True)
+            client = E2EConvertCheck(client)
+        elif raw9_kind:
             client = MotionEncoderClient(online_gpu=args.motion_gpu, store_provenance={"vae": mmeta.provenance.get("vae")},
                                          encoder_kind="wan_raw9", readout=str(hc.motion.readout),
                                          expected_raw9_sha256=mmeta.provenance["raw9_source_sha256"])
@@ -857,6 +1133,8 @@ def main() -> int:
     n_done = 0
     ckpt_dtype_line = None
     f32_line = None
+    e2e_windows: list[np.ndarray] = []           # E2E_ENC_TRAIN_VS_ONLINE 用的 S 臂 bf16 槽（sidecar 档）
+    e2e_rec_line = None
 
     try:
         for ep in eps:
@@ -870,6 +1148,8 @@ def main() -> int:
                 f2row = {}
 
             def motion_lookup(window, start_frame, _f2row=f2row):
+                if e2e_kind:                    # e2e：表里的 bf16 字节原样给出，不做 dtype 转换（R9）
+                    return _motion_row(_f2row[int(start_frame)])
                 return np.asarray(_motion_row(_f2row[int(start_frame)]), dtype=np.float32)
 
             n_read = min(T, taus[-1] + 1)
@@ -945,8 +1225,14 @@ def main() -> int:
                         if f in checked_motion:
                             continue
                         checked_motion.add(f)
-                        on = np.asarray(mems["S"]._history_feats_motion[f], np.float32)
-                        off = np.asarray(_motion_row(f2row[int(f)]), np.float32)
+                        if e2e_kind:            # e2e：bf16 对 bf16 逐字节（dtype 也须相同）
+                            on = np.asarray(mems["S"]._history_feats_motion[f])
+                            off = np.asarray(_motion_row(f2row[int(f)]))
+                            if len(e2e_windows) < E2E_REC_WINDOWS:
+                                e2e_windows.append(np.array(on))
+                        else:
+                            on = np.asarray(mems["S"]._history_feats_motion[f], np.float32)
+                            off = np.asarray(_motion_row(f2row[int(f)]), np.float32)
                         motion_sidecar_cmp[0] += 1
                         if not _bytes_equal(on, off):
                             motion_sidecar_cmp[1] += 1
@@ -1224,6 +1510,22 @@ def main() -> int:
             del params_f32, model_f32, gstate32, gdef32, f_full32, f_cached32
             gc.collect()                    # 三份权重同卡（bf16 生产 + f32 诊断 + 随后的 ACT_CKPT_DTYPE）时先放掉 f32 缓冲
 
+        # ── E2E_ENC_TRAIN_VS_ONLINE（只记录、不判）：同一批窗口，训练精度路径（盘上 f32 参数、批量）vs 在线路径（bf16 restore、逐窗）
+        if e2e_kind and e2e_windows and not prompt_fail:
+            t0 = time.perf_counter()
+            try:
+                params_tr = _model.restore_params(ckpt_dir / "params", dtype=None)
+                tc_tr = dataclasses.replace(train_config, model=dataclasses.replace(
+                    train_config.model, history_config=hc, use_history=True))
+                model_tr = tc_tr.model.load(params_tr, remove_extra_params=False)
+                rel, n_win = e2e_encoder_train_vs_online(model_tr, model, e2e_windows)
+                e2e_rec_line = (f"E2E_ENC_TRAIN_VS_ONLINE=RECORDED rel_rmse={rel:.4g} windows={n_win} "
+                                f"train=f32_params_batched online=bf16_restore_per_window wall_s={time.perf_counter() - t0:.1f}")
+                del params_tr, model_tr
+                gc.collect()
+            except Exception as exc:  # 只记录项：测不出时如实写出原因，不影响阻断判定
+                e2e_rec_line = f"E2E_ENC_TRAIN_VS_ONLINE=RECORDED rel_rmse=nan windows={len(e2e_windows)} error={type(exc).__name__}:{exc}"
+
         # ── ACT_CKPT_DTYPE（仅 store 档；盘上原精度 vs 生产 bf16 加载，观察）────────────────────
         if args.motion == "store" and last_infer_inputs is not None and not prompt_fail:
             t0 = time.perf_counter()
@@ -1276,6 +1578,17 @@ def main() -> int:
         V.block(ok, f"MOTION_S_VS_SIDECAR={'PASS' if ok else 'FAIL'} windows={motion_sidecar_cmp[0]} "
                     f"mismatches={motion_sidecar_cmp[1]} provenance_keys_equal=1 lib={lib.name} "
                     f"policy=create_trained_policy motion_client=MotionEncoderClient(online_gpu={args.motion_gpu})")
+    if isinstance(client, E2EConvertCheck):
+        cv_ok = client.checked > 0 and client.mismatches == 0 and client.fn_ok
+        V.block(cv_ok, f"E2E_BF16_CONVERT={'PASS' if cv_ok else 'FAIL'} windows={client.checked} mismatches={client.mismatches} "
+                       f"fn_is_raw9_f32_to_bf16={int(client.fn_ok)} fn=mme_vla_suite.shared.raw_bf16.raw9_f32_to_bf16")
+    if coverage is not None:
+        k_ok = k_actual_max == coverage["max_visible_k"]
+        V.block(coverage["ok"] and k_ok,
+                coverage_line(coverage).replace("TIC_ACCEPTANCE_COVERAGE=PASS", "TIC_ACCEPTANCE_COVERAGE=" + ("PASS" if k_ok else "FAIL"))
+                + f" k_closed_form_vs_index={'equal' if k_ok else str(coverage['max_visible_k']) + '!=' + str(k_actual_max)}")
+    if e2e_rec_line is not None:
+        V.observe(e2e_rec_line)
     obs_ok = (not obs_key_mis) and obs_train_only <= {"actions"} and not obs_infer_only
     V.block(obs_ok, f"OBS_T_VS_I={'PASS' if obs_ok else 'FAIL'} points={n_done} keys={len(obs_key_mis) if obs_key_mis else 'all_equal'} "
                     f"mismatches={obs_key_mis or 'none'} train_only={sorted(obs_train_only)} infer_only={sorted(obs_infer_only)}")
@@ -1360,8 +1673,13 @@ def main() -> int:
 
     tag = "TIC_OBS_MODEL" if args.motion == "store" else "TIC_SIDECAR"
     extra = f"motion=store" if args.motion == "store" else f"motion=sidecar windows={motion_sidecar_cmp[0]}"
-    final = (f"{tag}={'PASS' if V.all_ok else 'FAIL'} episodes={len(eps)} points={n_done} {extra} "
-             f"blocking={V.block_pass}/{V.block_total} observe={V.n_observe}")
+    if coverage is not None:
+        # 验收模式汇总行（计划三节 G5）：TIC_SIDECAR=PASS blocking=<n>/<n> tasks=4/4 tail_pad_windows>=1 max_visible_k=<k>
+        final = (f"{tag}={'PASS' if V.all_ok else 'FAIL'} blocking={V.block_pass}/{V.block_total} {coverage_tag(coverage)} "
+                 f"episodes={len(eps)} points={n_done} {extra} observe={V.n_observe} max_steps={max_steps} mode=acceptance")
+    else:
+        final = (f"{tag}={'PASS' if V.all_ok else 'FAIL'} episodes={len(eps)} points={n_done} {extra} "
+                 f"blocking={V.block_pass}/{V.block_total} observe={V.n_observe}")
     lines = V.texts() + [final]
     print("\n".join(lines))
     rec.update({"lines": lines, "per_episode": per_episode, "per_point": per_point,
@@ -1379,6 +1697,67 @@ def main() -> int:
     out_path.write_text(json.dumps(rec, ensure_ascii=False, indent=1, default=str) + "\n", encoding="utf-8")
     (out_path.parent / (out_path.stem + ".summary.txt")).write_text("\n".join(lines) + "\n", encoding="utf-8")
     return 0 if V.all_ok else 1
+
+
+E2E_REC_WINDOWS = 32          # E2E_ENC_TRAIN_VS_ONLINE 取的窗数上限
+
+
+def e2e_row_view(row: np.ndarray) -> np.ndarray:
+    """e2e 表行（bf16 (9,16,32,32)）→ (9,16384) 视图：零拷贝、不改 dtype（R9：数据集与比对侧只搬运 bf16 字节）。"""
+    if row.dtype.name != "bfloat16" or tuple(row.shape) != (9, 16, 32, 32):
+        raise RuntimeError(f"e2e 表行形制 {row.shape} {row.dtype} != (9,16,32,32) bfloat16")
+    out = np.ascontiguousarray(row).reshape(9, 16384)
+    return out
+
+
+class E2EConvertCheck:
+    """包住 e2e MotionEncoderClient：每窗核客户端返回的 bf16 与 raw9_f32_to_bf16(同窗 fp32) 逐字节相等，
+    并核客户端持有的转换函数对象就是 mme_vla_suite.shared.raw_bf16.raw9_f32_to_bf16（R9 唯一转换点）。"""
+
+    def __init__(self, client):
+        from mme_vla_suite.shared import raw_bf16
+        self._client = client
+        self._fn = raw_bf16.raw9_f32_to_bf16
+        self.fn_ok = getattr(client, "_bf16_fn", None) is raw_bf16.raw9_f32_to_bf16
+        self.checked = 0
+        self.mismatches = 0
+
+    def __call__(self, frames, start_frame=0):
+        out = self._client(frames, start_frame)
+        ref = self._fn(self._client.last_raw_f32)
+        self.checked += 1
+        if not _bytes_equal(out, ref):
+            self.mismatches += 1
+        return out
+
+    def __getattr__(self, name):
+        return getattr(self._client, name)
+
+    def close(self):
+        self._client.close()
+
+
+def _find_e2e_encoder(model):
+    """在 nnx 模型里按类名找 E2E encoder 子模块（S1 的 WanLatentMotionEncoderJax；属性名由 S3 定，不写死路径）。"""
+    hits = [(path, m) for path, m in model.iter_modules() if type(m).__name__ == "WanLatentMotionEncoderJax"]
+    if len(hits) != 1:
+        raise RuntimeError(f"模型里 WanLatentMotionEncoderJax 子模块数 {len(hits)} != 1")
+    return hits[0][1]
+
+
+def e2e_encoder_train_vs_online(model_train, model_online, windows: list[np.ndarray]) -> tuple[float, int]:
+    """同一批 bf16 (9,16384) 窗：训练精度路径（f32 参数、一次批量 (n,9,16384)）vs 在线路径（bf16 参数、逐窗 (1,9,16384)）
+    的 encoder 输出 rel_rmse = ||on − tr|| / ||tr||（只记录）。"""
+    import jax
+    import jax.numpy as jnp
+    enc_tr = _find_e2e_encoder(model_train)
+    enc_on = _find_e2e_encoder(model_online)
+    x = np.stack(windows)
+    tr = np.asarray(jax.block_until_ready(enc_tr(jnp.asarray(x))), np.float32)
+    on = np.concatenate([np.asarray(jax.block_until_ready(enc_on(jnp.asarray(x[i:i + 1]))), np.float32)
+                         for i in range(len(x))], axis=0)
+    rel = float(np.sqrt(np.sum((on.astype(np.float64) - tr) ** 2) / max(np.sum(tr.astype(np.float64) ** 2), 1e-30)))
+    return rel, len(x)
 
 
 def _acc_num(acc: dict, a, b) -> None:

@@ -45,6 +45,19 @@ WANRAW9_YAML = 'src/mme_vla_suite/models/config/robomme/perceptual-framesamp-mod
 # S2 YAML 合入后（v15 73289a3）已以 `check_checkpoint.py --resolved-sha256 <WANRAW9_YAML>` 复算，逐位一致。
 WANRAW9_RESOLVED_SHA256 = '819a001c58b00d4a4110835b913ac1fb58238fb71d272eaa33a429f6dcb53062'
 
+# 1117 计划（1117-e2e-enc-train-plan.html 第二部分「一」check_checkpoint.py 行）：E2E-Enc run。表是 s16 bf16 raw9 表（无 encoder、
+# 参数量 0），可训练 encoder 记在 motion_provenance.json 的 policy_encoder（与 train.py 快照同一契约）；字面量不 import。
+WANE2E_KIND = 'wan_e2e'
+WANE2E_READOUT = 'wan_e2e_enc768_s16_v1'
+WANE2E_TABLE_KIND = 'wan_raw_bf16_s16_v1'
+WANE2E_YAML = 'src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-8frame-8x8-e2eenc.yaml'
+WANE2E_POLICY_ENCODER = {'init': 'random', 'trainable': True, 'layers': 1, 'parameter_count': 20252928, 'spec_src': 'd3213de'}
+# 待复算：S4 写本条目时 S3 的 e2e YAML 尚未合入，下值按计划「一」YAML 行（由 …-8x8-motion.yaml 复制，去 source_run，
+# store_path 换新表，encoder_kind / readout / raw_dim / latents_per_window / encoder 节紧跟在 store_path 之后）构造的候选 YAML 预算；
+# 键序或取值的任何差异都会改变 sha。S3 合入后须以 `check_checkpoint.py --resolved-sha256 <WANE2E_YAML>` 复算，
+# 不一致就以复算值改写本常量（test_e2e_online.py::test_check_checkpoint_e2e_resolved_sha_matches_yaml 在 YAML 存在时强制一致）。
+WANE2E_RESOLVED_SHA256 = '15454805117d37b5c5749c8580bd46b9fb1489b362ac19347a3090f3ab0ba63b'
+
 
 def resolved_sha256_of_yaml(yaml_path) -> str:
     """与 scripts/training/train.py::init_history_config 写 history_config.resolved.yaml 同口径：
@@ -80,6 +93,9 @@ def assert_motion(cfg, run, prov):
         print(f'BUDGET_CONSISTENT=PASS budget={int(cfg.motion.budget)} motion_kind={kind} readout={run["readout"]} '
               f'tokens_per_window=9 raw9_source_sha256={str(prov["raw9_source_sha256"])[:16]}', flush=True)
         return
+    if kind == WANE2E_KIND:
+        assert_motion_e2e(cfg, run, prov)
+        return
     # 池化分支（1108 计划 1.1 第 6 行）：不要求 motion_source_run，改核快照与 motion_provenance.json 的 kind / readout
     assert kind == WANTP768_KIND, kind
     assert cfg.motion.get('encoder_kind') == kind, cfg.motion.get('encoder_kind')
@@ -92,6 +108,36 @@ def assert_motion(cfg, run, prov):
         (prov.get('encoder'), prov.get('vae'), prov.get('pool_source_sha256'))
     print(f'BUDGET_CONSISTENT=PASS budget={int(cfg.motion.budget)} motion_kind={kind} readout={run["readout"]} '
           f'pool_source_sha256={str(prov["pool_source_sha256"])[:16]}', flush=True)
+
+
+def assert_motion_e2e(cfg, run, prov):
+    """E2E-Enc 分支（仿 wan_raw9 分支）：stride 16、dim 768、raw_dim 16384、latents_per_window 9、不写 tokens_per_window（=1）、
+    readout 一致；prov 按 train.py 快照契约：encoder_kind / readout / table_kind / raw9_source_sha256 / policy_encoder，
+    表无 encoder、表 parameter_count（若写）为 0，不与 policy_encoder.parameter_count 混用。新旧 kind / readout 互换必失败。"""
+    kind = run['motion_kind']
+    assert kind == WANE2E_KIND, kind
+    m = cfg.motion
+    assert m.get('encoder_kind') == kind, m.get('encoder_kind')
+    assert m.get('readout') == run['readout'] == WANE2E_READOUT, (m.get('readout'), run['readout'])
+    assert int(m.stride) == 16 and int(m.window_frames) == 33 and int(m.frame_size) == 256, (m.stride, m.window_frames, m.frame_size)
+    assert int(m.dim) == 768, m.dim
+    assert int(m.get('raw_dim', 0)) == 16384, m.get('raw_dim')
+    assert int(m.get('latents_per_window', 0)) == 9, m.get('latents_per_window')
+    assert int(m.get('tokens_per_window', 1)) == 1, m.get('tokens_per_window')       # e2e 不写 tokens_per_window
+    assert m.get('source_run') is None, m.get('source_run')
+    assert prov.get('encoder_kind') == kind and prov.get('readout') == run['readout'], \
+        (prov.get('encoder_kind'), prov.get('readout'))
+    assert prov.get('table_kind') == WANE2E_TABLE_KIND, prov.get('table_kind')
+    assert prov.get('encoder') is None and prov.get('vae') is not None and prov.get('raw9_source_sha256'), \
+        (prov.get('encoder'), prov.get('vae'), prov.get('raw9_source_sha256'))
+    assert prov.get('parameter_count', 0) == 0, prov.get('parameter_count')
+    pe = prov.get('policy_encoder')
+    want = run['policy_encoder']
+    assert isinstance(pe, dict) and {k: pe.get(k) for k in want} == want, (pe, want)
+    assert type(pe['trainable']) is bool and type(pe['layers']) is int and type(pe['parameter_count']) is int, pe
+    print(f'BUDGET_CONSISTENT=PASS budget={int(m.budget)} motion_kind={kind} readout={run["readout"]} '
+          f'latents_per_window=9 raw_dim=16384 table_kind={WANE2E_TABLE_KIND} '
+          f'policy_encoder_params={pe["parameter_count"]} raw9_source_sha256={str(prov["raw9_source_sha256"])[:16]}', flush=True)
 
 
 # 登记过的权重：键 = run 根目录名（download.sh 的落点目录名）
@@ -201,6 +247,22 @@ RUNS = {
         resolved_sha256=WANRAW9_RESOLVED_SHA256,
         norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
         motion_budget=80, motion_kind=WANRAW9_KIND, readout=WANRAW9_READOUT,
+    ),
+    # ── 1117 计划（1117-e2e-enc-train-plan.html）：E2E-Enc，s16 bf16 raw9 表 + 策略内随机初始化 1 层 encoder，motion.budget = 160 窗；
+    # 同一 4task-v2-1600ep 库，norm_stats 与 v11 / Wan-9 同一份。正式 run 只评 @50000；
+    # 冒烟 run e2e-smoke20（runner --smoke20，num_train_steps=20，最后一份 ckpt 为 19）供 G5 / G5b 用 G4 冒烟权重；
+    # 冒烟 run 名以 S5 runner 实际 --run-name 为准，不同时在此补一条同值条目。
+    'v2-1600ep-m8x8-modul-e2eenc-s16-b128-50k': dict(
+        steps=('50000',), motion=True, config='mme_vla_suite_b128_80k', budget=512,
+        resolved_sha256=WANE2E_RESOLVED_SHA256,
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+        motion_budget=160, motion_kind=WANE2E_KIND, readout=WANE2E_READOUT, policy_encoder=WANE2E_POLICY_ENCODER,
+    ),
+    'e2e-smoke20': dict(
+        steps=('19',), motion=True, config='mme_vla_suite_b128_80k', budget=512,
+        resolved_sha256=WANE2E_RESOLVED_SHA256,
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+        motion_budget=160, motion_kind=WANE2E_KIND, readout=WANE2E_READOUT, policy_encoder=WANE2E_POLICY_ENCODER,
     ),
 }
 

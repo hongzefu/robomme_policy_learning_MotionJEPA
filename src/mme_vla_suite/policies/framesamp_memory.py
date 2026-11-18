@@ -32,6 +32,14 @@ import mem_buffer（建库域留有冻结副本 `dataset_builder/mem_buffer.py`�
   `τ_j = wan_raw9.token_times(f, es−1 if f < es else f+32)`（C-τ，与训练侧 FrameSampDataset 同一函数同一 last_real 规则），
   `pos[i*tpw + j] = pos_emb[τ_j, 0, :pos_dim]`，mask 前 k·tpw 位，`times = pad_times(τ 展平, T)`。
 - tpw == 1（旧 YAML 缺省）时走原语句，返回形状 (budget,·) 逐字不变。
+
+── E2E-Enc（计划 1117-e2e-enc-train-plan.html 第二部分「一」framesamp_memory.py 行，`motion_cfg["encoder_kind"] == "wan_e2e"`）──
+- `motion_enc_fn` 返回 (latents_per_window=9, raw_dim=16384) **bf16**（MotionEncoderClient 已调 raw9_f32_to_bf16，R9），
+  本类原样存、原样拷，不做任何 dtype 转换；
+- 槽 = 窗（budget=160 个槽，tokens_per_window 不写），窗级取点与 `resample` 降采样逐字沿用；
+- 装配：`motion_emb` 为 (budget·9, 16384) bf16，第 i 槽占第 9i..9i+8 行，不可见槽置 0；`motion_pos[i] = pos_emb[f_i, 0, :pos_dim]`
+  （时间码 = 窗起点，与 768 路径同式）；`motion_mask` 前 k 槽；`times = pad_times(窗起点, budget)`。
+  与训练侧 `FrameSampDataset._fill_motion_e2e` 同一口径（(1440,16384) bf16 + 160 槽 pos/mask/memory_order）。
 """
 
 import math
@@ -41,6 +49,7 @@ from typing import Callable
 import einops
 import jax
 import jax.numpy as jnp
+import ml_dtypes
 import numpy as np
 
 from openpi.shared import image_tools
@@ -98,6 +107,14 @@ class FrameSampMemory:
             self.motion_pos_dim = int(motion_cfg["pos_dim"])
             self.motion_dim = int(motion_cfg["dim"])
             self.motion_tpw = int(motion_cfg.get("tokens_per_window", 1))
+            # E2E-Enc：每槽 (latents_per_window, raw_dim) bf16；tokens_per_window 不写（=1），槽数即 budget
+            self.motion_e2e = motion_cfg.get("encoder_kind", None) == E2E_ENCODER_KIND
+            if self.motion_e2e:
+                self.motion_lpw = int(motion_cfg["latents_per_window"])
+                self.motion_raw_dim = int(motion_cfg.get("raw_dim", 16384))
+                if self.motion_tpw != 1 or self.motion_lpw != 9 or self.motion_raw_dim != 16384:
+                    raise ValueError(f"wan_e2e 在线契约：tokens_per_window=1、latents_per_window=9、raw_dim=16384，"
+                                     f"得到 {self.motion_tpw}/{self.motion_lpw}/{self.motion_raw_dim}")
             if self.motion_tpw > 1:
                 from mme_vla_suite.shared import wan_raw9
                 self._raw9 = wan_raw9
@@ -122,6 +139,8 @@ class FrameSampMemory:
             self.motion_overflow = str(motion_cfg.get("overflow", "raise"))
             if self.motion_overflow not in ("raise", "resample"):
                 raise ValueError(f"motion.overflow 只能是 raise / resample，得到 {self.motion_overflow!r}")
+        if not self.motion_enabled:
+            self.motion_e2e = False
         self._history_feats_motion: dict[int, np.ndarray] = {}
         self._raw_frames: dict[int, np.ndarray] = {}
         self._next_grid_start_demo = 0
@@ -244,10 +263,19 @@ class FrameSampMemory:
             raise RuntimeError(f"起点 {f} 的 33 帧不齐（缺 {missing[:4]}…），原始帧缓冲被过早清理？")
         window = np.ascontiguousarray(np.stack(frames))
         t0 = time.perf_counter()
-        tok = np.asarray(self.motion_enc(window, f) if _accepts_start(self.motion_enc) else self.motion_enc(window), dtype=np.float32)
+        out = self.motion_enc(window, f) if _accepts_start(self.motion_enc) else self.motion_enc(window)
+        if self.motion_e2e:
+            # e2e：客户端已转 bf16（R9），这里只核形制、原样存，绝不升 f32
+            tok = np.asarray(out)
+            want = (self.motion_lpw, self.motion_raw_dim)
+            if tok.shape != want or tok.dtype != _BF16:
+                raise RuntimeError(f"motion_enc_fn 返回形制 {tok.shape} {tok.dtype} != {want} bfloat16")
+        else:
+            tok = np.asarray(out, dtype=np.float32)
         self.motion_encode_s += time.perf_counter() - t0
         self.motion_encode_calls += 1
-        want = (self.motion_dim,) if self.motion_tpw == 1 else (self.motion_tpw, self.motion_dim)
+        want = ((self.motion_lpw, self.motion_raw_dim) if self.motion_e2e
+                else (self.motion_dim,) if self.motion_tpw == 1 else (self.motion_tpw, self.motion_dim))
         if tok.shape != want:
             raise RuntimeError(f"motion_enc_fn 返回形制 {tok.shape} != {want}")
         if f in self._history_feats_motion:
@@ -320,6 +348,8 @@ class FrameSampMemory:
             print(f"MOTION_DOWNSAMPLE step={step_idx} es={es} k={k} k_demo={len(demo)} k_exec={len(exec_)} "
                   f"kept_demo={keep_demo} kept_exec={keep_exec} budget={B}", flush=True)
             k = len(frames)
+        if self.motion_e2e:
+            return self._assemble_motion_e2e(frames)
         if self.motion_tpw > 1:
             return self._expand_motion_tokens(frames)
         emb = np.zeros((B, self.motion_dim), np.float32)
@@ -351,6 +381,21 @@ class FrameSampMemory:
         mask[:n] = True
         flat = np.concatenate(taus) if taus else np.zeros(0, np.int64)
         return emb, pos, mask, pad_times(flat, T)
+
+    def _assemble_motion_e2e(self, frames: list[int]):
+        """E2E-Enc 装配：槽 = 窗，motion_emb (budget·lpw, raw_dim) bf16（第 i 槽占 lpw 行，不可见槽为 0），
+        pos / mask / times 按 budget 个槽、时间码 = 窗起点（与 768 路径 :331 同式）。"""
+        B, lpw = self.motion_budget, self.motion_lpw
+        emb = np.zeros((B * lpw, self.motion_raw_dim), _BF16)
+        pos = np.zeros((B, self.motion_pos_dim), np.float32)
+        for i, f in enumerate(frames):
+            if f not in self._history_feats_motion:
+                raise RuntimeError(f"起点 {f} 应已编码但缓冲中没有（增量编码落后）")
+            emb[i * lpw:(i + 1) * lpw] = self._history_feats_motion[f]
+            pos[i] = self.pos_emb[f, 0, : self.motion_pos_dim]
+        mask = np.zeros(B, np.bool_)
+        mask[:len(frames)] = True
+        return emb, pos, mask, pad_times(frames, B)
 
     # ―― 以下装配路径与旧 MemoryBuffer 的 frame_sampling 支路逐字同式 ――
 
@@ -395,6 +440,10 @@ class FrameSampMemory:
 
     def default_history_feats_gather_fn(self, indices_to_load, *args, **kwargs):
         return {idx: self._history_feats[idx] for idx in indices_to_load}
+
+
+E2E_ENCODER_KIND = "wan_e2e"          # 与 motion_client.E2E_ENCODER_KINDS 同值（字面量，避免多一层导入）
+_BF16 = np.dtype(ml_dtypes.bfloat16)
 
 
 def _even_pick(n: int, keep: int) -> list[int]:
