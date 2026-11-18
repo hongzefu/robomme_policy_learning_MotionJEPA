@@ -14,3 +14,6 @@
 
 ## 偏离/调整记录（R8 第 (i) 档等只记不报的项写这里）
 （暂无）
+
+## RB-A3 核实：MotionMEM 80k 全局 grad_norm
+- `v1-store/logs/v2-1600ep-m8x8-modul-motion-b128-80k.log`（1,233,164 B，2026-09-19）含 804 条 `grad_norm=`，每 100 步一条（如 `Step 0: grad_norm=1.1137, llm_grad_norm=1.1026, …`）。历史全局梯度范数轨迹可作参照；逐步裁剪系数仍只能由 e2e 自身逐步日志给出（log_interval 均值不等于逐步）。
