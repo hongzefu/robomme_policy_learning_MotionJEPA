@@ -15,7 +15,6 @@ train.py ``init_train_state`` 同一函数），分别以 e2e YAML 与 MotionMEM
 
 用法（worktree 内 CPU）：
     JAX_PLATFORMS=cpu uv run --no-sync python scripts/training/g0/e2e_init_eq.py [--variant real|small] [--base dd39f3d]
-S1 的 encoder 未合入时须显式 ``--allow-stub``（用 test_e2e_dataset.py 的替身，只验 R7 接线），判定行带 ``encoder=stub``。
 """
 
 from __future__ import annotations
@@ -131,7 +130,6 @@ def main(argv=None) -> int:
     ap.add_argument("--variant", choices=("real", "small"), default="real")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--base", default="dd39f3d")
-    ap.add_argument("--allow-stub", action="store_true")
     ap.add_argument("--skip-r3", action="store_true")
     ap.add_argument("--child-out")
     ap.add_argument("--child-yamls", nargs="*")
@@ -144,12 +142,10 @@ def main(argv=None) -> int:
     import mme_vla_suite
     if not mme_vla_suite.__file__.startswith(str(REPO)):
         raise SystemExit(f"mme_vla_suite 不在本仓库: {mme_vla_suite.__file__}")
-    sys.path.insert(0, str(REPO / "scripts/training/tests"))
-    import test_e2e_dataset as T          # 只取替身安装函数
-    real = T.S1_REAL
-    if not real and not args.allow_stub:
-        raise SystemExit("S1 wan_e2e_encoder 未合入；只验接线时显式加 --allow-stub")
     from mme_vla_suite.models.representation import percep_mem as pm
+    from mme_vla_suite.models.representation import wan_e2e_encoder as E
+    if not E.__file__.startswith(str(REPO)):
+        raise SystemExit(f"wan_e2e_encoder 不在本仓库: {E.__file__}")
 
     e2e = summarize(YAML_DIR / E2E_YAML, args.variant, args.seed, track_rng=True)
     mot = summarize(YAML_DIR / MOTION_YAML, args.variant, args.seed)
@@ -162,10 +158,9 @@ def main(argv=None) -> int:
     n_mis = len(mism) + (0 if rng_eq else 1) + (0 if n_enc > 0 else 1)
     for k in mism[:20]:
         print(f"INIT_EQ_MISMATCH leaf={k}")
-    tag = "" if real else " encoder=stub"
     print(f"INIT_EQ={'PASS' if n_mis == 0 else 'FAIL'} leaves_compared={len(set(e_rest) | set(mot['leaves']))} "
           f"mismatches={n_mis} encoder_leaves={n_enc} default_rng_count_before={rng.get('count_before')} "
-          f"after={rng.get('count_after')} variant={args.variant}{tag}", flush=True)
+          f"after={rng.get('count_after')} variant={args.variant}", flush=True)
     rc = 0 if n_mis == 0 else 1
 
     if not args.skip_r3:

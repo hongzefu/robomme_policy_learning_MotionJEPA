@@ -443,31 +443,17 @@ def _e2e_write_clip_steps(diag_dir: pathlib.Path, steps: list, infos: list) -> N
             f.write(json.dumps({"step": int(st), **{k: float(v) for k, v in row.items()}}) + "\n")
 
 
-def _e2e_windows_manifest_path() -> pathlib.Path:
-    p = os.environ.get("E2E_WINDOWS_MANIFEST")
-    if p:
-        return pathlib.Path(p)
-    return pathlib.Path(__file__).resolve().parent / "g0" / "e2e_windows_v1.json"
-
-
-def _e2e_load_window_rows(path: pathlib.Path) -> tuple[np.ndarray, str]:
-    """固定窗口清单（S1 的 e2e_windows_v1.json）→ (表行号数组, 文件 sha256)。
-
-    清单格式以 S1 为准；这里只要求每窗记录里有表行号（键名按 row / table_row / row16 / s16_row 依次取），
-    顶层可为列表或含 windows 列表的对象。缺行号即 raise。"""
-    import hashlib
-    raw = path.read_bytes()
-    obj = json.loads(raw)
-    wins = obj["windows"] if isinstance(obj, dict) else obj
-    rows = []
-    for w in wins:
-        for key in ("row", "table_row", "row16", "s16_row"):
-            if key in w:
-                rows.append(int(w[key]))
-                break
-        else:
-            raise ValueError(f"窗口清单 {path} 的条目缺表行号（row/table_row/row16/s16_row）: {w}")
-    return np.asarray(rows, dtype=np.int64), hashlib.sha256(raw).hexdigest()
+def _e2e_window_rows() -> tuple[np.ndarray, str, str]:
+    """固定窗口清单（S1 ``scripts/training/g0/e2e_windows_v1.json``，经其 ``load_manifest`` 校验提交 sha256）
+    → (表行号 ``table_row`` 数组, 清单 sha256, 清单路径)。s16 新表与 768 表同一行序。"""
+    import importlib.util
+    mod_path = pathlib.Path(__file__).resolve().parent / "g0" / "e2e_windows_v1.py"
+    spec = importlib.util.spec_from_file_location("e2e_windows_v1_for_train", str(mod_path))
+    W = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(W)
+    manifest, sha = W.load_manifest()
+    rows = np.asarray([int(w["table_row"]) for w in manifest["windows"]], dtype=np.int64)
+    return rows, sha, str(W.DEFAULT_MANIFEST)
 
 
 def _e2e_effective_rank(x: np.ndarray) -> float:
@@ -485,7 +471,7 @@ def _e2e_encode_rows(train_state, motion_root, rows: np.ndarray, chunk: int = 25
     from mme_vla_suite.models.representation.percep_mem import E2E_ENCODER_ATTR, E2E_RAW_ROW_SHAPE
 
     meta = _ms.MotionMeta.load(motion_root)
-    dt = np.dtype(getattr(meta.spec, "dtype", np.float32))
+    dt = meta.spec.np_dtype                                   # 布局 dtype（bf16）
     mstore = _ms.MotionStore(motion_root, meta=meta)
     graphdef, state = train_state.model_def, train_state.params
 
@@ -510,8 +496,7 @@ def _e2e_encode_rows(train_state, motion_root, rows: np.ndarray, chunk: int = 25
 def _e2e_step0_diagnostics(config, train_state, motion_root) -> pathlib.Path:
     """初始化时在固定窗口清单上保存步 0 encoder 输出：diagnostics/0.json（统计）+ diagnostics/0.npy（张量）。"""
     import hashlib
-    man = _e2e_windows_manifest_path()
-    rows, man_sha = _e2e_load_window_rows(man)
+    rows, man_sha, man = _e2e_window_rows()
     out = _e2e_encode_rows(train_state, motion_root, rows)
     d = _e2e_diag_dir(config)
     np.save(d / "0.npy", out)

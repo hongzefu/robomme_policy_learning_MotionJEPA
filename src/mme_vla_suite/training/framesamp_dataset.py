@@ -28,7 +28,6 @@ import os
 import pathlib
 import pickle
 
-import ml_dtypes  # noqa: F401  （注册 bfloat16，表布局 dtype 可为 bf16）
 import numpy as np
 from omegaconf import DictConfig
 
@@ -212,7 +211,7 @@ class FrameSampDataset(Dataset):
                 self._motion_lpw = int(mcfg.latents_per_window)
                 self._motion_raw_dim = int(mcfg.raw_dim)
                 self.raw9_motion_shape = (self._motion_budget * self._motion_lpw, self._motion_raw_dim)
-                self.raw9_motion_dtype = np.dtype(getattr(self._motion_meta.spec, "dtype", ms.MOTION_DTYPE))
+                self.raw9_motion_dtype = self._motion_meta.spec.np_dtype           # 布局 dtype（S2：bf16）
             if self._motion_raw9:
                 # S5-L1：TransformedDataset.__getitems__ 据此在共享内存里整批预分配 motion_emb、逐样本 getitem_into 直接填
                 self.raw9_motion_shape = (self._motion_tokens, self._motion_dim)

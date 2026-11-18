@@ -1,5 +1,3 @@
-import inspect
-
 import flax.nnx as nnx
 import jax
 import jax.numpy as jnp
@@ -9,12 +7,11 @@ import openpi.shared.array_typing as at
 from mme_vla_suite.models.representation.mem_encoder import FeatureEncoder
 from mme_vla_suite.models.representation.utils import kernel_init
 from mme_vla_suite.shared.wan_raw9 import motion_token_budget
+from mme_vla_suite.datastore.motion_store import E2E_TABLE_KIND, LAYOUT_RAW9BF16 as E2E_LAYOUT  # noqa: F401（S2 契约）
 
 # ── E2E-Enc（1117-e2e-enc-train-plan.html 一节 percep_mem 行、YAML 行）：训练侧共用的身份常量 ─────────────────
 E2E_ENCODER_KIND = "wan_e2e"
 E2E_READOUT = "wan_e2e_enc768_s16_v1"
-E2E_TABLE_KIND = "wan_raw_bf16_s16_v1"                  # 表 provenance 的制表身份（S2 契约）
-E2E_LAYOUT = "motion-raw9bf16-grid16-demopad17-v1"      # 表布局名（S2 契约）
 E2E_LATENTS_PER_WINDOW = 9
 E2E_RAW_DIM = 16 * 32 * 32                              # 16384
 E2E_RAW_ROW_SHAPE = (9, 16, 32, 32)
@@ -42,25 +39,14 @@ def e2e_rngs(rngs: nnx.Rngs) -> nnx.Rngs:
     return nnx.Rngs(params=jax.random.fold_in(jax.random.fold_in(base, E2E_RNG_FOLD_1), E2E_RNG_FOLD_2))
 
 
-def build_e2e_encoder(mcfg, rngs: nnx.Rngs, dtype):
-    """按 YAML motion.encoder 节构造 S1 的 ``WanLatentMotionEncoderJax``（深度取 ``encoder.layers``，不写死）。
+def build_e2e_encoder(mcfg, rngs: nnx.Rngs, dtype, **overrides):
+    """按 YAML ``motion.encoder`` 节构造 S1 的 ``WanLatentMotionEncoderJax``（深度取 ``encoder.layers``，不写死）。
 
-    S1 的构造签名在本文件写作时尚未合入：按参数名把 YAML 值映射过去，签名里不认识的名字不传；
-    必需参数缺失时由类自身报错（fail-loud）。
+    ``overrides`` 只给测试脚本用（如 G3 临时 ``layers=8``），训练路径不传。
     """
     from mme_vla_suite.models.representation.wan_e2e_encoder import WanLatentMotionEncoderJax
 
-    ecfg = mcfg.encoder
-    cand = {
-        "depth": int(ecfg.layers), "layers": int(ecfg.layers), "num_layers": int(ecfg.layers),
-        "width": int(ecfg.width), "dim": int(ecfg.width), "hidden_dim": int(ecfg.width),
-        "heads": int(ecfg.heads), "num_heads": int(ecfg.heads),
-        "dropout": float(ecfg.get("dropout", 0.0)),
-        "dtype": dtype, "rngs": rngs, "config": ecfg, "cfg": ecfg,
-    }
-    params = inspect.signature(WanLatentMotionEncoderJax.__init__).parameters
-    kwargs = {k: v for k, v in cand.items() if k in params}
-    return WanLatentMotionEncoderJax(**kwargs)
+    return WanLatentMotionEncoderJax(mcfg.encoder, rngs=rngs, dtype=dtype, **overrides)
 
 
 class PerceptualMemory(nnx.Module):

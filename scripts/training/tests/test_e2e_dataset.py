@@ -13,8 +13,8 @@
 ⑨ train.py：``init_history_config`` 的 e2e 分支（真实入口，MotionMeta 用夹具）、诊断键、逐步裁剪日志、步 0 输出；
 ⑩ 标准化常量：保存 → bf16 恢复 → 合并回模型后仍为 fp32 指定值，严格参数树无多余叶。
 
-S1 的 ``wan_e2e_encoder`` 未合入时，注册同名最小替身（只验 S3 的接线，替身有 ``_IS_TEST_STUB``）；
-S2 的 bf16 布局未合入时，依赖真表布局的用例跳过并在汇报中列出。
+encoder 用 S1 合入的 ``wan_e2e_encoder.WanLatentMotionEncoderJax``（不再用替身）；读表用 S2 的 bf16 布局；
+provenance 由 S4 的 ``check_checkpoint.assert_motion`` 与 ``policy_config.check_e2e_provenance`` 消费。
 运行：``JAX_PLATFORMS=cpu uv run --no-sync python -m pytest scripts/training/tests/test_e2e_dataset.py -q -s``
 """
 
@@ -27,7 +27,6 @@ import json
 import os
 import pathlib
 import sys
-import types
 from types import SimpleNamespace
 
 os.environ.setdefault("JAX_PLATFORMS", "cpu")
@@ -52,83 +51,14 @@ BF16 = np.dtype(ml_dtypes.bfloat16)
 V11_N_LEAVES = 65
 V11_TREE_SHA256 = "51f537d1b96c40af546bee0fda0c3e3982c4c4b1f8af6716b2e66b4022e38020"
 
-# ── S1 encoder 替身（仅在 S1 未合入时注册）──────────────────────────────────────────────────────
-_STUB_SRC = '''"""测试用最小替身：与 S1 WanLatentMotionEncoderJax 同名（1117 计划一节 wan_e2e_encoder.py 行；只验 S3 接线）。"""
-import flax.nnx as nnx
-import jax.numpy as jnp
-_IS_TEST_STUB = True
-STUB_MEAN = tuple(0.05 * c - 0.3 for c in range(16))
-STUB_STD = tuple(1.0 + 0.1 * c for c in range(16))
-_init = nnx.initializers.variance_scaling(1 / 3, "fan_in", "uniform")
-
-
-class _Norm(nnx.Module):
-    def __init__(self, dim):
-        self.weight = nnx.Param(jnp.ones((dim,), jnp.float32))
-
-    def __call__(self, x):
-        x32 = x.astype(jnp.float32)
-        y = (x32 * jnp.reciprocal(jnp.sqrt(jnp.mean(x32 * x32, -1, keepdims=True) + 1e-6))).astype(x.dtype)
-        return y * self.weight
-
-
-class _Block(nnx.Module):
-    def __init__(self, dim, dtype, rngs):
-        self.norm1 = _Norm(dim)
-        self.ffn = nnx.Linear(dim, dim, use_bias=False, kernel_init=_init, dtype=dtype, rngs=rngs)
-
-    def __call__(self, x):
-        return x + self.ffn(self.norm1(x))
-
-
-class WanLatentMotionEncoderJax(nnx.Module):
-    def __init__(self, depth, dim=768, heads=12, dropout=0.0, dtype=jnp.float32, *, rngs):
-        self.dtype = dtype
-        self.mean = STUB_MEAN          # 非状态常量（Python 元组，不进参数树）
-        self.std = STUB_STD
-        self.input_proj = nnx.Linear(16384, dim, use_bias=False, kernel_init=_init, dtype=dtype, rngs=rngs)
-        self.blocks = [_Block(dim, dtype, rngs) for _ in range(int(depth))]
-        self.final_norm = _Norm(dim)
-        self.output_proj = nnx.Linear(dim, dim, use_bias=False, kernel_init=_init, dtype=dtype, rngs=rngs)
-
-    def __call__(self, z):
-        n, t = z.shape[0], z.shape[1]
-        x = z.astype(jnp.float32).reshape(n, t, 16, 1024)
-        m = jnp.asarray(self.mean, jnp.float32)[None, None, :, None]
-        s = jnp.asarray(self.std, jnp.float32)[None, None, :, None]
-        x = ((x - m) / s).reshape(n, t, 16384).astype(self.dtype)
-        x = self.input_proj(x)
-        for b in self.blocks:
-            x = b(x)
-        x = self.final_norm(x[:, -1])
-        return self.output_proj(x)
-'''
-
-
-def install_encoder_stub() -> bool:
-    """S1 模块不存在时注册替身；返回 True 表示用的是真模块。"""
-    name = "mme_vla_suite.models.representation.wan_e2e_encoder"
-    try:
-        mod = importlib.import_module(name)
-        return not getattr(mod, "_IS_TEST_STUB", False)
-    except ModuleNotFoundError:
-        import mme_vla_suite.models.representation as pkg
-        stub = types.ModuleType(name)
-        exec(compile(_STUB_SRC, "<wan_e2e_encoder stub>", "exec"), stub.__dict__)
-        sys.modules[name] = stub
-        pkg.wan_e2e_encoder = stub
-        return False
-
-
-import importlib  # noqa: E402
-
-S1_REAL = install_encoder_stub()
-
 from mme_vla_suite.datastore import motion_store as ms  # noqa: E402
 from mme_vla_suite.models.representation import percep_mem as pm  # noqa: E402
 from mme_vla_suite.shared.sampling import even_sampling_indices, memory_order, pad_times  # noqa: E402
 
-S2_LAYOUT = pm.E2E_LAYOUT in getattr(ms, "LAYOUT_SPECS", {})
+from mme_vla_suite.models.representation import wan_e2e_encoder as E  # noqa: E402
+
+S1_REAL = E.__file__.startswith(str(WT / "src"))   # 真模块来自本 worktree 的 src
+assert pm.E2E_LAYOUT == ms.LAYOUT_RAW9BF16 and pm.E2E_TABLE_KIND == ms.E2E_TABLE_KIND
 
 
 def _say(capsys, line: str) -> None:
@@ -208,8 +138,7 @@ def test_e2e_tree_adds_only_encoder_and_specs(capsys):
     assert enc and rest == lm, "e2e 树去掉 encoder 叶后须与 MotionMEM 树完全相同"
     assert all("img" not in l.split(":")[0] and "llm" not in l.split(":")[0] for l in enc)
     n_enc = sum(int(np.prod(v.shape)) for k, v in flat.items() if k[:2] == ("mem_encoder", pm.E2E_ENCODER_ATTR))
-    if S1_REAL:
-        assert n_enc == pm.E2E_POLICY_ENCODER_PARAMS, n_enc
+    assert n_enc == pm.E2E_POLICY_ENCODER_PARAMS, n_enc
     me = model.mem_encoder
     assert (me.motion_budget, me.motion_tokens, me.motion_dim, me.motion_emb_len, me.motion_emb_dim, me.motion_lpw) == \
         (160, 160, 768, 1440, 16384, 9)
@@ -463,7 +392,8 @@ def _fake_meta(**over):
     prov = {"table_kind": pm.E2E_TABLE_KIND, "table_op": "f32_to_bf16_reorder", "parameter_count": 0,
             "raw9_source_sha256": "0" * 64}
     prov.update(over.pop("prov", {}))
-    spec = SimpleNamespace(grid_stride=16, row_shape=ROW_SHAPE, dtype=over.pop("dtype", BF16),
+    npdt = np.dtype(over.pop("dtype", BF16))
+    spec = SimpleNamespace(grid_stride=16, row_shape=ROW_SHAPE, dtype=str(npdt), np_dtype=npdt,
                            demo_min_real=17, demo_tail_pad="repeat_last")
     return SimpleNamespace(provenance=prov, raw={"layout": over.pop("layout", pm.E2E_LAYOUT)}, spec=spec)
 
@@ -504,42 +434,67 @@ def _load_train():
     return mod
 
 
+E2E_TABLE = LIB / "motion-wan-raw9-s16"
+need_e2e_table = pytest.mark.skipif(not (E2E_TABLE / "meta/store_meta.json").exists(), reason="本机无 s16 bf16 新表")
+
+
 @need_lib
+@need_e2e_table
 def test_init_history_config_e2e_branch(tmp_path, monkeypatch, capsys):
-    """真实 init_history_config 入口：MotionMeta 用夹具（S2 新表未导出），_motion_gates 走真实闸前半段由夹具替代。"""
+    """真实 init_history_config 入口 + 真实 _motion_gates / MotionMeta（真 s16 bf16 新表，只读）→ 真实消费方。"""
     from omegaconf import OmegaConf
-    from mme_vla_suite.training import dataloader as mdl
     from mme_vla_suite.training import config as _config
+    from mme_vla_suite.shared import wan_raw9 as wr
 
     train = _load_train()
     hc = OmegaConf.load(E2E_YAML)
-    fake = _fake_meta()
-    fake.manifest_sha256, fake.motion_index_sha256, fake.table_sha256 = "a" * 64, "b" * 64, "c" * 64
-    fake.provenance["vae"] = {"name": "Wan2.1"}
-    fake_root = tmp_path / "e2e_table"
-    (fake_root / "meta").mkdir(parents=True)
-    (fake_root / "meta" / "store_meta.json").write_text("{}")
-    monkeypatch.setattr(mdl, "_motion_gates", lambda h, fm: str(fake_root))
-    monkeypatch.setattr(ms.MotionMeta, "load", staticmethod(lambda root: fake))
+    monkeypatch.setenv("MMEVLA_MOTION_STORE", str(E2E_TABLE))
     cfg = _config.get_config("mme_vla_suite_b128_80k")
     cfg = dataclasses.replace(cfg, exp_name="t", model=dataclasses.replace(cfg.model, history_config=E2E_YAML.name),
                               checkpoint_base_dir=str(tmp_path / "ck"))
     cfg.checkpoint_dir.mkdir(parents=True)
     train.init_history_config(cfg, hc, framesamp_root=str(LIB / "framesamp-8x8"))
     prov = json.loads((cfg.checkpoint_dir / "motion_provenance.json").read_text())
-    assert prov["encoder"] is None and prov["encoder_kind"] == "wan_e2e"
+    assert prov["encoder"] is None and prov["encoder_kind"] == "wan_e2e" and prov["vae"] is not None
     assert prov["readout"] == "wan_e2e_enc768_s16_v1" and prov["table_kind"] == "wan_raw_bf16_s16_v1"
-    assert prov["raw9_source_sha256"] == "0" * 64 and prov["vae"] == {"name": "Wan2.1"}
+    assert prov["raw9_source_sha256"] == wr.source_sha256() and prov["motion_root"] == str(E2E_TABLE)
     assert prov["policy_encoder"] == {"init": "random", "trainable": True, "layers": 1,
                                       "parameter_count": 20252928, "spec_src": "d3213de"}
     assert "pool_source_sha256" not in prov
     snap = OmegaConf.load(cfg.checkpoint_dir / "history_config.resolved.yaml")
     assert snap.motion.encoder_kind == "wan_e2e" and snap.motion.latents_per_window == 9
-    # 消费方（S4 写集）：check_checkpoint.py 的 e2e 分支合入后才能闭环
-    cc = WT / "scripts/evaluation/check_checkpoint.py"
-    consumed = "wan_e2e" in cc.read_text()
-    _say(capsys, f"E2E_PROVENANCE=PASS policy_encoder_params=20252928 table_param_count_separate=1 "
-                 f"check_checkpoint_e2e_branch={'present' if consumed else 'PENDING_S4'}")
+    _consume_provenance(cfg.checkpoint_dir, prov)
+    _say(capsys, "E2E_PROVENANCE=PASS real_table=1 policy_encoder_params=20252928 table_param_count_separate=1 "
+                 "check_checkpoint_assert_motion=PASS resolved_sha=WANE2E_RESOLVED_SHA256 policy_config_check=PASS swap_neg=3")
+
+
+def _consume_provenance(run_root: pathlib.Path, prov: dict) -> None:
+    """真实消费方：check_checkpoint.py 的 e2e 分支（assert_motion + 快照 sha 对 RUNS 登记值）与
+    policy_config.check_e2e_provenance；另做交换新旧 kind / readout 的负例。"""
+    import copy
+    from omegaconf import OmegaConf
+    from mme_vla_suite.policies import policy_config as pc
+
+    cc = _load_cc()
+    run = cc.RUNS["e2e-smoke20"]
+    raw = (run_root / "history_config.resolved.yaml").read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == run["resolved_sha256"] == cc.WANE2E_RESOLVED_SHA256
+    snap = OmegaConf.create(raw.decode())
+    cc.assert_motion(snap, run, prov)
+    pc.check_e2e_provenance(snap.motion, prov, run_root)
+    for key, bad in (("encoder_kind", "wan_raw9"), ("readout", "wan_raw9_flat16384_s32_v1"),
+                     ("table_kind", "wan_raw9")):
+        p2 = copy.deepcopy(prov)
+        p2[key] = bad
+        with pytest.raises((AssertionError, ValueError)):
+            cc.assert_motion(snap, run, p2)
+
+
+def _load_cc():
+    spec = importlib.util.spec_from_file_location("check_checkpoint_under_s3", str(WT / "scripts/evaluation/check_checkpoint.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 def test_train_diag_helpers(tmp_path, capsys):
@@ -556,18 +511,14 @@ def test_train_diag_helpers(tmp_path, capsys):
     rows = [json.loads(l) for l in (d / "clip_steps.jsonl").read_text().splitlines()]
     assert [r["step"] for r in rows] == [7, 8, 9] and "loss" not in rows[0]
     assert abs(rows[1]["clip_coef"] - 1 / 3) < 1e-6
-    # 窗口清单行号解析：列表 / windows 对象，缺行号即拒
-    p = tmp_path / "w.json"
-    p.write_text(json.dumps({"windows": [{"task": "a", "row": 3}, {"table_row": 5}]}))
-    r, sha = train._e2e_load_window_rows(p)
-    assert r.tolist() == [3, 5] and len(sha) == 64
-    p.write_text(json.dumps([{"task": "a"}]))
-    with pytest.raises(ValueError):
-        train._e2e_load_window_rows(p)
+    # 窗口清单：S1 的 load_manifest（校验提交 sha），取 table_row
+    r, sha, path = train._e2e_window_rows()
+    man = json.loads(pathlib.Path(path).read_text())
+    assert r.tolist() == [int(w["table_row"]) for w in man["windows"]] and len(r) == man["num_windows"] >= 2000
     x = np.random.default_rng(0).standard_normal((64, 8))
     assert 1.0 < train._e2e_effective_rank(x) <= 8.0
     assert abs(train._e2e_effective_rank(np.outer(np.arange(10.0), np.ones(4)))-1.0) < 1e-6
-    _say(capsys, "E2E_DIAG_HELPERS=PASS clip_steps_per_step=1 window_rows=1 eff_rank=1")
+    _say(capsys, f"E2E_DIAG_HELPERS=PASS clip_steps_per_step=1 window_rows={len(r)} manifest_sha={sha[:16]} eff_rank=1")
 
 
 # ══ ⑩ 标准化常量与严格参数树（保存 → bf16 恢复 → 合并）══════════════════════════════════════════
@@ -618,7 +569,7 @@ def test_norm_constants_survive_bf16_restore(tmp_path, capsys):
 
 class _FixMeta:
     def __init__(self, table):
-        self.spec = SimpleNamespace(dtype=BF16, row_shape=ROW_SHAPE, grid_stride=16)
+        self.spec = SimpleNamespace(dtype="bfloat16", np_dtype=BF16, row_shape=ROW_SHAPE, grid_stride=16)
         self._t = table
 
 
@@ -655,9 +606,8 @@ def test_train_step_cpu_smoke(fx, tmp_path, monkeypatch, capsys):
     mesh = sharding.make_mesh(1)
     state, _ = train.init_train_state(cfg, jax.random.key(0), mesh, resume=False)
     # 步 0 输出：窗口清单夹具 + 表夹具（S2 读表合入前用夹具替身 MotionMeta / MotionStore）
-    man = tmp_path / "w.json"
-    man.write_text(json.dumps({"windows": [{"row": int(r)} for r in range(0, fx.rows, 7)]}))
-    monkeypatch.setenv("E2E_WINDOWS_MANIFEST", str(man))
+    fx_rows = np.arange(0, fx.rows, 7, dtype=np.int64)
+    monkeypatch.setattr(train, "_e2e_window_rows", lambda: (fx_rows, "f" * 64, "fixture"))
     monkeypatch.setattr(ms.MotionMeta, "load", staticmethod(lambda root: _FixMeta(fx.table)))
     monkeypatch.setattr(ms, "MotionStore", _FixStore)
     cfg.checkpoint_dir.mkdir(parents=True)

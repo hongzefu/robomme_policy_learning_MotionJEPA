@@ -101,14 +101,13 @@ def _e2e_motion_gate(mcfg, mmeta) -> None:
     if mcfg.get("readout") != pm.E2E_READOUT:
         raise ValueError(f"motion.readout={mcfg.get('readout')!r} != {pm.E2E_READOUT!r}（wan_e2e）")
     prov = mmeta.provenance
-    if prov.get("table_kind") != pm.E2E_TABLE_KIND:
-        raise ValueError(f"wan_e2e 只与 table_kind={pm.E2E_TABLE_KIND!r} 的表配对，store provenance.table_kind="
+    if prov.get("table_kind") != ms.E2E_TABLE_KIND:
+        raise ValueError(f"wan_e2e 只与 table_kind={ms.E2E_TABLE_KIND!r} 的表配对，store provenance.table_kind="
                          f"{prov.get('table_kind')!r}")
-    if mmeta.raw.get("layout") != pm.E2E_LAYOUT:
-        raise ValueError(f"wan_e2e 分支的 motion store layout={mmeta.raw.get('layout')!r} != {pm.E2E_LAYOUT!r}")
-    got_dt = getattr(mmeta.spec, "dtype", None)
-    if got_dt is None or np.dtype(got_dt) != np.dtype(ml_dtypes.bfloat16):
-        raise ValueError(f"wan_e2e 分支的 motion store dtype={got_dt!r} != bfloat16")
+    if mmeta.raw.get("layout") != ms.LAYOUT_RAW9BF16:
+        raise ValueError(f"wan_e2e 分支的 motion store layout={mmeta.raw.get('layout')!r} != {ms.LAYOUT_RAW9BF16!r}")
+    if mmeta.spec.np_dtype != np.dtype(ml_dtypes.bfloat16):
+        raise ValueError(f"wan_e2e 分支的 motion store dtype={mmeta.spec.dtype!r} != bfloat16")
     if tuple(mmeta.spec.row_shape) != tuple(pm.E2E_RAW_ROW_SHAPE):
         raise ValueError(f"wan_e2e 分支的 motion store row_shape={tuple(mmeta.spec.row_shape)} != {pm.E2E_RAW_ROW_SHAPE}")
     if mcfg.get("tokens_per_window") is not None:
