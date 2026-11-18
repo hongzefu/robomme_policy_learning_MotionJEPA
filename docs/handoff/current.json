@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-16T20:14:34Z",
-    "america_new_york": "2026-11-16T15:14:34-0500"
+    "utc": "2026-11-18T00:14:22+00:00",
+    "america_new_york": "2026-11-17T19:14:22-05:00"
   },
   "repo": {
     "branch": "v4.2-plswap-full",
@@ -2457,8 +2457,8 @@
         "sha": "d654df8"
       },
       "state": "running",
-      "state_changed_at": "2026-11-12T12:27:04Z",
-      "state_reason": "2026-11-14 18:03 美东中途快照：ctx512 第 22800 步（9.5 s/步，估 11-17 16:30 完成），已落盘 ckpt 5000/10000/15000/20000；ctx1024 第 15400 步（13.7 s/步，估 11-20 06:30 完成），已落盘 ckpt 5000/10000/15000。两条都无报错。中间 ckpt 路径与用法见 docs/training-doc/<run>/interim-1114.md（其他 agent 引用入口）。",
+      "state_changed_at": "2026-11-18T00:14:22+00:00",
+      "state_reason": "2026-11-17 美东 19:15：ctx512 训练 50000 步完成（EXIT_CODE=0，10 份 ckpt 齐，nonfinite=0，result.md 已写）；占位 65943150 不 scancel、转交 1116 计划 692 局评估（评估链 g4c-ev512-chain 18:39 起正式评估）。ctx1024 训练进行中，估 11-20 约 06:00 完成。",
       "owner": {
         "session": "Claude Code 会话（sled-aspen，本仓库主检出）",
         "host": "sled-aspen"
@@ -2467,9 +2467,9 @@
       "pre_handoff": [
         {
           "what": "ctx512 训练完成",
-          "evidence": "",
+          "evidence": "TRAIN_DONE=PASS run=v2-1600ep-m8x8-ctx-b128-50k-gl steps=50000 ckpts=10 nonfinite=0 exit=0；EXIT_CODE=0",
           "where": "<GL_REPO>/v1-store/logs/v2-1600ep-m8x8-ctx-b128-50k-gl.log",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "ctx1024 训练完成",
@@ -2478,7 +2478,7 @@
           "status": "pending"
         },
         {
-          "what": "两份占位 scancel、两份 result.md 已提交",
+          "what": "两份 result.md 已提交；占位转交 1116 计划 692 局评估（评估通过且 new_errors=0 后由评估任务 scancel）",
           "evidence": "",
           "where": "docs/training-doc/",
           "status": "pending"
@@ -2486,13 +2486,6 @@
       ],
       "long_tail": [],
       "running_handles": [
-        {
-          "tmux": "g4c-train-512",
-          "jobid": "65943150",
-          "node": "gl1513",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/v2-1600ep-m8x8-ctx-b128-50k-gl.log",
-          "done_line": "EXIT_CODE=0"
-        },
         {
           "tmux": "g4c-train-1024",
           "jobid": "65943151",
