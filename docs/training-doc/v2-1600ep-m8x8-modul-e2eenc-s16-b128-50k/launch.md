@@ -72,3 +72,19 @@
 
 ## 本轮 tmux 会话清单
 e2e-export、e2e-g1、e2e-h5fetch、e2e-g9、e2e-g0、e2e-g3-a01、e2e-g4-a01、e2e-g4-a02（挂死，已 kill-session 并按 PID 清理）、e2e-g1g3-r2、e2e-memdiag-a01、e2e-memdiag-a02、e2e-g4-a03、e2e-benchckpt-a01
+
+## G6 / G5b / G5 与 F3、F4（2026-11-18 美东凌晨）
+- G6（v1-store/logs/e2e-benchckpt-a01.log，488d2eb，XLA_MEM_FRACTION=0.90，prefetch=2，num_workers=16）：
+  - `BENCH300=PASS s_per_step=1.1166 limit=2.27 dl_wait_frac=0.0647 window=steps_50_240`
+  - `GPU_UTIL=PASS util_mean=99.22 limit=85`
+  - `GPU_PEAK=PASS peak_gb=18.40 limit=72`
+  - `SMOKE_CKPT=PASS step=250 updates_after=49 bytes=11960266502`
+  - `SHM_PEAK=DEFERRED reason=user_2026-11-18_formal_first2000`
+  - `G6=PASS pathcfg_sha=d89d7351db6c31cb plan=benchckpt`
+  - 外推 50,001 步 × 1.1166 s ≈ 15.5 h（Wan-9 1.133 s/步、16 h）。
+- G5b（a01 全片 check_checkpoint None 叶 AttributeError → F3；a02 一片被 run_shard 归属检查误杀 → F4；a03 PASS，v1-store/logs/e2e-g5b-a03.log）：
+  - `EVAL692_PLAN_IDENTITY=PASS manifest_sha=2d594d715b77d409 shards=32 union=692 per_group=14/14`
+  - `E2E_ONLINE_PERF=PASS p95_ms=508.7 shards_per_gpu=4 peak_gb=77.38`（infer_p50 342.9 ms；最重 4 局墙钟 968–1043 s；motion_downsample 0）→ 评估按 32 片、每卡 4 片、EVAL_MEM_FRACTION=0.2。
+- F3（60e9b60 → ca98ad2）：check_checkpoint 参数树比对两侧剔除 None 叶；真实 e2e-smoke20/19 `PARAM_TREE_EXACT=PASS n_model=75 n_ckpt=75 missing=0 extra=0 shape_mismatch=0 none_leaves_model=7 none_leaves_ckpt=7`。
+- F4（2ad7c46 → ba6a264）：run_shard.sh 归属检查对「回溯失败且 /proc 已无」的已退出进程不再判外来（存活外来进程仍拒）；local_692_pool_e2e.sh run_slot 先登记后 exec 起跑。三次合并后审查 POST_MERGE_REVIEW=PASS（135 passed）。旧 local_692_pool.sh 未改。test_s3_eval_local.py c4/c5/c7 基线即失败（夹具仍按 10 片/每卡 2 片），未改。
+- G5（v1-store/logs/e2e-g5-a01.log，GPU1 策略 + GPU2 sidecar）：`TIC_ACCEPTANCE_COVERAGE=PASS tasks=4/4 max_visible_k=141 long_c_env=1151/1151`；逐步 obs_mis=0、act T==I True（进行中，判定行待补）。
