@@ -78,7 +78,9 @@ class TransformedDataset(Dataset[T_co]):
         shape = getattr(self._dataset, "raw9_motion_shape", None)
         if shape is None:
             return [self[i] for i in indices]
-        tensor, buf = _shared_empty((len(indices),) + tuple(shape), np.dtype(np.float32))
+        # dtype 随表：wan_raw9 为 f32（缺省）；wan_e2e（1117 计划）为 bf16 (B,1440,16384)，只搬运字节、不转换（R9）
+        dtype = np.dtype(getattr(self._dataset, "raw9_motion_dtype", np.float32))
+        tensor, buf = _shared_empty((len(indices),) + tuple(shape), dtype)
         items = []
         for j, i in enumerate(indices):
             item = self._transform(self._dataset.getitem_into(i, buf[j]))

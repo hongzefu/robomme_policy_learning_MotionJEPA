@@ -1,0 +1,52 @@
+# modulation 8×8 开启 motion，motion 来源是端到端训练的 Wan latent encoder（E2E-Enc，计划 1117-e2e-enc-train-plan.html 一节 YAML 行）：
+# 数据侧每槽送 9 个 bf16 raw latent（步长 16 新表 motion-raw9bf16-grid16-demopad17-v1），模型内 reshape 为 (b·160,9,16384)
+# 过 encoder（结构按 MotionJEPA d3213de，深度 encoder.layers）得到每槽 768 维，再走与 MotionMEM 相同的 motion_encoder_static。
+# 由 perceptual-framesamp-modul-8frame-8x8-motion.yaml 复制：改 store_path、去掉 source_run、加 encoder_kind / readout /
+# raw_dim / latents_per_window / encoder 节；不写 tokens_per_window（槽数 = budget = 160）；其余键逐值不变。
+budget: 512
+num_views: 1
+token_per_image: 64
+streaming_obs_horizon: 16
+pool_type: mean
+use_pos_emb: true
+use_state_emb: false
+memory_feature:
+  img:
+    net: identity
+    input_dim: 2048
+  pos:
+    input_dim: 768
+    hidden_dim: 768
+  state:
+    input_dim: 8
+    hidden_dim: 512
+integration_type: modulation
+memory_token_dim: 1024
+representation_type: perceptual
+perceptual_memory:
+  type: frame_sampling
+motion:
+  enabled: true
+  dim: 768                  # encoder 输出维（每槽一个 768 维向量，与 MotionMEM 同）
+  budget: 160               # 槽数（窗数）。模型语义参数，训练、评估与在线侧必须一致；超限直接报错。
+  demo_min_real_frames: 17
+  demo_tail_pad: repeat_last
+  stride: 16
+  window_frames: 33
+  window_direction: forward
+  grid_origin: segment_start
+  store_path: v1-store/datasets/4task-v2-1600ep-604f16da/motion-wan-raw9-s16
+  encoder_kind: wan_e2e
+  readout: wan_e2e_enc768_s16_v1
+  raw_dim: 16384            # 单个 latent (16,32,32) C→H→W 展平后的维数
+  latents_per_window: 9     # 每槽 latent 数；传输长度 = budget × latents_per_window = 1440
+  encoder:
+    layers: 1               # 深度是配置项（2026-11-17 用户改定为 1；G1 第二次对拍与 G3 测试脚本内临时用 8）
+    width: 768
+    heads: 12
+    mlp_ratio: 4            # SwiGLU 实际隐层以 d3213de 的 2048 为准
+    dropout: 0.0
+    norm: vae_config        # 标准化常数取 Wan VAE config 的 latents_mean / latents_std（D1）
+  pos_dim: 256
+  frame_size: 256
+  online_gpu: 4             # 只供在线 sidecar 使用，训练不读取。

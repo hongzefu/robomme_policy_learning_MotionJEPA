@@ -44,6 +44,7 @@ from mme_vla_suite.datastore import (
 )
 from mme_vla_suite.datastore import motion_store as ms
 from mme_vla_suite.shared import wan_raw9 as wr
+from mme_vla_suite.models.representation import percep_mem as _pm
 from mme_vla_suite.shared.sampling import MEM_ORDER_SENTINEL, even_sampling_indices, memory_order, pad_times
 
 logger = logging.getLogger(__name__)
@@ -107,11 +108,20 @@ class FrameSampDataset(Dataset):
         # wan_raw9 分支（计划 1112 §3.2）：每窗 9 个 token、行形状 (9,16,32,32)、步长由表 meta 给出；
         # 旧两 kind（未写 encoder_kind / wan_fixedpool768）走下面原语句，逐字不变
         self._motion_raw9 = bool(self._motion_enabled and mcfg.get("encoder_kind", None) == wr.RAW9_ENCODER_KIND)
+        # E2E 分支（1117 计划一节 framesamp_dataset 行）：判定排在 768 分支之前——e2e YAML 也是 dim 768 / stride 16，
+        # 不先分出来会静默通过 768 分支校验并按 768 表取数
+        self._motion_e2e = bool(self._motion_enabled and _pm.is_e2e(mcfg))
+        if self._motion_e2e:
+            _req(int(mcfg.dim) == ms.MOTION_ROW_SHAPE[0], f"motion.dim={mcfg.dim} != {ms.MOTION_ROW_SHAPE[0]}（wan_e2e encoder 输出维）")
+            _req(int(mcfg.get("raw_dim", -1)) == _pm.E2E_RAW_DIM, f"motion.raw_dim={mcfg.get('raw_dim')} != {_pm.E2E_RAW_DIM}（wan_e2e）")
+            _req(int(mcfg.get("latents_per_window", -1)) == _pm.E2E_LATENTS_PER_WINDOW,
+                 f"motion.latents_per_window={mcfg.get('latents_per_window')} != {_pm.E2E_LATENTS_PER_WINDOW}（wan_e2e）")
+            _req(mcfg.get("tokens_per_window", None) is None, "wan_e2e 不得写 motion.tokens_per_window（槽数 = budget）")
         if self._motion_raw9:
             _req(int(mcfg.dim) == wr.RAW9_TOKEN_DIM, f"motion.dim={mcfg.dim} != {wr.RAW9_TOKEN_DIM}（wan_raw9）")
             _req(int(mcfg.get("tokens_per_window", 1)) == wr.RAW9_TOKENS_PER_WINDOW,
                  f"motion.tokens_per_window={mcfg.get('tokens_per_window', 1)} != {wr.RAW9_TOKENS_PER_WINDOW}（wan_raw9）")
-        if self._motion_enabled and not self._motion_raw9:
+        if self._motion_enabled and not self._motion_raw9 and not self._motion_e2e:
             _req(int(mcfg.dim) == ms.MOTION_ROW_SHAPE[0], f"motion.dim={mcfg.dim} != {ms.MOTION_ROW_SHAPE[0]}")
         if self._motion_enabled:
             _req(int(mcfg.budget) >= 16 and int(mcfg.budget) % 16 == 0,
@@ -119,7 +129,7 @@ class FrameSampDataset(Dataset):
             _req(int(mcfg.pos_dim) == int(hc.memory_feature.pos.input_dim) // 3,
                  f"motion.pos_dim={mcfg.pos_dim} != pos.input_dim // 3 = {int(hc.memory_feature.pos.input_dim) // 3}")
             _req(int(mcfg.stride) >= 1, f"motion.stride={mcfg.stride} < 1")
-            if not self._motion_raw9:   # raw9 的步长闸在 MotionMeta.load 之后对表 meta 比（见下方 motion store 段）
+            if not (self._motion_raw9 or self._motion_e2e):   # raw9 / e2e 的步长闸在 MotionMeta.load 之后对表 meta 比
                 _req(int(mcfg.stride) == ms.GRID_STRIDE, f"motion.stride={mcfg.stride} != motion store GRID_STRIDE {ms.GRID_STRIDE}")
             _req(int(mcfg.window_frames) == ms.WINDOW_FRAMES, f"motion.window_frames={mcfg.window_frames} != {ms.WINDOW_FRAMES}")
             _req(str(mcfg.window_direction) == ms.WINDOW_DIRECTION, f"motion.window_direction={mcfg.window_direction!r}")
@@ -171,7 +181,7 @@ class FrameSampDataset(Dataset):
         if self._motion_enabled:
             self._motion_root = pathlib.Path(motion_root)
             self._motion_meta = ms.MotionMeta.load(self._motion_root)
-            if self._motion_raw9:
+            if self._motion_raw9 or self._motion_e2e:
                 # 步长与行形状以表 meta 为准（S1：LayoutSpec.grid_stride / row_shape），与 yaml 互校
                 got_spec = self._motion_meta.spec
                 _req(int(mcfg.stride) == int(got_spec.grid_stride),
@@ -195,6 +205,13 @@ class FrameSampDataset(Dataset):
             self._motion_pos_dim = int(mcfg.pos_dim)
             self._motion_tokens = wr.motion_token_budget(mcfg)          # token 数 T = budget × tokens_per_window
             self._motion_dim = int(mcfg.dim)
+            if self._motion_e2e:
+                # L1 预分配与 getitem_into 用：(budget·9, 16384)，dtype 随表（bf16；R9：数据集内不做 dtype 转换）。
+                # _motion_tokens / _motion_dim 仍为 160 / 768，用于槽数、pos 与 mask
+                self._motion_lpw = int(mcfg.latents_per_window)
+                self._motion_raw_dim = int(mcfg.raw_dim)
+                self.raw9_motion_shape = (self._motion_budget * self._motion_lpw, self._motion_raw_dim)
+                self.raw9_motion_dtype = self._motion_meta.spec.np_dtype           # 布局 dtype（S2：bf16）
             if self._motion_raw9:
                 # S5-L1：TransformedDataset.__getitems__ 据此在共享内存里整批预分配 motion_emb、逐样本 getitem_into 直接填
                 self.raw9_motion_shape = (self._motion_tokens, self._motion_dim)
@@ -309,6 +326,52 @@ class FrameSampDataset(Dataset):
         times = pad_times(frames, B)
         return out_emb, out_pos, mask, times
 
+    def _pad_motion_meta(self, pos, frames, k: int):
+        """运动路右填充的不含 emb 部分（与 ``_pad_motion`` 同一规则：k > 预算即 raise；pos f32 零填充、mask、哨兵时刻）。"""
+        B = self._motion_budget
+        if k > B:
+            raise ValueError(f"合法 motion 起点数 {k} > motion.budget {B}（零截断契约被破坏）")
+        out_pos = np.zeros((B,) + pos.shape[1:], dtype=np.float32)
+        out_pos[:k] = pos
+        mask = np.zeros(B, dtype=np.bool_)
+        mask[:k] = True
+        times = pad_times(frames, B)
+        return out_pos, mask, times
+
+    def _fill_motion_e2e(self, entry, step: int, mstore, store, frames_arr: np.ndarray, out_emb=None):
+        """wan_e2e 运动路（1117 计划一节 framesamp_dataset 行）。
+
+        可见窗、pos 起始帧、mask、排序与 768 路径同式（visible_motion_rows、pos 取窗起点帧第 0 行前 pos_dim 维、
+        memory_order），但不经 ``_pad_motion``（它固定 float32）：k 个可见窗的表行 (k,9,16,32,32) 由 ``mstore.rows_into``
+        按布局 dtype（bf16）原样写进 (budget·9, 16384) 的前 k·9 行，尾部显式清零——数据集内不做任何 dtype 转换（R9）。
+        返回 (motion_emb (budget·9,16384) 表 dtype, motion_pos (budget,pos_dim) f32, motion_mask (budget,) bool,
+        mem_order (512+budget,) int32)。``out_emb`` 给定时直接写进它（L1 预分配槽位），并以它交付。
+        """
+        rows_m, f_m = ms.visible_motion_rows(entry, step)
+        k = int(len(rows_m))
+        if k > self._motion_budget:     # 零截断契约按窗计（__init__ 已按全量 index 预检）
+            raise ValueError(
+                f"g={entry.g} t={step} 合法 motion 窗数 {k} > motion.budget {self._motion_budget}（零截断契约被破坏）")
+        shape = tuple(self.raw9_motion_shape)
+        dt = self.raw9_motion_dtype
+        n = k * self._motion_lpw
+        if out_emb is None:
+            out_emb = np.zeros(shape, dtype=dt)
+        else:
+            if (out_emb.shape != shape or out_emb.dtype != dt
+                    or not out_emb.flags["C_CONTIGUOUS"] or not out_emb.flags["WRITEABLE"]):
+                raise ValueError(f"out_emb 须为 C 连续可写 {shape} {dt}，得到 "
+                                 f"{out_emb.shape} {out_emb.dtype} flags={out_emb.flags}")
+            out_emb[n:] = 0                              # 尾部 padding 显式清零（不依赖缓冲初值）
+        if k:
+            mstore.rows_into(rows_m, out_emb[:n].reshape((k,) + tuple(_pm.E2E_RAW_ROW_SHAPE)))
+            mpos = np.ascontiguousarray(store.pos_rows(f_m)[:, 0, : self._motion_pos_dim])
+        else:
+            mpos = np.zeros((0, self._motion_pos_dim), np.float32)
+        mpos, mmask, mtimes = self._pad_motion_meta(mpos, f_m, k)
+        ftimes = pad_times(frames_arr, self._max_frames)
+        return out_emb, mpos, mmask, memory_order(ftimes, self._tokens_per_frame, mtimes)
+
     def _fill_motion_raw9(self, entry, step: int, mstore, store, frames_arr: np.ndarray, out_emb=None):
         """wan_raw9 运动路（计划 1112 §3.2、§1.0 C-B / C-τ；L0 预分配实现）。
 
@@ -359,8 +422,8 @@ class FrameSampDataset(Dataset):
 
     def getitem_into(self, idx, motion_emb_out: np.ndarray):
         """S5-L1：同 ``__getitem__``，但 raw9 的 motion_emb 直接写进调用方给的 (T,16384) f32 槽位并以它交付。"""
-        if not self._motion_raw9:
-            raise ValueError("getitem_into 只用于 wan_raw9 配置")
+        if not (self._motion_raw9 or self._motion_e2e):
+            raise ValueError("getitem_into 只用于 wan_raw9 / wan_e2e 配置")
         return self._getitem(idx, motion_emb_out)
 
     def _getitem(self, idx, motion_emb_out):
@@ -408,6 +471,12 @@ class FrameSampDataset(Dataset):
             (data["motion_emb"], data["motion_pos"], data["motion_mask"],
              data["mem_order"]) = self._fill_motion_raw9(self._motion_entries[g], step, mstore, store, frames_arr,
                                                         out_emb=motion_emb_out)
+        elif self._motion_e2e:
+            # wan_e2e：k 窗 → (k·9,16384) bf16 原字节，右填充到 budget·9；pos/mask/mem_order 按 160 槽（_fill_motion_e2e）
+            mstore = self._ensure_motion_store()
+            (data["motion_emb"], data["motion_pos"], data["motion_mask"],
+             data["mem_order"]) = self._fill_motion_e2e(self._motion_entries[g], step, mstore, store, frames_arr,
+                                                       out_emb=motion_emb_out)
         elif self._motion_enabled:
             # ①′ 起点集合（段内绝对网格、前视 33 帧、尾端 ≤ 当前帧；三侧同式 visible_motion_rows）
             entry = self._motion_entries[g]

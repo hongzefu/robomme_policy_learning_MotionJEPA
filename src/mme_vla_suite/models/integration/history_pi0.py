@@ -24,6 +24,7 @@ from mme_vla_suite.models.integration.history_observation import (
 from mme_vla_suite.models.integration import history_gemma as _gemma
 from mme_vla_suite.models.config.utils import get_history_config
 from mme_vla_suite.shared.wan_raw9 import motion_token_budget
+from mme_vla_suite.models.representation.percep_mem import is_e2e as _is_e2e, e2e_slot_latents as _e2e_slot_latents
 
 
 logger = logging.getLogger("history-pi0")
@@ -84,8 +85,14 @@ def _motion_specs(history_config, batch_size: int) -> dict:
     m = history_config.motion
     # token 长度 T = motion.budget（窗数）× tokens_per_window，统一由 motion_token_budget 计算；旧 yaml 下 T == budget
     T = motion_token_budget(m)
+    if _is_e2e(m):
+        # E2E（1117 计划一节形状方案）：motion_emb 为 (b, budget·9, 16384) bf16 原字节（R9：数据通路不转换），
+        # 槽数 T_slots = budget = 160；pos / mask / mem_order 仍按 160 槽
+        emb = jax.ShapeDtypeStruct([batch_size, _e2e_slot_latents(m), int(m.raw_dim)], jnp.bfloat16)
+    else:
+        emb = jax.ShapeDtypeStruct([batch_size, T, int(m.dim)], jnp.float32)
     return {
-        "motion_emb": jax.ShapeDtypeStruct([batch_size, T, int(m.dim)], jnp.float32),
+        "motion_emb": emb,
         "motion_pos": jax.ShapeDtypeStruct([batch_size, T, int(m.pos_dim)], jnp.float32),
         "motion_mask": jax.ShapeDtypeStruct([batch_size, T], jnp.bool_),
         "mem_order": jax.ShapeDtypeStruct([batch_size, int(history_config.budget) + T], jnp.int32),
@@ -343,8 +350,10 @@ class HistoryPi0(BaseModel):
         if obs.motion_emb is None or obs.motion_pos is None or obs.motion_mask is None or obs.mem_order is None:
             raise ValueError("motion.enabled=true 但 observation 缺 motion_emb / motion_pos / motion_mask / mem_order")
         n_tok = int(self.mem_encoder.motion_tokens)                 # = budget × tokens_per_window（旧 yaml 同 budget）
-        if obs.motion_emb.shape[1] != n_tok:
-            raise ValueError(f"motion_emb.shape[1]={obs.motion_emb.shape[1]} != motion token 数 {n_tok}")
+        # motion_emb 第 1 维：非 E2E 等于 token 数；E2E 为 budget × latents_per_window（1440），T_slots 仍为 n_tok=160
+        n_emb = int(self.mem_encoder.motion_emb_len)
+        if obs.motion_emb.shape[1] != n_emb:
+            raise ValueError(f"motion_emb.shape[1]={obs.motion_emb.shape[1]} != motion_emb 长度 {n_emb}（token 数 {n_tok}）")
         input_mask = jnp.concatenate([obs.static_mask, obs.motion_mask], axis=1)
         # 形状闸：长度写错时 take_along_axis 不报错，会静默把记忆段截成 mem_order 的长度；越界与非置换的守卫在 dataloader 侧
         if not (obs.mem_order.shape[1] == tokens.shape[1] == input_mask.shape[1]):

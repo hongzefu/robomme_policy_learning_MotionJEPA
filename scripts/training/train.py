@@ -154,6 +154,19 @@ def init_history_config(config: _config.TrainConfig, resolved_history_config=Non
                     "readout": mm.provenance["readout"],
                     "raw9_source_sha256": mm.provenance["raw9_source_sha256"],
                 })
+            elif kind == "wan_e2e":
+                # E2E 分支（1117 计划一节 train.py 行）：表无 encoder（encoder 写 null），表身份取 table_kind；
+                # 策略内 encoder 的身份写 policy_encoder（20,252,928 只出现在这里，不与表的 parameter_count 0 混用）
+                from mme_vla_suite.models.representation import percep_mem as _pm
+                prov.update({
+                    "encoder": None,
+                    "encoder_kind": _pm.E2E_ENCODER_KIND,
+                    "readout": mcfg.get("readout"),
+                    "table_kind": mm.provenance["table_kind"],
+                    "raw9_source_sha256": mm.provenance["raw9_source_sha256"],
+                    "policy_encoder": {"init": "random", "trainable": True, "layers": int(mcfg.encoder.layers),
+                                       "parameter_count": _pm.E2E_POLICY_ENCODER_PARAMS, "spec_src": _pm.E2E_SPEC_SRC},
+                })
             elif kind == "wan_fixedpool768":
                 # 池化分支（1108 计划 1.1 第 5 行）：encoder 块写 null，另记 kind / readout / 池化源码摘要；
                 # 三键只在此分支出现，encoder 分支与 closed run 的键集合与字节不变。
@@ -353,6 +366,8 @@ def train_step(
         info["mem_enc_norm"] = optax.global_norm(grads.mem_encoder)
     if _raw9_diag_enabled(config):
         info.update(_motion_diag_info(model, grads))
+    if _e2e_diag_enabled(config):
+        info.update(_e2e_diag_info(grads, updates, params, info["grad_norm"]))
 
     return new_state, info
 
@@ -365,6 +380,164 @@ def _raw9_diag_enabled(config) -> bool:
     hc = getattr(config.model, "history_config", None)
     mcfg = getattr(hc, "motion", None) if hc is not None and not isinstance(hc, str) else None
     return bool(mcfg is not None and mcfg.get("enabled", False) and mcfg.get("encoder_kind") == "wan_raw9")
+
+
+def _e2e_diag_enabled(config) -> bool:
+    """E2E 诊断键（1117 计划一节 train.py 行）：只在 motion.encoder_kind == "wan_e2e" 时加（Python 级 if，编译期常量）；
+    其余 run 的 info 键集合逐字不变。"""
+    if not getattr(config.model, "use_history", False):
+        return False
+    hc = getattr(config.model, "history_config", None)
+    mcfg = getattr(hc, "motion", None) if hc is not None and not isinstance(hc, str) else None
+    return bool(mcfg is not None and mcfg.get("enabled", False) and mcfg.get("encoder_kind") == "wan_e2e")
+
+
+def _e2e_subtree(state):
+    """从 (梯度 / 更新 / 参数) State 中取 encoder 子树；不存在时返回 None。"""
+    from mme_vla_suite.models.representation.percep_mem import E2E_ENCODER_ATTR
+    try:
+        return state["mem_encoder"][E2E_ENCODER_ATTR]
+    except (KeyError, AttributeError, TypeError):
+        return None
+
+
+def _e2e_diag_info(grads, updates, params, gnorm) -> dict:
+    """encoder 子树按其顶层子模块分组的梯度范数（输入投影 / 各块 / 最终归一化 / 输出投影，组名取 S1 的属性名）、
+    encoder 整体梯度范数、update/param 比、全局裁剪系数 min(1, 1/gnorm) 与排除 encoder 子树后的对照裁剪系数。
+    「排除 encoder」只是同一 E2E 梯度下去掉该组的对照，不是历史 MotionMEM 的真实裁剪轨迹。"""
+    g = _e2e_subtree(grads)
+    if g is None:
+        return {}
+    out = {}
+    for name in sorted(g.keys(), key=str):
+        out[f"e2e_enc_grad_norm/{name}"] = optax.global_norm(g[name])
+    g_enc = optax.global_norm(g)
+    out["e2e_enc_grad_norm"] = g_enc
+    u, p = _e2e_subtree(updates), _e2e_subtree(params)
+    if u is not None and p is not None:
+        out["e2e_enc_update_param_ratio"] = optax.global_norm(u) / (optax.global_norm(p) + 1e-12)
+    out["clip_coef"] = jnp.minimum(1.0, 1.0 / (gnorm + 1e-12))
+    g_ex = jnp.sqrt(jnp.maximum(gnorm ** 2 - g_enc ** 2, 0.0))
+    out["clip_coef_ex_enc"] = jnp.minimum(1.0, 1.0 / (g_ex + 1e-12))
+    return out
+
+
+# ── E2E 诊断生产者（1117 计划一节 train.py 行、RB-F2）──────────────────────────────────────────────
+_E2E_CLIP_KEYS = ("grad_norm", "clip_coef", "clip_coef_ex_enc", "e2e_enc_grad_norm")
+E2E_TOKEN_STATS_EVERY = 100
+
+
+def _e2e_diag_dir(config) -> pathlib.Path:
+    d = pathlib.Path(str(config.checkpoint_dir)) / "diagnostics"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _e2e_write_clip_steps(diag_dir: pathlib.Path, steps: list, infos: list) -> None:
+    """逐步写裁剪系数（每步一行，不靠 log_interval 均值）：diagnostics/clip_steps.jsonl。"""
+    if not steps:
+        return
+    rows = jax.device_get([{k: info[k] for k in _E2E_CLIP_KEYS if k in info} for info in infos])
+    with (diag_dir / "clip_steps.jsonl").open("a") as f:
+        for st, row in zip(steps, rows):
+            f.write(json.dumps({"step": int(st), **{k: float(v) for k, v in row.items()}}) + "\n")
+
+
+def _e2e_window_rows() -> tuple[np.ndarray, str, str]:
+    """固定窗口清单（S1 ``scripts/training/g0/e2e_windows_v1.json``，经其 ``load_manifest`` 校验提交 sha256）
+    → (表行号 ``table_row`` 数组, 清单 sha256, 清单路径)。s16 新表与 768 表同一行序。"""
+    import importlib.util
+    mod_path = pathlib.Path(__file__).resolve().parent / "g0" / "e2e_windows_v1.py"
+    spec = importlib.util.spec_from_file_location("e2e_windows_v1_for_train", str(mod_path))
+    W = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(W)
+    manifest, sha = W.load_manifest()
+    rows = np.asarray([int(w["table_row"]) for w in manifest["windows"]], dtype=np.int64)
+    return rows, sha, str(W.DEFAULT_MANIFEST)
+
+
+def _e2e_effective_rank(x: np.ndarray) -> float:
+    """有效秩 = 中心化输出奇异值归一化为分布 p 后 exp(−Σ p·log p)（与 e2e_token_rank.py 同定义）。"""
+    xc = x - x.mean(axis=0, keepdims=True)
+    s = np.linalg.svd(xc.astype(np.float64), compute_uv=False)
+    p = s / max(s.sum(), 1e-30)
+    p = p[p > 0]
+    return float(np.exp(-(p * np.log(p)).sum()))
+
+
+def _e2e_encode_rows(train_state, motion_root, rows: np.ndarray, chunk: int = 256) -> np.ndarray:
+    """用 train_state 的参数（步 0 时即初始化参数 = EMA）对表行 (n,9,16,32,32)（表 dtype，bf16）跑 encoder → (n,768) f32。"""
+    from mme_vla_suite.datastore import motion_store as _ms
+    from mme_vla_suite.models.representation.percep_mem import E2E_ENCODER_ATTR, E2E_RAW_ROW_SHAPE
+
+    meta = _ms.MotionMeta.load(motion_root)
+    dt = meta.spec.np_dtype                                   # 布局 dtype（bf16）
+    mstore = _ms.MotionStore(motion_root, meta=meta)
+    graphdef, state = train_state.model_def, train_state.params
+
+    @jax.jit
+    def enc_fn(st, z):
+        model = nnx.merge(graphdef, st)
+        enc = getattr(model.mem_encoder, E2E_ENCODER_ATTR)
+        return enc(z).astype(jnp.float32)
+
+    outs = []
+    try:
+        for i in range(0, len(rows), chunk):
+            r = rows[i:i + chunk]
+            buf = np.empty((len(r),) + tuple(E2E_RAW_ROW_SHAPE), dtype=dt)
+            mstore.rows_into(r, buf)
+            outs.append(np.asarray(enc_fn(state, buf.reshape(len(r), E2E_RAW_ROW_SHAPE[0], -1))))
+    finally:
+        mstore.close()
+    return np.concatenate(outs, axis=0)
+
+
+def _e2e_step0_diagnostics(config, train_state, motion_root) -> pathlib.Path:
+    """初始化时在固定窗口清单上保存步 0 encoder 输出：diagnostics/0.json（统计）+ diagnostics/0.npy（张量）。"""
+    import hashlib
+    rows, man_sha, man = _e2e_window_rows()
+    out = _e2e_encode_rows(train_state, motion_root, rows)
+    d = _e2e_diag_dir(config)
+    np.save(d / "0.npy", out)
+    var = out.var(axis=0)
+    summary = {
+        "step": 0, "params": "init(=ema@0)", "windows": int(len(rows)), "manifest": str(man), "manifest_sha256": man_sha,
+        "motion_root": str(motion_root), "out_shape": list(out.shape),
+        "out_sha256": hashlib.sha256(np.ascontiguousarray(out).tobytes()).hexdigest(),
+        "mean": float(out.mean()), "std": float(out.std()), "rms": float(np.sqrt((out ** 2).mean())),
+        "effective_rank": _e2e_effective_rank(out),
+        "dim_var_mean": float(var.mean()), "dim_var_min": float(var.min()), "dim_var_max": float(var.max()),
+        "finite": bool(np.isfinite(out).all()),
+    }
+    (d / "0.json").write_text(json.dumps(summary, indent=1) + "\n")
+    print(f"E2E_DIAG0 windows={len(rows)} manifest_sha={man_sha[:16]} effective_rank={summary['effective_rank']:.3f} "
+          f"std={summary['std']:.4g} path={d / '0.json'}", flush=True)
+    return d / "0.json"
+
+
+def _e2e_token_stats(train_state, batch) -> dict:
+    """encoder 输出 token 在当前批有效槽上的 mean/std（每 E2E_TOKEN_STATS_EVERY 步一次，主循环调用）。"""
+    from mme_vla_suite.models.representation.percep_mem import E2E_ENCODER_ATTR
+
+    obs = batch[0]
+    graphdef = train_state.model_def
+
+    @jax.jit
+    def f(st, memb, mmask):
+        model = nnx.merge(graphdef, st)
+        me = model.mem_encoder
+        b = memb.shape[0]
+        z = memb.reshape(b * me.motion_tokens, me.motion_lpw, me.motion_emb_dim)
+        y = getattr(me, E2E_ENCODER_ATTR)(z).astype(jnp.float32).reshape(b, me.motion_tokens, -1)
+        w = mmask.astype(jnp.float32)[..., None]
+        n = jnp.maximum(w.sum() * y.shape[-1], 1.0)
+        mean = (y * w).sum() / n
+        var = (((y - mean) ** 2) * w).sum() / n
+        return mean, jnp.sqrt(var)
+
+    mean, std = jax.device_get(f(train_state.params, obs.motion_emb, obs.motion_mask))
+    return {"e2e_enc_out_mean": float(mean), "e2e_enc_out_std": float(std)}
 
 
 def _motion_diag_info(model, grads) -> dict:
@@ -463,8 +636,13 @@ def main(config: _config.TrainConfig):
         action_horizon=config.model.action_horizon,
         batch_size=config.batch_size,
         num_workers=config.num_workers,
-        seed=config.seed
+        seed=config.seed,
+        # R8 (i) 吞吐档：来源只有环境变量 E2E_PREFETCH_FACTOR，未设时传 None（torch 默认 2，行为与原来相同）
+        prefetch_factor=(int(os.environ["E2E_PREFETCH_FACTOR"]) if os.environ.get("E2E_PREFETCH_FACTOR") else None),
     )
+    # G6 读回实际值（未设为 2，退路为 1），防止静默不符；num_workers=0 时 torch 记 None
+    print(f"DATALOADER_PREFETCH_FACTOR={data_loader._data_loader.torch_loader.prefetch_factor} "
+          f"env={os.environ.get('E2E_PREFETCH_FACTOR') or 'unset'} num_workers={config.num_workers}", flush=True)
     data_iter = iter(data_loader)
     batch = next(data_iter)
     logging.info(
@@ -489,6 +667,13 @@ def main(config: _config.TrainConfig):
     logging.info(
         f"Initialized train state:\n{training_utils.array_tree_to_info(train_state.params.filter(nnx.All(nnx.Param)))}"
     )
+    e2e_diag = _e2e_diag_enabled(config)
+    e2e_diag_dir = None
+    if e2e_diag:
+        from mme_vla_suite.training.dataloader import _motion_gates as _mg
+        from mme_vla_suite.datastore import StoreMeta as _SM
+        e2e_diag_dir = _e2e_diag_dir(config)
+        _e2e_step0_diagnostics(config, train_state, _mg(history_config, _SM.load(config.dataset_path)))
 
     ptrain_step = jax.jit(
         functools.partial(train_step, config),
@@ -522,6 +707,7 @@ def main(config: _config.TrainConfig):
         timing = StepTiming(record_root, min(timing_steps, config.num_train_steps - start_step))
 
     infos = []
+    info_steps = []
     try:
         for step in pbar:
             with timing.step(step, flush=lambda: jax.block_until_ready(train_state)) if timing else nullcontext():
@@ -529,8 +715,16 @@ def main(config: _config.TrainConfig):
                     with sharding.set_mesh(mesh):
                         train_state, info = ptrain_step(train_rng, train_state, batch)
                 infos.append(info)
+                info_steps.append(step)
+                if e2e_diag and step % E2E_TOKEN_STATS_EVERY == 0:
+                    ts = _e2e_token_stats(train_state, batch)
+                    with (e2e_diag_dir / "token_stats.jsonl").open("a") as f:
+                        f.write(json.dumps({"step": int(step), **ts}) + "\n")
                 if step % config.log_interval == 0:
                     with timing.phase("logging") if timing else nullcontext():
+                        if e2e_diag:
+                            _e2e_write_clip_steps(e2e_diag_dir, info_steps, infos)
+                        info_steps = []
                         stacked_infos = common_utils.stack_forest(infos)
                         reduced_info = jax.device_get(jax.tree.map(jnp.mean, stacked_infos))
 
@@ -550,6 +744,8 @@ def main(config: _config.TrainConfig):
     finally:
         if timing:
             timing.close()
+        if e2e_diag and info_steps:                 # 末段不足 log_interval 的步也逐步落盘
+            _e2e_write_clip_steps(e2e_diag_dir, info_steps, infos)
 
     logging.info("Waiting for checkpoint manager to finish")
     checkpoint_manager.wait_until_finished()

@@ -86,6 +86,40 @@ def _raw9_motion_gate(mcfg, mmeta) -> None:
         raise ValueError(f"raw9 分支的 motion store layout={mmeta.raw.get('layout')!r} != {ms.LAYOUT_RAW9!r}")
 
 
+def _e2e_motion_gate(mcfg, mmeta) -> None:
+    """E2E 分支（1117 计划一节 dataloader 行）：YAML ``encoder_kind: wan_e2e`` + ``readout: wan_e2e_enc768_s16_v1`` 只与
+    表 ``table_kind: wan_raw_bf16_s16_v1`` 配对；表 layout 为新布局、dtype=bf16、行形状 (9,16,32,32)；YAML 几何一致；
+    不得同时写 source_run。表 provenance 自身的契约已由 MotionMeta.load → check_e2e_table_provenance 校验（S2）。"""
+    import ml_dtypes
+    import numpy as np
+    from mme_vla_suite.models.representation import percep_mem as pm
+
+    if mcfg.get("source_run") is not None:
+        raise ValueError("wan_e2e 分支不得同时写 motion.source_run")
+    if mcfg.get("encoder_kind") != pm.E2E_ENCODER_KIND:
+        raise ValueError(f"motion.encoder_kind={mcfg.get('encoder_kind')!r} != {pm.E2E_ENCODER_KIND!r}")
+    if mcfg.get("readout") != pm.E2E_READOUT:
+        raise ValueError(f"motion.readout={mcfg.get('readout')!r} != {pm.E2E_READOUT!r}（wan_e2e）")
+    prov = mmeta.provenance
+    if prov.get("table_kind") != ms.E2E_TABLE_KIND:
+        raise ValueError(f"wan_e2e 只与 table_kind={ms.E2E_TABLE_KIND!r} 的表配对，store provenance.table_kind="
+                         f"{prov.get('table_kind')!r}")
+    if mmeta.raw.get("layout") != ms.LAYOUT_RAW9BF16:
+        raise ValueError(f"wan_e2e 分支的 motion store layout={mmeta.raw.get('layout')!r} != {ms.LAYOUT_RAW9BF16!r}")
+    if mmeta.spec.np_dtype != np.dtype(ml_dtypes.bfloat16):
+        raise ValueError(f"wan_e2e 分支的 motion store dtype={mmeta.spec.dtype!r} != bfloat16")
+    if tuple(mmeta.spec.row_shape) != tuple(pm.E2E_RAW_ROW_SHAPE):
+        raise ValueError(f"wan_e2e 分支的 motion store row_shape={tuple(mmeta.spec.row_shape)} != {pm.E2E_RAW_ROW_SHAPE}")
+    if mcfg.get("tokens_per_window") is not None:
+        raise ValueError("wan_e2e 分支不得写 motion.tokens_per_window（槽数 = budget）")
+    geom = {"dim": (mcfg.get("dim"), 768), "raw_dim": (mcfg.get("raw_dim"), pm.E2E_RAW_DIM),
+            "latents_per_window": (mcfg.get("latents_per_window"), pm.E2E_LATENTS_PER_WINDOW),
+            "stride": (mcfg.get("stride"), 16)}
+    for key, (got, want) in geom.items():
+        if got is None or int(got) != want:
+            raise ValueError(f"wan_e2e 分支 motion.{key}={got!r} != {want}")
+
+
 def _motion_gates(history_config, frame_meta: StoreMeta) -> str | None:
     """motion.enabled=true 时的 fail-loud 闸：锁 / MotionMeta / verified / stride / 同源 / source_run 绑定；关闭态返回 None 且什么都不读。"""
     mcfg = getattr(history_config, "motion", None) if history_config is not None else None
@@ -105,8 +139,11 @@ def _motion_gates(history_config, frame_meta: StoreMeta) -> str | None:
     kind = mcfg.get("encoder_kind")
     if kind is not None:
         from mme_vla_suite.shared import wan_raw9 as _wr
+        from mme_vla_suite.models.representation import percep_mem as _pm
         if kind == _wr.RAW9_ENCODER_KIND:
             _raw9_motion_gate(mcfg, mmeta)
+        elif kind == _pm.E2E_ENCODER_KIND:
+            _e2e_motion_gate(mcfg, mmeta)
         else:
             _pool_motion_gate(mcfg, mmeta, kind)
         logging.info("motion memory 开启（%s）：store=%s rows=%d manifest=%s…", kind, motion_root, mmeta.num_rows,
@@ -115,6 +152,9 @@ def _motion_gates(history_config, frame_meta: StoreMeta) -> str | None:
     if "encoder_kind" in mmeta.provenance:
         raise ValueError(f"YAML 未写 motion.encoder_kind（encoder 路径），但 motion store 是 "
                          f"{mmeta.provenance['encoder_kind']!r} 池化表")
+    if "table_kind" in mmeta.provenance:
+        raise ValueError(f"YAML 未写 motion.encoder_kind（encoder 路径），但 motion store 是 "
+                         f"{mmeta.provenance['table_kind']!r} 制表（E2E 表只配 encoder_kind=wan_e2e）")
     want = _parse_source_run(str(mcfg.source_run))
     enc = mmeta.provenance.get("encoder", {})
     got = {k: enc.get(k) for k in ("run_name", "checkpoint_name", "epoch", "state_key")}
@@ -182,6 +222,7 @@ def create_data_loader(
     num_batches: int | None = None,
     num_workers: int = 0,
     seed: int = 0,
+    prefetch_factor: int | None = None,
 ) -> DataLoader[tuple[HistAugObservation, _model.Actions]]:
     
     history_config = get_history_config(history_config)
@@ -206,6 +247,7 @@ def create_data_loader(
         num_workers=num_workers,
         seed=seed,
         framework="jax",
+        prefetch_factor=prefetch_factor,       # None 时行为与原来相同（torch 默认 2）；R8 (i) 吞吐档
     )
 
     return DataLoaderImpl(data_config, data_loader)
