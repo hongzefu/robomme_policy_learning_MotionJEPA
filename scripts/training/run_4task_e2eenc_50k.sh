@@ -2,9 +2,14 @@
 # 4task 原训练库 + 端到端训练的 Wan latent encoder（E2E-Enc：步长 16 bf16 raw 表、策略内 1 层 encoder）modulation 50k runner。
 # 依据：根目录 1117-e2e-enc-train-plan.html 第二部分「一」runner 行、「二」S5 行、三节 G0/G4/G6/G7、四节 RB-C1/RB-D1/RB-D2/RB-E2。
 # 由 run_4task_wanraw9s32_50k.sh（c0826be）复制：换 history YAML（…-8x8-e2eenc.yaml）、HC_SHA、motion 表路径（motion-wan-raw9-s16）、
-# run 名与冒烟 / 探测 run 名白名单；G0 常量与收尾断言改 e2e 口径；新增 --shmprobe / --ckptprobe。
+# run 名与冒烟 / 探测 run 名白名单；G0 常量与收尾断言改 e2e 口径；新增 --shmprobe / --ckptprobe / --benchckpt。
 # TrainConfig mme_vla_suite_b128_80k 全部超参不变（R2）：TRAIN_ARGS 的超参类开关只有 --exp-name / --model.history-config /
-# --num_train_steps 三项，路径类参数与 Wan-9 相同；只有 --ckptprobe 追加 --save-interval 50 --keep-period 50（R8 (i) 吞吐/留存档）。
+# --num_train_steps 三项，路径类参数与 Wan-9 相同；只有 --ckptprobe 追加 --save-interval 50 --keep-period 50、
+# --benchckpt 追加 --save-interval 250 --keep-period 250（R8 (i) 吞吐/留存档；只改存盘周期，不改训练语义）。
+# 用户 2026-11-18 美东裁定（原话）：「问题一和三能不能够放在一起来做？然后问题二能不能够在正式起跑的时候再来做，就不要单独跑这个」
+#   → 闸 G6 只跑一次 --benchckpt（① 测速 300 步 + ③ 存 step 250 并读回，合成一次 run）；② /dev/shm 判定不再单独跑 --shmprobe，
+#   改由正式训练期间的 shmmon.sh（tmux e2e-shmmon，--formal-rec）在第 2000 步后打印 SHM_PEAK（见 shmmon.sh 文件头）。
+#   --bench300 / --shmprobe / --ckptprobe 旧模式代码保留可用，闸门表 e2e_trig_gates.sh 不再使用。
 #
 # 用法：
 #   bash run_4task_e2eenc_50k.sh <TRAIN_HEAD 40 位 sha>                                     # 正式 50001 步（最后一份 ckpt 50000）
@@ -12,10 +17,13 @@
 #   bash run_4task_e2eenc_50k.sh <TRAIN_HEAD> --bench300 --run-name e2e-bench-aNN            # 闸 G6 ① 测速 300 步
 #   bash run_4task_e2eenc_50k.sh <TRAIN_HEAD> --shmprobe --run-name e2e-shmprobe-aNN         # 闸 G6 ② 2000 步 + shmmon.sh
 #   bash run_4task_e2eenc_50k.sh <TRAIN_HEAD> --ckptprobe --run-name e2e-ckptprobe-aNN       # 闸 G6 ③ 80 步，存 step 50 并读回
+#   bash run_4task_e2eenc_50k.sh <TRAIN_HEAD> --benchckpt --run-name e2e-benchckpt-aNN       # 闸 G6（现行）：300 步测速 + 存 step 250 / 299
+#     并读回 250/params；测速窗口取第 50–240 步（避开编译与第 250 步存盘）；末段 e2e_g6_judge.py aggregate --plan benchckpt 打印 G6 各行
 #   bash run_4task_e2eenc_50k.sh <任意> --g0-only                                            # 只跑 DATA_LINEAGE 各环（只读）
 #   bash run_4task_e2eenc_50k.sh <任意> [任一模式] [--run-name N] --dry-run                 # 只打印 TRAIN_ARGS 与诊断开关
 #
-# 探测 run 名：三种探测模式必须显式给 --run-name，只接受 ^e2e-(bench|shmprobe|ckptprobe)-a[0-9]{2}$ 且模式与名字一致；
+# 探测 run 名：四种探测模式必须显式给 --run-name，只接受 ^e2e-(bench|shmprobe|ckptprobe|benchckpt)-a[0-9]{2}$ 且模式与名字一致
+#   （--benchckpt 即 ^e2e-benchckpt-a[0-9]{2}$）；
 #   attempt id（aNN）同时绑定 runner 日志、checkpoint、记录目录、shmmon 日志与 G6 证据；本轮日志或 run 目录已存在即拒（重跑递增 NN）。
 # 路径配置摘要 PATHCFG = "prefetch=<E2E_PREFETCH_FACTOR 或 2> compact=off remat=off"（紧凑计算 / remat 尚未实现，恒为 off；
 #   采用 R8 (ii) 档时须先改这里），PATHCFG_SHA = 其 sha256 前 16 位；G6 证据只认与当前摘要相同的尝试。
@@ -28,7 +36,7 @@
 # GPU_PEAK 证据：e2e_g6_judge.py 读日志里的 `DEVICE_PEAK device=<i> peak_bytes_in_use=<n>` 行（由训练进程打印；缺则 GPU_PEAK=FAIL）。
 set -o pipefail                     # 外层记录正常返回和报错的退出码；外部强杀除外。
 
-usage() { printf '用法: %s <TRAIN_HEAD> [--g0-only|--smoke20|--bench300|--shmprobe|--ckptprobe] [--run-name NAME] [--dry-run]\n' "$0" >&2; exit 2; }
+usage() { printf '用法: %s <TRAIN_HEAD> [--g0-only|--smoke20|--bench300|--shmprobe|--ckptprobe|--benchckpt] [--run-name NAME] [--dry-run]\n' "$0" >&2; exit 2; }
 TRAIN_HEAD="${1:-}"; [ -n "$TRAIN_HEAD" ] || usage; shift
 MODE=formal; DRY=0; RUN_NAME=""
 set_mode() { [ "$MODE" = formal ] || { printf '模式互斥：已是 %s，又给了 %s\n' "$MODE" "$1" >&2; exit 2; }; MODE="$1"; }
@@ -39,6 +47,7 @@ while [ $# -gt 0 ]; do
     --bench300) set_mode bench ;;
     --shmprobe) set_mode shmprobe ;;
     --ckptprobe) set_mode ckptprobe ;;
+    --benchckpt) set_mode benchckpt ;;
     --dry-run) DRY=1 ;;
     --run-name) [ $# -ge 2 ] || usage; RUN_NAME="$2"; shift ;;
     *) usage ;;
@@ -60,8 +69,11 @@ fi
 MAIN=/scratch/hongze/robomme_policy_learning_MotionJEPA
 FORMAL_RUN=v2-1600ep-m8x8-modul-e2eenc-s16-b128-50k
 SMOKE_RUN=e2e-smoke20               # 与 check_checkpoint.py RUNS 的冒烟条目同名（step 19）
-BENCH_SKIP=20                       # 测速统计去掉前 20 步（编译）
-PROBE_RE='^e2e-(bench|shmprobe|ckptprobe)-a[0-9]{2}$'
+BENCH_SKIP=20                       # 测速统计去掉前 20 步（编译；--bench300 / --shmprobe / --ckptprobe 旧口径）
+BENCHCKPT_WIN_LO=50                 # --benchckpt 测速窗口：第 50–240 步（含两端），避开编译与第 250 步存盘
+BENCHCKPT_WIN_HI=240
+BENCHCKPT_CKPT=250                  # --benchckpt 读回的中途 checkpoint（其后还有 251..299 共 49 次更新）
+PROBE_RE='^e2e-(bench|shmprobe|ckptprobe|benchckpt)-a[0-9]{2}$'
 EXTRA_ARGS=()
 ATTEMPT=a00
 case "$MODE" in
@@ -69,7 +81,7 @@ case "$MODE" in
     RUN="${RUN_NAME:-$SMOKE_RUN}"; STEPS=20; EXPECT_CKPTS="19"
     [[ "$RUN" =~ ^e2e-smoke20(-a[0-9]{2})?$ ]] || { printf '冒烟 run 名只允许 e2e-smoke20 / e2e-smoke20-aNN，拒绝 %s\n' "$RUN" >&2; exit 2; }
     [[ "$RUN" =~ -(a[0-9]{2})$ ]] && ATTEMPT="${BASH_REMATCH[1]}" ;;
-  bench|shmprobe|ckptprobe)
+  bench|shmprobe|ckptprobe|benchckpt)
     RUN="$RUN_NAME"
     [ -n "$RUN" ] || { printf '%s 模式必须显式给 --run-name e2e-%s-aNN（尝试编号）\n' "$MODE" "$MODE" >&2; exit 2; }
     [[ "$RUN" =~ $PROBE_RE ]] || { printf '探测 run 名必须匹配 %s，拒绝 %s\n' "$PROBE_RE" "$RUN" >&2; exit 2; }
@@ -79,6 +91,9 @@ case "$MODE" in
       bench) STEPS=300; EXPECT_CKPTS="" ;;
       shmprobe) STEPS=2000; EXPECT_CKPTS="" ;;
       ckptprobe) STEPS=80; EXPECT_CKPTS="50 79"; EXTRA_ARGS=(--save-interval 50 --keep-period 50) ;;
+      # train.py 存盘条件：(step % save_interval == 0 且 step > start_step) 或 step == num_train_steps - 1 → 存 250 与 299；
+      # CheckpointManager max_to_keep=1 + keep_period=250：250 % 250 == 0 保留，299 是最新一份 → 收尾断言期望集合恰为 {250, 299}
+      benchckpt) STEPS=300; EXPECT_CKPTS="$BENCHCKPT_CKPT 299"; EXTRA_ARGS=(--save-interval 250 --keep-period 250) ;;
     esac ;;
   *)
     RUN="${RUN_NAME:-$FORMAL_RUN}"; STEPS=50001
@@ -151,7 +166,11 @@ if [ "$DRY" = 1 ]; then
   else
     printf 'DIAG_SWITCH TRAIN_TIMING_STEPS=%s TRAIN_TIMING_PROFILE=%s TRAIN_RECORD_DIR=%s follower=STEP_TIME+DIAG gpu_sample_s=15 LOG=%s shmmon=%s g6_evidence=%s\n' \
       "$TIMING_STEPS" "$TIMING_PROFILE" "$REC" "$LOG" "$([ "$MODE" = shmprobe ] && echo "$SHMMON_LOG" || echo off)" \
-      "$(case "$MODE" in bench|shmprobe|ckptprobe) echo "$G6_DIR/g6-$MODE-$ATTEMPT.json" ;; *) echo off ;; esac)"
+      "$(case "$MODE" in bench|shmprobe|ckptprobe|benchckpt) echo "$G6_DIR/g6-$MODE-$ATTEMPT.json" ;; *) echo off ;; esac)"
+    if [ "$MODE" = benchckpt ]; then
+      printf 'BENCHCKPT bench_window=steps_%s_%s readback_step=%s expect_ckpts=%s judge=aggregate_plan_benchckpt shm=deferred_formal_first2000\n' \
+        "$BENCHCKPT_WIN_LO" "$BENCHCKPT_WIN_HI" "$BENCHCKPT_CKPT" "${EXPECT_CKPTS// /,}"
+    fi
   fi
   exit 0
 fi
@@ -472,6 +491,30 @@ PY
       "${JUDGE[@]}" stage --mode ckptprobe "${STAGE_ARGS[@]}" --run-root "$RUN_ROOT" --wan9-leaves "$WAN9_LEAVES"
       "${JUDGE[@]}" aggregate --pathcfg-sha "$PATHCFG_SHA" --evidence-dir "$G6_DIR"
       exit 0 ;;
+    benchckpt)
+      # SMOKE_CKPT 证据：读回 250/params（不得用最终 ckpt 299 代替），叶数 = Wan-9 叶数 + encoder 叶数。
+      # 读回失败不中止：缺 CKPT250_READBACK 行由 judge 判 SMOKE_CKPT=FAIL，测速证据照落
+      if JAX_PLATFORMS=cpu uv run --no-sync python - "$RUN_ROOT" "$WAN9_LEAVES" "$BENCHCKPT_CKPT" <<'PY'
+import pathlib, sys
+import numpy as np
+import jax, jax.numpy as jnp
+import openpi.models.model as _model
+from mme_vla_suite.models.representation.percep_mem import E2E_ENCODER_ATTR
+run_root, wan9, step = pathlib.Path(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3])
+pdir = run_root / str(step) / "params"
+nbytes = sum(f.stat().st_size for f in pdir.rglob("*") if f.is_file()) if pdir.is_dir() else 0
+params = _model.restore_params(pdir, dtype=jnp.bfloat16)
+flat = jax.tree_util.tree_flatten_with_path(params)[0]
+paths = ["/".join(str(getattr(k, "key", getattr(k, "name", k))) for k in kp) for kp, _ in flat]
+enc = sum(1 for p in paths if E2E_ENCODER_ATTR in p)
+finite = all(bool(np.isfinite(np.asarray(x, dtype=np.float32)).all()) for _, x in flat)
+print(f"CKPT{step}_READBACK step={step} path={pdir} bytes={nbytes} leaves={len(flat)} enc_leaves={enc} wan9_leaves={wan9} finite={int(finite)}", flush=True)
+PY
+      then rb_rc=0; else rb_rc=$?; echo "CKPT${BENCHCKPT_CKPT}_READBACK_EXIT=$rb_rc"; fi
+      if "${JUDGE[@]}" stage --mode benchckpt "${STAGE_ARGS[@]}" --win-lo "$BENCHCKPT_WIN_LO" --win-hi "$BENCHCKPT_WIN_HI" \
+           --ckpt-step "$BENCHCKPT_CKPT" --run-root "$RUN_ROOT" --wan9-leaves "$WAN9_LEAVES"; then stage_rc=0; else stage_rc=$?; fi
+      echo "G6_STAGE_EXIT=$stage_rc"
+      ;;   # 往下走 e2e 收尾断言（checkpoint 集合 {250, 299}、最后一份真实加载），通过后再聚合
   esac
 
   # ── 训练后：checkpoint 齐全 + 真实加载最后一份（G7 / G4），e2e 口径收尾断言 ──
@@ -537,6 +580,11 @@ if smoke:
 else:
     print(f"TRAIN_FINAL_RECORD=PASS step={expect[-1]} ckpts={len(dirs)}", flush=True)
 PY
+  if [ "$MODE" = benchckpt ]; then
+    # G6 聚合（只要求 BENCH300 / GPU_UTIL / GPU_PEAK / SMOKE_CKPT 四项；SHM_PEAK=DEFERRED，改在正式训练前 2000 步判）
+    if "${JUDGE[@]}" aggregate --plan benchckpt --pathcfg-sha "$PATHCFG_SHA" --evidence-dir "$G6_DIR"; then agg_rc=0; else agg_rc=$?; fi
+    [ "$rb_rc" = 0 ] && [ "$stage_rc" = 0 ] && [ "$agg_rc" = 0 ] || exit 1
+  fi
 )
 
 body 2>&1 | tee "$LOG"
