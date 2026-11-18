@@ -531,6 +531,20 @@ def test_g6_failures_and_rules(tmp_path):
     assert "GPU_PEAK=FAIL reason=no_peak_bytes_evidence" in out and re.search(r"^G6=FAIL", out, re.M)
 
 
+def test_g6_stage_fail_not_swallowed_by_items(tmp_path):
+    # bench-a01 阶段因 prefetch 读回不符 FAIL（分项 s/步本身 PASS），shm/ckpt a01 PASS → 聚合必须 G6=FAIL
+    ev = tmp_path / "ev"
+    assert _stage(tmp_path, "bench", "a01", ev, prefetch="1").returncode == 1
+    b = json.loads((ev / "g6-bench-a01.json").read_text())
+    assert b["bench_status"] == "PASS" and b["stage_status"] == "FAIL"
+    assert _stage(tmp_path, "shmprobe", "a01", ev, steps=2000).returncode == 0
+    assert _stage(tmp_path, "ckptprobe", "a01", ev, steps=80).returncode == 0
+    p = _agg(ev)
+    assert p.returncode == 1, p.stdout
+    assert re.search(r"^BENCH300=FAIL s_per_step=2\.0000 limit=2\.27 .*stage_status=FAIL stage_reasons=.*prefetch_factor=1 expect=2", p.stdout, re.M), p.stdout
+    assert re.search(r"^G6=FAIL ", p.stdout, re.M) and not re.search(r"^BENCH300=PASS", p.stdout, re.M)
+
+
 # ── ⑧ shmmon ────────────────────────────────────────────────────────────────
 
 

@@ -276,6 +276,21 @@ def pick(evs: list[dict], mode: str, pathcfg_sha: str) -> dict | None:
     return ok[-1] if ok else (cands[-1] if cands else None)
 
 
+def with_stage(e: dict, key: str, st: str, line: str) -> tuple[str, str]:
+    """分项状态与该尝试的阶段状态取最坏：阶段 FAIL（如 prefetch 读回不符等非分项原因）时分项一律报 FAIL，
+    阶段 ASK 时分项至少 ASK；不让回退选中的未通过尝试的阶段失败被分项 PASS 吞掉。"""
+    stage_st = e.get("stage_status", "FAIL")
+    w = st
+    if stage_st == "FAIL" and st != "FAIL":
+        w = "FAIL"
+    elif stage_st == "ASK" and st not in ("FAIL", "ASK"):
+        w = "ASK"
+    if w == st:
+        return st, line
+    rest = line[len(f"{key}={st}"):] if line.startswith(f"{key}={st}") else " " + line
+    return w, f"{key}={w}{rest} stage_status={stage_st} stage_reasons={e.get('reasons')}"
+
+
 def aggregate(args) -> int:
     ev_dir = pathlib.Path(args.evidence_dir)
     evs = []
@@ -290,7 +305,7 @@ def aggregate(args) -> int:
     if b is None:
         st, line = "FAIL", f"BENCH300=FAIL reason=no_bench_evidence pathcfg_sha={args.pathcfg_sha}"
     else:
-        st, line = b["bench_status"], b["bench_line"] + f" attempt={b['attempt']}"
+        st, line = with_stage(b, "BENCH300", b["bench_status"], b["bench_line"] + f" attempt={b['attempt']}")
     states.append(st); lines.append(line)
     n = sum(chosen[m]["util_n"] for m in ("bench", "shmprobe") if chosen[m])
     tot = sum(chosen[m]["util_sum"] for m in ("bench", "shmprobe") if chosen[m])
@@ -301,7 +316,7 @@ def aggregate(args) -> int:
     if s is None:
         st, line = "FAIL", f"SHM_PEAK=FAIL reason=no_shmprobe_evidence pathcfg_sha={args.pathcfg_sha}"
     else:
-        st, line = s["shm_status"], s["shm_line"] + f" attempt={s['attempt']}"
+        st, line = with_stage(s, "SHM_PEAK", s["shm_status"], s["shm_line"] + f" attempt={s['attempt']}")
     states.append(st); lines.append(line)
     peaks = [chosen[m]["gpu_peak_gb"] for m in MODES if chosen[m] and chosen[m].get("gpu_peak_gb") is not None]
     st, line = gpu_peak_verdict(max(peaks) if peaks else None)
@@ -310,7 +325,7 @@ def aggregate(args) -> int:
     if c is None:
         st, line = "FAIL", f"SMOKE_CKPT=FAIL reason=no_ckptprobe_evidence pathcfg_sha={args.pathcfg_sha}"
     else:
-        st, line = c["ckpt_status"], c["ckpt_line"] + f" attempt={c['attempt']}"
+        st, line = with_stage(c, "SMOKE_CKPT", c["ckpt_status"], c["ckpt_line"] + f" attempt={c['attempt']}")
     states.append(st); lines.append(line)
     for ln in lines:
         print(ln, flush=True)
