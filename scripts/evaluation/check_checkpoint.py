@@ -267,6 +267,19 @@ RUNS = {
 }
 
 
+def drop_none_leaves(expected, actual):
+    """参数树比对前统一剔除值为 None 的叶（nnx.Linear(use_bias=False) 在 nnx 状态里留下 bias=None，orbax 存成 None 叶）。
+    期望侧 None 叶不要求 ckpt 有对应项；ckpt 侧 None 叶必须是期望侧的 None 叶（否则结构不符）。剔除后键集合与形状仍由调用方逐叶严格比对：
+    期望侧为 None 而 ckpt 侧为数组 → ckpt 多出该键（extra）判 FAIL；期望侧为数组而 ckpt 侧为 None → 缺键（missing）判 FAIL。
+    无 None 叶的旧 run 两个字典原样返回，比对逐字不变。返回 (expected, actual, 期望侧 None 叶数, ckpt 侧 None 叶数)。"""
+    none_expected = {k for k, v in expected.items() if v is None}
+    none_actual = {k for k, v in actual.items() if v is None}
+    assert none_actual <= none_expected, ('ckpt 侧 None 叶不在模型 None 叶中', sorted(none_actual - none_expected))
+    expected = {k: v for k, v in expected.items() if v is not None}
+    actual = {k: v for k, v in actual.items() if v is not None}
+    return expected, actual, len(none_expected), len(none_actual)
+
+
 def main(argv):
     if len(argv) == 3 and argv[1] == '--resolved-sha256':
         print(f'RESOLVED_SHA256={resolved_sha256_of_yaml(argv[2])} yaml={argv[2]}', flush=True)
@@ -296,12 +309,14 @@ def main(argv):
     actual = flatten_dict(metadata.tree['params'])
     if all(key[-1] == 'value' for key in actual):
         actual = {key[:-1]: value for key, value in actual.items()}
+    expected, actual, none_model, none_ckpt = drop_none_leaves(expected, actual)
     assert set(actual) == set(expected), (set(expected) - set(actual), set(actual) - set(expected))
     for key, value in expected.items():
         assert value.shape == actual[key].shape, (key, value.shape, actual[key].shape)
     motion_leaves = sorted('/'.join(map(str, k)) for k in actual if 'motion_pos_proj' in '/'.join(map(str, k)) or 'motion_encoder_static' in '/'.join(map(str, k)))
     assert bool(motion_leaves) == run['motion'], motion_leaves
-    print(f'PARAM_TREE_EXACT=PASS n_model={len(expected)} n_ckpt={len(actual)} missing=0 extra=0 shape_mismatch=0 motion_leaves={len(motion_leaves)}', flush=True)
+    none_note = f' none_leaves_model={none_model} none_leaves_ckpt={none_ckpt}' if (none_model or none_ckpt) else ''
+    print(f'PARAM_TREE_EXACT=PASS n_model={len(expected)} n_ckpt={len(actual)} missing=0 extra=0 shape_mismatch=0 motion_leaves={len(motion_leaves)}{none_note}', flush=True)
     print(f"HISTORY_CONFIG=PASS NORM_STATS=PASS {'MOTION_ENABLED=PASS' if run['motion'] else 'MOTION_DISABLED=PASS'} config={run['config']} step={checkpoint.name} budget={int(cfg.budget)}", flush=True)
 
 

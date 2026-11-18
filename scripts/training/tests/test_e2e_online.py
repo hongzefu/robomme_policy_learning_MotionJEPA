@@ -560,6 +560,33 @@ def test_check_checkpoint_e2e_resolved_sha_matches_yaml(CC):
     assert CC.resolved_sha256_of_yaml(E2E_YAML) == CC.WANE2E_RESOLVED_SHA256
 
 
+def test_check_checkpoint_drop_none_leaves(CC):
+    """G5b 故障：nnx.Linear(use_bias=False) 的 bias=None 叶。两侧剔除 None 后再比对；期望 None 而 ckpt 为数组 → 键集不等。"""
+    import jax
+    arr = lambda *s: jax.ShapeDtypeStruct(s, "float32")
+    k_w, k_b, k_x = ("enc", "lin", "kernel"), ("enc", "lin", "bias"), ("other", "kernel")
+    exp = {k_w: arr(4, 3), k_b: None, k_x: arr(2)}
+    # 1) ckpt 无该键 → 剔除后键集相等
+    e, a, nm, nc = CC.drop_none_leaves(exp, {k_w: arr(4, 3), k_x: arr(2)})
+    assert set(e) == set(a) == {k_w, k_x} and (nm, nc) == (1, 0)
+    # 2) ckpt 该键也为 None（真实 e2e-smoke20/19 的情形）→ 相等
+    e, a, nm, nc = CC.drop_none_leaves(exp, {k_w: arr(4, 3), k_b: None, k_x: arr(2)})
+    assert set(e) == set(a) and (nm, nc) == (1, 1)
+    # 3) ckpt 该键为数组 → 剔除后 ckpt 多出 k_b，main 的键集断言 FAIL
+    e, a, _, _ = CC.drop_none_leaves(exp, {k_w: arr(4, 3), k_b: arr(3), k_x: arr(2)})
+    assert set(a) - set(e) == {k_b}
+    # 4) ckpt 侧 None 而期望为数组 → 直接 FAIL
+    with pytest.raises(AssertionError):
+        CC.drop_none_leaves(exp, {k_w: None, k_b: None, k_x: arr(2)})
+    # 5) ckpt 侧多出期望里没有的 None 叶 → FAIL
+    with pytest.raises(AssertionError):
+        CC.drop_none_leaves(exp, {k_w: arr(4, 3), k_x: arr(2), ("stray", "bias"): None})
+    # 6) 旧 run（无 None）：原样返回同一内容
+    old = {k_w: arr(4, 3), k_x: arr(2)}
+    e, a, nm, nc = CC.drop_none_leaves(old, dict(old))
+    assert e == old and a == old and (nm, nc) == (0, 0)
+
+
 # ── compare_train_infer_obs：--acceptance ───────────────────────────────────────
 
 @pytest.fixture(scope="module")
