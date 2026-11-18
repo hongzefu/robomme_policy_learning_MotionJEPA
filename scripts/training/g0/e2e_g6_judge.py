@@ -33,6 +33,8 @@
              `SHM_PEAK=<PASS|FAIL> peak_gb=<x> limit=330 growth_last1500=<y>% window=formal_steps_0_2000 …`
              （阈值同旧 shmprobe：峰值 ≤ 330 GB 且第 500–2000 步峰值相对此前峰值增长 ≤ 2%）；FAIL 时另打印 SHM_ALERT 与
              RB-D2 退路提示（主会话停训后以 E2E_PREFETCH_FACTOR=1 从头重起），本脚本不停训。
+             退出码：0 = PASS、2 = FAIL（均为已判）、3 = 未到判定点、其他 = 出错（shmmon 下轮重判）；
+             metrics.jsonl 末尾的半行（训练进程正在写）跳过不计。
 只用标准库，纯 CPU；单测用假日志夹具（scripts/training/tests/test_e2e_runner_chain.py）。
 """
 from __future__ import annotations
@@ -420,14 +422,33 @@ def aggregate(args) -> int:
     return 1 if g == "FAIL" else 0
 
 
+# shm-formal 退出码约定（shmmon.sh 依此决定是否已判）：0 = SHM_PEAK=PASS（已判）、2 = SHM_PEAK=FAIL（已判）、
+# 3 = 未到判定点；其他（1 = 未捕获异常、127 = 解释器缺失等）= 出错，shmmon 打 SHMMON_ERROR 并下轮重判。
+SHM_FORMAL_PASS_RC = 0
+SHM_FORMAL_FAIL_RC = 2
 SHM_FORMAL_PENDING_RC = 3
+
+
+def read_jsonl_live(path: pathlib.Path) -> list[dict]:
+    """读训练进程正在追加的 jsonl：只容忍最后一行不完整（半行写入），跳过它；中间行坏了照常抛异常（不是写入竞态）。"""
+    if not path.is_file():
+        return []
+    raw = [x for x in path.read_text(errors="replace").splitlines() if x.strip()]
+    out = []
+    for i, x in enumerate(raw):
+        try:
+            out.append(json.loads(x))
+        except json.JSONDecodeError:
+            if i != len(raw) - 1:
+                raise
+    return out
 
 
 def shm_formal(args) -> int:
     """正式训练第 0–judge_step 步的 /dev/shm 判定（取代单独的 --shmprobe）。步数来源与旧 shmprobe 相同：
     记录目录 metrics.jsonl 的 (step, wall_time)。未到 judge_step 时不打印、退出 3。"""
     rec = pathlib.Path(args.rec)
-    metrics = sorted((r for r in read_jsonl(rec / "metrics.jsonl") if r.get("step") is not None), key=lambda r: r["step"])
+    metrics = sorted((r for r in read_jsonl_live(rec / "metrics.jsonl") if r.get("step") is not None), key=lambda r: r["step"])
     end = next((r["wall_time"] for r in metrics if r["step"] >= args.judge_step), None)
     if end is None:
         return SHM_FORMAL_PENDING_RC
@@ -451,7 +472,7 @@ def shm_formal(args) -> int:
         print(f"SHM_ALERT reason=formal_first{args.judge_step} peak_gb={peak} limit_gb={SHM_LIMIT_GB:g} growth_pct={growth} "
               f"action=主会话按 RB-D2 退路处理：停正式训练后以 E2E_PREFETCH_FACTOR=1 从头重起（新 run 名，按第 6 条清产物）；"
               f"本脚本不停训", flush=True)
-    return 0 if st == "PASS" else 1
+    return SHM_FORMAL_PASS_RC if st == "PASS" else SHM_FORMAL_FAIL_RC
 
 
 def main(argv=None) -> int:

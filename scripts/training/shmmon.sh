@@ -14,7 +14,9 @@
 #   按「TRAIN_START_EPOCH → 第 2000 步」窗口打印一次
 #     SHM_PEAK=<PASS|FAIL> peak_gb=<x> limit=330 growth_last1500=<y>% window=formal_steps_0_2000 …
 #   FAIL 时另打印 SHM_ALERT reason=formal_first2000 … 与 RB-D2 退路提示（主会话停训、E2E_PREFETCH_FACTOR=1 从头重起）；
-#   之后打印 SHM_FORMAL_JUDGED rc=<0|1|…>，继续照常采样告警。本脚本不停训。
+#   之后打印 SHM_FORMAL_JUDGED rc=<0|2>，继续照常采样告警。本脚本不停训。
+#   judge 退出码约定：0 = PASS、2 = FAIL（已判，且须打出 SHM_PEAK= 行）、3 = 未到判定点；其他（异常 1、解释器缺失 127 等）
+#   打印 SHMMON_ERROR judge_rc=<n>（同码连续出现时首次与每第 20 次打印）并在下一次采样后重判。
 #   与 RB-E2 的 e2e-shmmon 会话合并为一个：告警线 --limit-gb 初值 293（原「G6 平台 × 1.35」，G6 不再测平台），
 #   判定用的绝对上限 330 写死在 judge（SHM_LIMIT_GB）。主会话在正式 runner 起跑后（主检出根目录）起：
 #     V1=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store; F=v2-1600ep-m8x8-modul-e2eenc-s16-b128-50k
@@ -53,7 +55,7 @@ elif [ -n "$SAMPLES_LOG$FORMAL_RUN_LOG" ]; then
   printf '拒绝：--samples-log / --formal-run-log 只能与 --formal-rec 同用\n' >&2; exit 2
 fi
 JUDGE_PY="${SHMMON_PY:-$REPO/.venv/bin/python}"
-JUDGED=0
+JUDGED=0; last_err=""; err_n=0
 [[ "$LIMIT_GB" =~ ^[0-9]+(\.[0-9]+)?$ ]] || { printf '拒绝：limit-gb 非法 %s\n' "$LIMIT_GB" >&2; exit 2; }
 [[ "$INTERVAL" =~ ^[0-9]+(\.[0-9]+)?$ ]] || { printf '拒绝：interval 非法 %s\n' "$INTERVAL" >&2; exit 2; }
 [[ "$MAX_SAMPLES" =~ ^[0-9]+$ ]] || { printf '拒绝：max-samples 非法 %s\n' "$MAX_SAMPLES" >&2; exit 2; }
@@ -89,8 +91,19 @@ while :; do
   if [ -n "$FORMAL_REC" ] && [ "$JUDGED" = 0 ]; then
     jargs=(shm-formal --rec "$FORMAL_REC" --shmmon-samples "$SAMPLES_LOG" --judge-step "$JUDGE_STEP")
     [ -z "$FORMAL_RUN_LOG" ] || jargs+=(--run-log "$FORMAL_RUN_LOG")
-    if "$JUDGE_PY" -I "$SCRIPT_DIR/g0/e2e_g6_judge.py" "${jargs[@]}"; then jrc=0; else jrc=$?; fi
-    if [ "$jrc" != 3 ]; then JUDGED=1; echo "SHM_FORMAL_JUDGED rc=$jrc"; fi   # 3 = 未到第 JUDGE_STEP 步
+    if jout="$("$JUDGE_PY" -I "$SCRIPT_DIR/g0/e2e_g6_judge.py" "${jargs[@]}" 2>&1)"; then jrc=0; else jrc=$?; fi
+    [ -z "$jout" ] || printf '%s\n' "$jout"
+    # 退出码约定：0 = PASS、2 = FAIL（已判）、3 = 未到第 JUDGE_STEP 步；其他 = 出错，下轮重判。
+    # 0/2 还须输出里有 SHM_PEAK= 判定行才算已判（argparse 用法错误也是 2，但不打判定行）。
+    if { [ "$jrc" = 0 ] || [ "$jrc" = 2 ]; } && printf '%s\n' "$jout" | grep -q '^SHM_PEAK='; then
+      JUDGED=1; echo "SHM_FORMAL_JUDGED rc=$jrc"
+    elif [ "$jrc" != 3 ]; then
+      # 同一错误码连续出现时限频：首次与每第 20 次打印一行
+      if [ "$jrc" = "${last_err:-}" ]; then err_n=$((err_n + 1)); else last_err="$jrc"; err_n=1; fi
+      if [ $((err_n % 20)) = 1 ]; then echo "SHMMON_ERROR judge_rc=$jrc repeat=$err_n 下轮重判"; fi
+    else
+      last_err=""; err_n=0
+    fi
   fi
   n=$((n + 1))
   if [ "$MAX_SAMPLES" -gt 0 ] && [ "$n" -ge "$MAX_SAMPLES" ]; then finish; fi

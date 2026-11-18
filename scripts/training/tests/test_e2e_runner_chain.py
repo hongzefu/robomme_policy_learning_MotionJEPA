@@ -15,7 +15,8 @@
   ⑦b（用户 2026-11-18 裁定：G6 ①③ 合成一次 --benchckpt，② 移到正式训练前 2000 步）runner --benchckpt 白名单正反例、
      TRAIN_ARGS 恰多 --save-interval 250 --keep-period 250、期望 ckpt 250/299；judge benchckpt 各档（BENCH300 三档、GPU_UTIL
      RECORDED、DEVICE_PEAK 缺行与超 72 FAIL、缺 CKPT250_READBACK FAIL、窗口不全 FAIL、prefetch 阶段 FAIL 不被吞），
-     aggregate --plan benchckpt 打印 SHM_PEAK=DEFERRED；⑦c shm-formal PASS/FAIL/未到判定点三档，shmmon.sh --formal-rec 只判一次；
+     aggregate --plan benchckpt 打印 SHM_PEAK=DEFERRED；⑦c shm-formal PASS（0）/FAIL（2）/未到判定点（3）与 metrics 末尾半行，
+     shmmon.sh --formal-rec 只判一次，judge 出错（1 / 127）不置已判、打 SHMMON_ERROR（限频）并下轮重判；
   ⑧ shmmon.sh 超线打印 SHM_ALERT；⑨ e2e_token_rank.py 统计量与 checkpoint 子树载入往返；
   ⑩ e2e_trig_gates.sh 被触发器 --dry-run 解析（G6 只剩单个 gate G6-benchckpt，判定只读 G6 行）。
 末尾 test_zz_verdict 打印 S5_RUNNER_UNIT=PASS（pytest -s 可见；全部用例通过才会执行到它）。
@@ -738,15 +739,27 @@ def test_shm_formal_pass_fail_pending(tmp_path):
     assert "SHM_ALERT" not in p.stdout
     rec, log, smp = _formal_fixture(tmp_path / "grow", t0, after=210.0)
     p = _shm_formal(rec, log, smp)
-    assert p.returncode == 1 and re.search(r"^SHM_PEAK=FAIL peak_gb=210\.0 limit=330 growth_last1500=5\.00% "
+    assert p.returncode == 2 and re.search(r"^SHM_PEAK=FAIL peak_gb=210\.0 limit=330 growth_last1500=5\.00% "
                                            r"window=formal_steps_0_2000 ", p.stdout, re.M), p.stdout
     assert re.search(r"^SHM_ALERT reason=formal_first2000 .*RB-D2.*E2E_PREFETCH_FACTOR=1 从头重起.*本脚本不停训", p.stdout, re.M)
     rec, log, smp = _formal_fixture(tmp_path / "over", t0, before=335.0, after=335.0)
     p = _shm_formal(rec, log, smp)
-    assert p.returncode == 1 and re.search(r"^SHM_PEAK=FAIL peak_gb=335\.0 limit=330 growth_last1500=0\.00% ", p.stdout, re.M)
+    assert p.returncode == 2 and re.search(r"^SHM_PEAK=FAIL peak_gb=335\.0 limit=330 growth_last1500=0\.00% ", p.stdout, re.M)
     rec, log, smp = _formal_fixture(tmp_path / "pend", t0, last_step=1900)
     p = _shm_formal(rec, log, smp)
     assert p.returncode == 3 and p.stdout == "", p.stdout
+    # metrics.jsonl 末尾半行（训练进程正在写）→ 不崩、跳过该行仍能判
+    rec, log, smp = _formal_fixture(tmp_path / "half", t0)
+    with (rec / "metrics.jsonl").open("a") as f:
+        f.write('{"step": 2100, "wall_ti')
+    p = _shm_formal(rec, log, smp)
+    assert p.returncode == 0 and re.search(r"^SHM_PEAK=PASS peak_gb=201\.0 ", p.stdout, re.M), p.stdout + p.stderr
+    # 半行之前还没到第 2000 步 → 仍是未到判定点（3），不报错
+    rec, log, smp = _formal_fixture(tmp_path / "halfpend", t0, last_step=1900)
+    with (rec / "metrics.jsonl").open("a") as f:
+        f.write('{"step": 20')
+    p = _shm_formal(rec, log, smp)
+    assert p.returncode == 3 and p.stdout == "", p.stdout + p.stderr
 
 
 def test_shmmon_formal_judges_once(tmp_path):
@@ -765,7 +778,8 @@ def test_shmmon_formal_judges_once(tmp_path):
     p = run(args, env, timeout=60)
     out = p.stdout
     assert p.returncode == 0 and out.rstrip().endswith("EXIT_CODE=0"), out + p.stderr
-    assert out.count("SHM_FORMAL_JUDGED rc=1") == 1 and out.count("SHM_PEAK=FAIL reason=no_evidence") == 1, out
+    assert out.count("SHM_FORMAL_JUDGED rc=2") == 1 and out.count("SHM_PEAK=FAIL reason=no_evidence") == 1, out
+    assert "SHMMON_ERROR" not in out
     assert out.count("SHM_ALERT reason=formal_first2000") == 1 and "SHM_ALERT used_gb" not in out
     assert len([l for l in smp.read_text().splitlines() if l.startswith("SHM_SAMPLE ")]) == 3
     # samples 文件已存在即拒；--samples-log 不能单独给
@@ -780,6 +794,38 @@ def test_shmmon_formal_judges_once(tmp_path):
     p = run(["bash", str(SHMMON), "--limit-gb", "293", "--interval", "0", "--max-samples", "1"],
             {**env, "SHMMON_DF_CMD": "echo 300000000000"}, timeout=30)
     assert "SHM_ALERT used_gb=300.00 limit_gb=293" in p.stdout
+
+
+def test_shmmon_formal_judge_error_retries(tmp_path):
+    """judge 退出 1 / 127（出错）→ 不置 JUDGED、打 SHMMON_ERROR，下一次采样重判；同码连续出现限频。"""
+    now = datetime.datetime.now().timestamp()
+    rec, log, _ = _formal_fixture(tmp_path / "f", now - 4100, samples=False)
+    rows = [json.loads(x) for x in (rec / "metrics.jsonl").read_text().splitlines()]
+    rows[-1]["wall_time"] = now + 3600
+    (rec / "metrics.jsonl").write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+    base = {"SHMMON_DF_CMD": "echo 200000000000", "SHMMON_SMI_CMD": "false"}
+    for code in (1, 127):
+        # 假解释器：前两次调用以 code 退出，之后转交真解释器
+        fake = tmp_path / f"py{code}"
+        cnt = tmp_path / f"cnt{code}"
+        fake.write_text(f"#!/usr/bin/env bash\nn=$(cat {cnt} 2>/dev/null || echo 0); echo $((n+1)) > {cnt}\n"
+                        f"[ \"$n\" -ge 2 ] || {{ echo boom >&2; exit {code}; }}\nexec {shlex.quote(sys.executable)} \"$@\"\n")
+        fake.chmod(0o755)
+        smp = tmp_path / f"s{code}.log"
+        p = run(["bash", str(SHMMON), "--limit-gb", "293", "--interval", "0", "--max-samples", "4", "--formal-rec", str(rec),
+                 "--formal-run-log", str(log), "--samples-log", str(smp)], {**base, "SHMMON_PY": str(fake)}, timeout=60)
+        out = p.stdout
+        assert p.returncode == 0, out + p.stderr
+        assert out.count(f"SHMMON_ERROR judge_rc={code} repeat=1 ") == 1 and "repeat=2" not in out, out   # 限频：连续两次只打一行
+        assert out.count("SHM_FORMAL_JUDGED rc=2") == 1 and out.count("SHM_PEAK=FAIL") == 1, out          # 第 3 次采样后重判成功
+        assert out.index("SHMMON_ERROR") < out.index("SHM_FORMAL_JUDGED")
+        assert cnt.read_text().strip() == "3", cnt.read_text()                                             # 判过后不再调用
+    # 解释器根本不存在（127）：一直出错、从不置 JUDGED
+    p = run(["bash", str(SHMMON), "--limit-gb", "293", "--interval", "0", "--max-samples", "3", "--formal-rec", str(rec),
+             "--formal-run-log", str(log), "--samples-log", str(tmp_path / "s-miss.log")],
+            {**base, "SHMMON_PY": str(tmp_path / "no-such-python")}, timeout=60)
+    assert p.returncode == 0 and "SHM_FORMAL_JUDGED" not in p.stdout, p.stdout
+    assert p.stdout.count("SHMMON_ERROR judge_rc=127 ") == 1, p.stdout
 
 
 # ── ⑧ shmmon ────────────────────────────────────────────────────────────────
