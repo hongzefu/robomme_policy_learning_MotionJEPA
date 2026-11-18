@@ -25,7 +25,7 @@
 #      (task, difficulty, episode) 身份（不复用其 by_shard），按本次计划查所属分片，写该片 progress.json 预标 "error"
 #      并 ALLOW_RESUME=1；判定行 PRESEED=PASS episodes=9 placed=9 duplicates=0，不过即不起跑；
 #   ④ C4：分片 k 用 GPU k%8；每卡一个占位文件 $EVAL_ROOT/gpu-slots/gpu<g>（同名 .lock 做 flock）：
-#      先在锁内预占卡位（含本片 <= $PER_GPU，按分片计数），再后台起 run_shard.sh，把它自身的 PID 作为进程树根写入
+#      先在锁内预占卡位（含本片 <= $PER_GPU，按分片计数），再把 run_shard.sh 自身的 PID 作为进程树根写入后才起跑它
 #      （server、sidecar 都是它的子孙），片结束在锁内释放；run_shard.sh 的 LOCAL_GPU_SHARE>=2 分支只认这份登记；
 #   ⑤ wait 全部分片，逐片记 SHARD_EXIT_CODE；只含预标 error 的分片非零退出属预期；
 #   ⑥ C7：新 error（不在预标清单）只重跑该局一次：重跑写独立运行目录（结束后移入 s<k>/retry1/），
@@ -323,14 +323,16 @@ slot_release() {  # $1=gpu $2=tag
     local f="$SLOT_DIR/gpu$1"
     ( flock 9 || exit 1; sed -i "/^$2 /d" "$f" ) 9>"$f.lock"
 }
-# 一片的完整生命周期（后台调用）：预占 → 起 run_shard.sh（重定向而非管道，$! 即 run_shard.sh 自身 PID）→ 登记 PID → wait → 释放 → 写 rc
+# 一片的完整生命周期（后台调用）：预占 → 子 shell 先登记自身 PID 再 exec 成 run_shard.sh（重定向而非管道，$! 即 run_shard.sh 自身 PID）→ wait → 释放 → 写 rc
 run_slot() {  # $1=gpu $2=tag $3=shard_index $4=plan $5=run_name $6=log $7=rc 文件
     local gpu="$1" tag="$2" idx="$3" plan="$4" run="$5" log="$6" rcf="$7" pid rc
     if ! slot_reserve "$gpu" "$tag"; then echo 97 > "$rcf"; return; fi
-    env CUDA_VISIBLE_DEVICES="$gpu" SHARD_INDEX="$idx" LOCAL_GPU_SLOT_FILE="$SLOT_DIR/gpu$gpu" \
-        bash scripts/evaluation/run_shard.sh "$run" "$CKPT" "$plan" "$SEED" "$tag" > "$log" 2>&1 &
+    # 先登记、后起跑：子 shell 把自身 PID（$BASHPID）写进占位文件再 exec，env→bash 逐级 exec 不换 PID，
+    # 所以 run_shard.sh 的 $$ 与 $! 都等于登记值，不存在「已起跑但仍是 pending」的窗口。
+    ( slot_set_pid "$gpu" "$tag" "$BASHPID"
+      exec env CUDA_VISIBLE_DEVICES="$gpu" SHARD_INDEX="$idx" LOCAL_GPU_SLOT_FILE="$SLOT_DIR/gpu$gpu" \
+        bash scripts/evaluation/run_shard.sh "$run" "$CKPT" "$plan" "$SEED" "$tag" ) > "$log" 2>&1 &
     pid=$!
-    slot_set_pid "$gpu" "$tag" "$pid"
     echo "SLOT_REGISTERED gpu=$gpu tag=$tag pid=$pid run=$run"
     wait "$pid"; rc=$?
     slot_release "$gpu" "$tag"
