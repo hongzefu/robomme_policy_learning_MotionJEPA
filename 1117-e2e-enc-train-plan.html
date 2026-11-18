@@ -194,7 +194,7 @@
 <tr><td>步速与时长</td><td>—</td><td>粗估 1.1–2 s/步、约 15–28 小时（Wan-9 实测 1.133 s/步、16 小时）；没有逐项推导，以 G6 实测为准。接受上限 3 s/步、约 42 小时</td></tr>
 </table>
 
-<p>随机初始化的 encoder 早期输出尺度可能与预训练 token 差别很大。本计划不加任何额外归一化或缩放（加了就又多出一处与 MotionMEM 的差别），只如实记录；若发散，停下报用户。训练程序不支持续训（权重只存 EMA），中途崩溃只能从头。</p>
+<p>随机初始化的 encoder 早期输出尺度可能与预训练 token 差别很大。本计划不加任何额外归一化或缩放（加了就又多出一处与 MotionMEM 的差别），只如实记录；若发散，先查代码与数据通路缺陷并修复重跑；只能靠改超参才能收敛时属训练语义，停下问用户。训练程序不支持续训（权重只存 EMA），中途崩溃只能从头。</p>
 
 <h3>3.4　数据管线：每批 6.04 GB，与 Wan-9 同级</h3>
 
@@ -213,7 +213,7 @@
 <tr><td>③</td><td>encoder 块重算激活（remat），省显存。1 层时 encoder 激活只占约 2.5–4.3 GB，这一步基本用不上，保留为条件项</td><td>数学等价，不保证逐位相同</td></tr>
 </table>
 
-<p>三步都用完仍不过，停下报用户。有效窗数分布已知（第 2 节 K_DIST）：平均利用率只有 27.44%，但紧凑计算的容量必须按最坏的一批预留，保守容量 2482 窗与稠密 2560 窗相差很小，所以紧凑计算仍排在预取深度降到 1 之后，不提为首选。想用更小的容量，须先锁定采样顺序、枚举各批的上界并说明覆盖范围。</p>
+<p>三步都用完仍不过时，再往下只能改训练语义（如减 batch），属停止项，停下报用户。有效窗数分布已知（第 2 节 K_DIST）：平均利用率只有 27.44%，但紧凑计算的容量必须按最坏的一批预留，保守容量 2482 窗与稠密 2560 窗相差很小，所以紧凑计算仍排在预取深度降到 1 之后，不提为首选。想用更小的容量，须先锁定采样顺序、枚举各批的上界并说明覆盖范围。</p>
 
 <h2>4　评估：本机 692 局</h2>
 
@@ -277,22 +277,23 @@
 
 <h3>停止项总表</h3>
 
-<p>闸门 FAIL 一律不改判据。授权为一级：用户看过定稿版并明确确认后开工（尚未开工）。开工之后，下表是会停下来问用户的全部情形；不在表里的环节，主会话只报告、不等回复。</p>
+<p>授权为一级：用户看过定稿版并明确确认后开工（尚未开工）。开工后按用户 2026-11-17 美东原则一路跑到底：「我同意开工之后就尽可能一路跑到底，除非有训练语义上的不同，就是重大变化，否则的话尽可能就一路跑到底了。」工程故障由主会话自己定位、修复、重跑，事后报告，不停下等回复；只有下表「停下问用户」的情形才停。闸门 FAIL 一律不改判据。</p>
 
 <table>
-<tr><th>时点</th><th>情形</th><th>处置</th></tr>
-<tr><td>等 GPU 时</td><td>NativeMEM 流水线失败或非 0 退出</td><td>不自动开跑，报用户（NativeMEM 可能重跑，会抢卡）。对 NativeMEM 始终只读，不动它的会话与进程</td></tr>
-<tr><td>GPU 验证中</td><td>任一闸门 FAIL</td><td>触发器停止后续启动，交主会话定位修复后重跑；修不了报用户。G3、G6 的阈值若要放宽，由主会话判断影响面并告知用户</td></tr>
-<tr><td>起跑前</td><td>G0 数据同源 FAIL</td><td>即停，不得豁免</td></tr>
-<tr><td>G6</td><td>步速超过 3.0 s/步（约 42 小时）</td><td>不自动判失败：输出 <code>BENCH300=ASK</code>，等用户决定。2.27–3.0 s/步不停，自动记 <code>BENCH300=ACCEPTED_OVER_LIMIT</code>，保留原测值与原阈值 2.27</td></tr>
-<tr><td>G6</td><td>GPU 利用率均值低于 85%，在不改训练语义的吞吐参数里调过仍然偏低</td><td>记录并报用户（不阻断，照常起训练）</td></tr>
-<tr><td>G6</td><td>共享内存或显存超限，退路①②③用完仍不过</td><td>停下报用户</td></tr>
-<tr><td>采用退路②③时</td><td>紧凑计算或 remat</td><td>先过 <code>E2E_COMPACT_EQ</code>，报告用户后继续（不需批准）；紧凑计算运行中有效窗数超出预留容量即报错停下，不截断</td></tr>
-<tr><td>写代码时</td><td>需要新增依赖</td><td>停下报用户；本计划不改 <code>pyproject.toml</code> 与 <code>uv.lock</code></td></tr>
-<tr><td>腾盘、清理时</td><td>需要删除旧 run 或本轮的冒烟、测速目录</td><td>逐项列路径与大小，用户同意后才删；不碰 HF 禁删清单。例外：HF 校验副本读回通过后直接删除，用户 2026-11-17 已同意</td></tr>
-<tr><td>评估前后</td><td>692 身份不符：身份清单与历史逐局记录交叉核对不一致，或 <code>EVAL692_PLAN_IDENTITY</code>、<code>EVAL692_RESULT_IDENTITY</code> 任一 FAIL</td><td>即停报用户；不起评估，或不出结果</td></tr>
-<tr><td>训练中</td><td>共享内存告警</td><td>上报主会话，由主会话决定是否停训</td></tr>
-<tr><td>训练中</td><td>发散（loss 尖峰、nan）或崩溃</td><td>停下报用户；不能续训，重跑只能从头</td></tr>
+<tr><th>类别</th><th>情形</th><th>处置</th></tr>
+<tr><td rowspan="5">停下问用户</td><td>需要改训练语义：超参（lr、batch、步数、优化器、EMA）、数据或数据集、模型结构（含 encoder 深度与宽度）、数值精度口径（D5 之外）、损失、评估口径</td><td>停下报用户，给出原因与可选方案，等决定</td></tr>
+<tr><td>G0 数据同源 FAIL</td><td>即停，不得豁免（encoder 与 VLA 数据必须同源的强约束）</td></tr>
+<tr><td>692 身份不符（身份清单与历史逐局记录不一致，或 <code>EVAL692_PLAN_IDENTITY</code>、<code>EVAL692_RESULT_IDENTITY</code> 任一 FAIL）</td><td>即停报用户；评估对象变了属评估口径</td></tr>
+<tr><td>修复只能靠放宽判据（G1–G6 任一阈值），或共享内存／显存在退路①②③用完后只能靠减 batch 等改训练语义的手段</td><td>停下报用户</td></tr>
+<tr><td>步速超过 3.0 s/步（约 42 小时，用户定的上限）</td><td>输出 <code>BENCH300=ASK</code>，等用户决定；2.27–3.0 s/步自动记 <code>BENCH300=ACCEPTED_OVER_LIMIT</code>，不停</td></tr>
+<tr><td rowspan="2">全局规则要求确认</td><td>删除计划外文件、旧 run、本轮冒烟／测速目录</td><td>逐项列路径与大小，用户同意后才删；不挡训练与评估继续推进。例外：HF 校验副本读回通过后直接删除（用户 2026-11-17 已同意）</td></tr>
+<tr><td>需要新增依赖（会动共享环境）</td><td>停下报用户；本计划不改 <code>pyproject.toml</code> 与 <code>uv.lock</code></td></tr>
+<tr><td rowspan="6">自己处理、事后报告（不停）</td><td>任一闸门 FAIL（代码缺陷、接线错误、单测失败等）</td><td>触发器暂停后续启动，主会话派修复子代理修复、经审查合入后重跑该闸门及受影响闸门，继续推进</td></tr>
+<tr><td>训练崩溃（OOM、shm 写满、进程被杀、NCCL 错误等）</td><td>定位并修复工程原因后从头重跑（不能续训），继续推进；同一故障修复两次仍复发时报告用户但继续尝试不改语义的修法</td></tr>
+<tr><td>训练发散（loss 尖峰、nan）</td><td>先查代码与数据通路缺陷，查到即修复重跑；查不到缺陷、只能靠改超参才能收敛时，属训练语义，转为「停下问用户」</td></tr>
+<tr><td>GPU 利用率低于 85% 或步速偏慢（≤3.0 s/步）</td><td>在不改训练语义的吞吐参数里调（worker、预取、紧凑计算／remat 先过 <code>E2E_COMPACT_EQ</code>），仍低则记录报告，照常起训练</td></tr>
+<tr><td>训练中共享内存告警</td><td>主会话处置（必要时停训、修复、从头重跑），事后报告</td></tr>
+<tr><td>评估中断、分片失败、超时</td><td>按评估链的恢复入口补跑缺失回合，身份闸保证补齐后仍是同一 692 全集</td></tr>
 </table>
 
 <h2>6　步骤表</h2>
@@ -382,7 +383,7 @@
 
 <table>
 <tr><th>编号</th><th>红线</th></tr>
-<tr><td>R1</td><td>授权为一级（用户 2026-11-17 美东裁定，原话「不需要分两级授权，直接开始就可以了」）：原「实施与 GPU 验证令」「正式训练令」两级区分作废，统一为一级授权。用户 2026-11-17 美东新指示「先定稿，定稿完了之后，不要立刻开工，让我再看一眼通过」：授权为一级：用户看过定稿版并明确确认后开工；未确认前不改代码、不导出、不起触发器与 GPU 任务。用户确认开工后按本计划自主推进到评估结束：S1–S5 代码、新表导出（bf16，约 21.0 GB）、G1、G1b、G1c、G3、G4、G5、G5b、G6 的 GPU 占用（含 ≥2000 步 shmprobe 约 47–67 分钟）、G7 正式训练、G8 评估，均不再停下要令；GPU 工作由〇.1.1 的触发器在 NativeMEM 结束、A0 <code>GPU_FREE=PASS</code> 后自动起。仍须停下报用户的只有停止项：步速 &gt;3.0 s/步（<code>BENCH300=ASK</code>，R10；用户预先接受 ≤3.0 s/步、总时长上限约 42 小时）、NativeMEM 失败（<code>NM_DONE=FAIL</code>）、闸门 FAIL 且按 R4 修不了、训练发散或崩溃、692 身份不符（<code>EVAL692_*_IDENTITY</code> FAIL）、需要删除计划外文件、R4 所述放宽阈值。命名已定：实施分支 <code>v18-4task-modul-e2eenc-s16-50k</code>，正式 run 名 <code>v2-1600ep-m8x8-modul-e2eenc-s16-b128-50k</code>。状态机登记在策略仓 <code>docs/handoff/current.json</code>，任务 id <code>e2eenc-s16-50k</code>，由主会话在开工时登记。G4 用 8 卡（runner 强制 8 卡、条目 <code>fsdp_devices=8</code>，见〇.3），与 G3（1 卡）串行；每个 GPU 闸门启动前按〇.1.1 的统一判据重查空闲，不凭上一个闸门的 PASS 行。D5 已定：默认用 bf16 存储与传输 motion latent（用户 2026-11-17 美东裁定，见 R9），不再问。完整停止项以第一部分第 5 节「停止项总表」为准</td></tr>
+<tr><td>R1</td><td>授权为一级（用户 2026-11-17 美东裁定，原话「不需要分两级授权，直接开始就可以了」）：原「实施与 GPU 验证令」「正式训练令」两级区分作废，统一为一级授权。用户 2026-11-17 美东新指示「先定稿，定稿完了之后，不要立刻开工，让我再看一眼通过」：授权为一级：用户看过定稿版并明确确认后开工；未确认前不改代码、不导出、不起触发器与 GPU 任务。用户确认开工后按本计划自主推进到评估结束：S1–S5 代码、新表导出（bf16，约 21.0 GB）、G1、G1b、G1c、G3、G4、G5、G5b、G6 的 GPU 占用（含 ≥2000 步 shmprobe 约 47–67 分钟）、G7 正式训练、G8 评估，均不再停下要令；GPU 工作由〇.1.1 的触发器在 NativeMEM 结束、A0 <code>GPU_FREE=PASS</code> 后自动起。开工后一路跑到底（用户 2026-11-17 美东原话：「我同意开工之后就尽可能一路跑到底，除非有训练语义上的不同，就是重大变化，否则的话尽可能就一路跑到底了。」）：工程故障（闸门 FAIL、代码缺陷、训练崩溃、评估中断）由主会话修复重跑、事后报告；仍须停下问用户的只有：需要改训练语义（超参、数据、模型结构、精度口径、损失、评估口径）、G0 数据同源 FAIL、692 身份不符（<code>EVAL692_*_IDENTITY</code> FAIL）、修复只能靠放宽判据或改训练语义、步速 &gt;3.0 s/步（<code>BENCH300=ASK</code>，R10；用户预先接受 ≤3.0 s/步、约 42 小时），以及全局规则要求确认的删除计划外文件与新增依赖。命名已定：实施分支 <code>v18-4task-modul-e2eenc-s16-50k</code>，正式 run 名 <code>v2-1600ep-m8x8-modul-e2eenc-s16-b128-50k</code>。状态机登记在策略仓 <code>docs/handoff/current.json</code>，任务 id <code>e2eenc-s16-50k</code>，由主会话在开工时登记。G4 用 8 卡（runner 强制 8 卡、条目 <code>fsdp_devices=8</code>，见〇.3），与 G3（1 卡）串行；每个 GPU 闸门启动前按〇.1.1 的统一判据重查空闲，不凭上一个闸门的 PASS 行。D5 已定：默认用 bf16 存储与传输 motion latent（用户 2026-11-17 美东裁定，见 R9），不再问。完整停止项以第一部分第 5 节「停止项总表」为准</td></tr>
 <tr><td>R2</td><td><code>mme_vla_suite_b128_80k</code> 的超参一项不改。runner 的 <code>TRAIN_ARGS</code> 里，超参类开关只有 <code>--exp-name</code>、<code>--model.history-config</code>、<code>--num_train_steps</code> 三项；路径类参数与 Wan-9 相同。ckptprobe 模式追加的 <code>--save-interval 50 --keep-period 50</code> 属 R8 (i) 吞吐/留存档，不算超参，也只在该模式出现</td></tr>
 <tr><td>R3</td><td><code>encoder_kind</code> 未写或为其他值时，模型的参数叶数、初始化值、前向结果与改动前逐位相同（新模块在 <code>__init__</code> 里根本不创建）</td></tr>
 <tr><td>R4</td><td>闸门 FAIL 不改判据。G3、G6 的阈值若要放宽，按策略仓规则由主会话判断影响面并告知用户</td></tr>
@@ -583,7 +584,7 @@
 <tr><td>RB-B3</td><td>导出完成后（CPU）：跑 <code>S16_EVEN_VS_S32</code>（s16 表偶数 m 行 == bf16(s32 表对应行) 逐字节相等，36484 行）；复核 <code>K_DIST</code>（外部审计已重算：均值 43.906481、p50/p95/max = 39/93/141、超过 160 窗的训练样本 0、平均槽位利用率 27.44%；复核值不一致即停下报用户）。紧凑计算的可证保守容量为每卡每批 16×141 = 2256 窗、加 10% 取 2482，接近稠密 2560，收益有限，不再因均值 &lt;40% 就把紧凑提为首选退路；超出 fail-loud 并停下；采用前过 <code>E2E_COMPACT_EQ</code></td></tr>
 <tr><td>RB-C1</td><td>G1c、G3、G4 由触发器 <code>e2e-trig</code> 在 <code>NM_DONE=PASS</code> 且前置齐时自动起，全部串行。次序：G9（S3 合入后，纯 CPU，可在 A0 前做）→ G0（S5 合入后）→ G1 ①（depth=1）与 ②（depth=8，载入 P3）→ G1b → G1c（G1b／G1c 均在 depth=1；A0 前用 CPU 版，A0 后可用一张卡）→ G3（1 卡；测试脚本内临时 depth=8 + 预训练权重 + 冻结，只验数据通路）→ G4（8 卡，需 S5 的 runner；G3 结束释放后才起）。每个闸门启动前按三节判据重查 GPU 空闲</td></tr>
 <tr><td>RB-D1</td><td>G6 → G5 → G5b 由触发器 <code>e2e-trig</code> 按次序自动起（G4 通过并释放 GPU 后）。G6 会话 <code>e2e-bench-aNN</code>、<code>e2e-shmprobe-aNN</code>、<code>e2e-ckptprobe-aNN</code>（与 run 名同编号），shmprobe 期间另起 <code>e2e-shmmon-aNN</code>；三个模式依次跑、各自落证据，最后由 <code>e2e_g6_judge.py</code> 聚合打印 <code>BENCH300</code>、<code>GPU_UTIL</code>、<code>SHM_PEAK</code>、<code>GPU_PEAK</code>、<code>SMOKE_CKPT</code>。记录 s/步、<code>dl_wait_frac</code>、host 填充时间、<code>device_put</code> 时间、每卡 <code>peak_bytes_in_use</code>、<code>free -g</code> available、GPU 利用率均值、shm 平台与峰值。ckptprobe 追加 <code>--save-interval 50 --keep-period 50</code>，证据取 <code>50/params</code> 读回并证明其后 ≥20 次更新。重跑一律换新编号</td></tr>
-<tr><td>RB-D2</td><td>D5 已定 bf16 后数据通路回到 Wan-9 水平（每批 6.04 GB，prefetch 2 时 shm 估约 217 GB），prefetch=1 不再是起跑前必设项。G6 不过时退路按顺序：① <code>prefetch_factor=1</code>（runner 设 <code>E2E_PREFETCH_FACTOR=1</code>，经 <code>mme_vla_suite</code> 的 <code>dataloader.create_data_loader</code> 与 <code>train.py:457</code> 传入，shm 估约 121 GB；R8 第 (i) 档，记 <code>launch.md</code>）→ ② 紧凑计算/传输（数学等价，不保证逐位；保守容量 2482 收益有限；须过 <code>E2E_COMPACT_EQ</code> 并报告用户，R8 第 (ii) 档）→ ③ encoder 每层 remat（<code>nnx.remat</code>，policy <code>nothing_saveable</code>；须过 <code>E2E_COMPACT_EQ</code>，同为 R8 第 (ii) 档；encoder 改为 1 层后激活显存约降到原来的 1/4，这一档基本用不上，保留为条件项）。原第 ④ 档「bf16 须 D5 批准」已删（D5 已定）。②③ 一旦采用，G9、G3、G4、G6、G5 全部在新通路上重做，路径配置摘要随之改变，旧 PASS 不再被认。<code>GPU_UTIL</code> 低于 85% 时也在这些吞吐档（及 <code>num_workers</code>）内提升后换编号重测。三步都用完仍不过，停下报用户</td></tr>
+<tr><td>RB-D2</td><td>D5 已定 bf16 后数据通路回到 Wan-9 水平（每批 6.04 GB，prefetch 2 时 shm 估约 217 GB），prefetch=1 不再是起跑前必设项。G6 不过时退路按顺序：① <code>prefetch_factor=1</code>（runner 设 <code>E2E_PREFETCH_FACTOR=1</code>，经 <code>mme_vla_suite</code> 的 <code>dataloader.create_data_loader</code> 与 <code>train.py:457</code> 传入，shm 估约 121 GB；R8 第 (i) 档，记 <code>launch.md</code>）→ ② 紧凑计算/传输（数学等价，不保证逐位；保守容量 2482 收益有限；须过 <code>E2E_COMPACT_EQ</code> 并报告用户，R8 第 (ii) 档）→ ③ encoder 每层 remat（<code>nnx.remat</code>，policy <code>nothing_saveable</code>；须过 <code>E2E_COMPACT_EQ</code>，同为 R8 第 (ii) 档；encoder 改为 1 层后激活显存约降到原来的 1/4，这一档基本用不上，保留为条件项）。原第 ④ 档「bf16 须 D5 批准」已删（D5 已定）。②③ 一旦采用，G9、G3、G4、G6、G5 全部在新通路上重做，路径配置摘要随之改变，旧 PASS 不再被认。<code>GPU_UTIL</code> 低于 85% 时也在这些吞吐档（及 <code>num_workers</code>）内提升后换编号重测。三步都用完仍不过时，再往下只能改训练语义（如减 batch），属停止项，停下报用户</td></tr>
 <tr><td>RB-E0</td><td>向用户报告 G6 结果（不再要「正式训练令」，用户 2026-11-17 美东改为一级授权）：外推 50001 步总时长（粗估 1.1–2 s/步、约 15–28 小时，Wan-9 为 16 小时；以 G6 实测为准）、步速判定行、<code>GPU_UTIL</code> 均值（Wan-9 参照 94.44%；若为 <code>RECORDED</code> 即低于 85%，说明已试过的吞吐档）、shm 平台、每卡峰值显存。步速 2.27–3.0 s/步属用户已预先接受（约 42 小时上限，<code>ACCEPTED_OVER_LIMIT</code>），照常报告即可；超过 3.0 s/步才停下问是否接受。G6 通过或步速 ≤3.0 s/步自动放行后，主会话即发此报告（报告即可，不等回复），随即打 Beta commit 起正式训练（RB-E2）；若用了 RB-D2 的退路，一并报告。只有 <code>BENCH300=ASK</code>（&gt;3.0 s/步）时停下等用户</td></tr>
 <tr><td>RB-E1</td><td>G5、G5b 完成后，清理本轮自己创建、已在 <code>launch.md</code> 登记的冒烟与测速 run 目录（含各尝试编号）：逐项列路径与大小交用户确认后再删；打 Beta commit；<code>git status --short</code> 为空</td></tr>
 <tr><td>RB-E2</td><td>RB-E0 报告发出并打 Beta commit 后，tmux <code>e2e-train</code> 起链脚本；另起 <code>e2e-shmmon</code>（<code>shmmon.sh</code>，15 s 采样，告警线 = G6 实测平台×1.35；初值约 293 GB 只是按 bf16、prefetch 2 的估计平台 217 GB 推算的占位（217×1.35），G6 后按实测重算；绝对上限仍为 330 GB；同会话或 runner 采样器同时记录 8 卡 GPU 利用率，<code>result.md</code> 报全程均值，Wan-9 参照 <code>gpu_util_mean=94.44</code>）；各挂一个 Monitor，过滤词含 <code>拒绝|失败|FAIL|错误|找不到|nan|NaN|out of memory|Killed|Traceback|terminate called|No space left|SHM_ALERT|EXIT_CODE=</code>。<code>SHM_ALERT</code> 由 Monitor 上报主会话，主会话决定是否停训。train.py 不能续训（ckpt 只存 EMA），崩溃即从头</td></tr>
@@ -670,7 +671,7 @@
 <tr><td>三片退路需改分片数：每卡 3 片时 32 片计划不再适用</td><td>分片与身份全集错配</td><td>完整组合 <code>EVAL_SHARDS=24 EVAL_PER_GPU=3 EVAL_MEM_FRACTION=0.2</code>，重做 G5b 三片性能，重新生成 24 片计划并过 <code>EVAL692_PLAN_IDENTITY</code></td></tr>
 <tr><td>1 层 encoder 与 MotionMEM 的 8 层不同（2026-11-17 用户改为 1 层）</td><td>Table I 中 E2E-Enc 与 MotionMEM 两行的对照，除权重来源（预训练冻结 vs 随机初始化、动作损失训练）外多了深度（8 vs 1）这一差别</td><td>事实陈述，不做判读；结果解读由用户决定。其余超参（宽 768、12 头、因果注意力、1D RoPE、RMSNorm eps 1e-6、SwiGLU 2048、无 bias、dropout 0、末位读出）相同</td></tr>
 <tr><td>新模块改变了投影层的初始化</td><td>E2E-Enc 与 MotionMEM 的投影层初值不同</td><td>由 G9 全树逐叶比覆盖（含 <code>motion_encoder_static</code>）</td></tr>
-<tr><td>随机初始化的 encoder 输出尺度与预训练 token 差别大，训练早期不稳</td><td>loss 尖峰或 nan</td><td>不加任何额外归一化或缩放（那会在权重来源与深度之外再引入一处与 MotionMEM 的差别）；如实记录（每 100 步记 encoder 输出 token mean/std）。若发散，停下报用户</td></tr>
+<tr><td>随机初始化的 encoder 输出尺度与预训练 token 差别大，训练早期不稳</td><td>loss 尖峰或 nan</td><td>不加任何额外归一化或缩放（那会在权重来源与深度之外再引入一处与 MotionMEM 的差别）；如实记录（每 100 步记 encoder 输出 token mean/std）。若发散，先查代码与数据通路缺陷并修复重跑；只能靠改超参才能收敛时属训练语义，停下问用户</td></tr>
 <tr><td>在线侧传输加倍与策略内重算</td><td>评估变慢、显存升高（Wan-9 的 78.3 GB 是同卡两片口径，与四片不能直接比）</td><td>sidecar 发送是增量的（只编码新完成的窗）；E2E 每局约 73 MB 响应、约 805 MB 请求上行，为 s32 的 2 倍；但策略内 encoder 每次策略调用处理全部历史槽，评估时长不能只按传输翻倍推断；G5b 分项实测（add_buffer、策略推理、单局墙钟），4 片超显存则退为三片完整组合</td></tr>
 <tr><td>评估跨环境：MotionMEM 54.62%（378/692）是 GreatLakes A40 上两次评估拼接</td><td>E2E-Enc（本机 A100 一次评完）与它不在同一评估环境</td><td>D4 已定不重评；填表与 <code>result.md</code> 照实标注各行评估来源</td></tr>
 <tr><td>评测降采样：评测跑满 2000 步时 exec 窗约 124，加 demo 窗后可超过 160</td><td>长局末段触发 resample，评测记忆与训练分布不同</td><td>E2E 与 MotionMEM 两行同口径；G5b、G8 记录 <code>MOTION_DOWNSAMPLE</code> 次数，随结果交付</td></tr>
@@ -862,5 +863,7 @@
 <li>同轮用户新指示（主会话转达，美东 2026-11-17 23:3x），原话「先定稿，定稿完了之后，不要立刻开工，让我再看一眼通过」。据此 R1 及全区段「已获开工令／开工令已给」改为「授权为一级：用户看过定稿版并明确确认后开工；未确认前不改代码、不导出、不起触发器与 GPU 任务」；RB-A3 加「先把定稿版交用户审阅，等确认」。另补事实（〇.1.1 现状、〇.2 P9、RB-A0、A0、五节上游）：NativeMEM 已于美东 2026-11-17 23:09:43 结束：<code>NM_PIPELINE=PASS</code>、<code>EVAL692=PASS episodes=692 success=290</code>、末行 <code>EXIT_CODE=0</code>，tmux <code>nm-pipe2</code> 已不存在，8 卡 <code>memory.used</code> 之和为 0；触发条件已满足，开工后触发器首轮即判 <code>NM_DONE=PASS</code>、A0 通过。</li>
 <li>不变：bf16、D4 不重评、无显著性判读、一级授权（按上条改为看过定稿并确认后开工）、命名、状态机、步速 3 s/步上限、<code>GPU_UTIL</code>、校验副本删除、外部审计 22 条修订。</li>
 </ul>
+<h3>第九轮：开工后一路跑到底（2026-11-17 美东）</h3>
+<p>用户原话：「我同意开工之后就尽可能一路跑到底，除非有训练语义上的不同，就是重大变化，否则的话尽可能就一路跑到底了。」据此重写第一部分第 5 节「停止项总表」与 R1：工程故障（闸门 FAIL、代码缺陷、训练崩溃、shm 告警、评估中断）改为主会话修复重跑、事后报告；停下问用户的只剩训练语义变化、G0 数据同源 FAIL、692 身份不符、修复只能靠放宽判据或改训练语义、步速 &gt;3.0 s/步，以及全局规则要求确认的删除与新增依赖。发散先查缺陷，只能靠改超参时才停。</p>
 </body>
 </html>
