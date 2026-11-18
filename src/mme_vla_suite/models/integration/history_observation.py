@@ -27,8 +27,10 @@ class HistAugObservation(_Observation):
     # l4 = T = motion.budget（窗数）× motion.tokens_per_window（缺省 1；wan_raw9 为 9，T=720），
     # d4 = motion.dim（768 或 wan_raw9 的 16384），d5 = motion.pos_dim（256）；
     # mem_order 用 at.Int（jaxtyping 的 Float 白名单不含 int32），l5 = 帧路 budget + T，
-    # 不得复用 l1/l4（@at.typecheck 把全部字段塞进同一个 memo，同名维必须同值）
-    motion_emb: at.Float[at.Array, "b l4 d4"] | None = None
+    # 不得复用 l1/l4（@at.typecheck 把全部字段塞进同一个 memo，同名维必须同值）。
+    # motion_emb 的长度维另起名 l6（1117 E2E 计划一节 history_observation 行）：E2E 下 motion_emb 为 (b,1440,16384) bf16
+    # 而 motion_pos / motion_mask 为 160 槽，共用 l4 会被 typecheck 拒；非 E2E 下 l6 == l4，取值不变
+    motion_emb: at.Float[at.Array, "b l6 d4"] | None = None
     motion_pos: at.Float[at.Array, "b l4 d5"] | None = None
     motion_mask: at.Bool[at.Array, "b l4"] | None = None
     mem_order: at.Int[at.Array, "b l5"] | None = None
@@ -88,7 +90,7 @@ class HistAugObservation(_Observation):
         static_pos_emb: at.Float[ArrayT, "*b l d2"] | None = None,
         static_state_emb: at.Float[ArrayT, "*b l d3"] | None = None,
         # 本签名内 l 已被 512 占住，motion 侧另用一套维名；jaxtyped 装饰 dataclass 只包 __init__，方法注解不做运行时检查
-        motion_emb: at.Float[ArrayT, "*b m d4"] | None = None,
+        motion_emb: at.Float[ArrayT, "*b m6 d4"] | None = None,
         motion_pos: at.Float[ArrayT, "*b m d5"] | None = None,
         motion_mask: at.Bool[ArrayT, "*b m"] | None = None,
         mem_order: at.Int[ArrayT, "*b lm"] | None = None,
