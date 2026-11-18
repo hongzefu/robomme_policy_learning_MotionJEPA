@@ -27,6 +27,7 @@
 #   attempt id（aNN）同时绑定 runner 日志、checkpoint、记录目录、shmmon 日志与 G6 证据；本轮日志或 run 目录已存在即拒（重跑递增 NN）。
 # 路径配置摘要 PATHCFG = "prefetch=<E2E_PREFETCH_FACTOR 或 2> compact=off remat=off"（紧凑计算 / remat 尚未实现，恒为 off；
 #   采用 R8 (ii) 档时须先改这里），PATHCFG_SHA = 其 sha256 前 16 位；G6 证据只认与当前摘要相同的尝试。
+# E2E_XLA_MEM_FRACTION：XLA_PYTHON_CLIENT_MEM_FRACTION 取值，缺省 0.90（不再照抄 Wan-9 的 0.95），起跑头打印 XLA_MEM_FRACTION=。
 # E2E_PREFETCH_FACTOR：默认不设（torch 默认 2）；RB-D2 退路第一档设 1。train.py 打印 DATALOADER_PREFETCH_FACTOR= 供 G6 读回比对。
 # 单测专用（只在 --dry-run 生效，其他情形设了即拒）：E2E_DRY_STATE_DIR=<目录> 把「本轮日志 / run 目录已存在」检查改到该目录下
 #   （logs/<run>.runner.log、train-runs/<run>），TRAIN_ARGS 照旧用真实路径。
@@ -64,6 +65,12 @@ if [ -n "${E2E_DRY_STATE_DIR:-}" ] && [ "$DRY" != 1 ]; then
 fi
 if [ -n "${E2E_PREFETCH_FACTOR:-}" ] && ! [[ "$E2E_PREFETCH_FACTOR" =~ ^[1-9][0-9]*$ ]]; then
   printf 'E2E_PREFETCH_FACTOR 必须是正整数，收到 %s\n' "$E2E_PREFETCH_FACTOR" >&2; exit 2
+fi
+# XLA 显存预占比例：缺省 0.90（G4 a02 在 0.95 下第一训练步 NCCL Cuda OOM，池外须给 NCCL/cuBLAS 留空间；
+#   0.90 与 G6 GPU_PEAK 判据 72 GB = 80×0.9 一致）。所有模式同值，起跑头打印 XLA_MEM_FRACTION= 留档。
+XLA_MEM_FRACTION="${E2E_XLA_MEM_FRACTION:-0.90}"
+if ! [[ "$XLA_MEM_FRACTION" =~ ^0\.[0-9]+$ ]]; then
+  printf 'E2E_XLA_MEM_FRACTION 必须是 (0,1) 内的小数（如 0.90），收到 %s\n' "$XLA_MEM_FRACTION" >&2; exit 2
 fi
 
 MAIN=/scratch/hongze/robomme_policy_learning_MotionJEPA
@@ -160,6 +167,7 @@ if [ "$DRY" = 1 ]; then
   printf 'MODE=%s RUN=%s STEPS=%s EXPECT_CKPTS=%s ATTEMPT=%s\n' "$MODE" "$RUN" "$STEPS" "$EXPECT_CKPTS" "$ATTEMPT"
   printf 'HC=%s HC_SHA=%s MOTION=%s TABLE=%s\n' "$HC" "$HC_SHA" "$MOTION" "$TABLE_STATE"
   printf 'PATHCFG=%s PATHCFG_SHA=%s\n' "$PATHCFG" "$PATHCFG_SHA"
+  printf 'XLA_MEM_FRACTION=%s\n' "$XLA_MEM_FRACTION"
   printf 'TRAIN_ARGS='; printf ' %q' "${TRAIN_ARGS[@]}"; printf '\n'
   if [ "$MODE" = g0 ]; then
     printf 'G0_ONLY=1 checks=%s\n' "$([ "$TABLE_STATE" = present ] && echo full || echo pre)"
@@ -359,7 +367,7 @@ body() (
   export UV_CACHE_DIR="$V1_STORE/cache/uv" PYTHONUNBUFFERED=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
   export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
   unset JAX_PLATFORMS MMEVLA_MOTION_STORE WANDB_MODE
-  export XLA_PYTHON_CLIENT_MEM_FRACTION=0.95
+  export XLA_PYTHON_CLIENT_MEM_FRACTION="$XLA_MEM_FRACTION"   # 缺省 0.90，见文件头 E2E_XLA_MEM_FRACTION
   export MMEVLA_JAX_CACHE_DIR="$V1_STORE/cache/jax/$RUN"
   export TRAIN_RECORD_DIR="$REC"
   export MMEVLA_FRAMESAMP_SOURCE="$DS/source"
@@ -370,6 +378,7 @@ body() (
   printf 'RUN=%s\nMODE=%s\nATTEMPT=%s\nTRAIN_HEAD=%s\nREPO=%s\nV1_STORE=%s\nSTEPS=%s\nSTART_UTC=%s\n' \
     "$RUN" "$MODE" "$ATTEMPT" "$TRAIN_HEAD" "$MAIN" "$V1_STORE" "$STEPS" "$(date -u +%FT%TZ)"
   printf 'PATHCFG=%s PATHCFG_SHA=%s E2E_PREFETCH_FACTOR=%s\n' "$PATHCFG" "$PATHCFG_SHA" "${E2E_PREFETCH_FACTOR:-unset}"
+  printf 'XLA_MEM_FRACTION=%s\n' "$XLA_PYTHON_CLIENT_MEM_FRACTION"
   printf 'TRAIN_ARGS='; printf ' %q' "${TRAIN_ARGS[@]}"; printf '\n'
   printf 'DIAG_SWITCH TRAIN_TIMING_STEPS=%s TRAIN_TIMING_PROFILE=%s TRAIN_RECORD_DIR=%s follower=STEP_TIME+DIAG gpu_sample_s=15\n' \
     "$TIMING_STEPS" "$TIMING_PROFILE" "$REC"
