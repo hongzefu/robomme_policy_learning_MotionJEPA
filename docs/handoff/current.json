@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-18T04:50:00Z",
-    "america_new_york": "2026-11-17T23:50:00-05:00"
+    "utc": "2026-11-18T08:35:00Z",
+    "america_new_york": "2026-11-18T03:35:00-05:00"
   },
   "repo": {
     "branch": "v18-4task-modul-e2eenc-s16-50k",
@@ -320,9 +320,9 @@
         "file": "1117-e2e-enc-train-plan.html",
         "sha": "c618671"
       },
-      "state": "implementing",
-      "state_changed_at": "2026-11-18T04:50:00Z",
-      "state_reason": "用户看过定稿 c618671 后下令开工；阶段 A：v18 自 c618671 建出（主检出），A0 现状已满足（NativeMEM 23:09 美东结束、8 卡 0 MiB）",
+      "state": "running",
+      "state_changed_at": "2026-11-18T08:35:00Z",
+      "state_reason": "闸门 G0/G1/G1b/G1c/G2/G3/G4/G6/G9/G5b 通过，G5 经用户裁定提前结束（RECORDED）；正式训练起跑",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiSdfuvk3pVkwnNg4yV",
         "host": "ip-10-242-11-177"
@@ -330,7 +330,18 @@
       "depends_on": [],
       "pre_handoff": [],
       "long_tail": [],
-      "running_handles": [],
+      "running_handles": [
+        {
+          "tmux": "e2e-train",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/e2e-train.log",
+          "done_line": "EXIT_CODE=0（链脚本起评估后退出）"
+        },
+        {
+          "tmux": "e2e-shmmon",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/e2e-shmmon.log",
+          "done_line": "SHM_PEAK=PASS"
+        }
+      ],
       "authorizations": [
         {
           "kind": "register",
@@ -349,14 +360,26 @@
           "date": "2026-11-17",
           "quote": "开工",
           "scope": "计划 1117-e2e-enc-train-plan.html @c618671 全部步骤（一级授权，含 G7 正式训练与 G8 评估）"
+        },
+        {
+          "kind": "go",
+          "date": "2026-11-18",
+          "quote": "这个问题我们之前验证过嘛？验证过了就不用再跑了，直接开始吧。",
+          "scope": "G5 提前结束、直接起正式训练"
+        },
+        {
+          "kind": "go",
+          "date": "2026-11-18",
+          "quote": "问题一和三能不能够放在一起来做？然后问题二能不能够在正式起跑的时候再来做，就不要单独跑这个",
+          "scope": "G6 合成 benchckpt，SHM 判定移到正式训练前 2000 步"
         }
       ],
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "RB-A4 派 S5a（e2e_wait_nm.sh），合入后起 e2e-trig",
-          "command": "见计划四节 RB-A4",
-          "verdict_line": "NM_DONE=PASS GPU_FREE=PASS gpus=8"
+          "what": "正式训练 50001 步后链脚本自动起 e2e-eval 692 局评估",
+          "command": "见 launch.md",
+          "verdict_line": "TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10；EVAL692_RESULT_IDENTITY=PASS"
         }
       ]
     }

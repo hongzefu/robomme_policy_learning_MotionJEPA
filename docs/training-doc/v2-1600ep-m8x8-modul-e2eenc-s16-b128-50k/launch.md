@@ -88,3 +88,13 @@ e2e-export、e2e-g1、e2e-h5fetch、e2e-g9、e2e-g0、e2e-g3-a01、e2e-g4-a01、
 - F3（60e9b60 → ca98ad2）：check_checkpoint 参数树比对两侧剔除 None 叶；真实 e2e-smoke20/19 `PARAM_TREE_EXACT=PASS n_model=75 n_ckpt=75 missing=0 extra=0 shape_mismatch=0 none_leaves_model=7 none_leaves_ckpt=7`。
 - F4（2ad7c46 → ba6a264）：run_shard.sh 归属检查对「回溯失败且 /proc 已无」的已退出进程不再判外来（存活外来进程仍拒）；local_692_pool_e2e.sh run_slot 先登记后 exec 起跑。三次合并后审查 POST_MERGE_REVIEW=PASS（135 passed）。旧 local_692_pool.sh 未改。test_s3_eval_local.py c4/c5/c7 基线即失败（夹具仍按 10 片/每卡 2 片），未改。
 - G5（v1-store/logs/e2e-g5-a01.log，GPU1 策略 + GPU2 sidecar）：`TIC_ACCEPTANCE_COVERAGE=PASS tasks=4/4 max_visible_k=141 long_c_env=1151/1151`；逐步 obs_mis=0、act T==I True（进行中，判定行待补）。
+
+## G5 用户裁定提前结束（2026-11-18 美东约 03:30）
+- 用户原话：「这个问题我们之前验证过嘛？验证过了就不用再跑了，直接开始吧。」
+- 主会话如实答复：e2e 这条在线通路此前没有完全同口径验证过（Wan-9 的 G5 验过同一 sidecar 通路，但为 fp32、stride 32；bf16 转换另由 G1c 与单测逐字节对拍）。按用户裁定停掉 G5（tmux kill-session '=e2e-g5-a01'，无残留进程）。
+- 已完成部分（v1-store/logs/e2e-g5-a01.log）：`TIC_ACCEPTANCE_COVERAGE=PASS tasks=4/4 tail_pad_windows>=1 max_visible_k=141 long_c_env=1151/1151`；逐步 159 个决策点（BinFill:367 72 步〔全库最长局，含补尾窗〕、BinFill:357 65 步、RouteStick:366 22 步）全部 `obs_mis=0 tok_eq=True act T==I True`，帧 rel_fro S-B≈0.0046；VideoRepick、VideoUnmaskSwap 两局未跑到。G5 判定记为 `RECORDED`（用户裁定提前结束，未出 TIC_SIDECAR 判定行），不是 PASS。
+
+## 正式训练起跑（RB-E0/E2）
+- 起跑前 G6 报告已向用户给出（见上 G6 节）；按一级授权不等回复。
+- e2e-shmmon（--limit-gb 293、--formal-rec、--judge-step 2000）先起，随后 e2e-train 链脚本；TRAIN_HEAD = 本 Beta commit。
+- 评估档：32 片、每卡 4 片、EVAL_MEM_FRACTION=0.2、CHUNK_EPISODES=5、EVAL_TIMEOUT=14400（链脚本缺省值）。
