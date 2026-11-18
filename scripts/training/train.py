@@ -540,6 +540,26 @@ def _e2e_token_stats(train_state, batch) -> dict:
     return {"e2e_enc_out_mean": float(mean), "e2e_enc_out_std": float(std)}
 
 
+def device_peak_lines(devices=None) -> list[str]:
+    """每个本地设备一行 ``DEVICE_PEAK device=<i> peak_bytes_in_use=<n>``（S5 e2e_g6_judge.py GPU_PEAK 的数据源，
+    其正则按行首匹配 ``DEVICE_PEAK device=<整数> peak_bytes_in_use=<整数>``）；memory_stats() 为 None、缺键或抛错时值写 NA。"""
+    out = []
+    for i, d in enumerate(jax.local_devices() if devices is None else devices):
+        try:
+            stats = d.memory_stats()
+        except Exception:                           # 部分后端未实现 memory_stats
+            stats = None
+        v = stats.get("peak_bytes_in_use") if isinstance(stats, dict) else None
+        out.append(f"DEVICE_PEAK device={i} peak_bytes_in_use={int(v) if v is not None else 'NA'}")
+    return out
+
+
+def _print_device_peaks() -> None:
+    """只打印信息、不改任何数值；先刷 stderr 并另起一行，保证每行从行首开始（tqdm 进度条与 stdout 共用 tee）。"""
+    sys.stderr.flush()
+    print("\n" + "\n".join(device_peak_lines()), flush=True)
+
+
 def _motion_diag_info(model, grads) -> dict:
     """三键：motion_encoder_static kernel 范数（更新后参数）、同路径梯度范数、帧路 feature_encoder 梯度范数。"""
     mem = model.mem_encoder
@@ -708,6 +728,7 @@ def main(config: _config.TrainConfig):
 
     infos = []
     info_steps = []
+    loop_ok = False
     try:
         for step in pbar:
             with timing.step(step, flush=lambda: jax.block_until_ready(train_state)) if timing else nullcontext():
@@ -741,14 +762,18 @@ def main(config: _config.TrainConfig):
                 ) or step == config.num_train_steps - 1:
                     with timing.phase("checkpoint") if timing else nullcontext():
                         _checkpoints.save_state(checkpoint_manager, train_state, data_loader, step)
+        loop_ok = True
     finally:
         if timing:
             timing.close()
         if e2e_diag and info_steps:                 # 末段不足 log_interval 的步也逐步落盘
             _e2e_write_clip_steps(e2e_diag_dir, info_steps, infos)
+        if not loop_ok:                             # 训练循环异常退出时也留下显存峰值证据
+            _print_device_peaks()
 
     logging.info("Waiting for checkpoint manager to finish")
     checkpoint_manager.wait_until_finished()
+    _print_device_peaks()                           # 训练循环结束、保存完成之后（所有 run，含 bench / probe 模式）
 
 
 # ── 可选 metrics 记录器（仅 __main__ 路径、设 TRAIN_RECORD_DIR 时装载）───────────

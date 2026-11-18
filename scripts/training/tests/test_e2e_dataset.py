@@ -653,3 +653,46 @@ def test_train_step_cpu_smoke(fx, tmp_path, monkeypatch, capsys):
     _say(capsys, f"E2E_TRAIN_SMOKE=PASS steps=2 step0_mem_grad=0 diag_keys={len(keys)} loss={float(info['loss']):.4f} "
                  f"grad_norm={float(info['grad_norm']):.4f} enc_grad={float(info['e2e_enc_grad_norm']):.4g} "
                  f"diag0={p0.name} eff_rank={d0['effective_rank']:.2f} clip_steps=2 s1_real={int(S1_REAL)}")
+
+
+# ══ ⑫ DEVICE_PEAK：GPU_PEAK 证据行（格式与 S5 e2e_g6_judge.py 的解析正则一致）══════════════════════════════════
+
+
+def test_device_peak_lines_match_judge(tmp_path, capsys):
+    import jax
+
+    train = _load_train()
+    spec = importlib.util.spec_from_file_location("e2e_g6_judge_for_s3", str(WT / "scripts/training/g0/e2e_g6_judge.py"))
+    J = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(J)
+
+    class _Dev:
+        def __init__(self, stats=None, boom=False):
+            self._s, self._b = stats, boom
+
+        def memory_stats(self):
+            if self._b:
+                raise NotImplementedError
+            return self._s
+
+    lines = train.device_peak_lines([_Dev({"peak_bytes_in_use": 123, "bytes_in_use": 7}), _Dev(None), _Dev({}),
+                                     _Dev(boom=True), _Dev({"peak_bytes_in_use": 5 * 1024 ** 3})])
+    assert lines == ["DEVICE_PEAK device=0 peak_bytes_in_use=123", "DEVICE_PEAK device=1 peak_bytes_in_use=NA",
+                     "DEVICE_PEAK device=2 peak_bytes_in_use=NA", "DEVICE_PEAK device=3 peak_bytes_in_use=NA",
+                     f"DEVICE_PEAK device=4 peak_bytes_in_use={5 * 1024 ** 3}"]
+    # judge 只认数值行，NA 行不计入；数值行的设备号与字节数原样解析
+    assert J.device_peaks(lines) == {0: 123, 4: 5 * 1024 ** 3}
+    # 真实 CPU 设备：memory_stats() 为 None → NA，不崩溃
+    cpu = train.device_peak_lines()
+    assert len(cpu) == len(jax.local_devices()) and all(l.startswith("DEVICE_PEAK device=") for l in cpu)
+    assert jax.local_devices()[0].memory_stats() is not None or cpu[0].endswith("=NA")
+    # 打印路径：另起一行、行首开始；混入 tqdm 式 \r 残行后 judge 仍能按 splitlines 解析
+    train._print_device_peaks()
+    out = capsys.readouterr().out
+    log = tmp_path / "run.log"
+    log.write_text("Step 1: loss=1.0\n 50%|#####     | 1/2\r" + out + "EXIT_CODE=0\n")
+    parsed = J.device_peaks(log.read_text().splitlines())
+    want = {i: int(l.rsplit("=", 1)[1]) for i, l in enumerate(cpu) if not l.endswith("=NA")}
+    assert parsed == want
+    _say(capsys, f"E2E_DEVICE_PEAK=PASS fixture_lines=5 na_cases=3 judge_parsed=2 cpu_devices={len(cpu)} "
+                 f"cpu_line={cpu[0].split(' ', 1)[1]}")
