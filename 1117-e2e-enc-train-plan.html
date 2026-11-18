@@ -137,7 +137,7 @@
 </table>
 </div>
 
-<p>另有一条关于启动时点的用户原话（2026-11-18）：「你需要加入一点就是在我现在的这个 native mem 训练完成之后立刻开始就是在我同意开工之后，它应该监控 native mem 的训练和评估，监控完了立刻开始。」据此设触发器 <code>e2e-trig</code>；它只在获「实施与 GPU 验证令」之后才起，未获令前不起任何任务。</p>
+<p>另有一条关于启动时点的用户原话（2026-11-17）：「你需要加入一点就是在我现在的这个 native mem 训练完成之后立刻开始就是在我同意开工之后，它应该监控 native mem 的训练和评估，监控完了立刻开始。」据此设触发器 <code>e2e-trig</code>；它只在获「实施与 GPU 验证令」之后才起，未获令前不起任何任务。</p>
 
 <h2>2　数据：复用本机已有 latent，转成 bf16 新表，不重跑 Wan</h2>
 
@@ -145,7 +145,7 @@
 
 <table>
 <tr><th>项</th><th>值</th><th>说明</th></tr>
-<tr><td>源 latent</td><td><code>v1-store/datasets/4task-v2-1600ep-604f16da/wan-latents</code>，71,316 窗，fp32，约 40 GB</td><td>2026-11-18 只读核实在盘，成员清单与既有记录一致</td></tr>
+<tr><td>源 latent</td><td><code>v1-store/datasets/4task-v2-1600ep-604f16da/wan-latents</code>，71,316 窗，fp32，约 40 GB</td><td>2026-11-17 只读核实在盘，成员清单与既有记录一致</td></tr>
 <tr><td>新表</td><td><code>…/motion-wan-raw9-s16</code>，71,316 行，bf16，每行 294,912 字节，共 21,031,944,192 字节（约 21.0 GB）</td><td>只做一次 fp32→bf16 转换，不做其他数值处理；输出目录事先存在即拒绝，不覆盖</td></tr>
 <tr><td>行序</td><td>与 MotionMEM 的 768 维表逐行相同</td><td>同一个窗在两张表里是同一行号，所以「哪些窗对当前时刻可见」的规则可以原样沿用</td></tr>
 <tr><td>与 Wan-9 的关系</td><td>新表的偶数窗 = Wan-9 步长 32 表对应行转成 bf16</td><td>作为一项交叉校验，36,484 行逐字节相等</td></tr>
@@ -307,11 +307,11 @@
 <tr><th>#</th><th>事项</th><th>裁决</th></tr>
 <tr><td>K1–K5</td><td>encoder 版本、记忆对齐、唯一差别、步数、评估口径</td><td>见第 1 节「已定死口径」</td></tr>
 <tr><td>D1–D3</td><td>标准化常数、dropout、优化器</td><td>「都按推荐」</td></tr>
-<tr><td>D4</td><td>是否在本机重评 MotionMEM</td><td>不重评（2026-11-18，「d4不要」）</td></tr>
-<tr><td>D5</td><td>输入 latent 精度</td><td>默认 bf16（2026-11-18，「默认就直接用bf16可以吗？」「改bf16」）</td></tr>
-<tr><td>—</td><td>差距显著性的判读</td><td>本计划不定义（2026-11-18 删除原 D6）</td></tr>
-<tr><td>—</td><td>GPU 工作的启动时点</td><td>NativeMEM 训练与评估结束后自动开跑，前提是已获令（2026-11-18）</td></tr>
-<tr><td>—</td><td>计划位置</td><td>放策略仓，不放稿件仓库（2026-11-18）</td></tr>
+<tr><td>D4</td><td>是否在本机重评 MotionMEM</td><td>不重评（2026-11-17，「d4不要」）</td></tr>
+<tr><td>D5</td><td>输入 latent 精度</td><td>默认 bf16（2026-11-17，「默认就直接用bf16可以吗？」「改bf16」）</td></tr>
+<tr><td>—</td><td>差距显著性的判读</td><td>本计划不定义（2026-11-17 删除原 D6）</td></tr>
+<tr><td>—</td><td>GPU 工作的启动时点</td><td>NativeMEM 训练与评估结束后自动开跑，前提是已获令（2026-11-17）</td></tr>
+<tr><td>—</td><td>计划位置</td><td>放策略仓，不放稿件仓库（2026-11-17）</td></tr>
 </table>
 
 <h3>待用户确认</h3>
@@ -325,7 +325,7 @@
 </ol>
 </div>
 
-<h3>已核实事实（2026-11-18）</h3>
+<h3>已核实事实（2026-11-17）</h3>
 
 <ol>
 <li><b>P1　源 latent 在盘。</b>步长 16、71,316 窗、约 40 GB，成员清单与既有记录一致。</li>
@@ -349,7 +349,7 @@
 
 <table>
 <tr><th>编号</th><th>红线</th></tr>
-<tr><td>R1</td><td>未获「实施与 GPU 验证令」，不改代码、不导出、不起任何 GPU 任务；未获「正式训练令」，不起正式训练与评估。两级授权：「实施与 GPU 验证令」在 RB-A3／阶段 A 末向用户要，范围 = S1–S5 代码、新表导出（bf16，约 21.0 GB）、G1、G3、G4、G5、G5b、G6 的 GPU 占用（含 ≥2000 步 shmprobe 约 47–67 分钟），前提 A0 <code>GPU_FREE=PASS</code>（获令后由〇.1.1 的触发器判定），同一次询问一并要命名的裁决；「正式训练令」在 RB-E0 向用户要，附 G6 外推总时长、shm 平台、峰值显存，范围 = G7 正式训练、G8 评估。D5 已定：默认用 bf16 存储与传输 motion latent（用户 2026-11-18 美东裁定，见 R9），不再问</td></tr>
+<tr><td>R1</td><td>未获「实施与 GPU 验证令」，不改代码、不导出、不起任何 GPU 任务；未获「正式训练令」，不起正式训练与评估。两级授权：「实施与 GPU 验证令」在 RB-A3／阶段 A 末向用户要，范围 = S1–S5 代码、新表导出（bf16，约 21.0 GB）、G1、G3、G4、G5、G5b、G6 的 GPU 占用（含 ≥2000 步 shmprobe 约 47–67 分钟），前提 A0 <code>GPU_FREE=PASS</code>（获令后由〇.1.1 的触发器判定），同一次询问一并要命名的裁决；「正式训练令」在 RB-E0 向用户要，附 G6 外推总时长、shm 平台、峰值显存，范围 = G7 正式训练、G8 评估。D5 已定：默认用 bf16 存储与传输 motion latent（用户 2026-11-17 美东裁定，见 R9），不再问</td></tr>
 <tr><td>R2</td><td><code>mme_vla_suite_b128_80k</code> 的超参一项不改。runner 的 <code>TRAIN_ARGS</code> 里，超参类开关只有 <code>--exp-name</code>、<code>--model.history-config</code>、<code>--num_train_steps</code> 三项；路径类参数与 Wan-9 相同</td></tr>
 <tr><td>R3</td><td><code>encoder_kind</code> 未写或为其他值时，模型的参数叶数、初始化值、前向结果与改动前逐位相同（新模块在 <code>__init__</code> 里根本不创建）</td></tr>
 <tr><td>R4</td><td>闸门 FAIL 不改判据。G3、G6 的阈值若要放宽，按策略仓规则由主会话判断影响面并告知用户</td></tr>
@@ -357,12 +357,12 @@
 <tr><td>R6</td><td>正式训练从 clean HEAD 的 Beta commit 起跑；G0 数据同源闸（<code>DATA_LINEAGE</code>）FAIL 即停，不得豁免</td></tr>
 <tr><td>R7</td><td>encoder 用独立的 RNG 流：<code>base = rngs.default.key.value</code>（只读 key，不调用 <code>rngs()</code>，不消耗计数；flax 0.10.2 里该值构造期不变，只有 count 变），<code>nnx.Rngs(params=jax.random.fold_in(jax.random.fold_in(base, 0x7FFFFFFF), 0xE2E))</code>。不用单级 <code>fold_in(base, 0xE2E)</code>：flax 的 <code>RngStream.__call__</code> 返回 <code>fold_in(key, count)</code>（<code>flax/nnx/rnglib.py:66-71</code>），0xE2E=3630，default 流第 3630 次取用会得到同一个 key，与某个现有叶的初值相关；两级派生避开这一碰撞。G9 同时校验加入 encoder 前后 default 流的 count 相等。除 encoder 的叶以外，全模型参数初值在 e2e YAML 与 MotionMEM YAML 下逐位相等（G9 <code>INIT_EQ</code> 全树逐叶验证）</td></tr>
 <tr><td>R8</td><td>R2 的补充：吞吐档参数不属于超参，分三档。(i) <code>num_workers</code>、<code>prefetch_factor</code>、<code>save_interval</code>（仅 ckptprobe 模式）：只记 <code>launch.md</code>，不报用户。(ii) encoder 的 remat（<code>nnx.remat</code>／<code>jax.checkpoint</code>）、只算有效窗的紧凑计算或传输：只保证数学等价，不保证逐位相同；采用前必须过 <code>E2E_COMPACT_EQ=PASS</code>（见三），并报告用户（报告即可，不需批准）；采用后 G9、G3、G4、G6、G5 全部重做。原第三档「bf16 落表或传输须用户批准」已删：D5 已定默认 bf16（R9），bf16 不再是吞吐档</td></tr>
-<tr><td>R9</td><td>bf16 转换点唯一（D5，2026-11-18 用户裁定）。离线：导出新表时把源 fp32 latent 用 <code>src/mme_vla_suite/shared/raw_bf16.py::raw9_f32_to_bf16</code>（<code>np.asarray(x, np.float32).astype(ml_dtypes.bfloat16)</code>，round-to-nearest-even；策略仓 .venv 已有 ml_dtypes 0.4.1，随 jax 安装，不改 pyproject）转 bf16 存盘。在线：sidecar 仍返回 fp32（数值不改），<code>motion_client</code> 收到后立即调同一函数转 bf16。除这两处以外，数据集、collate、L1 预分配、模型都不做 fp32→bf16 转换，只搬运 bf16 字节；模型内 bf16 latent 先升 fp32，做 <code>(z-mean)/std</code>（D1 的 VAE 常数），再按 <code>config.dtype</code>（bf16）进 encoder，计算精度规定不变。G2、G5 校验这一点</td></tr>
+<tr><td>R9</td><td>bf16 转换点唯一（D5，2026-11-17 用户裁定）。离线：导出新表时把源 fp32 latent 用 <code>src/mme_vla_suite/shared/raw_bf16.py::raw9_f32_to_bf16</code>（<code>np.asarray(x, np.float32).astype(ml_dtypes.bfloat16)</code>，round-to-nearest-even；策略仓 .venv 已有 ml_dtypes 0.4.1，随 jax 安装，不改 pyproject）转 bf16 存盘。在线：sidecar 仍返回 fp32（数值不改），<code>motion_client</code> 收到后立即调同一函数转 bf16。除这两处以外，数据集、collate、L1 预分配、模型都不做 fp32→bf16 转换，只搬运 bf16 字节；模型内 bf16 latent 先升 fp32，做 <code>(z-mean)/std</code>（D1 的 VAE 常数），再按 <code>config.dtype</code>（bf16）进 encoder，计算精度规定不变。G2、G5 校验这一点</td></tr>
 </table>
 
 <h3>〇.1.1 NativeMEM 结束触发</h3>
 
-<p>用户 2026-11-18（美东）要求：在 NativeMEM 训练与评估结束后立即开始本计划的 GPU 工作，前提是用户已同意开工。本节是计划内容，<b>获「实施与 GPU 验证令」之后才生效</b>；未获令前不起任何触发器、不起 tmux、不占 GPU。</p>
+<p>用户 2026-11-17（美东）要求：在 NativeMEM 训练与评估结束后立即开始本计划的 GPU 工作，前提是用户已同意开工。本节是计划内容，<b>获「实施与 GPU 验证令」之后才生效</b>；未获令前不起任何触发器、不起 tmux、不占 GPU。</p>
 
 <table>
 <tr><th>项</th><th>规则</th></tr>
@@ -378,7 +378,7 @@
 <tr><td>现状（美东 2026-11-17 22:30 只读核查）</td><td>NativeMEM 训练已结束：日志有 <code>TRAIN_FINAL=PASS step=19999 ckpts=1 finite=PASS</code>，checkpoint <code>/scratch/hongze/NativeMEM/checkpoints/nativemem_pi05_robomme4task/nativemem-4task1600-b128-20k/19999</code> 在盘。692 局评估于美东 22:28 起跑（tmux <code>nm-pipe2</code>，脚本 <code>scripts/robomme/local_692_pool_nativemem.sh &lt;19999&gt; 7</code>，32 片 s0–s31、每卡 4 片，评估目录 <code>/scratch/hongze/NativeMEM/runs/eval/local692-nativemem-20k</code>）。结束时间未知；参照 Wan-9 本机 692 评估 2.5–3 小时，粗估美东 11-18 凌晨 1–2 点，仅为估计</td></tr>
 </table>
 
-<h3>〇.2 前提核实结果（2026-11-18 美东，AWS 只读核实）</h3>
+<h3>〇.2 前提核实结果（2026-11-17 美东，AWS 只读核实）</h3>
 
 <p>核实对象：策略仓 <code>c0826be</code>、MotionJEPA <code>d3213de</code>、本机 <code>v1-store</code>（<code>/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store</code>，下文简写 <code>v1-store</code>）。P1–P8 成立，P9 当前不成立（NativeMEM 评估在跑，由〇.1.1 的触发器在获令后判定）。</p>
 
@@ -478,7 +478,7 @@
 
 <h2>三、闸门总表</h2>
 
-<p>编号与判定行以 2026-11-18 细化与同日对抗验证修正后的为准，共 13 项，另有条件性闸 <code>E2E_COMPACT_EQ</code>（只在采用紧凑计算或 remat 时跑）。GPU 闸门一律排在 A0 之后，且须先获「实施与 GPU 验证令」（R1）。不占 GPU 的部分获令后不等 GPU：S1–S4 写代码（S5 待 S3 合入）、G2 导出与校验、K_DIST 在相应代码合入后即开始；G9 只需 S3、在 CPU 上跑，按推荐次序排在 S5 合入之后、G3 之前。</p>
+<p>编号与判定行以 2026-11-17 细化与同日对抗验证修正后的为准，共 13 项，另有条件性闸 <code>E2E_COMPACT_EQ</code>（只在采用紧凑计算或 remat 时跑）。GPU 闸门一律排在 A0 之后，且须先获「实施与 GPU 验证令」（R1）。不占 GPU 的部分获令后不等 GPU：S1–S4 写代码（S5 待 S3 合入）、G2 导出与校验、K_DIST 在相应代码合入后即开始；G9 只需 S3、在 CPU 上跑，按推荐次序排在 S5 合入之后、G3 之前。</p>
 
 <table>
 <tr><th>闸门</th><th>输入何时存在</th><th>命令或入口</th><th>判定行</th></tr>
@@ -509,7 +509,7 @@
 <tr><td>RB-A0</td><td>A0 由「NativeMEM 结束触发」判定（〇.1.1，触发器在 RB-A4 获令后才起）。获令前只读核查：<code>nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv</code>。现状（2026-11-17 22:30 美东）：NativeMEM 训练已结束（<code>TRAIN_FINAL=PASS step=19999</code>，checkpoint <code>…/nativemem-4task1600-b128-20k/19999</code> 在盘），692 局评估于 22:28 起跑占满 8 卡（tmux <code>nm-pipe2</code>，日志 <code>/scratch/hongze/NativeMEM/logs/nm-pipe2.log</code>，32 片、每卡 4 片），粗估 11-18 美东凌晨 1–2 点结束（仅估计）。判定口径：<code>EVAL692=PASS episodes=692</code>、<code>NM_PIPELINE=PASS</code>、末行 <code>EXIT_CODE=0</code>、<code>nm-pipe2</code> 不存在、8 卡 <code>memory.used&lt;2000 MiB</code> 且无计算进程 → <code>NM_DONE=PASS</code> 与 <code>GPU_FREE=PASS gpus=8</code>。不满足时只做 CPU 步骤，不动别人的进程</td></tr>
 <tr><td>RB-A1</td><td>策略仓 <code>git fetch</code>，核实分支基线为 <code>v15-4task-modul-wanraw9-s32-50k</code> 的 <code>c0826be</code>（只核实，获「实施与 GPU 验证令」后才建分支，见 RB-A3）。已核实：v16（merge-base f6915f2）、v17（merge-base c55a6bc）都不是 c0826be 的后代，shm 修复 4a8196d 只在 c0826be 线上，所以从 c0826be 起分支正确。v16 的评估加固提交（3c0b60d、a8126a8、d6a61d0、5fcf4ad、18c2264、29c91ab、e6f769e、f3497ab 等）列为「可选择性 cherry-pick，逐个经审查」，默认不合入；v17 只有评估脚本改动（55ddfac、2527364），src 无改动</td></tr>
 <tr><td>RB-A2</td><td>P1–P9 的核实结果已写进「〇.2」；接手时复核关键几项（ckpt sha256、两张表的 status 与行数）。磁盘：<code>df -h /scratch</code> 前后各核一次（核实时只剩 568G、已用 92%，launch.md 里「余量 2.6T」已过时；本实验预计用约 152–162 GB（新表 bf16 21.0 + 10 份 ckpt 约 111 + 冒烟/测速 20–30 = 152–162），用后约 94%（总量按 568G≈8% 推得约 7.1T，(6532+162)/7100≈94.3%））。起跑前列一份可删旧 run 清单（逐项路径与大小）交用户，经用户同意才删；不碰 HF 禁删清单</td></tr>
-<tr><td>RB-A3</td><td>向用户要命名的裁决（分支 <code>v18-4task-modul-e2eenc-s16-50k</code>、run 名 <code>v2-1600ep-m8x8-modul-e2eenc-s16-b128-50k</code>）。D5 已定默认 bf16（用户 2026-11-18 美东裁定，R9），不再问。D1–D5 已定，见第一部分第 1 节「已定死口径」。同一次询问向用户要「实施与 GPU 验证令」（范围见 R1：S1–S5 代码、新表导出（bf16）约 21.0 GB、G1、G3、G4、G5、G5b、G6 的 GPU 占用，含 ≥2000 步 shmprobe 约 47–67 分钟；前提 A0 <code>GPU_FREE=PASS</code>，获令后由 RB-A4 的触发器判定）。做开工前一致性审查；问是否登记状态机。另核实 MotionMEM 80k run 的训练记录里有没有全局 <code>grad_norm</code>（<code>train.py:348</code> 对所有 run 都记，但 <code>c0826be</code> 上该 run 的留档只有 <code>launch.md</code>）；没有就只能用 e2e 自身的「去掉 encoder 组的策略侧范数」推算反事实裁剪系数</td></tr>
+<tr><td>RB-A3</td><td>向用户要命名的裁决（分支 <code>v18-4task-modul-e2eenc-s16-50k</code>、run 名 <code>v2-1600ep-m8x8-modul-e2eenc-s16-b128-50k</code>）。D5 已定默认 bf16（用户 2026-11-17 美东裁定，R9），不再问。D1–D5 已定，见第一部分第 1 节「已定死口径」。同一次询问向用户要「实施与 GPU 验证令」（范围见 R1：S1–S5 代码、新表导出（bf16）约 21.0 GB、G1、G3、G4、G5、G5b、G6 的 GPU 占用，含 ≥2000 步 shmprobe 约 47–67 分钟；前提 A0 <code>GPU_FREE=PASS</code>，获令后由 RB-A4 的触发器判定）。做开工前一致性审查；问是否登记状态机。另核实 MotionMEM 80k run 的训练记录里有没有全局 <code>grad_norm</code>（<code>train.py:348</code> 对所有 run 都记，但 <code>c0826be</code> 上该 run 的留档只有 <code>launch.md</code>）；没有就只能用 e2e 自身的「去掉 encoder 组的策略侧范数」推算反事实裁剪系数</td></tr>
 <tr><td>RB-A4</td><td>获「实施与 GPU 验证令」后立即执行（未获令不做）：建分支后先派 S5a（只含 <code>scripts/training/e2e_wait_nm.sh</code> 与其假日志单测），审查合入；随即起 detached tmux <code>e2e-trig</code>：<code>set -o pipefail; PYTHONUNBUFFERED=1 bash scripts/training/e2e_wait_nm.sh --nm-log /scratch/hongze/NativeMEM/logs/nm-pipe2.log --nm-tmux nm-pipe2 2&gt;&amp;1 | tee v1-store/logs/e2e-trig.log; echo "EXIT_CODE=$?" &gt;&gt; v1-store/logs/e2e-trig.log</code>（先只读核实 NativeMEM 当时的会话名与日志路径）。对 <code>e2e-trig.log</code> 挂一个 Monitor，过滤词含 <code>NM_DONE=|GPU_FREE=|TRIG_LAUNCH|TRIG_STOP|拒绝|失败|FAIL|错误|找不到|Traceback|EXIT_CODE=</code>。<code>NM_DONE=PASS</code> 后触发器按推荐次序起已具备前置的 GPU 闸门（G1 若未在 CPU 跑、G3 ∥ G4、G6 → G5 → G5b），前置未齐就等齐后立刻开跑；主会话给每个新会话的日志另挂 Monitor。<code>NM_DONE=FAIL</code> 时不开跑，报告用户。不起 G7、G8；不 kill、不改 NativeMEM 的任何会话与运行</td></tr>
 <tr><td>RB-B1</td><td>同一批派出 S1、S2、S3、S4。S1 的规格源只用 MotionJEPA <code>d3213de</code>（<code>git -C /scratch/hongze/MotionJEPA show d3213de:src/motion_jepa/models/wan_latent_encoder.py</code> 与 <code>wan_latent_dit.py:29-60</code>），禁止参考 HEAD（<code>483c23e</code>）版——那是另一架构，加载不了该 ckpt</td></tr>
 <tr><td>RB-B2</td><td>S2 合入后在 tmux <code>e2e-export</code> 以 <code>--stride 16 --out-dtype bfloat16</code> 导出新表（约 21.0 GB）到 <code>v1-store/datasets/4task-v2-1600ep-604f16da/motion-wan-raw9-s16</code>，输出根事先存在即拒绝；日志 <code>v1-store/logs/e2e-export.log</code>，挂 Monitor。不等 GPU</td></tr>
@@ -599,7 +599,7 @@
 <li>MotionMEM 80k run 是否留有全局 grad_norm 记录未核实（<code>c0826be</code> 上只有 <code>launch.md</code>），阶段 A 核实。</li>
 <li>805 MB 请求上行的出处没有写明；全模型取用 default 流的次数没有数过（R7 改为两级派生，不依赖这个数）。</li>
 <li>encoder 只在动作损失下以 5e-5 训练 5 万步，是否训练充分没有独立证据。「预训练初始化加端到端微调」这一对照本计划不做。</li>
-<li><s>MotionJEPA 的 encoder 源码本轮没有读</s>——已关闭：2026-11-18 已读 <code>d3213de</code> 版源码，规格与行号见 P4。</li>
+<li><s>MotionJEPA 的 encoder 源码本轮没有读</s>——已关闭：2026-11-17 已读 <code>d3213de</code> 版源码，规格与行号见 P4。</li>
 <li><s>v15 之后的在线侧是否已经带超限降采样</s>——已关闭：<code>MMEVLA_MOTION_OVERFLOW=resample</code> 已在 c0826be（引入 78d5012），见 P6。</li>
 <li><s>D1 的 VAE 常数与 checkpoint buffer 两组常数差多大</s>——已关闭：P8 实测 max|Δmean|=4.17e-7、max|Δstd|=3.22e-5（舍入级），G3 不再临时换 buffer。</li>
 </ul>
@@ -614,9 +614,9 @@
 <li>本轮细化记录见文末「九」。</li>
 </ul>
 
-<h2>九、细化记录（2026-11-18 美东）</h2>
+<h2>九、细化记录（2026-11-17 美东）</h2>
 
-<p>核实时点：美东 2026-11-17 21:49 至 11-18。核实在 AWS p4de 本机只读进行，锚点为策略仓 <code>c0826be</code>、MotionJEPA <code>d3213de</code>、本机 <code>v1-store</code>。</p>
+<p>核实时点：美东 2026-11-17 21:49 起（当晚）。核实在 AWS p4de 本机只读进行，锚点为策略仓 <code>c0826be</code>、MotionJEPA <code>d3213de</code>、本机 <code>v1-store</code>。</p>
 
 <table>
 <tr><th>做了什么</th><th>结论</th></tr>
@@ -639,7 +639,7 @@
 
 <p><b>仍需用户裁决：</b>命名（分支名、run 名）；D5（bf16 传输，条件性；第五轮已定为默认 bf16，现只剩命名）。（本轮原列的 D4 已于第三轮裁定为不重评，D6 已于第三轮整项删除，见下。）</p>
 
-<h3>第二轮：workflow 对抗验证（2026-11-18 美东）</h3>
+<h3>第二轮：workflow 对抗验证（2026-11-17 美东）</h3>
 
 <p>定稿后跑了一轮 workflow 对抗验证：8 个维度（checklist、consistency、code-train、code-online、design、encoder、numbers、runbook）共报 56 条 finding，驳证了前 30 条：成立 28 条（C1–C28），驳倒 2 条；其余 26 条（U1–U26）未驳证，本轮先在代码与源码上核实再改。第二部分按主会话统一裁定修正。</p>
 
@@ -653,7 +653,7 @@
 
 <p>只在第一部分的条目（如 C5 的「待用户裁决的三项」段末、3.3 退路措辞、第一部分验收表）由另一写入代理处理，本节不重复。跨两部分的条目，第二部分措辞按主会话裁定文件统一。</p>
 
-<h3>第三轮：用户裁定（2026-11-18 美东）</h3>
+<h3>第三轮：用户裁定（2026-11-17 美东）</h3>
 
 <p>用户原话两条：</p>
 <ol>
@@ -670,7 +670,7 @@
 <li>K1–K5、D1–D3、D5 的内容，其余闸门、两级授权与次序不变。</li>
 </ul>
 
-<h3>第四轮：NativeMEM 结束触发（2026-11-18 美东）</h3>
+<h3>第四轮：NativeMEM 结束触发（2026-11-17 美东）</h3>
 
 <p>用户原话两句：</p>
 <ol>
@@ -688,7 +688,7 @@
 <li>K1–K5、D1–D5、各闸门判据与两级授权不变。</li>
 </ul>
 
-<h3>第五轮：默认 bf16 与第一部分重写（2026-11-18 美东）</h3>
+<h3>第五轮：默认 bf16 与第一部分重写（2026-11-17 美东）</h3>
 
 <p>用户原话三条：</p>
 <ol>
@@ -710,7 +710,7 @@
 <li>待用户裁决只剩命名（分支名、run 名）。K1–K5、D1–D4、两级授权、闸门次序不变。</li>
 </ul>
 
-<h3>第六轮：计划移入策略仓（2026-11-18 美东）</h3>
+<h3>第六轮：计划移入策略仓（2026-11-17 美东）</h3>
 <p>用户原话：「把这个放在policy仓库内 不要放在corlworkshop仓库 aws不要留这个corlorkshop仓库」。本文件从稿件仓库 <code>motionjepa-paper-CoRLWorkshop</code>（最后版本 main@2abf54a）移到策略仓根目录，提交在 <code>v15-4task-modul-wanraw9-s32-50k</code> 分支（代码锚点 c0826be 之上只加本文件）；稿件仓库删除该文件，AWS 上删除稿件仓库 clone。结果交付改为写进本仓 <code>result.md</code> 交给用户，不在 AWS 上改稿件。</p>
 </body>
 </html>
