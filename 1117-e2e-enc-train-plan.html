@@ -26,15 +26,17 @@
 
 <blockquote>
 <p><b>目标。</b>补上稿件 Table I 的 <code>E2E-Enc, 512+160</code> 一行，回答一个问题：motion encoder 的自监督预训练是否必要。</p>
-<p><b>状态。</b>计划已定稿。本计划只做训练与评估并交出结果，不定义 E2E-Enc 与其他行的差距多大算显著。</p>
-<p><b>授权分两级。</b>「实施与 GPU 验证令」：允许实施与 GPU 验证，NativeMEM 的训练与评估结束后自动开跑。「正式训练令」：允许正式训练与评估。</p>
+<p><b>状态。</b>计划已定稿，未开工。本计划只做训练与评估并交出结果，不定义 E2E-Enc 与其他行的差距多大算显著。</p>
+<p><b>授权分两级。</b>「实施与 GPU 验证令」：允许写代码、导出新表、做 GPU 验证，GPU 部分在 NativeMEM 的训练与评估结束后自动开跑。「正式训练令」：允许正式训练与 692 局评估。</p>
 <p><b>待用户给。</b>① 命名：分支 <code>v18-4task-modul-e2eenc-s16-50k</code>、run 名 <code>v2-1600ep-m8x8-modul-e2eenc-s16-b128-50k</code>；② 上述两级授权。</p>
-<p>实施细节、闸门与运行步骤见第二部分。</p>
+<p><b>计划位置。</b>策略仓 <code>v15-4task-modul-wanraw9-s32-50k</code> 分支根目录 <code>1117-e2e-enc-train-plan.html</code>；代码基线 <code>c0826be</code>，运行环境为 AWS 本机 8×A100-80GB。逐文件改动、闸门入口与运行步骤见第二部分。</p>
 </blockquote>
 
 <h1>第一部分（给人看）</h1>
 
-<h2>一、与 MotionMEM 的训练语义区别</h2>
+<h2>1　要做什么与全部运行一览</h2>
+
+<p>一句话：在 4task 训练库（1600 局）上再训一个策略模型，结构、记忆与超参都和 MotionMEM 那一行相同，只把 motion encoder 从「预训练后冻结」换成「随机初始化、跟着动作损失一起训」，训到第 50,000 步，在本机评 692 局，填进 Table I 的 E2E-Enc 行。</p>
 
 <p>E2E-Enc 与 MotionMEM 用同一个 encoder 结构、同一套记忆与策略超参。设计上只差一处：encoder 的权重不来自预训练，而是随机初始化后由动作损失训练出来。下表列出全部训练语义上的异同。</p>
 
@@ -97,7 +99,27 @@
 <figcaption>图 1　两条链路对照。MotionMEM 的 encoder 是预训练后冻结的，梯度到投影为止；E2E-Enc 的 encoder 随机初始化、读 bf16 latent，由动作损失的梯度训练。</figcaption>
 </figure>
 
-<h2>二、已定事项</h2>
+<h3>全部运行一览</h3>
+
+<p>下表是本计划会起的全部运行。时长里只有 shm 探测、正式训练、评估三项出自第二部分；其余是参照 Wan-9 那一轮给的粗估，以实测为准。「GPU 空闲」指 NativeMEM 的训练与 692 局评估结束、8 张卡腾空。</p>
+
+<table>
+<tr><th>运行</th><th>做什么</th><th>占什么资源</th><th>预计时长</th><th>何时启动</th></tr>
+<tr><td>触发器 <code>e2e-trig</code></td><td>只读跟踪 NativeMEM 的流水线日志，判定它结束且 8 卡空闲，然后按次序自动起下面各项 GPU 验证</td><td>CPU，不占 GPU</td><td>等到 NativeMEM 结束为止</td><td>获「实施与 GPU 验证令」后立即</td></tr>
+<tr><td>新表导出与校验（G2）</td><td>把步长 16 的 Wan latent 转成 bf16 新表（71,316 行，约 21.0 GB），独立脚本逐字节校验，统计每个样本的有效窗数</td><td>CPU 48 进程，写盘约 21 GB</td><td>约 0.5 小时（粗估）</td><td>导出代码合入后，不等 GPU</td></tr>
+<tr><td>初值相等检查（G9）</td><td>确认除 encoder 外，全模型初值与 MotionMEM 配置逐位相同</td><td>CPU</td><td>几分钟</td><td>训练侧代码合入后，不等 GPU</td></tr>
+<tr><td>移植对拍（G1、G1b）</td><td>JAX 版 encoder 装上预训练权重，与 PyTorch 原版比前向与梯度；另记 bf16 噪声底</td><td>1 张卡（GPU 空闲前可先跑 CPU 版）</td><td>几分钟</td><td>encoder 代码合入后</td></tr>
+<tr><td>数据同源检查（G0）</td><td>确认新表与训练库来自同一批 1600 局</td><td>CPU，只读</td><td>几分钟</td><td>新表导出且运行脚本合入后</td></tr>
+<tr><td>记忆对齐（G3）与 20 步冒烟（G4）</td><td>G3：装上预训练权重时，新通路算出的 token 与 MotionMEM 的离线表一致。G4：随机初始化的 encoder 确实在训练，能存能读</td><td>各 1 张卡，分卡同时跑</td><td>约 0.5–1 小时（粗估）</td><td>GPU 空闲后自动</td></tr>
+<tr><td>测速与 shm 探测（G6）</td><td>300 步测速；不少于 2000 步的共享内存探测；存盘探测。给出正式训练的步速、共享内存平台、每卡显存峰值</td><td>8 张卡</td><td>shm 探测约 47–67 分钟；合计约 1–1.5 小时</td><td>G4 通过后自动</td></tr>
+<tr><td>在线一致（G5）与在线性能（G5b）</td><td>评估时策略看到的 motion 输入与训练一致；同卡 4 片并发的延迟与显存</td><td>各 1 张卡</td><td>约 0.5–1 小时（粗估）</td><td>G6 通过后自动</td></tr>
+<tr><td>正式训练 <code>e2e-train</code>（G7）</td><td>50,001 步，每 5000 步存一份，共 10 份</td><td>8 张卡；共享内存约 217 GB</td><td>约 15–28 小时（粗估 1.1–2 s/步，以 G6 实测为准；Wan-9 为 16 小时）</td><td>获「正式训练令」后</td></tr>
+<tr><td>692 局评估 <code>e2e-eval</code>（G8）</td><td>第 50,000 步权重，692 局，32 片、每卡 4 片</td><td>8 张卡</td><td>约 5–6 小时（以 G5b 实测为准）</td><td>训练通过 G7 后由链脚本自动起</td></tr>
+<tr><td>token 诊断</td><td>每份保存的权重算一次 encoder 输出的有效秩等统计</td><td>CPU 或 1 张空闲卡</td><td>每份几分钟</td><td>每份权重落盘后</td></tr>
+<tr><td>上传 <code>e2e-hf</code></td><td>10 份权重上传 HF 并读回校验</td><td>网络，不占 GPU</td><td>长尾，不计入交接</td><td>训练结束后</td></tr>
+</table>
+
+<h3>已定死口径（用户原话逐字保留）</h3>
 
 <div class="todo">
 <table>
@@ -115,17 +137,209 @@
 </table>
 </div>
 
-<h2>三、交付的结果</h2>
+<p>另有一条关于启动时点的用户原话（2026-11-17）：「你需要加入一点就是在我现在的这个 native mem 训练完成之后立刻开始就是在我同意开工之后，它应该监控 native mem 的训练和评估，监控完了立刻开始。」据此设触发器 <code>e2e-trig</code>；它只在获「实施与 GPU 验证令」之后才起，未获令前不起任何任务。</p>
+
+<h2>2　数据：复用本机已有 latent，转成 bf16 新表，不重跑 Wan</h2>
+
+<p>MotionMEM 的 encoder 吃的是 Wan VAE 的 latent：每个 33 帧窗口一份，形状 <code>(9,16,32,32)</code>。这批 latent 现在就在本机盘上（步长 16，71,316 窗，约 40 GB，fp32），Wan-9 那一轮用过并校验过。本轮直接复用，不重跑 VAE，也不需要下载。</p>
+
+<table>
+<tr><th>项</th><th>值</th><th>说明</th></tr>
+<tr><td>源 latent</td><td><code>v1-store/datasets/4task-v2-1600ep-604f16da/wan-latents</code>，71,316 窗，fp32，约 40 GB</td><td>2026-11-17 只读核实在盘，成员清单与既有记录一致</td></tr>
+<tr><td>新表</td><td><code>…/motion-wan-raw9-s16</code>，71,316 行，bf16，每行 294,912 字节，共 21,031,944,192 字节（约 21.0 GB）</td><td>只做一次 fp32→bf16 转换，不做其他数值处理；输出目录事先存在即拒绝，不覆盖</td></tr>
+<tr><td>行序</td><td>与 MotionMEM 的 768 维表逐行相同</td><td>同一个窗在两张表里是同一行号，所以「哪些窗对当前时刻可见」的规则可以原样沿用</td></tr>
+<tr><td>与 Wan-9 的关系</td><td>新表的偶数窗 = Wan-9 步长 32 表对应行转成 bf16</td><td>作为一项交叉校验，36,484 行逐字节相等</td></tr>
+<tr><td>磁盘</td><td>本实验约用 152–162 GB</td><td><code>/scratch</code> 核实时剩 568 GB（已用 92%），用后约 94%；需要腾盘时先列清单交用户，同意后才删</td></tr>
+</table>
+
+<ul>
+<li><b>转换点唯一。</b>fp32→bf16 只发生在两处，而且调用同一个函数：离线导出新表时；评估时客户端收到 sidecar 返回的 fp32 latent 之后。数据集、组 batch、模型内部都只搬运 bf16 字节，不再转换。这样训练与评估喂给 encoder 的输入是同一套舍入，G2 与 G5 分别校验这两处。</li>
+<li><b>数据同源。</b>新表、MotionMEM 的 768 维表、训练帧库都来自同一批 1600 局；起跑前由 G0 检查，不过即停，不得豁免。</li>
+<li><b>不动旧产物。</b>MotionMEM 的 768 维表、Wan-9 的步长 32 表和它们的 run 目录一律不改；新表、新 run 用新路径、新名字。</li>
+</ul>
+
+<h2>3　机制</h2>
+
+<h3>3.1　encoder 搬进策略模型</h3>
+
+<ul>
+<li><b>结构照搬。</b>在策略仓里用 JAX 重写一份 <code>WanLatentMotionEncoder</code>，规格只认 MotionJEPA 仓 <code>d3213de</code> 版（MotionMEM 的预训练权重就是这一版结构）：输入一个窗的 9 个 latent，各展平成 16384 维，共用一个线性层投到 768 维，过 8 层因果 Transformer，取最后一个位置输出 1 个 768 维 token；69,808,896 个参数。MotionJEPA 仓当前 HEAD 上的同名文件已改成另一种结构，不能参考。</li>
+<li><b>怎么证明搬对了。</b>把预训练权重装进 JAX 版，与 PyTorch 原版比前向输出与梯度（G1）；再比它算出的 token 与 MotionMEM 离线表（G3）。这两步只用于验证移植，正式训练不加载预训练权重。</li>
+<li><b>随机初始化。</b>分布与 PyTorch 原版默认相同，即 U(±1/√fan_in)，不用 JAX 框架自带的默认初始化。</li>
+<li><b>独立随机数流。</b>全模型原本只有一条随机数流，新模块若从中取数，后面构造的模块初值都会跟着变。所以 encoder 用单独派生的一条流，其余参数的初值与 MotionMEM 配置下逐位相同（G9 全树逐叶比对）。</li>
+<li><b>计算精度。</b>encoder 参数用 f32，计算用 bf16，与策略其余可训练部分一致；输入的 bf16 latent 先升到 f32 做标准化（D1 的 VAE 常数），再进 encoder。</li>
+<li><b>不影响旧配置。</b>配置里不写 <code>encoder_kind: wan_e2e</code> 时，新模块根本不创建，旧 run 的参数与前向逐位不变。</li>
+</ul>
+
+<h3>3.2　记忆与评估口径同 MotionMEM</h3>
+
+<p>记忆仍是 512 个帧 token（8 帧 × 8×8）加最多 160 个 motion token；窗口 33 帧、步长 16；时间码、下游投影、modulation 注入都不变。区别只在 motion token 从哪来：MotionMEM 从离线表里取现成的 768 维 token，E2E-Enc 取 raw latent 现算。每个样本送进模型的 motion 输入因此从 160×768 变成 160 个窗 × 9 个 latent × 16384 维。评估时超过 160 窗沿用现有的按窗降采样，与 MotionMEM 同口径。</p>
+
+<h3>3.3　训练：除 encoder 权重来源外与 MotionMEM 逐项相同</h3>
+
+<table>
+<tr><th>项</th><th>MotionMEM 那一行</th><th>E2E-Enc</th></tr>
+<tr><td>训练配置</td><td><code>mme_vla_suite_b128_80k</code>，取第 50,000 步的中途权重</td><td>同一条配置，一项超参不改；只把总步数设为 50,001。学习率在 warmup 后恒为 5e-5，所以前 50k 步与 80k 配置逐步相同</td></tr>
+<tr><td>优化器</td><td colspan="2">相同：AdamW，warmup 5000，EMA 0.999，batch 128，8 卡，seed 42</td></tr>
+<tr><td>可训练部分</td><td>语言主干、动作专家、记忆模块</td><td>相同，再加 encoder（约 6,981 万参数）</td></tr>
+<tr><td>梯度裁剪</td><td>全局范数 1.0</td><td>全局范数 1.0，encoder 的梯度也计入。裁剪系数因此可能与 MotionMEM 不同，训练中记录全局与 encoder 分组的梯度范数、裁剪系数，随结果交付</td></tr>
+<tr><td>保存</td><td colspan="2">每 5000 步一份，5000…50000 共 10 份</td></tr>
+<tr><td>步速与时长</td><td>—</td><td>粗估 1.1–2 s/步、约 15–28 小时（Wan-9 实测 1.133 s/步、16 小时）；没有逐项推导，以 G6 实测为准</td></tr>
+</table>
+
+<p>随机初始化的 encoder 早期输出尺度可能与预训练 token 差别很大。本计划不加任何额外归一化或缩放（加了就不再是「只差权重来源」），只如实记录；若发散，停下报用户。训练程序不支持续训（权重只存 EMA），中途崩溃只能从头。</p>
+
+<h3>3.4　数据管线：每批 6.04 GB，与 Wan-9 同级</h3>
+
+<div class="warn">
+<p><b>为什么要专门测。</b>每个样本的 motion 输入是 1440×16384 个 bf16 数，47.2 MB；一批 128 个样本 6.04 GB，每一步都要从 worker 经共享内存 <code>/dev/shm</code> 送到 GPU。这与 Wan-9 的每批字节数相同，Wan-9 当时共享内存平台实测 209–225 GB，并出过一次写满事故（已修）。另外 encoder 的激活估计每卡多占 10–17 GB 显存。</p>
+</div>
+
+<p>按 Wan-9 的管线配置外推，共享内存约 217 GB，本机 <code>/dev/shm</code> 空闲 561 GB。这些都是推算，G6 实测三件事：步速不超过 2.27 s/步（Wan-9 的两倍）；共享内存峰值不超过 330 GB 且最后 1500 步不再增长；每卡显存峰值不超过 72 GB。正式训练全程每 15 秒采样共享内存，超过告警线（实测平台的 1.35 倍）就上报。</p>
+
+<table>
+<tr><th>退路顺序</th><th>做法</th><th>对数值的影响</th><th>条件</th></tr>
+<tr><td>①</td><td>预取深度从 2 降到 1，共享内存估计降到约 121 GB</td><td>无</td><td>只记入留档</td></tr>
+<tr><td>②</td><td>紧凑计算：只对有效窗过 encoder，空槽不算</td><td>数学等价，不保证逐位相同</td><td rowspan="2">采用前先过等价闸 <code>E2E_COMPACT_EQ</code> 并报告用户（报告即可）；采用后相关闸门全部重做</td></tr>
+<tr><td>③</td><td>encoder 每层重算激活（remat），省显存</td><td>数学等价，不保证逐位相同</td></tr>
+</table>
+
+<p>三步都用完仍不过，停下报用户。G2 导出后会统计每个样本的有效窗数；若均值不到 160 槽的 40%，紧凑计算提为首选退路。</p>
+
+<h2>4　评估：本机 692 局</h2>
+
+<p>训练通过 G7 后，链脚本自动起评估。参数照抄 Wan-9 的本机评估链：692 局（三个非 BinFill 任务加 BinFill 142 局，BinFill 注入 demo 前缀），seed 7、单次、每局最多 2000 步；32 片、每卡 4 片；9 条固定 reset error 预先标记并留在分母；超过 160 窗按窗降采样。只换三样：步长与预算改为 16 与 160（Wan-9 是 32 与 80）、策略配置名、run 名。</p>
+
+<ul>
+<li><b>时长。</b>约 5–6 小时。Wan-9 本机评估 2.5–3 小时；本轮每局上行数据约为它的 2 倍，按此线性外推，以 G5b 实测为准。若同卡 4 片超显存，退为每卡 3 片，时长相应增加。</li>
+<li><b>评估环境不同，照实标注。</b>MotionMEM 的 54.62%（378/692）是在 GreatLakes A40 上两次评估拼接得到的；E2E-Enc 在本机 A100 上一次评完。按 D4 不在本机重评 MotionMEM，交付时逐行写明评估来源。同在本机评的参照：Wan-9 37.86%、Wan-1 43.06%。</li>
+<li><b>长局会降采样。</b>评估跑满 2000 步时可见窗数会超过 160，末段触发降采样；E2E-Enc 与 MotionMEM 两行同口径，降采样次数记录并交付。</li>
+</ul>
+
+<h3>交付的结果</h3>
 
 <ul>
 <li>评估：692 局的总成功数与成功率、14 组逐组成功数、error 局数、降采样次数、逐局结果 CSV，并标注评估环境。</li>
 <li>训练诊断：encoder 的梯度范数、全局裁剪系数、token 有效秩等，随结果一并交付。</li>
-<li>不定义差距显著性；数值含义与稿件措辞由用户决定。</li>
+<li>不定义差距显著性；数值含义与稿件措辞由用户决定。结果写进本仓 <code>docs/training-doc/&lt;run&gt;/result.md</code> 交给用户，不在 AWS 上改稿件。</li>
 </ul>
 
-<p><b>预计时间。</b>训练粗估 1.1–2 s/步，以 G6 实测为准；评估约 5–6 小时。NativeMEM 结束后自动开跑。</p>
+<h2>5　验收判定行</h2>
 
-<p>第一部分到此为止。实施细节、闸门与运行步骤见第二部分。</p>
+<p>共 13 项闸门，另有一项只在采用紧凑计算或 remat 时才跑。判定行与第二部分「三、闸门总表」一致，入口命令与阈值的由来见该表。</p>
+
+<table>
+<tr><th>闸门</th><th>查什么</th><th>判定行</th></tr>
+<tr><td>A0</td><td>NativeMEM 已结束、8 张卡空闲（触发器判定）</td><td><code>GPU_FREE=PASS gpus=8</code></td></tr>
+<tr><td>G0</td><td>新表与训练库数据同源</td><td><code>DATA_LINEAGE=PASS</code></td></tr>
+<tr><td>G1</td><td>JAX 版 encoder 与 PyTorch 原版一致（前向与梯度，2000 窗）</td><td><code>E2E_PORT_PARITY=PASS windows=2000 params=69808896 fwd_rel_rmse&lt;=1e-4 grad_rel_rmse&lt;=1e-3</code></td></tr>
+<tr><td>G1b</td><td>训练精度（bf16）相对 fp32 的误差有多大；只记录、不判</td><td><code>E2E_BF16_FLOOR=&lt;x&gt;</code></td></tr>
+<tr><td>G2</td><td>新表字节正确、行序与 768 维表相同、与 Wan-9 表交叉一致；有效窗数分布</td><td><code>EXPORT_RAW16=PASS rows=71316 dtype=bf16 budget_max&lt;=160</code>、<code>INDEX_VS_MOTION768=PASS rows=71316 mismatches=0</code>、<code>S16_EVEN_VS_S32=PASS rows=36484 mismatches=0</code>、<code>K_DIST=&lt;mean,p50,p95,max&gt;</code></td></tr>
+<tr><td>G9</td><td>除 encoder 外全模型初值与 MotionMEM 配置逐位相同；旧配置不受影响</td><td><code>INIT_EQ=PASS leaves_compared=&lt;n&gt; mismatches=0</code>、<code>R3_OFF_EQ=PASS</code></td></tr>
+<tr><td>G3</td><td>装上预训练权重时，新通路的 token 与 MotionMEM 离线表在噪声范围内一致，掩码与顺序逐位相同</td><td><code>E2E_MEM_FP32=PASS rel_rmse=&lt;x&gt; limit=1e-3</code>、<code>E2E_MEM_VS_MOTIONMEM=PASS windows=&lt;&gt;=1000&gt; eps=&lt;ε&gt; floor=&lt;f&gt; rel_rmse_bf16=&lt;x&gt; limit=&lt;max(1.5eps, 1.1*sqrt(eps^2+floor^2))&gt; mask_mismatch=0 order_mismatch=0</code></td></tr>
+<tr><td>G4</td><td>20 步冒烟：encoder 各组梯度非零、没被冻结、能存能读</td><td><code>E2E_TRAINABLE=PASS leaves=&lt;n&gt; groups_grad_nonzero=10/10 frozen_hits=0</code>、<code>SMOKE20=PASS</code></td></tr>
+<tr><td>G6</td><td>步速、共享内存、显存、存盘</td><td><code>BENCH300=PASS s_per_step=&lt;x&gt; limit=2.27</code>、<code>SHM_PEAK=PASS peak_gb=&lt;x&gt; limit=330 growth_last1500=&lt;y&gt;%</code>、<code>GPU_PEAK=PASS peak_gb=&lt;x&gt; limit=72</code>、<code>SMOKE_CKPT=PASS</code></td></tr>
+<tr><td>G5</td><td>评估时策略看到的 motion 输入与训练一致</td><td><code>TIC_SIDECAR=PASS blocking=&lt;n&gt;/&lt;n&gt;</code>、<code>MOTION_S_VS_SIDECAR=PASS mismatches=0</code>、<code>MEM_S_VS_TRAINSET=PASS</code>、<code>OBS_T_VS_I=PASS</code></td></tr>
+<tr><td>G5b</td><td>同卡 4 片并发时的延迟与显存</td><td><code>E2E_ONLINE_PERF=PASS p95_ms=&lt;x&gt; peak_gb_4shards=&lt;x&gt;</code></td></tr>
+<tr><td>G7</td><td>训练完成，10 份权重齐，第 50,000 步能加载</td><td><code>CKPT_LOAD=PASS step=50000</code>、<code>TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10</code></td></tr>
+<tr><td>G8</td><td>692 局评估完成</td><td><code>E2E_EVAL=PASS episodes=692 groups=14 success=&lt;n&gt; error=&lt;n&gt; overflow_resample=&lt;n&gt;</code></td></tr>
+<tr><td><code>E2E_COMPACT_EQ</code>（条件性）</td><td>紧凑计算或 remat 与原通路的 loss、梯度差不超过 bf16 噪声底</td><td><code>E2E_COMPACT_EQ=PASS mode=&lt;compact|remat&gt; loss_rel=&lt;x&gt; grad_rel_max=&lt;y&gt; floor=&lt;f&gt;</code></td></tr>
+</table>
+
+<p>执行次序：A0 → G1 与 G2 → G9 → G0 → G3 与 G4 同时 → G6 → G5 → G5b →「正式训练令」→ G7 → G8。G6 排在 G5 前，是因为 G6 可能逼出退路②③，那样在线一致要在新通路上测。</p>
+
+<h3>停止项总表</h3>
+
+<p>闸门 FAIL 一律不改判据。下表是会停下来的全部情形。</p>
+
+<table>
+<tr><th>时点</th><th>情形</th><th>处置</th></tr>
+<tr><td>任何时候</td><td>未获「实施与 GPU 验证令」</td><td>不改代码、不导出、不起任何 GPU 任务、不起触发器</td></tr>
+<tr><td>任何时候</td><td>未获「正式训练令」</td><td>不起正式训练与评估；触发器最多跑到 G5b</td></tr>
+<tr><td>等 GPU 时</td><td>NativeMEM 流水线失败或非 0 退出</td><td>不自动开跑，报用户（NativeMEM 可能重跑，会抢卡）。对 NativeMEM 始终只读，不动它的会话与进程</td></tr>
+<tr><td>GPU 验证中</td><td>任一闸门 FAIL</td><td>触发器停止后续启动，交主会话定位修复后重跑；修不了报用户。G3、G6 的阈值若要放宽，由主会话判断影响面并告知用户</td></tr>
+<tr><td>起跑前</td><td>G0 数据同源 FAIL</td><td>即停，不得豁免</td></tr>
+<tr><td>G6</td><td>步速超过 2.27 s/步（约 31.5 小时）</td><td>不自动判失败，停下问用户是否接受</td></tr>
+<tr><td>G6</td><td>共享内存或显存超限，退路①②③用完仍不过</td><td>停下报用户</td></tr>
+<tr><td>采用退路②③时</td><td>紧凑计算或 remat</td><td>先过 <code>E2E_COMPACT_EQ</code>，报告用户后继续（不需批准）；紧凑计算运行中有效窗数超出预留容量即报错停下，不截断</td></tr>
+<tr><td>写代码时</td><td>需要新增依赖</td><td>停下报用户；本计划不改 <code>pyproject.toml</code> 与 <code>uv.lock</code></td></tr>
+<tr><td>腾盘、清理时</td><td>需要删除旧 run 或本轮的冒烟、测速目录</td><td>逐项列路径与大小，用户同意后才删；不碰 HF 禁删清单</td></tr>
+<tr><td>训练中</td><td>共享内存告警</td><td>上报主会话，由主会话决定是否停训</td></tr>
+<tr><td>训练中</td><td>发散（loss 尖峰、nan）或崩溃</td><td>停下报用户；不能续训，重跑只能从头</td></tr>
+</table>
+
+<h2>6　步骤表</h2>
+
+<table>
+<tr><th>阶段</th><th>内容</th><th>判据</th><th>占 GPU</th><th>预计时长</th></tr>
+<tr><td>A　准备与授权</td><td>复核前提（权重、两张表、磁盘）；向用户要命名裁决与<b>「实施与 GPU 验证令」</b>；开工前一致性审查；问是否登记状态机</td><td>命名已定；获令</td><td>否</td><td>约 0.5–1 小时，不含等用户</td></tr>
+<tr><td>B　代码实施与合并、导出</td><td>建分支；先合入触发脚本并起 <code>e2e-trig</code>；S1–S5 写代码，逐个审查、合并、推送；导出新表并校验；跑 G9 与 G1 的 CPU 版</td><td>各子任务单测；每次合并前后审查 PASS；G2 四行；G9</td><td>否</td><td>约 4–6 小时（粗估）</td></tr>
+<tr><td>C　对拍与冒烟</td><td>等 A0。<b>NativeMEM 训练与评估结束后，触发器自动开跑</b>：G1、G0、G3 与 G4</td><td>A0、G1、G1b、G0、G3、G4</td><td>各 1 张卡</td><td>约 0.5–1 小时（粗估）</td></tr>
+<tr><td>D　测速与在线验证</td><td>触发器接着起 G6（测速、shm 探测、存盘探测）→ G5 → G5b；G6 不过时按 3.4 的退路处理</td><td>G6 四行、G5、G5b</td><td>G6 用 8 张卡，其余 1 张</td><td>约 1.5–2.5 小时；用到退路②③另加</td></tr>
+<tr><td>E　正式训练</td><td>向用户报 G6 结果（外推总时长、共享内存平台、显存峰值），要<b>「正式训练令」</b>；清理冒烟目录（用户确认后）；打 Beta commit；起 <code>e2e-train</code> 与共享内存采样，挂监听</td><td>G7</td><td>8 张卡</td><td>约 15–28 小时（粗估 1.1–2 s/步，以 G6 实测为准）</td></tr>
+<tr><td>F　评估</td><td>G7 通过后链脚本自动起 <code>e2e-eval</code>，中间不停</td><td>G8</td><td>8 张卡</td><td>约 5–6 小时</td></tr>
+<tr><td>G　上传与收尾</td><td>每份权重的 token 诊断；写训练与评估留档；权重上传 HF 并读回校验；结果交用户</td><td><code>HF_VERIFY=PASS</code>；<code>result.md</code> 已提交推送</td><td>否（诊断可用 1 张空闲卡）</td><td>约 1–2 小时；上传为长尾</td></tr>
+</table>
+
+<p><b>总时长粗估。</b>从获「实施与 GPU 验证令」到出评估结果，约 27–45 小时：阶段 B–D 约 6–9.5 小时，阶段 E–G 约 21–36 小时。不含等 NativeMEM 腾出 GPU 的时间，也不含等用户给「正式训练令」的时间。阶段 A–D 与 G 的时长是参照 Wan-9 那一轮的粗估，第二部分没有逐项推导。</p>
+
+<h2>7　子代理分工与合并（简述）</h2>
+
+<p>代码按文件归属拆成五块，各在独立工作目录里写，互不碰对方的文件：</p>
+
+<table>
+<tr><th>编号</th><th>做什么</th></tr>
+<tr><td>S1</td><td>JAX 版 encoder，以及与 PyTorch 原版的对拍脚本</td></tr>
+<tr><td>S2</td><td>bf16 新表的导出与独立校验、唯一的 fp32→bf16 转换函数、有效窗数统计</td></tr>
+<tr><td>S3</td><td>训练侧接线：把 encoder 接进记忆模块、新配置文件、数据集与数据加载、训练诊断项、G3 与 G9 的检查脚本</td></tr>
+<tr><td>S4</td><td>评估侧接线：sidecar、客户端、在线记忆缓冲、权重检查白名单、G5 的检查脚本</td></tr>
+<tr><td>S5</td><td>运行脚本：训练 runner、训完接评估的链脚本、G6 判定与共享内存采样脚本、token 诊断脚本</td></tr>
+<tr><td>S5a</td><td>S5 里的 NativeMEM 结束触发脚本，单独先行：获令后最先提交、审查、合入，随即起 <code>e2e-trig</code></td></tr>
+</table>
+
+<p>S1–S4 同时开工（S3、S4 按事先写死的接口名先写，不等别人合入），S5 等 S3 合入后再写。合并顺序 S5a → S1 → S2 → S3 → S4 → S5。每次合并前由一个独立的审查代理钉死版本审一遍，合并后再审一遍并跑定向测试，通过才推送；写的人和审的人不是同一个代理。子代理只在自己的工作目录里跑 CPU 单测；所有 GPU 闸门、tmux 会话、监听、清理都归主会话。逐文件写集与验收命令见第二部分「二、子代理分配表」。</p>
+
+<h2>8　确认事项</h2>
+
+<h3>已裁决</h3>
+
+<table>
+<tr><th>#</th><th>事项</th><th>裁决</th></tr>
+<tr><td>K1–K5</td><td>encoder 版本、记忆对齐、唯一差别、步数、评估口径</td><td>见第 1 节「已定死口径」</td></tr>
+<tr><td>D1–D3</td><td>标准化常数、dropout、优化器</td><td>「都按推荐」</td></tr>
+<tr><td>D4</td><td>是否在本机重评 MotionMEM</td><td>不重评（2026-11-17，「d4不要」）</td></tr>
+<tr><td>D5</td><td>输入 latent 精度</td><td>默认 bf16（2026-11-17，「默认就直接用bf16可以吗？」「改bf16」）</td></tr>
+<tr><td>—</td><td>差距显著性的判读</td><td>本计划不定义（2026-11-17 删除原 D6）</td></tr>
+<tr><td>—</td><td>GPU 工作的启动时点</td><td>NativeMEM 训练与评估结束后自动开跑，前提是已获令（2026-11-17）</td></tr>
+<tr><td>—</td><td>计划位置</td><td>放策略仓，不放稿件仓库（2026-11-17）</td></tr>
+</table>
+
+<h3>待用户确认</h3>
+
+<div class="todo">
+<ol>
+<li><b>命名。</b>分支 <code>v18-4task-modul-e2eenc-s16-50k</code>、run 名 <code>v2-1600ep-m8x8-modul-e2eenc-s16-b128-50k</code>。</li>
+<li><b>「实施与 GPU 验证令」。</b>范围：S1–S5 代码、新表导出（约 21.0 GB）、G1、G3、G4、G5、G5b、G6 的 GPU 占用。</li>
+<li><b>「正式训练令」。</b>在 G6 出结果后再要，届时附外推总时长、共享内存平台、显存峰值；范围：正式训练与 692 局评估。</li>
+<li>是否把本任务登记进策略仓的任务状态机（任务 id <code>e2eenc-s16-50k</code>）。</li>
+</ol>
+</div>
+
+<h3>已核实事实（2026-11-17）</h3>
+
+<ol>
+<li><b>P1　源 latent 在盘。</b>步长 16、71,316 窗、约 40 GB，成员清单与既有记录一致。</li>
+<li><b>P2　768 维表在盘。</b>状态 verified，71,316 行，来自 MotionMEM 那个 encoder 的第 72 epoch。</li>
+<li><b>P3　预训练权重在盘。</b><code>checkpoint_epoch_72.pt</code> 的 sha256 与记录一致，内含 EMA 权重；只有 G1、G3 用它，正式训练不用。</li>
+<li><b>P4　encoder 规格源。</b>必须是 MotionJEPA <code>d3213de</code> 版，该版能严格加载上述权重，参数 69,808,896；HEAD 版是另一种结构。原版没有显式初始化，用的是 PyTorch 默认。</li>
+<li><b>P5　数据管线可复用。</b>Wan-9 的整批预分配管线对本轮可用；bf16 下每样本 47.2 MB、每批 6.04 GB，共享内存估约 217 GB；<code>/dev/shm</code> 空闲 561 GB，<code>/scratch</code> 剩 568 GB。</li>
+<li><b>P6　在线侧可参数化。</b>sidecar 与步长无关，按窗降采样已在基线代码里；握手、客户端、在线缓冲有几处写死的值要改，已列入 S4。</li>
+<li><b>P7　评估参数。</b>MotionMEM 那一行是 80k run 的第 50,000 步中途权重，54.62% 为两次评估拼接；Wan-9 本机评估链的参数可照抄，只换步长、预算与名字。</li>
+<li><b>P8　标准化常数一致。</b>预训练权重里的常数与 Wan VAE 配置里的常数只差舍入级（最大差 3.22e-5），D1 用的就是 MotionMEM 实际所用的常数。</li>
+<li><b>P9　GPU 空闲：当前不成立。</b>2026-11-17 22:30（美东）核查时 NativeMEM 训练已结束、692 局评估在跑并占满 8 卡；是否结束由触发器在获令后判定。</li>
+</ol>
+
+<p>第一部分到此为止。逐文件改动清单、子代理分配表、闸门总表、runbook、风险登记、盲区与留档纪律见第二部分。</p>
 
 <h1>第二部分（技术细节，供 agent 追踪）</h1>
 
@@ -135,7 +349,7 @@
 
 <table>
 <tr><th>编号</th><th>红线</th></tr>
-<tr><td>R1</td><td>未获「实施与 GPU 验证令」，不改代码、不导出、不起任何 GPU 任务；未获「正式训练令」，不起正式训练与评估。两级授权：「实施与 GPU 验证令」在 RB-A3／阶段 A 末向用户要，范围 = S1–S5 代码、新表导出（bf16，约 21.0 GB）、G1、G3、G4、G5、G5b、G6 的 GPU 占用（含 ≥2000 步 shmprobe 约 47–67 分钟），前提 A0 <code>GPU_FREE=PASS</code>（获令后由〇.1.1 的触发器判定），同一次询问一并要命名的裁决；「正式训练令」在 RB-E0 向用户要，附 G6 外推总时长、shm 平台、峰值显存，范围 = G7 正式训练、G8 评估。D5 已定：默认用 bf16 存储与传输 motion latent（用户 2026-11-18 美东裁定，见 R9），不再问</td></tr>
+<tr><td>R1</td><td>未获「实施与 GPU 验证令」，不改代码、不导出、不起任何 GPU 任务；未获「正式训练令」，不起正式训练与评估。两级授权：「实施与 GPU 验证令」在 RB-A3／阶段 A 末向用户要，范围 = S1–S5 代码、新表导出（bf16，约 21.0 GB）、G1、G3、G4、G5、G5b、G6 的 GPU 占用（含 ≥2000 步 shmprobe 约 47–67 分钟），前提 A0 <code>GPU_FREE=PASS</code>（获令后由〇.1.1 的触发器判定），同一次询问一并要命名的裁决；「正式训练令」在 RB-E0 向用户要，附 G6 外推总时长、shm 平台、峰值显存，范围 = G7 正式训练、G8 评估。D5 已定：默认用 bf16 存储与传输 motion latent（用户 2026-11-17 美东裁定，见 R9），不再问</td></tr>
 <tr><td>R2</td><td><code>mme_vla_suite_b128_80k</code> 的超参一项不改。runner 的 <code>TRAIN_ARGS</code> 里，超参类开关只有 <code>--exp-name</code>、<code>--model.history-config</code>、<code>--num_train_steps</code> 三项；路径类参数与 Wan-9 相同</td></tr>
 <tr><td>R3</td><td><code>encoder_kind</code> 未写或为其他值时，模型的参数叶数、初始化值、前向结果与改动前逐位相同（新模块在 <code>__init__</code> 里根本不创建）</td></tr>
 <tr><td>R4</td><td>闸门 FAIL 不改判据。G3、G6 的阈值若要放宽，按策略仓规则由主会话判断影响面并告知用户</td></tr>
@@ -143,12 +357,12 @@
 <tr><td>R6</td><td>正式训练从 clean HEAD 的 Beta commit 起跑；G0 数据同源闸（<code>DATA_LINEAGE</code>）FAIL 即停，不得豁免</td></tr>
 <tr><td>R7</td><td>encoder 用独立的 RNG 流：<code>base = rngs.default.key.value</code>（只读 key，不调用 <code>rngs()</code>，不消耗计数；flax 0.10.2 里该值构造期不变，只有 count 变），<code>nnx.Rngs(params=jax.random.fold_in(jax.random.fold_in(base, 0x7FFFFFFF), 0xE2E))</code>。不用单级 <code>fold_in(base, 0xE2E)</code>：flax 的 <code>RngStream.__call__</code> 返回 <code>fold_in(key, count)</code>（<code>flax/nnx/rnglib.py:66-71</code>），0xE2E=3630，default 流第 3630 次取用会得到同一个 key，与某个现有叶的初值相关；两级派生避开这一碰撞。G9 同时校验加入 encoder 前后 default 流的 count 相等。除 encoder 的叶以外，全模型参数初值在 e2e YAML 与 MotionMEM YAML 下逐位相等（G9 <code>INIT_EQ</code> 全树逐叶验证）</td></tr>
 <tr><td>R8</td><td>R2 的补充：吞吐档参数不属于超参，分三档。(i) <code>num_workers</code>、<code>prefetch_factor</code>、<code>save_interval</code>（仅 ckptprobe 模式）：只记 <code>launch.md</code>，不报用户。(ii) encoder 的 remat（<code>nnx.remat</code>／<code>jax.checkpoint</code>）、只算有效窗的紧凑计算或传输：只保证数学等价，不保证逐位相同；采用前必须过 <code>E2E_COMPACT_EQ=PASS</code>（见三），并报告用户（报告即可，不需批准）；采用后 G9、G3、G4、G6、G5 全部重做。原第三档「bf16 落表或传输须用户批准」已删：D5 已定默认 bf16（R9），bf16 不再是吞吐档</td></tr>
-<tr><td>R9</td><td>bf16 转换点唯一（D5，2026-11-18 用户裁定）。离线：导出新表时把源 fp32 latent 用 <code>src/mme_vla_suite/shared/raw_bf16.py::raw9_f32_to_bf16</code>（<code>np.asarray(x, np.float32).astype(ml_dtypes.bfloat16)</code>，round-to-nearest-even；策略仓 .venv 已有 ml_dtypes 0.4.1，随 jax 安装，不改 pyproject）转 bf16 存盘。在线：sidecar 仍返回 fp32（数值不改），<code>motion_client</code> 收到后立即调同一函数转 bf16。除这两处以外，数据集、collate、L1 预分配、模型都不做 fp32→bf16 转换，只搬运 bf16 字节；模型内 bf16 latent 先升 fp32，做 <code>(z-mean)/std</code>（D1 的 VAE 常数），再按 <code>config.dtype</code>（bf16）进 encoder，计算精度规定不变。G2、G5 校验这一点</td></tr>
+<tr><td>R9</td><td>bf16 转换点唯一（D5，2026-11-17 用户裁定）。离线：导出新表时把源 fp32 latent 用 <code>src/mme_vla_suite/shared/raw_bf16.py::raw9_f32_to_bf16</code>（<code>np.asarray(x, np.float32).astype(ml_dtypes.bfloat16)</code>，round-to-nearest-even；策略仓 .venv 已有 ml_dtypes 0.4.1，随 jax 安装，不改 pyproject）转 bf16 存盘。在线：sidecar 仍返回 fp32（数值不改），<code>motion_client</code> 收到后立即调同一函数转 bf16。除这两处以外，数据集、collate、L1 预分配、模型都不做 fp32→bf16 转换，只搬运 bf16 字节；模型内 bf16 latent 先升 fp32，做 <code>(z-mean)/std</code>（D1 的 VAE 常数），再按 <code>config.dtype</code>（bf16）进 encoder，计算精度规定不变。G2、G5 校验这一点</td></tr>
 </table>
 
 <h3>〇.1.1 NativeMEM 结束触发</h3>
 
-<p>用户 2026-11-18（美东）要求：在 NativeMEM 训练与评估结束后立即开始本计划的 GPU 工作，前提是用户已同意开工。本节是计划内容，<b>获「实施与 GPU 验证令」之后才生效</b>；未获令前不起任何触发器、不起 tmux、不占 GPU。</p>
+<p>用户 2026-11-17（美东）要求：在 NativeMEM 训练与评估结束后立即开始本计划的 GPU 工作，前提是用户已同意开工。本节是计划内容，<b>获「实施与 GPU 验证令」之后才生效</b>；未获令前不起任何触发器、不起 tmux、不占 GPU。</p>
 
 <table>
 <tr><th>项</th><th>规则</th></tr>
@@ -164,7 +378,7 @@
 <tr><td>现状（美东 2026-11-17 22:30 只读核查）</td><td>NativeMEM 训练已结束：日志有 <code>TRAIN_FINAL=PASS step=19999 ckpts=1 finite=PASS</code>，checkpoint <code>/scratch/hongze/NativeMEM/checkpoints/nativemem_pi05_robomme4task/nativemem-4task1600-b128-20k/19999</code> 在盘。692 局评估于美东 22:28 起跑（tmux <code>nm-pipe2</code>，脚本 <code>scripts/robomme/local_692_pool_nativemem.sh &lt;19999&gt; 7</code>，32 片 s0–s31、每卡 4 片，评估目录 <code>/scratch/hongze/NativeMEM/runs/eval/local692-nativemem-20k</code>）。结束时间未知；参照 Wan-9 本机 692 评估 2.5–3 小时，粗估美东 11-18 凌晨 1–2 点，仅为估计</td></tr>
 </table>
 
-<h3>〇.2 前提核实结果（2026-11-18 美东，AWS 只读核实）</h3>
+<h3>〇.2 前提核实结果（2026-11-17 美东，AWS 只读核实）</h3>
 
 <p>核实对象：策略仓 <code>c0826be</code>、MotionJEPA <code>d3213de</code>、本机 <code>v1-store</code>（<code>/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store</code>，下文简写 <code>v1-store</code>）。P1–P8 成立，P9 当前不成立（NativeMEM 评估在跑，由〇.1.1 的触发器在获令后判定）。</p>
 
@@ -264,7 +478,7 @@
 
 <h2>三、闸门总表</h2>
 
-<p>编号与判定行以 2026-11-18 细化与同日对抗验证修正后的为准，共 13 项，另有条件性闸 <code>E2E_COMPACT_EQ</code>（只在采用紧凑计算或 remat 时跑）。GPU 闸门一律排在 A0 之后，且须先获「实施与 GPU 验证令」（R1）。不占 GPU 的部分获令后不等 GPU：S1–S4 写代码（S5 待 S3 合入）、G2 导出与校验、K_DIST 在相应代码合入后即开始；G9 只需 S3、在 CPU 上跑，按推荐次序排在 S5 合入之后、G3 之前。</p>
+<p>编号与判定行以 2026-11-17 细化与同日对抗验证修正后的为准，共 13 项，另有条件性闸 <code>E2E_COMPACT_EQ</code>（只在采用紧凑计算或 remat 时跑）。GPU 闸门一律排在 A0 之后，且须先获「实施与 GPU 验证令」（R1）。不占 GPU 的部分获令后不等 GPU：S1–S4 写代码（S5 待 S3 合入）、G2 导出与校验、K_DIST 在相应代码合入后即开始；G9 只需 S3、在 CPU 上跑，按推荐次序排在 S5 合入之后、G3 之前。</p>
 
 <table>
 <tr><th>闸门</th><th>输入何时存在</th><th>命令或入口</th><th>判定行</th></tr>
@@ -295,7 +509,7 @@
 <tr><td>RB-A0</td><td>A0 由「NativeMEM 结束触发」判定（〇.1.1，触发器在 RB-A4 获令后才起）。获令前只读核查：<code>nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv</code>。现状（2026-11-17 22:30 美东）：NativeMEM 训练已结束（<code>TRAIN_FINAL=PASS step=19999</code>，checkpoint <code>…/nativemem-4task1600-b128-20k/19999</code> 在盘），692 局评估于 22:28 起跑占满 8 卡（tmux <code>nm-pipe2</code>，日志 <code>/scratch/hongze/NativeMEM/logs/nm-pipe2.log</code>，32 片、每卡 4 片），粗估 11-18 美东凌晨 1–2 点结束（仅估计）。判定口径：<code>EVAL692=PASS episodes=692</code>、<code>NM_PIPELINE=PASS</code>、末行 <code>EXIT_CODE=0</code>、<code>nm-pipe2</code> 不存在、8 卡 <code>memory.used&lt;2000 MiB</code> 且无计算进程 → <code>NM_DONE=PASS</code> 与 <code>GPU_FREE=PASS gpus=8</code>。不满足时只做 CPU 步骤，不动别人的进程</td></tr>
 <tr><td>RB-A1</td><td>策略仓 <code>git fetch</code>，核实分支基线为 <code>v15-4task-modul-wanraw9-s32-50k</code> 的 <code>c0826be</code>（只核实，获「实施与 GPU 验证令」后才建分支，见 RB-A3）。已核实：v16（merge-base f6915f2）、v17（merge-base c55a6bc）都不是 c0826be 的后代，shm 修复 4a8196d 只在 c0826be 线上，所以从 c0826be 起分支正确。v16 的评估加固提交（3c0b60d、a8126a8、d6a61d0、5fcf4ad、18c2264、29c91ab、e6f769e、f3497ab 等）列为「可选择性 cherry-pick，逐个经审查」，默认不合入；v17 只有评估脚本改动（55ddfac、2527364），src 无改动</td></tr>
 <tr><td>RB-A2</td><td>P1–P9 的核实结果已写进「〇.2」；接手时复核关键几项（ckpt sha256、两张表的 status 与行数）。磁盘：<code>df -h /scratch</code> 前后各核一次（核实时只剩 568G、已用 92%，launch.md 里「余量 2.6T」已过时；本实验预计用约 152–162 GB（新表 bf16 21.0 + 10 份 ckpt 约 111 + 冒烟/测速 20–30 = 152–162），用后约 94%（总量按 568G≈8% 推得约 7.1T，(6532+162)/7100≈94.3%））。起跑前列一份可删旧 run 清单（逐项路径与大小）交用户，经用户同意才删；不碰 HF 禁删清单</td></tr>
-<tr><td>RB-A3</td><td>向用户要命名的裁决（分支 <code>v18-4task-modul-e2eenc-s16-50k</code>、run 名 <code>v2-1600ep-m8x8-modul-e2eenc-s16-b128-50k</code>）。D5 已定默认 bf16（用户 2026-11-18 美东裁定，R9），不再问。D1–D5 已定，见第一部分「二、已定事项」。同一次询问向用户要「实施与 GPU 验证令」（范围见 R1：S1–S5 代码、新表导出（bf16）约 21.0 GB、G1、G3、G4、G5、G5b、G6 的 GPU 占用，含 ≥2000 步 shmprobe 约 47–67 分钟；前提 A0 <code>GPU_FREE=PASS</code>，获令后由 RB-A4 的触发器判定）。做开工前一致性审查；问是否登记状态机。另核实 MotionMEM 80k run 的训练记录里有没有全局 <code>grad_norm</code>（<code>train.py:348</code> 对所有 run 都记，但 <code>c0826be</code> 上该 run 的留档只有 <code>launch.md</code>）；没有就只能用 e2e 自身的「去掉 encoder 组的策略侧范数」推算反事实裁剪系数</td></tr>
+<tr><td>RB-A3</td><td>向用户要命名的裁决（分支 <code>v18-4task-modul-e2eenc-s16-50k</code>、run 名 <code>v2-1600ep-m8x8-modul-e2eenc-s16-b128-50k</code>）。D5 已定默认 bf16（用户 2026-11-17 美东裁定，R9），不再问。D1–D5 已定，见第一部分第 1 节「已定死口径」。同一次询问向用户要「实施与 GPU 验证令」（范围见 R1：S1–S5 代码、新表导出（bf16）约 21.0 GB、G1、G3、G4、G5、G5b、G6 的 GPU 占用，含 ≥2000 步 shmprobe 约 47–67 分钟；前提 A0 <code>GPU_FREE=PASS</code>，获令后由 RB-A4 的触发器判定）。做开工前一致性审查；问是否登记状态机。另核实 MotionMEM 80k run 的训练记录里有没有全局 <code>grad_norm</code>（<code>train.py:348</code> 对所有 run 都记，但 <code>c0826be</code> 上该 run 的留档只有 <code>launch.md</code>）；没有就只能用 e2e 自身的「去掉 encoder 组的策略侧范数」推算反事实裁剪系数</td></tr>
 <tr><td>RB-A4</td><td>获「实施与 GPU 验证令」后立即执行（未获令不做）：建分支后先派 S5a（只含 <code>scripts/training/e2e_wait_nm.sh</code> 与其假日志单测），审查合入；随即起 detached tmux <code>e2e-trig</code>：<code>set -o pipefail; PYTHONUNBUFFERED=1 bash scripts/training/e2e_wait_nm.sh --nm-log /scratch/hongze/NativeMEM/logs/nm-pipe2.log --nm-tmux nm-pipe2 2&gt;&amp;1 | tee v1-store/logs/e2e-trig.log; echo "EXIT_CODE=$?" &gt;&gt; v1-store/logs/e2e-trig.log</code>（先只读核实 NativeMEM 当时的会话名与日志路径）。对 <code>e2e-trig.log</code> 挂一个 Monitor，过滤词含 <code>NM_DONE=|GPU_FREE=|TRIG_LAUNCH|TRIG_STOP|拒绝|失败|FAIL|错误|找不到|Traceback|EXIT_CODE=</code>。<code>NM_DONE=PASS</code> 后触发器按推荐次序起已具备前置的 GPU 闸门（G1 若未在 CPU 跑、G3 ∥ G4、G6 → G5 → G5b），前置未齐就等齐后立刻开跑；主会话给每个新会话的日志另挂 Monitor。<code>NM_DONE=FAIL</code> 时不开跑，报告用户。不起 G7、G8；不 kill、不改 NativeMEM 的任何会话与运行</td></tr>
 <tr><td>RB-B1</td><td>同一批派出 S1、S2、S3、S4。S1 的规格源只用 MotionJEPA <code>d3213de</code>（<code>git -C /scratch/hongze/MotionJEPA show d3213de:src/motion_jepa/models/wan_latent_encoder.py</code> 与 <code>wan_latent_dit.py:29-60</code>），禁止参考 HEAD（<code>483c23e</code>）版——那是另一架构，加载不了该 ckpt</td></tr>
 <tr><td>RB-B2</td><td>S2 合入后在 tmux <code>e2e-export</code> 以 <code>--stride 16 --out-dtype bfloat16</code> 导出新表（约 21.0 GB）到 <code>v1-store/datasets/4task-v2-1600ep-604f16da/motion-wan-raw9-s16</code>，输出根事先存在即拒绝；日志 <code>v1-store/logs/e2e-export.log</code>，挂 Monitor。不等 GPU</td></tr>
@@ -343,7 +557,7 @@
 <tr><td>上游依赖</td><td>无本计划的上游任务，但 GPU 当前被 NativeMEM 692 局评估占用（P9，训练已结束），所有 GPU 闸门排在 A0 之后；获令后由触发器 <code>e2e-trig</code> 跟踪 NativeMEM 的 <code>NM_PIPELINE=PASS</code> 等判定行，结束即自动开跑（〇.1.1）。对既有产物的假设：768 维表 71,316 行；s32 表与 Wan-9 的 run 不被改动</td></tr>
 <tr><td>交接前必须完成</td><td>A0、G0–G9（含 G1b 记录值、G5b）的判定行全部 PASS 且出处可查；<code>result.md</code> 已提交并推送；逐组结果已写进 result.md 并交给用户</td></tr>
 <tr><td>长尾</td><td>checkpoint 上传 HF 与读回校验（tmux <code>e2e-hf</code>，完成行 <code>HF_VERIFY=PASS</code>）；不占 GPU、不写本仓 git</td></tr>
-<tr><td>下游</td><td>把结果（第一部分「三、交付的结果」所列各项）写进本仓 <code>docs/training-doc/&lt;run&gt;/result.md</code> 并交给用户；稿件仓库的数字与措辞由用户在 AWS 之外处理（AWS 不保留稿件仓库 clone）</td></tr>
+<tr><td>下游</td><td>把结果（第一部分第 4 节「交付的结果」所列各项）写进本仓 <code>docs/training-doc/&lt;run&gt;/result.md</code> 并交给用户；稿件仓库的数字与措辞由用户在 AWS 之外处理（AWS 不保留稿件仓库 clone）</td></tr>
 </table>
 
 <p>AWS 会话在阶段 A 问用户一句是否把本任务登记进策略仓的 <code>docs/handoff/current.json</code>。</p>
@@ -385,7 +599,7 @@
 <li>MotionMEM 80k run 是否留有全局 grad_norm 记录未核实（<code>c0826be</code> 上只有 <code>launch.md</code>），阶段 A 核实。</li>
 <li>805 MB 请求上行的出处没有写明；全模型取用 default 流的次数没有数过（R7 改为两级派生，不依赖这个数）。</li>
 <li>encoder 只在动作损失下以 5e-5 训练 5 万步，是否训练充分没有独立证据。「预训练初始化加端到端微调」这一对照本计划不做。</li>
-<li><s>MotionJEPA 的 encoder 源码本轮没有读</s>——已关闭：2026-11-18 已读 <code>d3213de</code> 版源码，规格与行号见 P4。</li>
+<li><s>MotionJEPA 的 encoder 源码本轮没有读</s>——已关闭：2026-11-17 已读 <code>d3213de</code> 版源码，规格与行号见 P4。</li>
 <li><s>v15 之后的在线侧是否已经带超限降采样</s>——已关闭：<code>MMEVLA_MOTION_OVERFLOW=resample</code> 已在 c0826be（引入 78d5012），见 P6。</li>
 <li><s>D1 的 VAE 常数与 checkpoint buffer 两组常数差多大</s>——已关闭：P8 实测 max|Δmean|=4.17e-7、max|Δstd|=3.22e-5（舍入级），G3 不再临时换 buffer。</li>
 </ul>
@@ -400,9 +614,9 @@
 <li>本轮细化记录见文末「九」。</li>
 </ul>
 
-<h2>九、细化记录（2026-11-18 美东）</h2>
+<h2>九、细化记录（2026-11-17 美东）</h2>
 
-<p>核实时点：美东 2026-11-17 21:49 至 11-18。核实在 AWS p4de 本机只读进行，锚点为策略仓 <code>c0826be</code>、MotionJEPA <code>d3213de</code>、本机 <code>v1-store</code>。</p>
+<p>核实时点：美东 2026-11-17 21:49 起（当晚）。核实在 AWS p4de 本机只读进行，锚点为策略仓 <code>c0826be</code>、MotionJEPA <code>d3213de</code>、本机 <code>v1-store</code>。</p>
 
 <table>
 <tr><th>做了什么</th><th>结论</th></tr>
@@ -425,7 +639,7 @@
 
 <p><b>仍需用户裁决：</b>命名（分支名、run 名）；D5（bf16 传输，条件性；第五轮已定为默认 bf16，现只剩命名）。（本轮原列的 D4 已于第三轮裁定为不重评，D6 已于第三轮整项删除，见下。）</p>
 
-<h3>第二轮：workflow 对抗验证（2026-11-18 美东）</h3>
+<h3>第二轮：workflow 对抗验证（2026-11-17 美东）</h3>
 
 <p>定稿后跑了一轮 workflow 对抗验证：8 个维度（checklist、consistency、code-train、code-online、design、encoder、numbers、runbook）共报 56 条 finding，驳证了前 30 条：成立 28 条（C1–C28），驳倒 2 条；其余 26 条（U1–U26）未驳证，本轮先在代码与源码上核实再改。第二部分按主会话统一裁定修正。</p>
 
@@ -439,7 +653,7 @@
 
 <p>只在第一部分的条目（如 C5 的「待用户裁决的三项」段末、3.3 退路措辞、第一部分验收表）由另一写入代理处理，本节不重复。跨两部分的条目，第二部分措辞按主会话裁定文件统一。</p>
 
-<h3>第三轮：用户裁定（2026-11-18 美东）</h3>
+<h3>第三轮：用户裁定（2026-11-17 美东）</h3>
 
 <p>用户原话两条：</p>
 <ol>
@@ -456,7 +670,7 @@
 <li>K1–K5、D1–D3、D5 的内容，其余闸门、两级授权与次序不变。</li>
 </ul>
 
-<h3>第四轮：NativeMEM 结束触发（2026-11-18 美东）</h3>
+<h3>第四轮：NativeMEM 结束触发（2026-11-17 美东）</h3>
 
 <p>用户原话两句：</p>
 <ol>
@@ -474,7 +688,7 @@
 <li>K1–K5、D1–D5、各闸门判据与两级授权不变。</li>
 </ul>
 
-<h3>第五轮：默认 bf16 与第一部分重写（2026-11-18 美东）</h3>
+<h3>第五轮：默认 bf16 与第一部分重写（2026-11-17 美东）</h3>
 
 <p>用户原话三条：</p>
 <ol>
@@ -496,7 +710,7 @@
 <li>待用户裁决只剩命名（分支名、run 名）。K1–K5、D1–D4、两级授权、闸门次序不变。</li>
 </ul>
 
-<h3>第六轮：计划移入策略仓（2026-11-18 美东）</h3>
+<h3>第六轮：计划移入策略仓（2026-11-17 美东）</h3>
 <p>用户原话：「把这个放在policy仓库内 不要放在corlworkshop仓库 aws不要留这个corlorkshop仓库」。本文件从稿件仓库 <code>motionjepa-paper-CoRLWorkshop</code>（最后版本 main@2abf54a）移到策略仓根目录，提交在 <code>v15-4task-modul-wanraw9-s32-50k</code> 分支（代码锚点 c0826be 之上只加本文件）；稿件仓库删除该文件，AWS 上删除稿件仓库 clone。结果交付改为写进本仓 <code>result.md</code> 交给用户，不在 AWS 上改稿件。</p>
 </body>
 </html>
