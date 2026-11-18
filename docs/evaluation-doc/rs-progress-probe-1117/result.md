@@ -61,6 +61,33 @@
 - **(b)**：A 读 motion 有轻微对角（D = 1.102 [1.094, 1.108]），第 1 列（示范第 1 段）在所有行都偏高；读帧没有对角（0.977）。B 读 motion D = 1.002，读帧 0.968，帧流明显偏读示范第 1 段。与原论文 context 版的结论方向一致：注意力读哪一段并不随当前步数调整，只有 A 的 motion 流有很弱的对角。
 - 原图的 frames←motion、lang←motion、lang←frames 三行在 modulation 下按结构为零，不画。
 
+## 新版 Fig. 4：只画下一步走法（11-17 追加，`8645958`）
+
+用户：「如果只看这个下一步往哪儿走的话，怎么画图呢」「用 Fable 重构一下，就是我要体现出它更强」。τ 读不出超出时间的信息，新 Fig. 4 只画下一步走法（4 类，随机 0.25，时间基线 0.257）。脚本和图在 [fig4-next/](fig4-next/README.md)，复现命令：`uv run --no-project --with matplotlib --with numpy python docs/evaluation-doc/rs-progress-probe-1117/fig4-next/plot_fig4_next.py`（只读 `records/rsprog-probe-summary.json`）。判定行 `FIG4_NEXT=PASS a_sel=0.668 b_sel=0.552 diffs=+0.112,+0.195,+0.118`，`PRE_MERGE_REVIEW=PASS findings=2`（两条措辞问题已在 README 修正）。
+
+- (a) 逐层：A、B 叠在同一坐标轴。A 的记忆读出在 L12–L13 达到峰值（L13 为 0.668，B 同层 0.455），其余层大多与 B 重叠，L9 是 B 高（0.552 对 0.418）。动作 token 在 18 层上 A 全部高于 B，差约 0.01–0.05。
+- (b) 分难度的记忆读出（各自训练折内选层：A L13，B L9）：easy +0.04（CI 重叠），medium +0.11、hard +0.19、xhard +0.12（CI 都不重叠）。差值不随难度单调变化。
+- 图注建议：「中等以上难度 A 明显更强」，同时如实说明记忆读出的优势集中在中后层、动作 token 每层都更高。不写「越难越大」，也不写 p 值。
+
+注意力 (b) 对角线的现状：A 读 motion D = 1.10，未达预设门槛 1.2；最显眼的是第 1 列整列偏高。A 读帧 0.98，B 读 motion 1.00、读帧 0.97，都没有对角线。可以写成「注意力不按当前步逐段对齐，更像整体读取示范」，不能写成「出现对角线」。
+
+## 归档与跨机器接续
+
+论文所需的图和汇总已全部进 git（本目录）：
+
+| 图 / 数据 | 路径 |
+|---|---|
+| 新版 Fig. 4 | `fig4-next/fig4-next.{png,pdf}`，脚本 `fig4-next/plot_fig4_next.py` |
+| 注意力 (a)：A 主图、B 附录 | `records/figs/attn-a-routestick{,-B}.{png,pdf}` |
+| 注意力 (b)：对角线矩阵 | `records/figs/attn-b-routestick.{png,pdf}` |
+| 旧版 τ 图（不再用作主图） | `records/figs/progress-{fig4,layerwise,fit}.{png,pdf}` |
+| 汇总 | `records/rsprog-probe-summary.json`、`records/rsprog-attn-summary.json`、`records/rsprog_points.json`（取点，sha256 前 16 位 `65a357c75eb740c9`）、`records/pool.json` |
+
+其他机器上 clone 本分支即可重画图 4，不需要大文件。重跑探针或注意力分析则需要以下不在 git 里的产物，都在 sled-aspen 上：
+- 回放 npz：`/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/rs-progress-probe-1117/replay-all/`（3.3 G）。
+- 数据 H5：`v1-store/datasets/rs-progress-1117/`（66 G）。另有一份副本在 turbo `…MotionJEPA-eval/v1-store/datasets/rs-progress-1117`，`DATA_SYNC=PASS`。
+- 需要时用 `rsync` 从 aspen 拉取。
+
 ## 与计划不符的地方（如实记录）
 
 1. **严格档配对为空**：「同一按钮、两视角逐像素差 ≤8」的候选配对 566 对，全部超阈（前视最大差中位数 222.5、最小 170），所以严格档 0 对。原因是 RouteStick 里同一按钮可能从左或右到达，手臂与棍子姿态不同，不会像 StopCube 那样出现画面相同的帧。阈值没有放宽，严格档记为不可用。
