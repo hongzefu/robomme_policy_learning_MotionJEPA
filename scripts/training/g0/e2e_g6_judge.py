@@ -18,6 +18,21 @@
   SMOKE_CKPT：ckptprobe 的 50/params 读回（runner 打印 CKPT50_READBACK：字节数 > 0、叶数 = Wan-9 叶数 + encoder 叶数、有限），
             且 step_timing 证明 step 50 之后又完成 ≥ 20 次更新；不得用最终 checkpoint 代替。
   各阶段另核 DataLoader 实际 prefetch_factor（日志 DATALOADER_PREFETCH_FACTOR=）等于本次配置值，不符即该阶段 FAIL。
+
+现行口径（用户 2026-11-18 美东裁定，原话：「问题一和三能不能够放在一起来做？然后问题二能不能够在正式起跑的时候再来做，
+就不要单独跑这个」；不改训练语义）：
+  stage --mode benchckpt  一次 300 步 run（runner --benchckpt，--save-interval 250 --keep-period 250）同时出 BENCH300、GPU_UTIL、
+             GPU_PEAK、SMOKE_CKPT 四项证据：测速与 GPU_UTIL 窗口取第 --win-lo..--win-hi 步（缺省 50–240，含两端；避开编译与
+             第 250 步存盘），SMOKE_CKPT 读 CKPT<ckpt-step>_READBACK（缺省 250）且其后 ≥20 次更新；阈值与状态词同上不变。
+             阶段状态 = 四项与 prefetch 读回取最坏；聚合时「非分项原因」（prefetch 读回）记作 base_status，用于 with_stage。
+  aggregate --plan benchckpt  只要求上述四项（保留 with_stage 取最坏），另打印一行
+             `SHM_PEAK=DEFERRED reason=user_2026-11-18_formal_first2000`，末行 `G6=<状态> … plan=benchckpt`。
+             不给 --plan（或 --plan g6）时仍是旧三阶段口径。
+  shm-formal  正式训练期间由 shmmon.sh（--formal-rec）在每次采样后调用：正式记录目录的 metrics.jsonl 还没有 step ≥ 2000 的行时
+             静默退出 3（未到判定点）；到了就按「训练开始（runner 日志 TRAIN_START_EPOCH）→ 第 2000 步」窗口打印一次
+             `SHM_PEAK=<PASS|FAIL> peak_gb=<x> limit=330 growth_last1500=<y>% window=formal_steps_0_2000 …`
+             （阈值同旧 shmprobe：峰值 ≤ 330 GB 且第 500–2000 步峰值相对此前峰值增长 ≤ 2%）；FAIL 时另打印 SHM_ALERT 与
+             RB-D2 退路提示（主会话停训后以 E2E_PREFETCH_FACTOR=1 从头重起），本脚本不停训。
 只用标准库，纯 CPU；单测用假日志夹具（scripts/training/tests/test_e2e_runner_chain.py）。
 """
 from __future__ import annotations
@@ -42,7 +57,10 @@ GPU_PEAK_LIMIT_GB = 72.0
 CKPT_STEP = 50
 CKPT_MIN_UPDATES_AFTER = 20
 OK_STATES = ("PASS", "ACCEPTED_OVER_LIMIT", "RECORDED")
-MODES = ("bench", "shmprobe", "ckptprobe")
+MODES = ("bench", "shmprobe", "ckptprobe")          # 旧三阶段口径（aggregate 缺省 --plan g6）
+STAGE_MODES = MODES + ("benchckpt",)
+SHM_FORMAL_STEP = 2000
+SHM_DEFERRED_LINE = "SHM_PEAK=DEFERRED reason=user_2026-11-18_formal_first2000"
 ATTEMPT_RE = re.compile(r"^a[0-9]{2}$")
 
 
@@ -154,6 +172,33 @@ def shm_samples(path: pathlib.Path) -> list[tuple[float, float]]:
     return out
 
 
+def ckpt_verdict(lines: list[str], timing: list[dict], ckpt_step: int, run_root, wan9_expect) -> tuple[str, str, int]:
+    """SMOKE_CKPT：读回行 CKPT<step>_READBACK（字节 > 0、叶数 = Wan-9 + encoder、有限）、<run_root>/<step>/params 在盘、
+    且 step_timing 证明 <step> 之后又完成 ≥ CKPT_MIN_UPDATES_AFTER 次更新。不得用最终 checkpoint 代替。"""
+    rb = last_value(lines, rf"^CKPT{ckpt_step}_READBACK step={ckpt_step} .*bytes=(\d+) leaves=(\d+) enc_leaves=(\d+) "
+                           r"wan9_leaves=(\d+) finite=(\d)")
+    after = sum(1 for r in timing if r["step"] > ckpt_step and r.get("completed"))
+    pdir = pathlib.Path(run_root) / str(ckpt_step) / "params" if run_root else None
+    ok, why = True, []
+    if rb is None:
+        ok = False; why.append(f"缺 CKPT{ckpt_step}_READBACK 行")
+    else:
+        nbytes, leaves, enc, wan9, finite = (int(rb.group(i)) for i in range(1, 6))
+        if nbytes <= 0: ok = False; why.append(f"{ckpt_step}/params 字节数为 0")
+        if enc <= 0 or leaves != wan9 + enc: ok = False; why.append(f"叶数 {leaves} != {wan9}+{enc}")
+        if wan9_expect is not None and wan9 != wan9_expect: ok = False; why.append(f"wan9_leaves={wan9}")
+        if finite != 1: ok = False; why.append("非有限值")
+    if pdir is not None and not pdir.is_dir():
+        ok = False; why.append(f"缺 {pdir}")
+    if after < CKPT_MIN_UPDATES_AFTER:
+        ok = False; why.append(f"step {ckpt_step} 之后完成更新 {after} < {CKPT_MIN_UPDATES_AFTER}")
+    st = "PASS" if ok else "FAIL"
+    line = (f"SMOKE_CKPT={st} step={ckpt_step} updates_after={after} "
+            + (f"bytes={rb.group(1)} leaves={rb.group(2)} enc_leaves={rb.group(3)}" if rb else "readback=missing")
+            + ("" if ok else f" reasons={why}"))
+    return st, line, after
+
+
 def stage(args) -> int:
     if not ATTEMPT_RE.match(args.attempt):
         print(f"拒绝：attempt 非法 {args.attempt}", file=sys.stderr)
@@ -181,9 +226,15 @@ def stage(args) -> int:
     timing = sorted(read_jsonl(rec / "step_timing.jsonl"), key=lambda r: r["step"])
     done_m = last_value(lines, r"^TRAIN_DONE_EPOCH=(\d+)")
     start_m = last_value(lines, r"^TRAIN_START_EPOCH=(\d+)")
-    win = timing[args.skip:]
-    t0 = win[0]["wall_start"] if win else None
-    t1 = float(done_m.group(1)) if done_m else (win[-1]["wall_end"] if win else None)
+    if args.mode == "benchckpt":
+        # 窗口按步号取（含两端），GPU_UTIL 也只取窗口内的采样：不含编译段与第 250 步存盘及其后
+        win = [r for r in timing if args.win_lo <= r["step"] <= args.win_hi]
+        t0 = win[0]["wall_start"] if win else None
+        t1 = win[-1]["wall_end"] if win else None
+    else:
+        win = timing[args.skip:]
+        t0 = win[0]["wall_start"] if win else None
+        t1 = float(done_m.group(1)) if done_m else (win[-1]["wall_end"] if win else None)
     util = gpu_util_samples(rec / "gpu_util_15s_full.csv", t0, t1) if t0 is not None and t1 is not None else []
     peaks = device_peaks(lines)
     peak_gb = max(peaks.values()) / 1024 ** 3 if peaks else None
@@ -229,30 +280,35 @@ def stage(args) -> int:
         ev.update(shm_status=st, shm_peak_gb=peak, shm_growth_pct=growth, shm_line=line, shmmon_log=args.shmmon_log)
         states.append(st)
         out_lines.append(line)
-    else:  # ckptprobe
-        rb = last_value(lines, r"^CKPT50_READBACK step=50 .*bytes=(\d+) leaves=(\d+) enc_leaves=(\d+) wan9_leaves=(\d+) finite=(\d)")
-        after = sum(1 for r in timing if r["step"] > CKPT_STEP and r.get("completed"))
-        p50 = pathlib.Path(args.run_root) / str(CKPT_STEP) / "params" if args.run_root else None
-        ok, why = True, []
-        if rb is None:
-            ok = False; why.append("缺 CKPT50_READBACK 行")
-        else:
-            nbytes, leaves, enc, wan9, finite = (int(rb.group(i)) for i in range(1, 6))
-            if nbytes <= 0: ok = False; why.append("50/params 字节数为 0")
-            if enc <= 0 or leaves != wan9 + enc: ok = False; why.append(f"叶数 {leaves} != {wan9}+{enc}")
-            if args.wan9_leaves is not None and wan9 != args.wan9_leaves: ok = False; why.append(f"wan9_leaves={wan9}")
-            if finite != 1: ok = False; why.append("非有限值")
-        if p50 is not None and not p50.is_dir():
-            ok = False; why.append(f"缺 {p50}")
-        if after < CKPT_MIN_UPDATES_AFTER:
-            ok = False; why.append(f"step {CKPT_STEP} 之后完成更新 {after} < {CKPT_MIN_UPDATES_AFTER}")
-        st = "PASS" if ok else "FAIL"
-        line = (f"SMOKE_CKPT={st} step={CKPT_STEP} updates_after={after} "
-                + (f"bytes={rb.group(1)} leaves={rb.group(2)} enc_leaves={rb.group(3)}" if rb else "readback=missing")
-                + ("" if ok else f" reasons={why}"))
+    elif args.mode == "ckptprobe":
+        st, line, after = ckpt_verdict(lines, timing, CKPT_STEP, args.run_root, args.wan9_leaves)
         ev.update(ckpt_status=st, ckpt_line=line, updates_after=after)
         states.append(st)
         out_lines.append(line)
+    else:  # benchckpt：一次 run 出 BENCH300 / GPU_UTIL / GPU_PEAK / SMOKE_CKPT
+        n_win = args.win_hi - args.win_lo + 1
+        complete = (bool(timing) and len(timing) == args.steps and all(r.get("completed") for r in timing)
+                    and len(win) == n_win)
+        s = [r["host_step_s"] - r.get("phases_s", {}).get("checkpoint", 0.0) for r in win]
+        dl = [r.get("phases_s", {}).get("data_next", 0.0) for r in win]
+        x = sum(s) / len(s) if s else None
+        bst, bline = bench_verdict(x, complete, at)
+        dl_frac = sum(dl) / sum(s) if s and sum(s) > 0 else float("nan")
+        bline += (f" dl_wait_frac={dl_frac:.4f} steps={len(timing)}/{args.steps} window=steps_{args.win_lo}_{args.win_hi}"
+                  f" window_steps={len(win)}/{n_win}")
+        ust, uline = util_verdict((sum(util) / len(util)) if util else None)
+        uline += f" samples={len(util)} window=steps_{args.win_lo}_{args.win_hi}"
+        gst, gline = gpu_peak_verdict(peak_gb)
+        cst, cline, after = ckpt_verdict(lines, timing, args.ckpt_step, args.run_root, args.wan9_leaves)
+        ev.update(bench_status=bst, s_per_step=x, dl_wait_frac=dl_frac, complete=complete, bench_line=bline,
+                  bench_window=[args.win_lo, args.win_hi], util_status=ust, util_line=uline,
+                  gpu_peak_status=gst, gpu_peak_line=gline, ckpt_status=cst, ckpt_line=cline, updates_after=after,
+                  ckpt_step=args.ckpt_step, base_status=worst(states))     # base = 非分项原因（prefetch 读回）
+        for name, st_ in (("BENCH300", bst), ("GPU_PEAK", gst), ("SMOKE_CKPT", cst)):
+            if worst([st_]) != "PASS":
+                reasons.append(f"{name}={st_}")
+        states += [bst, gst, cst, "PASS" if ust == "RECORDED" else ust]
+        out_lines += [bline, uline.replace("GPU_UTIL=", "GPU_UTIL_STAGE=", 1), cline]
 
     gst, gline = gpu_peak_verdict(peak_gb)
     out_lines.append(gline.replace("GPU_PEAK=", "GPU_PEAK_STAGE=", 1))
@@ -276,10 +332,12 @@ def pick(evs: list[dict], mode: str, pathcfg_sha: str) -> dict | None:
     return ok[-1] if ok else (cands[-1] if cands else None)
 
 
-def with_stage(e: dict, key: str, st: str, line: str) -> tuple[str, str]:
+def with_stage(e: dict, key: str, st: str, line: str, stage_key: str = "stage_status") -> tuple[str, str]:
     """分项状态与该尝试的阶段状态取最坏：阶段 FAIL（如 prefetch 读回不符等非分项原因）时分项一律报 FAIL，
-    阶段 ASK 时分项至少 ASK；不让回退选中的未通过尝试的阶段失败被分项 PASS 吞掉。"""
-    stage_st = e.get("stage_status", "FAIL")
+    阶段 ASK 时分项至少 ASK；不让回退选中的未通过尝试的阶段失败被分项 PASS 吞掉。
+    benchckpt 一个阶段含四个分项，传 stage_key="base_status"（只含非分项原因），免得一个分项 FAIL 把其余分项也改成 FAIL；
+    G6 总状态仍对四项取最坏。"""
+    stage_st = e.get(stage_key, "FAIL")
     w = st
     if stage_st == "FAIL" and st != "FAIL":
         w = "FAIL"
@@ -291,6 +349,31 @@ def with_stage(e: dict, key: str, st: str, line: str) -> tuple[str, str]:
     return w, f"{key}={w}{rest} stage_status={stage_st} stage_reasons={e.get('reasons')}"
 
 
+def aggregate_benchckpt(evs: list[dict], sha: str) -> int:
+    """--plan benchckpt：只要求 BENCH300 / GPU_UTIL / GPU_PEAK / SMOKE_CKPT（取同一份 benchckpt 证据），SHM_PEAK 记 DEFERRED。"""
+    e = pick(evs, "benchckpt", sha)
+    states, lines = [], []
+    if e is None:
+        for key in ("BENCH300", "GPU_UTIL", "GPU_PEAK", "SMOKE_CKPT"):
+            states.append("FAIL"); lines.append(f"{key}=FAIL reason=no_benchckpt_evidence pathcfg_sha={sha}")
+    else:
+        tag = f" attempt={e['attempt']}"
+        st, line = with_stage(e, "BENCH300", e["bench_status"], e["bench_line"] + tag, "base_status")
+        states.append(st); lines.append(line)
+        st, line = with_stage(e, "GPU_UTIL", e["util_status"], e["util_line"] + " stages=benchckpt" + tag, "base_status")
+        states.append("PASS" if st == "RECORDED" else st); lines.append(line)
+        st, line = with_stage(e, "GPU_PEAK", e["gpu_peak_status"], e["gpu_peak_line"] + tag, "base_status")
+        states.append(st); lines.append(line)
+        st, line = with_stage(e, "SMOKE_CKPT", e["ckpt_status"], e["ckpt_line"] + tag, "base_status")
+        states.append(st); lines.append(line)
+    lines.append(SHM_DEFERRED_LINE)
+    for ln in lines:
+        print(ln, flush=True)
+    g = worst(states)
+    print(f"G6={g} pathcfg_sha={sha} plan=benchckpt attempts=benchckpt:{e['attempt'] if e else 'none'}", flush=True)
+    return 1 if g == "FAIL" else 0
+
+
 def aggregate(args) -> int:
     ev_dir = pathlib.Path(args.evidence_dir)
     evs = []
@@ -299,6 +382,8 @@ def aggregate(args) -> int:
             evs.append(json.loads(p.read_text()))
         except json.JSONDecodeError:
             continue
+    if args.plan == "benchckpt":
+        return aggregate_benchckpt(evs, args.pathcfg_sha)
     chosen = {m: pick(evs, m, args.pathcfg_sha) for m in MODES}
     states, lines = [], []
     b = chosen["bench"]
@@ -335,11 +420,45 @@ def aggregate(args) -> int:
     return 1 if g == "FAIL" else 0
 
 
+SHM_FORMAL_PENDING_RC = 3
+
+
+def shm_formal(args) -> int:
+    """正式训练第 0–judge_step 步的 /dev/shm 判定（取代单独的 --shmprobe）。步数来源与旧 shmprobe 相同：
+    记录目录 metrics.jsonl 的 (step, wall_time)。未到 judge_step 时不打印、退出 3。"""
+    rec = pathlib.Path(args.rec)
+    metrics = sorted((r for r in read_jsonl(rec / "metrics.jsonl") if r.get("step") is not None), key=lambda r: r["step"])
+    end = next((r["wall_time"] for r in metrics if r["step"] >= args.judge_step), None)
+    if end is None:
+        return SHM_FORMAL_PENDING_RC
+    split_step = args.judge_step - SHM_TAIL_STEPS
+    split = next((r["wall_time"] for r in metrics if r["step"] >= split_step), None)
+    start_m = last_value(log_lines(pathlib.Path(args.run_log)), r"^TRAIN_START_EPOCH=(\d+)") if args.run_log else None
+    samples = shm_samples(pathlib.Path(args.shmmon_samples))
+    t_start = float(start_m.group(1)) if start_m else (metrics[0]["wall_time"] if metrics else None)
+    run_s = [(t, g) for t, g in samples if t_start <= t <= end]
+    peak = max((g for _, g in run_s), default=None)
+    before = [g for t, g in run_s if t < split]
+    after = [g for t, g in run_s if t >= split]
+    growth = None
+    if before and after and max(before) > 0:
+        growth = max(0.0, (max(after) - max(before)) / max(before) * 100.0)
+    st, line = shm_verdict(peak, growth)
+    line += (f" window=formal_steps_0_{args.judge_step} samples={len(run_s)} split_step={split_step}"
+             f" t_start_src={'TRAIN_START_EPOCH' if start_m else 'metrics_first_row'}")
+    print(line, flush=True)
+    if st != "PASS":
+        print(f"SHM_ALERT reason=formal_first{args.judge_step} peak_gb={peak} limit_gb={SHM_LIMIT_GB:g} growth_pct={growth} "
+              f"action=主会话按 RB-D2 退路处理：停正式训练后以 E2E_PREFETCH_FACTOR=1 从头重起（新 run 名，按第 6 条清产物）；"
+              f"本脚本不停训", flush=True)
+    return 0 if st == "PASS" else 1
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     st = sub.add_parser("stage")
-    st.add_argument("--mode", choices=MODES, required=True)
+    st.add_argument("--mode", choices=STAGE_MODES, required=True)
     st.add_argument("--attempt", required=True)
     st.add_argument("--run", required=True)
     st.add_argument("--pathcfg", required=True)
@@ -353,12 +472,24 @@ def main(argv=None) -> int:
     st.add_argument("--shmmon-log", default=None)
     st.add_argument("--run-root", default=None)
     st.add_argument("--wan9-leaves", type=int, default=None)
+    st.add_argument("--win-lo", type=int, default=50, help="benchckpt 测速窗口起步（含）")
+    st.add_argument("--win-hi", type=int, default=240, help="benchckpt 测速窗口止步（含）")
+    st.add_argument("--ckpt-step", type=int, default=250, help="benchckpt 读回的中途 checkpoint 步数")
     st.add_argument("--now-et", default=None, help="单测用：固定 at= 时间")
     ag = sub.add_parser("aggregate")
     ag.add_argument("--pathcfg-sha", required=True)
     ag.add_argument("--evidence-dir", required=True)
+    ag.add_argument("--plan", choices=("g6", "benchckpt"), default="g6",
+                    help="g6 = 旧三阶段口径；benchckpt = 2026-11-18 起现行口径（SHM_PEAK 记 DEFERRED）")
+    sf = sub.add_parser("shm-formal")
+    sf.add_argument("--rec", required=True, help="正式训练记录目录（含 metrics.jsonl）")
+    sf.add_argument("--shmmon-samples", required=True, help="shmmon.sh 的 SHM_SAMPLE 行文件")
+    sf.add_argument("--run-log", default=None, help="正式 runner 日志（取 TRAIN_START_EPOCH）")
+    sf.add_argument("--judge-step", type=int, default=SHM_FORMAL_STEP)
     args = ap.parse_args(argv)
-    return stage(args) if args.cmd == "stage" else aggregate(args)
+    if args.cmd == "stage":
+        return stage(args)
+    return aggregate(args) if args.cmd == "aggregate" else shm_formal(args)
 
 
 if __name__ == "__main__":

@@ -6,7 +6,8 @@
 # GATE_SESSION GATE_LOG E2E_REPO E2E_LOCK_DIR 与帮助函数 trig_verdict_all / trig_need_sub / trig_file_has。
 # 次序（推荐次序，触发器每轮最多起一个、前一闸门判过且 8 卡 memory.used 之和为 0 才起下一个）：
 #   G1（含 G1b/G1c，主会话已跑完：只判 v1-store/logs/e2e-g1.log，永不启动）→ G3（1 卡）→ G4（8 卡 --smoke20）
-#   → G6-bench → G6-shmprobe → G6-ckptprobe（末段聚合打印 G6 各行）→ G5（1 卡）→ G5b（GPU 0 同卡 4 片）。
+#   → G6-benchckpt（一次 300 步 run，末段 aggregate --plan benchckpt 打印 G6 各行；SHM 判定移到正式训练前 2000 步）
+#   → G5（1 卡）→ G5b（GPU 0 同卡 4 片）。
 # 不在表内、由主会话在 CPU 上跑并写固定日志名的前置（触发器只读其判定行）：
 #   G9 → v1-store/logs/e2e-g9.log（INIT_EQ=PASS、R3_OFF_EQ=PASS）；G0 → v1-store/logs/e2e-g0.log（DATA_LINEAGE=PASS）。
 # 重做某闸门：主会话把旧锁改名为 ….launched.superseded-aNN，并把本表对应行的 aNN（会话名、日志名、run 名）一起递增。
@@ -41,19 +42,15 @@ gate_def G4 a01 e2e-g4-a01 "$E2E_L/e2e-g4-a01.log" \
   "bash $E2E_RUNNER \"\$(git rev-parse HEAD)\" --smoke20" \
   'trig_verdict_all "$GATE_LOG" DATA_LINEAGE E2E_TRAINABLE SMOKE20'
 
-# G6 ①②③（8 卡，依次）：run 名与会话名同带 -a01；末段 ckptprobe 由 runner 调 e2e_g6_judge.py aggregate 打印 G6 各行
-gate_def G6-bench a01 e2e-bench-a01 "$E2E_L/e2e-bench-a01.log" \
+# G6（8 卡，单个 gate）：用户 2026-11-18 美东裁定「问题一和三能不能够放在一起来做？然后问题二能不能够在正式起跑的时候再来做，
+#   就不要单独跑这个」→ ① 测速与 ③ 存盘读回合成一次 runner --benchckpt（300 步，存 250/299，测速窗口第 50–240 步）；
+#   ② /dev/shm 不再单独跑，改由正式训练 tmux e2e-shmmon（shmmon.sh --formal-rec）在第 2000 步后判。
+#   runner 末段调 e2e_g6_judge.py aggregate --plan benchckpt 打印 BENCH300 / GPU_UTIL / GPU_PEAK / SMOKE_CKPT、
+#   SHM_PEAK=DEFERRED 与 G6 行；本 gate 只读 G6 行。
+gate_def G6-benchckpt a01 e2e-benchckpt-a01 "$E2E_L/e2e-benchckpt-a01.log" \
   'trig_need_sub S3 S5' \
-  "bash $E2E_RUNNER \"\$(git rev-parse HEAD)\" --bench300 --run-name e2e-bench-a01" \
-  'trig_verdict_all "$GATE_LOG" G6_STAGE BENCH300'
-gate_def G6-shmprobe a01 e2e-shmprobe-a01 "$E2E_L/e2e-shmprobe-a01.log" \
-  'trig_need_sub S3 S5' \
-  "bash $E2E_RUNNER \"\$(git rev-parse HEAD)\" --shmprobe --run-name e2e-shmprobe-a01" \
-  'trig_verdict_all "$GATE_LOG" G6_STAGE SHM_PEAK'
-gate_def G6-ckptprobe a01 e2e-ckptprobe-a01 "$E2E_L/e2e-ckptprobe-a01.log" \
-  'trig_need_sub S3 S5' \
-  "bash $E2E_RUNNER \"\$(git rev-parse HEAD)\" --ckptprobe --run-name e2e-ckptprobe-a01" \
-  'trig_verdict_all "$GATE_LOG" G6_STAGE SMOKE_CKPT BENCH300 GPU_UTIL SHM_PEAK GPU_PEAK G6'
+  "bash $E2E_RUNNER \"\$(git rev-parse HEAD)\" --benchckpt --run-name e2e-benchckpt-a01" \
+  'trig_verdict_all "$GATE_LOG" G6'
 
 # G5（1 卡，GPU 0；sidecar 同卡）：S4 合入、G4 冒烟权重在盘、最长局 H5 在盘
 gate_def G5 a01 e2e-g5-a01 "$E2E_L/e2e-g5-a01.log" \

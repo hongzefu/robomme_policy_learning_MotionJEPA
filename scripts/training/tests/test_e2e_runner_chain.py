@@ -12,7 +12,12 @@
   ⑥ check_eval692_identity.py 负例（少一条、多一条、等数量换一条）全部 FAIL，32 片与 24 片计划并集为同一全集；
   ⑦ e2e_g6_judge.py 假日志夹具分阶段落证据并聚合：BENCH300 在 2.0/2.5/3.5 三档 PASS／ACCEPTED_OVER_LIMIT…user_preauth_3.0s_42h／ASK，
      GPU_UTIL 在 90/80 两档 PASS／RECORDED，SHM_PEAK、GPU_PEAK、SMOKE_CKPT，以及 prefetch 不符、证据不覆盖、摘要不同不聚合；
-  ⑧ shmmon.sh 超线打印 SHM_ALERT；⑨ e2e_token_rank.py 统计量与 checkpoint 子树载入往返；⑩ e2e_trig_gates.sh 被触发器 --dry-run 解析。
+  ⑦b（用户 2026-11-18 裁定：G6 ①③ 合成一次 --benchckpt，② 移到正式训练前 2000 步）runner --benchckpt 白名单正反例、
+     TRAIN_ARGS 恰多 --save-interval 250 --keep-period 250、期望 ckpt 250/299；judge benchckpt 各档（BENCH300 三档、GPU_UTIL
+     RECORDED、DEVICE_PEAK 缺行与超 72 FAIL、缺 CKPT250_READBACK FAIL、窗口不全 FAIL、prefetch 阶段 FAIL 不被吞），
+     aggregate --plan benchckpt 打印 SHM_PEAK=DEFERRED；⑦c shm-formal PASS/FAIL/未到判定点三档，shmmon.sh --formal-rec 只判一次；
+  ⑧ shmmon.sh 超线打印 SHM_ALERT；⑨ e2e_token_rank.py 统计量与 checkpoint 子树载入往返；
+  ⑩ e2e_trig_gates.sh 被触发器 --dry-run 解析（G6 只剩单个 gate G6-benchckpt，判定只读 G6 行）。
 末尾 test_zz_verdict 打印 S5_RUNNER_UNIT=PASS（pytest -s 可见；全部用例通过才会执行到它）。
 """
 from __future__ import annotations
@@ -80,6 +85,8 @@ def test_bash_syntax():
     (["--shmprobe", "--run-name", "e2e-shmprobe-a03"], ["--bench300"], "e2e-shmprobe-a03", "2000", []),
     (["--ckptprobe", "--run-name", "e2e-ckptprobe-a01"], ["--bench300"], "e2e-ckptprobe-a01", "80",
      ["--save-interval", "50", "--keep-period", "50"]),
+    (["--benchckpt", "--run-name", "e2e-benchckpt-a01"], ["--bench300"], "e2e-benchckpt-a01", "300",
+     ["--save-interval", "250", "--keep-period", "250"]),
 ])
 def test_runner_train_args_vs_wan9(tmp_path, flags, wan9_flags, run_name, steps, extra):
     w9 = train_args(run(["bash", str(WAN9), "X", *wan9_flags, "--dry-run"], check=True).stdout)
@@ -102,6 +109,11 @@ def test_runner_train_args_vs_wan9(tmp_path, flags, wan9_flags, run_name, steps,
     assert re.search(r"^PATHCFG=prefetch=2 compact=off remat=off PATHCFG_SHA=[0-9a-f]{16}$", out, re.M)
     if "--shmprobe" in flags:
         assert "shmmon=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/e2e-shmmon-a03.log" in out
+    if "--benchckpt" in flags:
+        assert "EXPECT_CKPTS=250 299 ATTEMPT=a01" in out and " shmmon=off " in out, out
+        assert "g6_evidence=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/g6/g6-benchckpt-a01.json" in out
+        assert re.search(r"^BENCHCKPT bench_window=steps_50_240 readback_step=250 expect_ckpts=250,299 "
+                         r"judge=aggregate_plan_benchckpt shm=deferred_formal_first2000$", out, re.M), out
     yaml = REPO / "src/mme_vla_suite/models/config/robomme" / YAML_NAME
     if yaml.is_file():          # S3 合入后：HC_SHA 必须等于现文件字节摘要
         assert f"HC_SHA={hashlib.sha256(yaml.read_bytes()).hexdigest()} " in out
@@ -133,6 +145,27 @@ def test_runner_probe_name_whitelist(tmp_path):
     assert run(["bash", str(RUNNER), "X", "--smoke20"], st).returncode == 2
     p = run(["bash", str(RUNNER), "X", "--smoke20", "--dry-run"], {**st, "E2E_G0_YAML": "/tmp/x"})
     assert p.returncode == 2 and "E2E_G0_YAML" in p.stderr
+
+
+def test_runner_benchckpt_name_whitelist(tmp_path):
+    st = {"E2E_DRY_STATE_DIR": str(tmp_path)}
+    for name in ("e2e-benchckpt-a01", "e2e-benchckpt-a99"):
+        p = run(["bash", str(RUNNER), "X", "--benchckpt", "--run-name", name, "--dry-run"], st)
+        assert p.returncode == 0 and f"RUN={name} STEPS=300 " in p.stdout, (name, p.stdout, p.stderr)
+    for flags in (["--benchckpt"], ["--benchckpt", "--run-name", "e2e-benchckpt"],
+                  ["--benchckpt", "--run-name", "e2e-benchckpt-a1"], ["--benchckpt", "--run-name", "e2e-benchckpt-a001"],
+                  ["--benchckpt", "--run-name", "e2e-bench-a01"], ["--benchckpt", "--run-name", "e2e-ckptprobe-a01"],
+                  ["--bench300", "--run-name", "e2e-benchckpt-a01"], ["--ckptprobe", "--run-name", "e2e-benchckpt-a01"],
+                  ["--benchckpt", "--bench300", "--run-name", "e2e-benchckpt-a01"]):
+        p = run(["bash", str(RUNNER), "X", *flags, "--dry-run"], st)
+        assert p.returncode == 2, (flags, p.stdout, p.stderr)
+    (tmp_path / "logs").mkdir()
+    (tmp_path / "logs/e2e-benchckpt-a02.runner.log").write_text("old\n")
+    p = run(["bash", str(RUNNER), "X", "--benchckpt", "--run-name", "e2e-benchckpt-a02", "--dry-run"], st)
+    assert p.returncode == 2 and "拒绝覆盖本轮日志" in p.stderr
+    (tmp_path / "train-runs/e2e-benchckpt-a03").mkdir(parents=True)
+    p = run(["bash", str(RUNNER), "X", "--benchckpt", "--run-name", "e2e-benchckpt-a03", "--dry-run"], st)
+    assert p.returncode == 2 and "拒绝复用" in p.stderr
 
 
 def test_runner_prefetch_pathcfg(tmp_path):
@@ -545,6 +578,210 @@ def test_g6_stage_fail_not_swallowed_by_items(tmp_path):
     assert re.search(r"^G6=FAIL ", p.stdout, re.M) and not re.search(r"^BENCH300=PASS", p.stdout, re.M)
 
 
+# ── ⑦b G6 benchckpt（一次 300 步 run 出四项，2026-11-18 用户裁定）────────────────
+
+
+def _bc_stage(tmp_path, attempt, ev, s_per_step=2.0, util=90.0, prefetch="2", peak_bytes=60 * 1024 ** 3, readback=True,
+              n_timing=300, pathcfg_sha="aaaa"):
+    """benchckpt 假证据：第 0–19 步编译 30 s，第 20–49 步 5 s、第 241–299 步 9 s（都在窗口外，混进来均值就会变），
+    第 50–240 步 = s_per_step；第 250 步另含 40 s checkpoint 相；GPU 采样窗口外为 0、窗口内为 util。"""
+    d = tmp_path / f"bc-{attempt}"; d.mkdir()
+    rec = d / "rec"; rec.mkdir()
+    t0 = 1_800_000_000.0
+    rows, t, win = [], t0, [None, None]
+    for s in range(n_timing):
+        dt = 30.0 if s < 20 else 5.0 if s < 50 else s_per_step if s <= 240 else 9.0
+        ph = {"data_next": 0.01}
+        if s == 250:
+            ph["checkpoint"] = 40.0; dt += 40.0
+        rows.append({"step": s, "host_step_s": dt, "phases_s": ph, "completed": True, "wall_start": t, "wall_end": t + dt})
+        if s == 50: win[0] = t
+        if s == 240: win[1] = t + dt
+        t += dt
+    (rec / "step_timing.jsonl").write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+    win[1] = t if win[1] is None else win[1]
+    with (rec / "gpu_util_15s_full.csv").open("w") as f:
+        tt = t0
+        while tt <= t:
+            for g in range(8):
+                f.write(f"{_ts(tt)}, {g}, {util if win[0] <= tt <= win[1] else 0.0}, 70000\n")
+            tt += 15
+    log = d / "runner.log"
+    lines = [f"DATALOADER_PREFETCH_FACTOR={prefetch} env=unset num_workers=16", f"TRAIN_START_EPOCH={int(t0)}"]
+    if peak_bytes is not None:
+        lines += [f"DEVICE_PEAK device={g} peak_bytes_in_use={peak_bytes - g}" for g in range(8)]
+    if readback:
+        lines.append("CKPT250_READBACK step=250 path=x bytes=123456 leaves=98 enc_leaves=33 wan9_leaves=65 finite=1")
+    lines.append(f"TRAIN_DONE_EPOCH={int(t)}")
+    log.write_text("\n".join(lines) + "\n")
+    root = d / "root"; (root / "250/params").mkdir(parents=True)
+    return run([sys.executable, "-I", str(JUDGE), "stage", "--mode", "benchckpt", "--attempt", attempt,
+                "--run", f"e2e-benchckpt-{attempt}", "--pathcfg", "prefetch=2 compact=off remat=off", "--pathcfg-sha", pathcfg_sha,
+                "--prefetch-expect", "2", "--run-log", str(log), "--rec", str(rec), "--evidence-dir", str(ev), "--steps", "300",
+                "--skip", "20", "--win-lo", "50", "--win-hi", "240", "--ckpt-step", "250", "--run-root", str(root),
+                "--wan9-leaves", "65", "--now-et", "2026-11-18T12:00:00-0500"])
+
+
+def _bc_agg(ev, sha="aaaa"):
+    return run([sys.executable, "-I", str(JUDGE), "aggregate", "--plan", "benchckpt", "--pathcfg-sha", sha,
+                "--evidence-dir", str(ev)])
+
+
+DEFERRED = "SHM_PEAK=DEFERRED reason=user_2026-11-18_formal_first2000"
+
+
+@pytest.mark.parametrize("x,word,g6", [(2.0, "PASS", "PASS"), (2.5, "ACCEPTED_OVER_LIMIT", "PASS"), (3.5, "ASK", "ASK")])
+def test_g6_benchckpt_bench_tiers(tmp_path, x, word, g6):
+    ev = tmp_path / "ev"
+    p = _bc_stage(tmp_path, "a01", ev, s_per_step=x)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert re.search(rf"^G6_STAGE={g6} mode=benchckpt attempt=a01 .*util_mean=90\.00 ", p.stdout, re.M), p.stdout
+    out = _bc_agg(ev).stdout
+    b = next(l for l in out.splitlines() if l.startswith("BENCH300="))
+    head = {"PASS": f"BENCH300=PASS s_per_step={x:.4f} limit=2.27",
+            "ACCEPTED_OVER_LIMIT": f"BENCH300=ACCEPTED_OVER_LIMIT measured={x:.4f} limit=2.27 "
+                                   "accepted_by=user_preauth_3.0s_42h at=2026-11-18T12:00:00-0500",
+            "ASK": f"BENCH300=ASK measured={x:.4f} limit=2.27"}[word]
+    assert b.startswith(head) and " window=steps_50_240 window_steps=191/191" in b and " steps=300/300" in b, b
+    assert re.search(r"^GPU_UTIL=PASS util_mean=90\.00 limit=85 samples=\d+ window=steps_50_240 ", out, re.M), out
+    assert re.search(r"^GPU_PEAK=PASS peak_gb=60\.00 limit=72 attempt=a01$", out, re.M), out
+    assert re.search(r"^SMOKE_CKPT=PASS step=250 updates_after=49 bytes=123456 leaves=98 enc_leaves=33 attempt=a01$", out, re.M), out
+    assert DEFERRED in out.splitlines()
+    assert re.search(rf"^G6={g6} pathcfg_sha=aaaa plan=benchckpt attempts=benchckpt:a01$", out, re.M), out
+    assert out.splitlines()[-1].startswith("G6=") and "SHM_PEAK=PASS" not in out and "SHM_PEAK=FAIL" not in out
+
+
+def test_g6_benchckpt_util_recorded_and_item_fails(tmp_path):
+    ev = tmp_path / "ev"
+    assert _bc_stage(tmp_path, "a01", ev, util=80.0).returncode == 0
+    out = _bc_agg(ev).stdout
+    assert re.search(r"^GPU_UTIL=RECORDED util_mean=80\.00 limit=85 ", out, re.M) and re.search(r"^G6=PASS ", out, re.M), out
+    # DEVICE_PEAK 缺行 → GPU_PEAK=FAIL、G6=FAIL；其余分项不被连坐（base_status 只含非分项原因）
+    ev2 = tmp_path / "ev2"
+    p = _bc_stage(tmp_path, "a02", ev2, peak_bytes=None)
+    assert p.returncode == 1 and re.search(r"^G6_STAGE=FAIL .*GPU_PEAK=FAIL", p.stdout, re.M), p.stdout
+    p = _bc_agg(ev2)
+    assert p.returncode == 1
+    assert re.search(r"^GPU_PEAK=FAIL reason=no_peak_bytes_evidence limit=72 attempt=a02$", p.stdout, re.M), p.stdout
+    assert re.search(r"^BENCH300=PASS ", p.stdout, re.M) and re.search(r"^SMOKE_CKPT=PASS ", p.stdout, re.M)
+    assert DEFERRED in p.stdout and re.search(r"^G6=FAIL .*plan=benchckpt", p.stdout, re.M)
+    # 峰值超 72 GiB → FAIL；缺 CKPT250_READBACK → SMOKE_CKPT=FAIL
+    ev3 = tmp_path / "ev3"
+    assert _bc_stage(tmp_path, "a03", ev3, peak_bytes=75 * 1024 ** 3).returncode == 1
+    assert re.search(r"^GPU_PEAK=FAIL peak_gb=75\.00 limit=72", _bc_agg(ev3).stdout, re.M)
+    ev4 = tmp_path / "ev4"
+    assert _bc_stage(tmp_path, "a04", ev4, readback=False).returncode == 1
+    out = _bc_agg(ev4).stdout
+    assert re.search(r"^SMOKE_CKPT=FAIL step=250 updates_after=49 readback=missing reasons=.*缺 CKPT250_READBACK 行", out, re.M), out
+    assert re.search(r"^G6=FAIL ", out, re.M)
+    # 测速窗口不全（timing 只到第 200 步）→ BENCH300=FAIL，且 250 之后没有更新 → SMOKE_CKPT=FAIL
+    ev5 = tmp_path / "ev5"
+    assert _bc_stage(tmp_path, "a05", ev5, n_timing=200).returncode == 1
+    out = _bc_agg(ev5).stdout
+    assert re.search(r"^BENCH300=FAIL reason=incomplete_or_missing", out, re.M) and "updates_after=0" in out, out
+
+
+def test_g6_benchckpt_stage_fail_not_swallowed(tmp_path):
+    ev = tmp_path / "ev"
+    p = _bc_stage(tmp_path, "a01", ev, prefetch="1")
+    assert p.returncode == 1 and re.search(r"^G6_STAGE=FAIL .*prefetch_factor=1 expect=2", p.stdout, re.M), p.stdout
+    e = json.loads((ev / "g6-benchckpt-a01.json").read_text())
+    assert e["bench_status"] == "PASS" and e["base_status"] == "FAIL" and e["stage_status"] == "FAIL"
+    p = _bc_agg(ev)
+    assert p.returncode == 1, p.stdout
+    for key in ("BENCH300", "GPU_UTIL", "GPU_PEAK", "SMOKE_CKPT"):
+        assert re.search(rf"^{key}=FAIL .*stage_status=FAIL stage_reasons=.*prefetch_factor=1 expect=2", p.stdout, re.M), (key, p.stdout)
+    assert not re.search(r"^(BENCH300|GPU_UTIL|GPU_PEAK|SMOKE_CKPT)=PASS", p.stdout, re.M)
+    assert re.search(r"^G6=FAIL ", p.stdout, re.M)
+    # 新尝试通过 → 取最新通过的 a02；摘要不同 / 无证据 → 四项 FAIL + DEFERRED
+    assert _bc_stage(tmp_path, "a02", ev).returncode == 0
+    assert re.search(r"^G6=PASS .*attempts=benchckpt:a02$", _bc_agg(ev).stdout, re.M)
+    p = _bc_agg(ev, "bbbb")
+    assert p.returncode == 1 and p.stdout.count("reason=no_benchckpt_evidence pathcfg_sha=bbbb") == 4, p.stdout
+    assert DEFERRED in p.stdout and re.search(r"^G6=FAIL pathcfg_sha=bbbb plan=benchckpt attempts=benchckpt:none$", p.stdout, re.M)
+    # 旧口径（无 --plan）不读 benchckpt 证据
+    assert "BENCH300=FAIL reason=no_bench_evidence" in _agg(ev).stdout
+
+
+# ── ⑦c 正式训练前 2000 步的 SHM 判定（shm-formal 与 shmmon.sh --formal-rec）──────────
+
+
+def _formal_fixture(d: pathlib.Path, t0: float, last_step=2000, before=200.0, after=201.0, pre_start=999.0, samples=True):
+    rec = d / "rec"; rec.mkdir(parents=True)
+    (rec / "metrics.jsonl").write_text("\n".join(json.dumps({"step": s, "wall_time": t0 + 10 + s * 2.0, "loss": {"dec": 1.0}})
+                                                 for s in range(0, last_step + 1, 100)) + "\n")
+    log = d / "runner.log"; log.write_text(f"TRAIN_START_EPOCH={int(t0)}\n")
+    smp = d / "samples.log"
+    if samples:
+        split, end = t0 + 10 + 500 * 2.0, t0 + 10 + 2000 * 2.0
+        out, tt = [], t0 - 300
+        while tt <= end + 300:
+            g = pre_start if tt < t0 else before if tt < split else after
+            out.append(f"SHM_SAMPLE ts=00:00:00 shm_used_gb={g} epoch={int(tt)} gpu_util=na gpu_util_mean=na")
+            tt += 15
+        smp.write_text("\n".join(out) + "\n")
+    return rec, log, smp
+
+
+def _shm_formal(rec, log, smp):
+    return run([sys.executable, "-I", str(JUDGE), "shm-formal", "--rec", str(rec), "--shmmon-samples", str(smp),
+                "--run-log", str(log)])
+
+
+def test_shm_formal_pass_fail_pending(tmp_path):
+    t0 = 1_800_000_000.0
+    rec, log, smp = _formal_fixture(tmp_path / "pass", t0)          # 训练开始前的 999 GB 采样不计入窗口
+    p = _shm_formal(rec, log, smp)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert re.search(r"^SHM_PEAK=PASS peak_gb=201\.0 limit=330 growth_last1500=0\.50% window=formal_steps_0_2000 samples=\d+ "
+                     r"split_step=500 t_start_src=TRAIN_START_EPOCH$", p.stdout, re.M), p.stdout
+    assert "SHM_ALERT" not in p.stdout
+    rec, log, smp = _formal_fixture(tmp_path / "grow", t0, after=210.0)
+    p = _shm_formal(rec, log, smp)
+    assert p.returncode == 1 and re.search(r"^SHM_PEAK=FAIL peak_gb=210\.0 limit=330 growth_last1500=5\.00% "
+                                           r"window=formal_steps_0_2000 ", p.stdout, re.M), p.stdout
+    assert re.search(r"^SHM_ALERT reason=formal_first2000 .*RB-D2.*E2E_PREFETCH_FACTOR=1 从头重起.*本脚本不停训", p.stdout, re.M)
+    rec, log, smp = _formal_fixture(tmp_path / "over", t0, before=335.0, after=335.0)
+    p = _shm_formal(rec, log, smp)
+    assert p.returncode == 1 and re.search(r"^SHM_PEAK=FAIL peak_gb=335\.0 limit=330 growth_last1500=0\.00% ", p.stdout, re.M)
+    rec, log, smp = _formal_fixture(tmp_path / "pend", t0, last_step=1900)
+    p = _shm_formal(rec, log, smp)
+    assert p.returncode == 3 and p.stdout == "", p.stdout
+
+
+def test_shmmon_formal_judges_once(tmp_path):
+    now = datetime.datetime.now().timestamp()
+    env = {"SHMMON_DF_CMD": "echo 200000000000", "SHMMON_SMI_CMD": "false", "SHMMON_PY": sys.executable}
+    # 已过第 2000 步：只有窗口后段的采样（训练开始前没有 shmmon 采样）→ 判 FAIL（无前段证据）一次，之后不再判
+    rec, log, _ = _formal_fixture(tmp_path / "a", now - 4100, samples=False)
+    smp = tmp_path / "a/samples.log"
+    rec_end = json.loads((rec / "metrics.jsonl").read_text().splitlines()[-1])
+    rows = [json.loads(x) for x in (rec / "metrics.jsonl").read_text().splitlines()]
+    rows[-1]["wall_time"] = now + 3600          # 第 2000 步在「现在」之后：当前采样都落在第 500–2000 步之间
+    (rec / "metrics.jsonl").write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+    assert rec_end["step"] == 2000
+    args = ["bash", str(SHMMON), "--limit-gb", "293", "--interval", "0", "--max-samples", "3", "--formal-rec", str(rec),
+            "--formal-run-log", str(log), "--samples-log", str(smp)]
+    p = run(args, env, timeout=60)
+    out = p.stdout
+    assert p.returncode == 0 and out.rstrip().endswith("EXIT_CODE=0"), out + p.stderr
+    assert out.count("SHM_FORMAL_JUDGED rc=1") == 1 and out.count("SHM_PEAK=FAIL reason=no_evidence") == 1, out
+    assert out.count("SHM_ALERT reason=formal_first2000") == 1 and "SHM_ALERT used_gb" not in out
+    assert len([l for l in smp.read_text().splitlines() if l.startswith("SHM_SAMPLE ")]) == 3
+    # samples 文件已存在即拒；--samples-log 不能单独给
+    assert run(args, env, timeout=30).returncode == 2
+    assert run(["bash", str(SHMMON), "--samples-log", str(tmp_path / "x.log"), "--max-samples", "1"], env).returncode == 2
+    # 未到第 2000 步：只采样、不判
+    rec2, log2, _ = _formal_fixture(tmp_path / "b", now - 100, last_step=1000, samples=False)
+    p = run(["bash", str(SHMMON), "--limit-gb", "293", "--interval", "0", "--max-samples", "2", "--formal-rec", str(rec2),
+             "--formal-run-log", str(log2), "--samples-log", str(tmp_path / "b/samples.log")], env, timeout=60)
+    assert p.returncode == 0 and "SHM_FORMAL_JUDGED" not in p.stdout and "SHM_PEAK" not in p.stdout, p.stdout
+    # 告警线 293：用量 300 GB 时每次采样都打 SHM_ALERT used_gb
+    p = run(["bash", str(SHMMON), "--limit-gb", "293", "--interval", "0", "--max-samples", "1"],
+            {**env, "SHMMON_DF_CMD": "echo 300000000000"}, timeout=30)
+    assert "SHM_ALERT used_gb=300.00 limit_gb=293" in p.stdout
+
+
 # ── ⑧ shmmon ────────────────────────────────────────────────────────────────
 
 
@@ -638,13 +875,30 @@ def test_gates_file_parsed_by_trigger(tmp_path):
     assert p.returncode == 0, out + p.stderr
     assert "NM_DONE=PASS" in out and "GPU_FREE=PASS gpus=8" in out
     gates = re.findall(r"^TRIG_DRYRUN gate=(\S+) tmux=(\S+) attempt=(\S+) log=(\S+) ", out, re.M)
-    assert [g[0] for g in gates] == ["G1", "G3", "G4", "G6-bench", "G6-shmprobe", "G6-ckptprobe", "G5", "G5b"], out
+    assert [g[0] for g in gates] == ["G1", "G3", "G4", "G6-benchckpt", "G5", "G5b"], out
     for g, s, a, log in gates[1:]:
         assert s.endswith("-a01") and a == "a01" and log == f"{locks}/{s}.log", (g, s, log)
-    assert [g[1] for g in gates[3:6]] == ["e2e-bench-a01", "e2e-shmprobe-a01", "e2e-ckptprobe-a01"]
-    for name in ("e2e-bench-a01", "e2e-shmprobe-a01", "e2e-ckptprobe-a01"):
-        assert re.search(rf"--run-name\\? {name}", out), name
+    assert gates[3][1] == "e2e-benchckpt-a01" and gates[3][3] == f"{locks}/e2e-benchckpt-a01.log"
+    assert re.search(r"--benchckpt\\? --run-name\\? e2e-benchckpt-a01", out), out
+    assert not re.search(r"--bench300|--shmprobe|--ckptprobe|e2e-shmprobe|e2e-ckptprobe", out), out
     assert "--smoke20" in out and "--g5b" in out and "--acceptance" in out
+    # G6 gate 只读 aggregate --plan benchckpt 的 G6 行
+    src = GATES.read_text()
+    blk = src[src.index("gate_def G6-benchckpt "):]
+    blk = blk[:blk.index("\n\n")]
+    verdict = re.findall(r"'([^']*)'\s*$", blk)[-1]
+    assert verdict == 'trig_verdict_all "$GATE_LOG" G6', blk
+    trig_src = TRIG.read_text()
+    fn = trig_src[trig_src.index("trig_verdict_all() {"):]
+    fn = fn[:fn.index("\n}\n") + 3]
+    for body, want in (("G6_STAGE=PASS x\nBENCH300=PASS x\nSHM_PEAK=DEFERRED reason=user_2026-11-18_formal_first2000\n"
+                        "G6=PASS pathcfg_sha=a plan=benchckpt\n", "PASS"),
+                       ("BENCH300=ASK x\nG6=ASK pathcfg_sha=a plan=benchckpt\n", "ASK"),
+                       ("GPU_PEAK=FAIL x\nG6=FAIL pathcfg_sha=a plan=benchckpt\n", "FAIL"),
+                       ("BENCH300=PASS x\n", "PENDING")):
+        log = tmp_path / "g6.log"; log.write_text(body)
+        v = run(["bash", "-c", fn + f'\nGATE_LOG={shlex.quote(str(log))}\n' + verdict], check=True).stdout.strip()
+        assert v == want, (body, v)
     assert "launched=0" in out and not list(locks.iterdir()) and not (tmp_path / "forbidden.log").exists()
 
 
