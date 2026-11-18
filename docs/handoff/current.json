@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-18T00:14:22+00:00",
-    "america_new_york": "2026-11-17T19:14:22-05:00"
+    "utc": "2026-11-18T00:48:21+00:00",
+    "america_new_york": "2026-11-17T19:48:21-05:00"
   },
   "repo": {
     "branch": "v4.2-plswap-full",
@@ -2457,8 +2457,8 @@
         "sha": "d654df8"
       },
       "state": "running",
-      "state_changed_at": "2026-11-18T00:14:22+00:00",
-      "state_reason": "2026-11-17 美东 19:15：ctx512 训练 50000 步完成（EXIT_CODE=0，10 份 ckpt 齐，nonfinite=0，result.md 已写）；占位 65943150 不 scancel、转交 1116 计划 692 局评估（评估链 g4c-ev512-chain 18:39 起正式评估）。ctx1024 训练进行中，估 11-20 约 06:00 完成。",
+      "state_changed_at": "2026-11-18T00:48:21+00:00",
+      "state_reason": "2026-11-17 美东 19:55：ctx512 训练完成并在原占位评完 692 局：EVAL692=PASS success=158 rate=0.2283 new_errors=0（modulation 对照 30.49%）；按 1116 R3 已 scancel 65943150。评估代码 4ba8b49（修 eval_v17 依赖错配）。ctx1024 训练进行中（估 11-20 约 06:00），评估链 g4c-ev1024-chain 在第 1 关等待。",
       "owner": {
         "session": "Claude Code 会话（sled-aspen，本仓库主检出）",
         "host": "sled-aspen"
@@ -2479,7 +2479,7 @@
         },
         {
           "what": "两份 result.md 已提交；占位转交 1116 计划 692 局评估（评估通过且 new_errors=0 后由评估任务 scancel）",
-          "evidence": "",
+          "evidence": "ctx512：训练 result.md（f793afb）、评估 docs/training-doc/gl692-ctx512-50k/result.md；65943150 sacct CANCELLED+；ctx1024 待完成",
           "where": "docs/training-doc/",
           "status": "pending"
         }
