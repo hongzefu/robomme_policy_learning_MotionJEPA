@@ -51,7 +51,7 @@ TRIG = REPO / "scripts/training/e2e_wait_nm.sh"
 YAML_NAME = "perceptual-framesamp-modul-8frame-8x8-e2eenc.yaml"
 FORMAL = "v2-1600ep-m8x8-modul-e2eenc-s16-b128-50k"
 POLICY = "perceptual-framesamp-modul-8frame-8x8-e2eenc"
-CLEAN_ENV = ("E2E_G0_MOTION", "E2E_G0_YAML", "E2E_DRY_STATE_DIR", "E2E_PREFETCH_FACTOR", "R9_G0_MOTION", "R9_TIMING_STEPS",
+CLEAN_ENV = ("E2E_G0_MOTION", "E2E_G0_YAML", "E2E_DRY_STATE_DIR", "E2E_PREFETCH_FACTOR", "E2E_XLA_MEM_FRACTION", "R9_G0_MOTION", "R9_TIMING_STEPS",
              "CHAIN_DRY", "CHAIN_RUNNER_LOG", "CHAIN_LOG_DIR", "POLICY", "RUN_NAME", "DRY_RUN", "EVAL_SHARDS", "EVAL_PER_GPU",
              "EVAL_MEM_FRACTION", "CHUNK_EPISODES", "EVAL_TIMEOUT", "STORE", "PYTHONPATH")
 
@@ -108,6 +108,7 @@ def test_runner_train_args_vs_wan9(tmp_path, flags, wan9_flags, run_name, steps,
     else:
         assert re.search(r"^DIAG_SWITCH TRAIN_TIMING_STEPS=300 TRAIN_TIMING_PROFILE=0 TRAIN_RECORD_DIR=\S+ follower=STEP_TIME\+DIAG gpu_sample_s=15 ", out, re.M)
     assert re.search(r"^PATHCFG=prefetch=2 compact=off remat=off PATHCFG_SHA=[0-9a-f]{16}$", out, re.M)
+    assert re.search(r"^XLA_MEM_FRACTION=0\.90$", out, re.M), out
     if "--shmprobe" in flags:
         assert "shmmon=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/e2e-shmmon-a03.log" in out
     if "--benchckpt" in flags:
@@ -950,3 +951,25 @@ def test_gates_file_parsed_by_trigger(tmp_path):
 
 def test_zz_verdict():
     print("S5_RUNNER_UNIT=PASS")
+
+
+@pytest.mark.parametrize("flags", [
+    [], ["--smoke20"], ["--bench300", "--run-name", "e2e-bench-a01"], ["--benchckpt", "--run-name", "e2e-benchckpt-a01"],
+    ["--shmprobe", "--run-name", "e2e-shmprobe-a03"], ["--ckptprobe", "--run-name", "e2e-ckptprobe-a01"],
+])
+def test_runner_xla_mem_fraction_override(tmp_path, flags):
+    # F2：E2E_XLA_MEM_FRACTION 覆盖缺省 0.90；TRAIN_ARGS 不受影响（环境变量不进 TRAIN_ARGS）
+    env = {"E2E_DRY_STATE_DIR": str(tmp_path)}
+    base = run(["bash", str(RUNNER), "X", *flags, "--dry-run"], env, check=True).stdout
+    out = run(["bash", str(RUNNER), "X", *flags, "--dry-run"], {**env, "E2E_XLA_MEM_FRACTION": "0.85"}, check=True).stdout
+    assert re.search(r"^XLA_MEM_FRACTION=0\.85$", out, re.M) and not re.search(r"^XLA_MEM_FRACTION=0\.90$", out, re.M), out
+    assert train_args(out) == train_args(base)
+    bad = run(["bash", str(RUNNER), "X", *flags, "--dry-run"], {**env, "E2E_XLA_MEM_FRACTION": "1.5"})
+    assert bad.returncode == 2 and "E2E_XLA_MEM_FRACTION" in bad.stderr
+
+
+def test_runner_no_hardcoded_095():
+    # F2：runner 的 XLA 预占不得再写死 0.95
+    src = RUNNER.read_text(encoding="utf-8")
+    assert "XLA_PYTHON_CLIENT_MEM_FRACTION=0.95" not in src
+    assert 'export XLA_PYTHON_CLIENT_MEM_FRACTION="$XLA_MEM_FRACTION"' in src
