@@ -90,6 +90,95 @@ def _make_pool_motion_client(mcfg, run_root: pathlib.Path, motion_stub: bool):
         encoder_kind=kind, readout=None if readout is None else str(readout), **sha_kw)
 
 
+# E2E-Enc（计划 1117-e2e-enc-train-plan.html 第二部分「一」policy_config.py 行）：motion_provenance.json 必备字段与
+# policy_encoder 子字典的契约键（与 train.py::init_history_config 的 wan_e2e 快照同一契约）。
+E2E_KIND = "wan_e2e"
+E2E_READOUT = "wan_e2e_enc768_s16_v1"
+E2E_TABLE_KIND = "wan_raw_bf16_s16_v1"
+E2E_PROV_KEYS = ("vae", "encoder_kind", "readout", "table_kind", "raw9_source_sha256", "policy_encoder")
+E2E_POLICY_ENCODER_KEYS = ("init", "trainable", "layers", "parameter_count", "spec_src")
+
+
+def check_e2e_provenance(mcfg, prov: dict, run_root) -> None:
+    """e2e run 的 motion_provenance.json 校验：必备字段齐全；encoder_kind / readout 与快照一致且为 e2e 身份；
+    table_kind 为 s16 bf16 表；raw9_source_sha256 等于本仓 wan_raw9.py 的 source_sha256()（sidecar 只跑 VAE + raw9 搬运）；
+    policy_encoder 为 {init: random, trainable: true, layers: <快照 encoder.layers>, parameter_count: 正整数, spec_src}；
+    表本身无 encoder（encoder 为 None），表的 parameter_count（若写）只能是 0，不与 policy_encoder 计数混用。"""
+    from mme_vla_suite.shared import wan_raw9
+    missing = [k for k in E2E_PROV_KEYS if prov.get(k) is None]
+    if missing:
+        raise ValueError(f"e2e run 的 motion_provenance.json 缺字段 {missing}: {run_root}")
+    if prov["encoder_kind"] != E2E_KIND or str(mcfg.encoder_kind) != E2E_KIND:
+        raise ValueError(f"e2e encoder_kind 不符: prov={prov['encoder_kind']!r} 快照={mcfg.encoder_kind!r}: {run_root}")
+    if prov["readout"] != E2E_READOUT or str(mcfg.get("readout", None)) != E2E_READOUT:
+        raise ValueError(f"e2e readout 不符: prov={prov['readout']!r} 快照={mcfg.get('readout', None)!r}: {run_root}")
+    if prov["table_kind"] != E2E_TABLE_KIND:
+        raise ValueError(f"e2e table_kind {prov['table_kind']!r} != {E2E_TABLE_KIND!r}: {run_root}")
+    if prov["raw9_source_sha256"] != wan_raw9.source_sha256():
+        raise ValueError(f"e2e raw9_source_sha256 {str(prov['raw9_source_sha256'])[:16]}… 与本仓 wan_raw9.py "
+                         f"{wan_raw9.source_sha256()[:16]}… 不符: {run_root}")
+    if prov.get("encoder", None) is not None:
+        raise ValueError(f"e2e 表不应带 encoder（可训练 encoder 记在 policy_encoder）: {run_root}")
+    if prov.get("parameter_count", 0) != 0:
+        raise ValueError(f"e2e 表的 parameter_count 必须为 0（不与 policy_encoder 计数混用）: {run_root}")
+    pe = prov["policy_encoder"]
+    if not isinstance(pe, dict) or any(k not in pe for k in E2E_POLICY_ENCODER_KEYS):
+        raise ValueError(f"e2e policy_encoder 缺键（需 {E2E_POLICY_ENCODER_KEYS}）: {pe!r}: {run_root}")
+    if pe["init"] != "random" or pe["trainable"] is not True:
+        raise ValueError(f"e2e policy_encoder 须 init=random、trainable=true: {pe!r}: {run_root}")
+    enc = mcfg.get("encoder", None)
+    if enc is not None and enc.get("layers", None) is not None and int(pe["layers"]) != int(enc.layers):
+        raise ValueError(f"e2e policy_encoder.layers={pe['layers']} 与快照 motion.encoder.layers={enc.layers} 不符: {run_root}")
+    if type(pe["parameter_count"]) is not int or pe["parameter_count"] <= 0:
+        raise ValueError(f"e2e policy_encoder.parameter_count 须为正整数: {pe['parameter_count']!r}: {run_root}")
+
+
+def _make_e2e_motion_client(mcfg, run_root: pathlib.Path, motion_stub: bool):
+    """e2e kind（wan_e2e）的在线 sidecar 句柄：sidecar 与 raw9 同一 VAE 通路（回 fp32 raw latent），客户端收到后
+    立即调 raw_bf16.raw9_f32_to_bf16（R9）。不落入 _make_pool_motion_client。"""
+    from mme_vla_suite.policies.motion_client import MotionEncoderClient
+    from mme_vla_suite.shared import wan_raw9
+    prov_path = run_root / "motion_provenance.json"
+    prov = json.loads(prov_path.read_text(encoding="utf-8")) if prov_path.is_file() else {}
+    if not motion_stub:
+        check_e2e_provenance(mcfg, prov, run_root)
+    elif str(mcfg.get("readout", None)) != E2E_READOUT:
+        raise ValueError(f"e2e 快照 motion.readout 必须为 {E2E_READOUT!r}: {run_root}")
+    online_gpu = os.environ.get("MMEVLA_MOTION_ONLINE_GPU") or mcfg.get("online_gpu", 1)
+    logging.info(f"motion sidecar（{E2E_KIND}）online_gpu={online_gpu!r}")
+    return MotionEncoderClient(
+        online_gpu=online_gpu, stub=motion_stub, store_provenance={"vae": prov.get("vae")},
+        encoder_kind=E2E_KIND, readout=E2E_READOUT,
+        expected_raw9_sha256=prov.get("raw9_source_sha256") or wan_raw9.source_sha256())
+
+
+def _make_motion_client(mcfg, run_root: pathlib.Path, motion_stub: bool):
+    """motion 在线句柄分派（计划 1117「一」policy_config.py 行）：wan_e2e 必须排在池化分派之前，
+    否则会落入 _make_pool_motion_client；其余 kind 与旧 encoder 路径逐字不变。"""
+    motion_enc_fn = None
+    if mcfg is not None and mcfg.get("enabled", False) and mcfg.get("encoder_kind", None) == E2E_KIND:
+        # e2e 必须排在池化分派之前（否则落入 _make_pool_motion_client，计划 1117「一」policy_config.py 行）
+        motion_enc_fn = _make_e2e_motion_client(mcfg, run_root, motion_stub)
+    elif mcfg is not None and mcfg.get("enabled", False) and mcfg.get("encoder_kind", None) is not None:
+        motion_enc_fn = _make_pool_motion_client(mcfg, run_root, motion_stub)
+    elif mcfg is not None and mcfg.get("enabled", False):
+        from mme_vla_suite.policies.motion_client import MotionEncoderClient
+        prov_path = run_root / "motion_provenance.json"
+        prov = json.loads(prov_path.read_text(encoding="utf-8")) if prov_path.is_file() else {}
+        store_prov = {"vae": prov.get("vae"), "encoder": prov.get("encoder")}
+        if not motion_stub and (store_prov["vae"] is None or store_prov["encoder"] is None):
+            raise ValueError(f"开启态 run 缺 motion_provenance.json 的 vae / encoder 字段，无法核对 sidecar 同源: {run_root}")
+        # sidecar 卡号：环境变量 MMEVLA_MOTION_ONLINE_GPU 优先（评估侧 Slurm 单卡 step 里 CUDA_VISIBLE_DEVICES=0、
+        # 本机冒烟按所选卡传入），否则用 run 快照写死的 motion.online_gpu（训练机的卡号，异机不适用）
+        online_gpu = os.environ.get("MMEVLA_MOTION_ONLINE_GPU") or mcfg.get("online_gpu", 1)
+        logging.info(f"motion sidecar online_gpu={online_gpu!r} (env MMEVLA_MOTION_ONLINE_GPU={os.environ.get('MMEVLA_MOTION_ONLINE_GPU')!r})")
+        motion_enc_fn = MotionEncoderClient(
+            source_run=str(mcfg.source_run),
+            online_gpu=online_gpu, stub=motion_stub, store_provenance=store_prov,
+            expected_ckpt_sha256=(store_prov["encoder"] or {}).get("checkpoint_sha256") if not motion_stub else None)
+    return motion_enc_fn
+
+
 def create_trained_policy(
     train_config: _config.TrainConfig,
     checkpoint_dir: pathlib.Path | str,
@@ -160,23 +249,8 @@ def create_trained_policy(
     #    motion_stub=True 时用 stub 档（P1–P4 测试）；关闭态为 None
     motion_enc_fn = None
     mcfg = getattr(train_config.model.history_config, "motion", None) if not isinstance(train_config.model.history_config, str) else None
-    if mcfg is not None and mcfg.get("enabled", False) and mcfg.get("encoder_kind", None) is not None:
-        motion_enc_fn = _make_pool_motion_client(mcfg, run_root, motion_stub)
-    elif mcfg is not None and mcfg.get("enabled", False):
-        from mme_vla_suite.policies.motion_client import MotionEncoderClient
-        prov_path = run_root / "motion_provenance.json"
-        prov = json.loads(prov_path.read_text(encoding="utf-8")) if prov_path.is_file() else {}
-        store_prov = {"vae": prov.get("vae"), "encoder": prov.get("encoder")}
-        if not motion_stub and (store_prov["vae"] is None or store_prov["encoder"] is None):
-            raise ValueError(f"开启态 run 缺 motion_provenance.json 的 vae / encoder 字段，无法核对 sidecar 同源: {run_root}")
-        # sidecar 卡号：环境变量 MMEVLA_MOTION_ONLINE_GPU 优先（评估侧 Slurm 单卡 step 里 CUDA_VISIBLE_DEVICES=0、
-        # 本机冒烟按所选卡传入），否则用 run 快照写死的 motion.online_gpu（训练机的卡号，异机不适用）
-        online_gpu = os.environ.get("MMEVLA_MOTION_ONLINE_GPU") or mcfg.get("online_gpu", 1)
-        logging.info(f"motion sidecar online_gpu={online_gpu!r} (env MMEVLA_MOTION_ONLINE_GPU={os.environ.get('MMEVLA_MOTION_ONLINE_GPU')!r})")
-        motion_enc_fn = MotionEncoderClient(
-            source_run=str(mcfg.source_run),
-            online_gpu=online_gpu, stub=motion_stub, store_provenance=store_prov,
-            expected_ckpt_sha256=(store_prov["encoder"] or {}).get("checkpoint_sha256") if not motion_stub else None)
+    if mcfg is not None and mcfg.get("enabled", False):
+        motion_enc_fn = _make_motion_client(mcfg, run_root, motion_stub)
 
     return _policy.MME_VLA_Policy(
         model,

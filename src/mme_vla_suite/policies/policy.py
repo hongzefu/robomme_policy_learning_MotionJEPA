@@ -64,6 +64,13 @@ class MME_VLA_Policy:
                                     demo_tail_pad=mcfg.get("demo_tail_pad", "none"))
             # 每窗 token 数（计划 1112 第二部分 1.1 第 21 行）：wan_raw9 为 9，旧 YAML 缺省 1；下游只在 >1 时读取
             self._motion_cfg["tokens_per_window"] = int(mcfg.get("tokens_per_window", 1))
+            # E2E-Enc 键（计划 1117 第二部分「一」policy.py 行）：只在快照写了 encoder_kind 时拷，旧 run 的 _motion_cfg 逐键不变。
+            # FrameSampMemory 按 encoder_kind == "wan_e2e" 走 e2e 装配（每槽 latents_per_window×raw_dim bf16）。
+            if mcfg.get("encoder_kind", None) is not None:
+                self._motion_cfg["encoder_kind"] = str(mcfg["encoder_kind"])
+                for key in ("readout", "latents_per_window", "raw_dim"):
+                    if mcfg.get(key, None) is not None:
+                        self._motion_cfg[key] = mcfg[key] if key == "readout" else int(mcfg[key])
             # 超预算口径只能走环境变量：评测侧 motion 配置来自 checkpoint 桶里的 history_config.resolved.yaml，
             # 其 sha256 被 check_checkpoint.py::RUNS 与 motion_provenance.json 三方钉死，改任何一份都到不了评测路径或直接炸闸。
             # 优先级 = 环境变量 > resolved 快照可选键 > "raise"（默认，与补 demo 之前一字不差）。
@@ -76,9 +83,60 @@ class MME_VLA_Policy:
             print(f"MOTION_OVERFLOW={overflow} budget={self._motion_cfg['budget']} "
                   f"stride={self._motion_cfg['stride']} window_frames={self._motion_cfg['window_frames']}", flush=True)
         
+        # G5b 在线性能测量（计划 1117 三节 G5b）：设 MMEVLA_PERF_LOG=<jsonl 路径> 时逐事件追加记录（add_buffer 耗时、
+        # 单次策略推理耗时、单局墙钟、请求字节、本进程 XLA 峰值显存、降采样次数），由
+        # compare_train_infer_obs.py --perf-report 汇总成 E2E_ONLINE_PERF 行；不设时零开销、行为不变。
+        self._perf_path = os.environ.get("MMEVLA_PERF_LOG", "").strip() or None
+        self._perf_ep: dict | None = None
+        self._perf_episode_idx = 0
+        if self._perf_path:
+            import atexit
+            atexit.register(self._perf_close_episode)
         self.reset()
         
     
+    def _perf_write(self, rec: dict) -> None:
+        import json
+        with open(self._perf_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+    @staticmethod
+    def _perf_peak_bytes() -> int | None:
+        try:
+            stats = jax.local_devices()[0].memory_stats() or {}
+            return int(stats.get("peak_bytes_in_use")) if "peak_bytes_in_use" in stats else None
+        except Exception:
+            return None
+
+    def _perf_close_episode(self) -> None:
+        ep = self._perf_ep
+        self._perf_ep = None
+        if not self._perf_path or ep is None or ep["n_add"] == 0:
+            return
+        client = self._motion_client
+        mem = self.mem_buffer
+        rec = {"event": "episode", "pid": os.getpid(), "episode_idx": self._perf_episode_idx,
+               "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES"),
+               "wall_s": ep["t_last"] - ep["t_first"], "n_add_buffer": ep["n_add"], "add_buffer_ms": ep["add_ms"],
+               "n_infer": len(ep["infer_ms"]), "infer_ms": ep["infer_ms"], "last_step_idx": int(self.step_idx),
+               "request_bytes": (getattr(client, "bytes_sent", 0) or 0) - ep["bytes_sent0"] if client is not None else 0,
+               "response_bytes": (getattr(client, "bytes_recv", 0) or 0) - ep["bytes_recv0"] if client is not None else 0,
+               "motion_encode_calls": int(getattr(mem, "motion_encode_calls", 0)),
+               "motion_downsample_steps": int(getattr(mem, "motion_downsample_steps", 0)),
+               "motion_downsample_max_k": int(getattr(mem, "motion_downsample_max_k", 0)),
+               "peak_bytes_in_use": self._perf_peak_bytes()}
+        self._perf_write(rec)
+        self._perf_episode_idx += 1
+
+    def _perf_touch(self) -> dict:
+        if self._perf_ep is None:
+            client = self._motion_client
+            now = time.perf_counter()
+            self._perf_ep = {"t_first": now, "t_last": now, "n_add": 0, "add_ms": [], "infer_ms": [],
+                             "bytes_sent0": getattr(client, "bytes_sent", 0) or 0 if client is not None else 0,
+                             "bytes_recv0": getattr(client, "bytes_recv", 0) or 0 if client is not None else 0}
+        return self._perf_ep
+
     def _prepare_mem_buffer(self):
         # commitV4.4：framesamp 是唯一在线记忆路径（recurrent/symbolic/token_dropping
         # 与 pi05_baseline 的 config is None 分支均已删除，见 git 历史）
@@ -117,6 +175,19 @@ class MME_VLA_Policy:
         outputs = jax.tree.map(lambda x: np.asarray(x[0, ...]), outputs)      
         outputs = self._output_transform(outputs)
         outputs["infer_time_ms"] = model_time * 1000
+        if self._perf_path:
+            ep = self._perf_touch()
+            ep["infer_ms"].append(model_time * 1000)
+            ep["t_last"] = time.perf_counter()
+            # 逐次落一行：服务进程被外部结束时最后一局没有 episode 行，汇总端用 infer 行补算
+            self._perf_write({"event": "infer", "pid": os.getpid(), "episode_idx": self._perf_episode_idx,
+                              "step_idx": int(self.step_idx), "infer_ms": model_time * 1000,
+                              "t_rel_s": ep["t_last"] - ep["t_first"],
+                              "add_ms_sum": float(sum(ep["add_ms"])), "n_add_buffer": ep["n_add"],
+                              "request_bytes": ((getattr(self._motion_client, "bytes_sent", 0) or 0) - ep["bytes_sent0"])
+                              if self._motion_client is not None else 0,
+                              "motion_k": int(getattr(self.mem_buffer, "motion_last_k", 0)),
+                              "peak_bytes_in_use": self._perf_peak_bytes()})
         if self.motion_enabled:
             # 随 infer_time_ms 一并回传（已有先例）：客户端累计成 motion_stats.json，
             # 供 check_shard.py 的 MOTION_WINDOWS 闸用闭式公式独立复核
@@ -130,6 +201,8 @@ class MME_VLA_Policy:
     
     @override
     def reset(self) -> None:
+        if getattr(self, "_perf_path", None):
+            self._perf_close_episode()
         del self.mem_buffer
         self._prepare_mem_buffer()
         self.step_idx = -1  
@@ -151,11 +224,19 @@ class MME_VLA_Policy:
             self.exec_start_idx = es_in
         
         step_idx_list = list(range(self.step_idx+1, self.step_idx + len(images) + 1))
+        ep = self._perf_touch() if self._perf_path else None      # 先建本局记录（含客户端字节基线），再计时
+        t_add = time.perf_counter()
         if self.motion_enabled:
             self.mem_buffer.add_buffer(images, states, step_idx_list, exec_start_idx=self.exec_start_idx)
         else:
             self.mem_buffer.add_buffer(images, states, step_idx_list)
         self.step_idx += len(images)
+        if ep is not None:
+            if ep["n_add"] == 0:
+                ep["t_first"] = t_add
+            ep["n_add"] += 1
+            ep["add_ms"].append((time.perf_counter() - t_add) * 1000)
+            ep["t_last"] = time.perf_counter()
 
     def _normalize_state(self, state):
         if self.use_quantiles:

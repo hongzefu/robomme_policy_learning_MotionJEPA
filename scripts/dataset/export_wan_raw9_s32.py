@@ -30,6 +30,16 @@ chunk 的 589,824 原字节，不经任何浮点运算、不做 z-score / 裁剪
 输出根事先存在即拒绝；写完经真实读 API ``MotionStore``（verify_level=full，只读 memmap）全表读回比对逐行摘要、核全有限，
 通过才把 status 写成 verified。末行 ``EXPORT_RAW9=PASS rows=… demo=… exec=… padded=… budget_max=… table_sha256=…``，
 budget_max = 新 index 上逐 episode ``max_visible_count`` 的最大值。
+
+步长 16 bf16 表（1117-e2e-enc-train-plan.html 第二部分一节本文件行、R9）：``--stride 16 --out-dtype bfloat16``。
+两个参数默认 ``32`` / ``float32``，默认行为与输出字节不变；只认这两种组合，其余组合拒绝。s16 时取全部 m（STEP=1，
+``m % STEP == 0`` 恒真，该检查退化为恒等校验），布局 ``motion-raw9bf16-grid16-demopad17-v1``，每行
+= ``raw_bf16.raw9_f32_to_bf16(源第 m 个 chunk)`` 的 294,912 字节（全链路唯一转换函数，R9），其余不做任何数值处理；
+新 index 由 ``build_index_entries`` 新算，导出前断言它与 ``--motion-ref``（768 维表）index 逐行相等（含
+demo_min_real / demo_tail_pad spec 与 grid_stride）。provenance 写 e2e 契约 ``table_kind: wan_raw_bf16_s16_v1``、
+``table_op: f32_to_bf16_reorder``、``parameter_count: 0``、``raw9_source_sha256``（不写 wan_raw9 的
+encoder_kind / readout / encoder_ckpt），由 ``motion_store.check_e2e_table_provenance`` 校验。末行
+``EXPORT_RAW16=PASS rows=… demo=… exec=… dtype=bf16 row_bytes=294912 padded=… budget_max=… table_sha256=…``。
 """
 
 from __future__ import annotations
@@ -58,17 +68,27 @@ sys.path.insert(0, str(_REPO_ROOT / "src"))
 
 from mme_vla_suite.datastore import motion_store as ms  # noqa: E402
 from mme_vla_suite.datastore.manifest import load_manifest  # noqa: E402
+from mme_vla_suite.shared import raw_bf16  # noqa: E402
 from mme_vla_suite.shared import wan_raw9 as wr  # noqa: E402
 
 LATENT_SHAPE = wr.RAW9_INPUT_SHAPE
 LATENT_CHUNK_BYTES = wr.RAW9_ROW_BYTES                   # 589,824，与 wan_common.CHUNK_BYTES 同值
 LATENT_ARC_PREFIX = "wan-latents"                        # pack_and_hash.py build_jobs 里 wan-latents 的 arc_prefix
 RAW9_SOURCE_RELPATH = "src/mme_vla_suite/shared/wan_raw9.py"
+RAW_BF16_SOURCE_RELPATH = "src/mme_vla_suite/shared/raw_bf16.py"
 SOURCE_GRID_STRIDE = ms.GRID_STRIDE                      # 源 latent 的网格步长 16
-NEW_STRIDE = wr.RAW9_STRIDE                              # 32
-STEP = NEW_STRIDE // SOURCE_GRID_STRIDE                  # 取每第 2 个源窗（偶数 m）
-if STEP * SOURCE_GRID_STRIDE != NEW_STRIDE:
-    raise RuntimeError("新步长须为源步长的整数倍")
+# (--stride, --out-dtype) → 输出布局；只认这两种组合（s32 f32 为既有默认，s16 bf16 为 e2e 新表）
+MODES = {(32, "float32"): ms.LAYOUT_RAW9, (16, "bfloat16"): ms.LAYOUT_RAW9BF16}
+if wr.RAW9_STRIDE != 32:
+    raise RuntimeError("wan_raw9.RAW9_STRIDE 须为 32")
+
+
+def step_of(new_stride: int) -> int:
+    """新步长对应的源网格取样间隔 STEP：32 → 2（偶数 m），16 → 1（全部 m）。"""
+    step = new_stride // SOURCE_GRID_STRIDE
+    if step < 1 or step * SOURCE_GRID_STRIDE != new_stride:
+        raise RuntimeError("新步长须为源步长的整数倍")
+    return step
 
 
 def _now() -> str:
@@ -103,8 +123,9 @@ def load_member_checksums(path: pathlib.Path) -> tuple[dict[str, str], str]:
     return members, digest
 
 
-def segment_jobs(src_entries: list[ms.IndexEntry], new_entries: list[ms.IndexEntry]) -> list[dict]:
-    """按新 index 行序列出段任务（新 num_grid=0 的段不出现）；逐段断言新旧网格的偶数 m 对应关系。"""
+def segment_jobs(src_entries: list[ms.IndexEntry], new_entries: list[ms.IndexEntry], new_stride: int) -> list[dict]:
+    """按新 index 行序列出段任务（新 num_grid=0 的段不出现）；逐段断言新旧网格的 m 对应关系（s32 偶数 m，s16 全部 m）。"""
+    step = step_of(new_stride)
     if len(src_entries) != len(new_entries):
         raise ValueError("源 index 与新 index 的 episode 数不同")
     jobs = []
@@ -113,24 +134,26 @@ def segment_jobs(src_entries: list[ms.IndexEntry], new_entries: list[ms.IndexEnt
                 (b.g, b.h5_file, b.raw_ep_idx, b.num_timesteps, b.exec_start_idx):
             raise ValueError(f"源 index 与新 index 的 episode 身份不同 g={a.g}")
         for seg in ms.SEGMENTS:
-            s16, s32 = getattr(a, seg), getattr(b, seg)
+            s16, s32 = getattr(a, seg), getattr(b, seg)          # s32 = 新表段（变量名沿用；s16 模式下新步长亦为 16）
             if s16.num_chunks != s32.num_chunks or s16.seg_len != s32.seg_len:
                 raise ValueError(f"g={a.g} {seg} 源/新 num_chunks 或 seg_len 不同")
-            ng32 = len(range(0, s32.num_chunks, NEW_STRIDE))
-            if s32.num_grid != ng32 or ng32 != len(range(0, s16.num_grid, STEP)):
-                raise ValueError(f"g={a.g} {seg} num_grid32={s32.num_grid} 与 ⌈num_grid16/2⌉ / 公式 {ng32} 不符")
+            ng32 = len(range(0, s32.num_chunks, new_stride))
+            if s32.num_grid != ng32 or ng32 != len(range(0, s16.num_grid, step)):
+                raise ValueError(f"g={a.g} {seg} 新 num_grid={s32.num_grid} 与 ⌈num_grid16/{step}⌉ / 公式 {ng32} 不符")
             if s32.num_grid == 0:
                 continue
             jobs.append({"key": ms.segment_key(a.h5_file, a.raw_ep_idx, seg), "segment": seg, "g": a.g,
                          "h5_file": a.h5_file, "raw_ep_idx": a.raw_ep_idx, "row_base": s32.row_base,
                          "num_grid16": s16.num_grid, "num_grid32": s32.num_grid, "seg_len": s16.seg_len,
-                         "seg_start": 0 if seg == "demo" else a.exec_start_idx})
+                         "seg_start": 0 if seg == "demo" else a.exec_start_idx,
+                         "new_stride": new_stride, "step": step})
     return jobs
 
 
 def check_segment_metadata(meta: dict, job: dict) -> int:
-    """逐段 metadata 与源网格（stride 16）的身份、网格、窗起点核对；返回新表（偶数 m）里的补帧窗数。"""
+    """逐段 metadata 与源网格（stride 16）的身份、网格、窗起点核对；返回新表（s32 偶数 m、s16 全部 m）里的补帧窗数。"""
     key = job["key"]
+    new_stride, step = job["new_stride"], job["step"]
     want = {"segment": key, "g": job["g"], "h5_file": job["h5_file"], "raw_ep_idx": job["raw_ep_idx"],
             "segment_kind": job["segment"], "seg_start_global": job["seg_start"], "seg_len": job["seg_len"],
             "num_grid": job["num_grid16"], "latent_shape": list(LATENT_SHAPE), "latent_dtype": "float32",
@@ -149,15 +172,16 @@ def check_segment_metadata(meta: dict, job: dict) -> int:
         pad = r.get("pad_frames")
         if type(pad) is not int or pad < 0 or (pad > 0 and job["segment"] != "demo"):
             raise ValueError(f"{key} m={m} pad_frames={pad!r} 非法")
-        if m % STEP == 0:
-            if r["start_global_frame"] != job["seg_start"] + NEW_STRIDE * (m // STEP):
-                raise ValueError(f"{key} m={m} 新行 m'={m // STEP} 起点与 stride {NEW_STRIDE} 网格不符")
+        if m % step == 0:                                      # s16 时 step=1 恒真（退化为恒等校验，保留）
+            if r["start_global_frame"] != job["seg_start"] + new_stride * (m // step):
+                raise ValueError(f"{key} m={m} 新行 m'={m // step} 起点与 stride {new_stride} 网格不符")
             padded += int(pad > 0)
     return padded
 
 
 def export_segment(job: dict) -> dict:
-    """worker：读一段源 latent → 核边车与 metadata → 偶数 chunk 原字节 pwrite 到输出表，返回逐行摘要。"""
+    """worker：读一段源 latent → 核边车与 metadata → 选中 chunk 写到输出表（f32 原字节；bf16 经
+    raw_bf16.raw9_f32_to_bf16），返回逐行摘要（摘要覆盖写出的字节）。"""
     root = pathlib.Path(job["latents_root"])
     key = job["key"]
     bin_path = root / f"{key}.bin"
@@ -177,13 +201,20 @@ def export_segment(job: dict) -> dict:
     padded = check_segment_metadata(meta, job)
     digests = bytearray()
     view = memoryview(data)
+    out_row_bytes = job["out_row_bytes"]
+    to_bf16 = job["out_dtype"] == "bfloat16"
     fd = os.open(job["table_tmp"], os.O_WRONLY)
     try:
-        for mp_, m in enumerate(range(0, ng16, STEP)):
+        for mp_, m in enumerate(range(0, ng16, job["step"])):
             chunk = view[m * LATENT_CHUNK_BYTES:(m + 1) * LATENT_CHUNK_BYTES]
-            pos = (job["row_base"] + mp_) * LATENT_CHUNK_BYTES
+            if to_bf16:
+                src = np.frombuffer(chunk, dtype="<f4").reshape(LATENT_SHAPE)
+                chunk = memoryview(raw_bf16.raw9_f32_to_bf16(src).tobytes())
+            if len(chunk) != out_row_bytes:
+                raise RuntimeError(f"{key} m={m} 行字节 {len(chunk)} != {out_row_bytes}")
+            pos = (job["row_base"] + mp_) * out_row_bytes
             done = 0
-            while done < LATENT_CHUNK_BYTES:
+            while done < out_row_bytes:
                 done += os.pwrite(fd, chunk[done:], pos + done)
             h = hashlib.blake2b(digest_size=ms.ROW_DIGEST_BYTES)
             h.update(chunk)
@@ -218,12 +249,19 @@ def main() -> None:
     ap.add_argument("--motion-ref", required=True,
                     help="<lib>/motion-wan-pool768（stride-16 源网格表，给出源行序与沿用的 vae / input_manifest 等字段）")
     ap.add_argument("--workers", type=int, default=48)
-    ap.add_argument("--out", required=True, help="<lib>/motion-wan-raw9-s32（必须事先不存在）")
+    ap.add_argument("--stride", type=int, choices=(16, 32), default=32, help="新表段内网格步长（默认 32）")
+    ap.add_argument("--out-dtype", choices=("float32", "bfloat16"), default="float32",
+                    help="新表 dtype（默认 float32；s16 e2e 表用 bfloat16）")
+    ap.add_argument("--out", required=True, help="<lib>/motion-wan-raw9-s32 或 -s16（必须事先不存在）")
     args = ap.parse_args()
     t0 = time.perf_counter()
     started_at = _now()
     if args.workers < 1:
         raise SystemExit("--workers 须 ≥ 1")
+    layout = MODES.get((args.stride, args.out_dtype))
+    if layout is None:
+        raise SystemExit(f"错误: 不支持 --stride {args.stride} --out-dtype {args.out_dtype}；只认 32/float32 与 16/bfloat16")
+    is_e2e = layout == ms.LAYOUT_RAW9BF16
 
     out = pathlib.Path(args.out).absolute()
     if out.exists() or out.is_symlink():
@@ -249,10 +287,18 @@ def main() -> None:
     if not latents_meta.is_file():
         raise SystemExit(f"错误: latent 根缺 metadata.json: {latents_meta}")
 
-    spec = ms.LAYOUT_SPECS[ms.LAYOUT_RAW9]
+    spec = ms.LAYOUT_SPECS[layout]
+    out_row_bytes = spec.row_bytes
     new_entries = ms.build_index_entries(manifest, spec)
+    if is_e2e:                                                     # 新 index 与 768 维表 index 逐行相等（含 spec）
+        if spec.fields() != ref.spec.fields() or spec.grid_stride != ref.spec.grid_stride:
+            raise SystemExit("错误: s16 新布局的窗口契约 / grid_stride 与 motion-ref 不同")
+        for a, b in zip(src_entries, new_entries, strict=True):
+            if (a.g, a.h5_file, a.raw_ep_idx, a.num_timesteps, a.exec_start_idx, a.demo, a.exec) != \
+                    (b.g, b.h5_file, b.raw_ep_idx, b.num_timesteps, b.exec_start_idx, b.demo, b.exec):
+                raise SystemExit(f"错误: s16 新 index 与 motion-ref index 第 g={a.g} 条不同")
     ref_index = json.loads((ref_root / ms.INDEX_RELPATH).read_text(encoding="utf-8"))
-    index = ms.index_payload(manifest, new_entries, spec=spec, layout=ms.LAYOUT_RAW9,
+    index = ms.index_payload(manifest, new_entries, spec=spec, layout=layout,
                              mj_repo_commit=ref_index.get("mj_repo_commit"))
     index_bytes = (json.dumps(index, ensure_ascii=False, indent=1) + "\n").encode("utf-8")
     index_sha = sha256_bytes(index_bytes)
@@ -261,18 +307,20 @@ def main() -> None:
     totals = ms.index_totals(new_entries)
     budget_max = max((ms.max_visible_count(e) for e in new_entries), default=0)
 
-    jobs = segment_jobs(src_entries, new_entries)
+    jobs = segment_jobs(src_entries, new_entries, args.stride)
     out.mkdir(parents=True)
     (out / "meta").mkdir()
     table_path = out / ms.MOTION_TABLE_RELPATH
     tmp = table_path.with_name(table_path.name + ".tmp")
-    total_bytes = totals["rows"] * LATENT_CHUNK_BYTES
+    total_bytes = totals["rows"] * out_row_bytes
     with open(tmp, "wb") as f:
         f.truncate(total_bytes)
     for j in jobs:
         j["latents_root"] = str(latents_root)
         j["table_tmp"] = str(tmp)
-    print(f"[export] episodes={len(new_entries)} segments={len(jobs)} rows={totals['rows']} "
+        j["out_dtype"] = args.out_dtype
+        j["out_row_bytes"] = out_row_bytes
+    print(f"[export] layout={layout} episodes={len(new_entries)} segments={len(jobs)} rows={totals['rows']} "
           f"(demo {totals['demo_rows']} + exec {totals['exec_rows']}) budget_max={budget_max} "
           f"workers={args.workers}", flush=True)
 
@@ -307,7 +355,7 @@ def main() -> None:
     with open(tmp, "rb+") as f:
         os.fsync(f.fileno())
     if tmp.stat().st_size != total_bytes:
-        raise RuntimeError(f"表字节数 {tmp.stat().st_size} != rows × {LATENT_CHUNK_BYTES}")
+        raise RuntimeError(f"表字节数 {tmp.stat().st_size} != rows × {out_row_bytes}")
     os.replace(tmp, table_path)
     table_sha = ms.sha256_file(table_path)
 
@@ -316,16 +364,32 @@ def main() -> None:
     old_prov = ref.provenance
     git_head = subprocess.run(["git", "-C", str(_REPO_ROOT), "rev-parse", "HEAD"],
                               capture_output=True, text=True, check=False).stdout.strip()
+    if is_e2e:                                     # e2e 表契约：身份描述制表操作，不复用 wan_raw9 的 kind/readout
+        identity = {
+            "table_kind": ms.E2E_TABLE_KIND,
+            "table_op": ms.E2E_TABLE_OP,
+            "parameter_count": ms.E2E_PARAMETER_COUNT,
+            "raw9_source_relpath": RAW9_SOURCE_RELPATH,
+            "raw9_source_sha256": wr.source_sha256(),
+            "raw_bf16_source_relpath": RAW_BF16_SOURCE_RELPATH,
+            "raw_bf16_source_sha256": raw_bf16.source_sha256(),     # 只记录，不参与校验
+            "convert_fn": "mme_vla_suite.shared.raw_bf16.raw9_f32_to_bf16",
+            "dtype": spec.dtype,
+        }
+    else:
+        identity = {
+            "encoder_kind": wr.RAW9_ENCODER_KIND,
+            "readout": wr.RAW9_READOUT,
+            "encoder_ckpt": None,
+            "parameter_count": wr.RAW9_PARAMETER_COUNT,
+            "raw9_source_relpath": RAW9_SOURCE_RELPATH,
+            "raw9_source_sha256": wr.source_sha256(),
+        }
     provenance = {
-        "encoder_kind": wr.RAW9_ENCODER_KIND,
-        "readout": wr.RAW9_READOUT,
-        "encoder_ckpt": None,
-        "parameter_count": wr.RAW9_PARAMETER_COUNT,
-        "raw9_source_relpath": RAW9_SOURCE_RELPATH,
-        "raw9_source_sha256": wr.source_sha256(),
+        **identity,
         "row_shape": list(LATENT_SHAPE),
         "source_grid_stride": SOURCE_GRID_STRIDE,
-        "source_m_rule": "even",
+        "source_m_rule": "all" if is_e2e else "even",
         "manifest_sha256": manifest["sha256"],
         "motion_index_sha256": index_sha,
         "vae": ref_vae,
@@ -355,13 +419,13 @@ def main() -> None:
     }
     import importlib.metadata as md
     meta = {
-        "schema": ms.META_SCHEMA, "layout": ms.LAYOUT_RAW9, "status": "packed",
+        "schema": ms.META_SCHEMA, "layout": layout, "status": "packed",
         **spec.fields(),
         "byte_order": ms.BYTE_ORDER, "array_order": ms.ARRAY_ORDER,
         "grid_stride": spec.grid_stride, "window_frames": ms.WINDOW_FRAMES, "grid_origin": ms.GRID_ORIGIN,
         "window_direction": ms.WINDOW_DIRECTION, "truncation_policy": ms.TRUNCATION_POLICY,
         "frame_size": ms.FRAME_SIZE,
-        "tables": {ms.MOTION_KEY: {"row_shape": list(spec.row_shape), "dtype": "float32",
+        "tables": {ms.MOTION_KEY: {"row_shape": list(spec.row_shape), "dtype": spec.dtype,
                                    "row_bytes": spec.row_bytes, "num_rows": totals["rows"],
                                    "relpath": ms.MOTION_TABLE_RELPATH, "byte_count": total_bytes,
                                    "sha256": table_sha}},
@@ -385,8 +449,8 @@ def main() -> None:
 
     # 真实读 API（只读 memmap）全表读回：逐行 blake2b 与 worker 回传摘要比对、逐行核有限，过了才写 verified
     store = ms.MotionStore(out, manifest_path=str(manifest_path), verify_level="full")
-    if not isinstance(store.table, np.memmap):
-        raise RuntimeError("raw9 表未以 memmap 打开")
+    if not isinstance(store.table, np.memmap) or store.table.dtype != spec.np_dtype:
+        raise RuntimeError("raw 表未以布局 dtype 的 memmap 打开")
     back = bytearray()
     nonfinite = 0
     for r in range(store.num_rows):
@@ -400,8 +464,13 @@ def main() -> None:
         raise RuntimeError("读回逐行摘要与写入摘要不符")
     if nonfinite:
         raise RuntimeError(f"新表含非有限值（{nonfinite} 行）")
-    conclusion = (f"EXPORT_RAW9=PASS rows={totals['rows']} demo={totals['demo_rows']} exec={totals['exec_rows']} "
-                  f"padded={padded} budget_max={budget_max} table_sha256={table_sha}")
+    if is_e2e:
+        conclusion = (f"EXPORT_RAW16=PASS rows={totals['rows']} demo={totals['demo_rows']} exec={totals['exec_rows']} "
+                      f"dtype=bf16 row_bytes={out_row_bytes} padded={padded} budget_max={budget_max} "
+                      f"table_sha256={table_sha}")
+    else:
+        conclusion = (f"EXPORT_RAW9=PASS rows={totals['rows']} demo={totals['demo_rows']} exec={totals['exec_rows']} "
+                      f"padded={padded} budget_max={budget_max} table_sha256={table_sha}")
     meta["status"] = "verified"
     meta["verify"] = {"scanned": totals["rows"], "mismatches": 0,
                       "method": "MotionStore（只读 memmap）全表读回逐行 blake2b + 有限性", "conclusion": conclusion}

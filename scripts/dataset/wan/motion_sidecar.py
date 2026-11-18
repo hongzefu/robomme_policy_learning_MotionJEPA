@@ -23,6 +23,11 @@
 （33 帧一次、B=1、fp32、`W.pin_numerics()` 关 TF32）与池化分支相同。握手 info 回 `encoder_kind`、`readout`、
 `raw9_source_sha256`（`<repo>/src/mme_vla_suite/shared/wan_raw9.py` 按文件加载后的 `source_sha256()`）、`raw9_path`、
 `encoder: None`。`--stub` 同用时握手带这几键，编码返回 `np.full((9,16,32,32), 起点, float32)`。
+
+`--encoder-kind wan_e2e`（计划 1117-e2e-enc-train-plan.html 第二部分「一」motion_sidecar.py 行，E2E-Enc）：VAE 调用、数值与响应
+（float32 (9,16,32,32) 原值、589,824 B）同 wan_raw9 分支，不加载 encoder；sidecar 只跑 VAE 与 raw9 搬运，bf16 转换与可训练
+encoder 都在策略侧（R9：客户端收到 fp32 后立即调 `raw_bf16.raw9_f32_to_bf16`）。握手 info 回 `encoder_kind=wan_e2e`、
+`readout=wan_e2e_enc768_s16_v1`，`raw9_source_sha256` 仍取 `wan_raw9.py` 的 `source_sha256()`。与步长无关（步长 16 由在线缓冲驱动）。
 """
 
 from __future__ import annotations
@@ -47,6 +52,9 @@ _POOL768_PATH = _REPO_ROOT / "src" / "mme_vla_suite" / "shared" / "wan_pool768.p
 POOL_KINDS = ("wan_fixedpool768",)
 _RAW9_PATH = _REPO_ROOT / "src" / "mme_vla_suite" / "shared" / "wan_raw9.py"
 RAW9_KINDS = ("wan_raw9",)
+# E2E-Enc（计划 1117）：sidecar 侧与 wan_raw9 同一 VAE + 原样回 latent 通路，只换握手身份
+E2E_KINDS = ("wan_e2e",)
+E2E_READOUT = "wan_e2e_enc768_s16_v1"
 
 
 def _load(path: pathlib.Path, name: str):
@@ -72,7 +80,11 @@ def pool_encode(W, PL, vae, window: np.ndarray, device) -> np.ndarray:
 
 
 def raw9_info(R, kind: str) -> dict:
-    """wan_raw9 分支握手键：kind 必须与模块常量相同。"""
+    """wan_raw9 / wan_e2e 分支握手键：wan_raw9 时 kind 必须与模块常量相同；wan_e2e 回 e2e 身份，
+    raw9_source_sha256 同样取 wan_raw9.py 的 source_sha256()（sidecar 只跑 VAE 与 raw9 搬运）。"""
+    if kind in E2E_KINDS:
+        return {"encoder_kind": kind, "readout": E2E_READOUT,
+                "raw9_source_sha256": R.source_sha256(), "raw9_path": str(_RAW9_PATH), "encoder": None}
     if kind != R.RAW9_ENCODER_KIND:
         raise RuntimeError(f"--encoder-kind {kind!r} 与 raw9 模块 {R.RAW9_ENCODER_KIND!r} 不符")
     return {"encoder_kind": R.RAW9_ENCODER_KIND, "readout": R.RAW9_READOUT,
@@ -100,8 +112,8 @@ def main() -> int:
     ap.add_argument("--checkpoint", default="checkpoint_epoch_72.pt")
     ap.add_argument("--expected-ckpt-sha256", default="")
     ap.add_argument("--expected-vae-sha256", default="")
-    ap.add_argument("--encoder-kind", default="", choices=("",) + POOL_KINDS + RAW9_KINDS,
-                    help="缺省为 encoder 分支；wan_fixedpool768 为零参数池化分支、wan_raw9 为不池化原样回 latent 分支（均不加载 encoder）")
+    ap.add_argument("--encoder-kind", default="", choices=("",) + POOL_KINDS + RAW9_KINDS + E2E_KINDS,
+                    help="缺省为 encoder 分支；wan_fixedpool768 为零参数池化分支、wan_raw9 / wan_e2e 为不池化原样回 latent 分支（均不加载 encoder）")
     args = ap.parse_args()
 
     P = _load(_PROTO_PATH, "motion_protocol")
@@ -109,8 +121,8 @@ def main() -> int:
     sock.setblocking(True)
     deadline = time.monotonic() + P.HANDSHAKE_TIMEOUT_S
     encode = None
-    raw9 = args.encoder_kind in RAW9_KINDS
-    # 服务循环的形状闸与响应长度按 kind：wan_raw9 为 (9,16,32,32) / 589,824 B，其余为 (768,) / 3,072 B
+    raw9 = args.encoder_kind in RAW9_KINDS + E2E_KINDS
+    # 服务循环的形状闸与响应长度按 kind：wan_raw9 / wan_e2e 为 (9,16,32,32) / 589,824 B，其余为 (768,) / 3,072 B
     tok_shape, resp_bytes = (P.TOKEN_DIM,), P.RESPONSE_BYTES
     try:
         if args.stub:

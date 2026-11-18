@@ -6,7 +6,8 @@
 帧路按 ``row_of()`` 逐帧、运动路按段内网格，混放会互相污染）。
 
 支持历史 ``motion-768-grid16-v1``、demo 补帧 ``motion-768-grid16-demopad17-v1`` 与 raw latent 直读
-``motion-raw9-grid32-demopad17-v1``（1112 计划；行形状 (9,16,32,32)、段内网格步长 32）：
+``motion-raw9-grid32-demopad17-v1``（1112 计划；行形状 (9,16,32,32)、段内网格步长 32），以及 e2e 用的 bf16 raw 表
+``motion-raw9bf16-grid16-demopad17-v1``（1117 计划；行形状 (9,16,32,32)、bf16、行 294,912 B、步长 16、index 与 768 维表逐行相同）：
 
     <motion_root>/
     ├── meta/store_meta.json          唯一契约，两阶段写：pack→"packed"、verify→"verified"
@@ -22,12 +23,13 @@
 新布局 demo 至少 17 个真实帧，不足 33 时重复本段最后一帧，exec 始终要求 33 帧。
 窗口契约随 ``IndexEntry.spec`` 与 ``MotionMeta.spec`` 传递，禁止用最新布局替代旧表契约。
 
-读取实现：旧两布局（1600 集表约 219 MB）每进程整表 ``np.fromfile`` 读入；raw9 布局（约 21.5 GB）改为
-只读 ``np.memmap(mode="r")``，各进程共享页缓存、任何路径不以可写模式打开；两种都
+读取实现：旧两布局（1600 集表约 219 MB）每进程整表 ``np.fromfile`` 读入；raw 布局集合 ``RAW_LAYOUTS``
+（raw9 f32 约 21.5 GB、bf16 约 21.0 GB）改为按布局 dtype（``LayoutSpec.dtype``）只读 ``np.memmap(mode="r")``，各进程共享页缓存、任何路径不以可写模式打开；两种都
 仍照抄 FrameSampStore 的三条纪律——记录 ``owner_pid``、``__reduce__`` 直接 raise 禁 pickle、跨进程懒构造
 （懒构造由 FrameSampDataset 负责）。本模块不 import 任何 training/model 模块（单向依赖）。
 
-沿用 framesamp 的禁 ``.npy`` 容器定论：一律裸 ``.bin`` + meta 声明 dtype。
+沿用 framesamp 的禁 ``.npy`` 容器定论：一律裸 ``.bin`` + meta 声明 dtype（bf16 表的文件名仍是 ``motion_token.f32.bin``，
+dtype 只以 store_meta ``tables.motion_token.dtype`` 与布局为准）。
 """
 
 from __future__ import annotations
@@ -78,12 +80,23 @@ ROW_DIGEST_COVERAGE = "motion_token 行原始位串（store 侧字节）"
 
 SEGMENTS = ("demo", "exec")             # 行序内 episode 内的段顺序
 
+def layout_np_dtype(name: str) -> np.dtype:
+    """布局 dtype 名 → numpy dtype；bf16 用 ``ml_dtypes.bfloat16``（随 jax 安装，按需导入）。"""
+    if name == "float32":
+        return np.dtype(MOTION_DTYPE)
+    if name == "bfloat16":
+        import ml_dtypes
+        return np.dtype(ml_dtypes.bfloat16)
+    raise ValueError(f"未知布局 dtype {name!r}（∈ float32|bfloat16）")
+
+
 @dataclasses.dataclass(frozen=True)
 class LayoutSpec:
     """布局自身的窗口契约；随索引一起传递，可哈希且可被 worker pickle。
 
-    ``grid_stride`` / ``row_shape`` 带等于旧值的默认值（16、(768,)），旧两布局的相等性与 ``fields()`` 不变；
-    ``fields()`` 仍只返回三键（这两项由 index / store_meta 的 ``grid_stride`` 与 ``tables.row_shape`` 单独互校）。
+    ``grid_stride`` / ``row_shape`` / ``dtype`` 带等于旧值的默认值（16、(768,)、"float32"），旧布局的相等性与
+    ``fields()`` 不变；``fields()`` 仍只返回三键（这三项由 index / store_meta 的 ``grid_stride`` 与
+    ``tables.row_shape`` / ``tables.dtype`` 单独互校）。``dtype`` 为 numpy 名（"float32" | "bfloat16"）。
     """
 
     demo_min_real: int
@@ -91,10 +104,15 @@ class LayoutSpec:
     demo_tail_pad: str
     grid_stride: int = GRID_STRIDE
     row_shape: tuple = MOTION_ROW_SHAPE
+    dtype: str = "float32"
+
+    @property
+    def np_dtype(self) -> np.dtype:
+        return layout_np_dtype(self.dtype)
 
     @property
     def row_bytes(self) -> int:
-        return int(np.prod(self.row_shape)) * np.dtype(MOTION_DTYPE).itemsize
+        return int(np.prod(self.row_shape)) * self.np_dtype.itemsize
 
     def min_real(self, segment: str) -> int:
         if segment not in SEGMENTS:
@@ -109,12 +127,18 @@ class LayoutSpec:
 
 LAYOUT_RAW9 = "motion-raw9-grid32-demopad17-v1"     # 1112 计划：raw latent 直读，行 (9,16,32,32)、步长 32
 RAW9_ROW_SHAPE = (9, 16, 32, 32)
+LAYOUT_RAW9BF16 = "motion-raw9bf16-grid16-demopad17-v1"  # 1117 计划：e2e 用 bf16 raw 表，行 (9,16,32,32) bf16、步长 16
+RAW9BF16_ROW_BYTES = 294_912                            # 9×16384×2
 
 LAYOUT_SPECS = {
     "motion-768-grid16-v1": LayoutSpec(33, 33, "none"),
     "motion-768-grid16-demopad17-v1": LayoutSpec(17, 33, "repeat_last"),
     LAYOUT_RAW9: LayoutSpec(17, 33, "repeat_last", grid_stride=32, row_shape=RAW9_ROW_SHAPE),
+    LAYOUT_RAW9BF16: LayoutSpec(17, 33, "repeat_last", grid_stride=16, row_shape=RAW9_ROW_SHAPE, dtype="bfloat16"),
 }
+RAW_LAYOUTS = frozenset({LAYOUT_RAW9, LAYOUT_RAW9BF16})   # raw 布局集合：MotionStore 一律按布局 dtype 只读 memmap
+if LAYOUT_SPECS[LAYOUT_RAW9BF16].row_bytes != RAW9BF16_ROW_BYTES:
+    raise RuntimeError("bf16 raw 布局行字节与 294,912 不符")
 if LAYOUT not in LAYOUT_SPECS or any(
     f"-grid{spec.grid_stride}-" not in name or not name.endswith("-v1") for name, spec in LAYOUT_SPECS.items()
 ):
@@ -446,6 +470,36 @@ def check_raw9_provenance(provenance: dict, ctx: str = "store_meta.json", *, lay
         raise ValueError(f"{ctx} raw9 provenance 的表 layout={layout!r} != {LAYOUT_RAW9!r}")
 
 
+# ── e2e bf16 raw 表 provenance（1117 计划第二部分一节 motion_store.py 行）──────────────────────
+
+E2E_TABLE_KIND = "wan_raw_bf16_s16_v1"
+E2E_TABLE_OP = "f32_to_bf16_reorder"
+E2E_PARAMETER_COUNT = 0
+
+
+def check_e2e_table_provenance(provenance: dict, ctx: str = "store_meta.json", *, layout: str | None = None) -> None:
+    """e2e 表的来源闸（表的身份描述「制表操作」）：table_kind / table_op 等于常量、parameter_count 为 int 0、
+    ``raw9_source_sha256`` 等于现行 wan_raw9.py 字节摘要、布局为 ``LAYOUT_RAW9BF16``；不复用 wan_raw9 的
+    encoder_kind / readout（出现即拒）。"""
+    from mme_vla_suite.shared import wan_raw9 as wr
+
+    for key in ("encoder_kind", "readout"):
+        if key in provenance:
+            raise ValueError(f"{ctx} e2e 表 provenance 不得含 {key}（={provenance[key]!r}）")
+    if provenance.get("table_kind") != E2E_TABLE_KIND:
+        raise ValueError(f"{ctx} provenance.table_kind={provenance.get('table_kind')!r} != {E2E_TABLE_KIND!r}")
+    if provenance.get("table_op") != E2E_TABLE_OP:
+        raise ValueError(f"{ctx} provenance.table_op={provenance.get('table_op')!r} != {E2E_TABLE_OP!r}")
+    count = provenance.get("parameter_count")
+    if type(count) is not int or count != E2E_PARAMETER_COUNT:
+        raise ValueError(f"{ctx} e2e 表 provenance.parameter_count={count!r} != {E2E_PARAMETER_COUNT}")
+    want = wr.source_sha256()
+    if provenance.get("raw9_source_sha256") != want:
+        raise ValueError(f"{ctx} e2e 表 provenance.raw9_source_sha256 与现行 wan_raw9.py（{want[:16]}…）不符")
+    if layout != LAYOUT_RAW9BF16:
+        raise ValueError(f"{ctx} e2e provenance 的表 layout={layout!r} != {LAYOUT_RAW9BF16!r}")
+
+
 # ── MotionMeta ────────────────────────────────────────────────────────────────
 
 
@@ -510,7 +564,7 @@ class MotionMeta:
         t = need("tables").get(MOTION_KEY)
         if t is None:
             raise ValueError(f"tables 缺 {MOTION_KEY}")
-        if tuple(t["row_shape"]) != tuple(spec.row_shape) or t["dtype"] != "float32" \
+        if tuple(t["row_shape"]) != tuple(spec.row_shape) or t["dtype"] != spec.dtype \
                 or int(t["row_bytes"]) != spec.row_bytes or t["relpath"] != MOTION_TABLE_RELPATH:
             raise ValueError(f"tables[{MOTION_KEY}] 形制与格式常量不符: {t}")
         num_rows = int(need("num_rows"))
@@ -541,6 +595,8 @@ class MotionMeta:
             raise ValueError("provenance 须为对象")
         if raw["layout"] == LAYOUT_RAW9:                    # raw9 布局只认 raw9 provenance（布局与来源双向绑定）
             check_raw9_provenance(provenance, ctx=str(meta_path), layout=raw["layout"])
+        elif raw["layout"] == LAYOUT_RAW9BF16 or "table_kind" in provenance:   # e2e 表契约与其布局双向绑定
+            check_e2e_table_provenance(provenance, ctx=str(meta_path), layout=raw["layout"])
         elif "encoder_kind" in provenance:                  # 无该键 = 旧 encoder 表，走原路径不变
             check_pool_provenance(provenance, ctx=str(meta_path))
         return cls(root=root, raw=raw, status=status, num_rows=num_rows,
@@ -605,11 +661,12 @@ def check_same_source(frame_manifest_sha256: str, motion_meta: MotionMeta,
     check_index_against_manifest(list(motion_meta.entries), manifest)
 
 
-# ── MotionStore（只读；旧布局整表进程内，raw9 布局只读 memmap）──────────────────
+# ── MotionStore（只读；旧布局整表进程内，raw 布局集合按布局 dtype 只读 memmap）──────────────────
 
 
 class MotionStore:
-    """只读访问层：旧两布局构造即 ``np.fromfile`` 整表读入；raw9 布局以 ``np.memmap(mode="r")`` 打开
+    """只读访问层：旧两布局构造即 ``np.fromfile`` 整表读入；raw 布局集合（raw9 f32、bf16）以布局 dtype 的
+    ``np.memmap(mode="r")`` 打开
     （各进程共享页缓存，不以可写模式打开）。两者都记录 ``_owner_pid``，
     禁止 pickle 跨进程携带（由 FrameSampDataset 在 worker 内按 pid 懒构造）。"""
 
@@ -622,9 +679,9 @@ class MotionStore:
         run_fast_checks(self._meta, manifest_path=manifest_path)
         if verify_level == "full":
             run_full_checks(self._meta)
-        if self._meta.raw["layout"] == LAYOUT_RAW9:
-            # raw9 表约 21.5 GB：只读 memmap，不整读；大小已由 run_fast_checks 核过
-            self._table = np.memmap(self._root / MOTION_TABLE_RELPATH, dtype=MOTION_DTYPE, mode="r",
+        if self._meta.raw["layout"] in RAW_LAYOUTS:
+            # raw 表约 21 GB：只读 memmap（dtype 取布局），不整读；大小已由 run_fast_checks 核过
+            self._table = np.memmap(self._root / MOTION_TABLE_RELPATH, dtype=self._meta.spec.np_dtype, mode="r",
                                     shape=(self._meta.num_rows,) + self._meta.row_shape)
         else:
             table = np.fromfile(self._root / MOTION_TABLE_RELPATH, dtype=MOTION_DTYPE)
@@ -660,7 +717,7 @@ class MotionStore:
             "由 FrameSampDataset 在 worker 内按 pid 懒构造")
 
     def rows(self, rows) -> np.ndarray:
-        """按全局行号取 (n,)+row_shape f32 新数组（旧布局 (n,768) 进程内副本切片，raw9 布局 (n,9,16,32,32)）。"""
+        """按全局行号取 (n,)+row_shape 新数组（dtype 取布局；旧布局 (n,768) 进程内副本切片，raw 布局 (n,9,16,32,32)）。"""
         r = np.asarray(rows, dtype=np.int64)
         if len(r) and (int(r.min()) < 0 or int(r.max()) >= self._meta.num_rows):
             raise IndexError(f"motion 行号越界: [{r.min()}, {r.max()}] ∉ [0, {self._meta.num_rows})")
@@ -669,12 +726,12 @@ class MotionStore:
         return self._table[r]
 
     def rows_into(self, rows, out: np.ndarray) -> np.ndarray:
-        """按全局行号把表行逐行直接写进调用方预分配的 ``out``（形状 (k,)+row_shape、float32、可写），
+        """按全局行号把表行逐行直接写进调用方预分配的 ``out``（形状 (k,)+row_shape、dtype 等于布局 dtype、可写），
         不经中间 concat / 副本；返回 ``out``。供 FrameSampDataset 的 L0 预分配取数。"""
         r = np.asarray(rows, dtype=np.int64)
         want = (len(r),) + self._meta.row_shape
-        if not isinstance(out, np.ndarray) or out.shape != want or out.dtype != np.dtype(MOTION_DTYPE):
-            raise ValueError(f"rows_into: out 须为 {want} float32，得到 "
+        if not isinstance(out, np.ndarray) or out.shape != want or out.dtype != self._meta.spec.np_dtype:
+            raise ValueError(f"rows_into: out 须为 {want} {self._meta.spec.dtype}，得到 "
                              f"{getattr(out, 'shape', None)} {getattr(out, 'dtype', None)}")
         if not out.flags["WRITEABLE"]:
             raise ValueError("rows_into: out 不可写")
