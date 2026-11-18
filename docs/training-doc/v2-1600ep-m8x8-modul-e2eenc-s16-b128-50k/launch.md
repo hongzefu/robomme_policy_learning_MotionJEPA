@@ -43,3 +43,32 @@
   - `E2E_BF16_FLOOR=RECORDED f=5.2745e-03`
   - `E2E_PORT_PARITY=PASS windows=2048 … depth=8 init=ckpt params=69808896`
   - `E2E_BF16_REF=PASS windows=2048 fwd_rel=5.1494e-03 fwd_limit=1.5420e-02 grad_rel_max=6.5487e-03 grad_limit_min=1.5180e-02 neg_x2=FAIL_AS_EXPECTED neg_stopgrad=FAIL_AS_EXPECTED`
+
+## 后续合入（续表）
+| 子任务 | TIP | 合并提交 | 审查 |
+|---|---|---|---|
+| S4 在线侧 | 09f2147 | 2e4a24e | PASS/PASS findings=0 |
+| S3 训练侧（替身对齐后） | 4a5e488 | 22b3eb3 | PASS findings=0 |
+| S5 runner/链/评估/judge/闸门表 | 09b78f7 | 473789e | 首审 FAIL findings=1（G6 聚合吞阶段 FAIL）→ 修复复核 PASS；合并后 PASS |
+| S3 DEVICE_PEAK 打印 | e9c008f | cfbde91 | PASS findings=0 |
+| S5b G6 合成 benchckpt、SHM 移到正式训练 | 876d327 | c8558b5 | PASS findings=1（shmmon 判定静默丢失）→ 修复复核 PASS |
+| F1 encoder 块改字符串键 | 4802d19 | 88fd4e2 | PASS findings=0；三次合并后审查 PASS（181 passed） |
+| F2 runner XLA 显存预占 0.90 | 07beb7b | 488d2eb | PASS findings=0 |
+
+## 用户中途裁定（2026-11-18 美东）
+- 原话：「问题一和三能不能够放在一起来做？然后问题二能不能够在正式起跑的时候再来做，就不要单独跑这个」「你自己来裁决这个问题，尽可能不要单独的跑这个两千步。」→ G6 改为单次 `--benchckpt`（300 步、--save-interval 250 --keep-period 250、步速窗口 50–240）；SHM 判定移到正式训练前 2000 步（shmmon --formal-rec → judge shm-formal；FAIL 时主会话按 RB-D2 以 E2E_PREFETCH_FACTOR=1 从头重起，不问用户）。
+
+## 计划外事件与处置（工程故障，自行修复）
+1. G2 H5：G5 最长局 `BinFill_ep111_seed15100.h5` 本机缺失（原始目录 v1-store/raw-h5/4task-20260912-v2 已不在）。从公开 bucket `HongzeFu/robomme-4task-h5-20260912-v2` 只读下载 `record_dataset_BinFill_hard.h5.tar.xz`（18,411,696,984 B，LFS sha256 6e8fa8e6…5b53；注意 xet_manifest 里的 b167d790… 是 xetHash 不是 sha256），解出该局（sha256 9d57e21e…30a2，1,529,131,008 B，与 episode_map 一致）放回 raw-h5 原位，压缩包已删。日志 v1-store/logs/e2e-h5fetch.r2.log `H5_FETCH=PASS`。
+2. G4 a01 失败：真实权重加载 `_merge_params` 的 `flatten_dict(sep="/")` 遇 encoder 块 list 整数键 TypeError（CPU 冒烟用 NoOpWeightLoader 未覆盖）。F1 改字符串键容器 `blocks/block_<i>`，encoder 初值改前改后逐位相同（ENC_INIT_BITEQ=PASS depth 1/8），真实 pi05_base 加载 PASS。G1/G1b/G1c/G3 在 88fd4e2 上重跑，数值与首轮逐位相同（v1-store/logs/e2e-g1g3-r2.log，E2E_G1G3_R2_ALL_RC=0）。
+3. G4 a02 失败：第一训练步 8 卡 NCCL `Cuda failure 2 'out of memory'`，进程挂死占 649 GB，按确切 PID SIGKILL 清理（核实 cwd 与 --exp-name e2e-smoke20）。诊断 run `e2e-memdiag-a02`（同 TRAIN_ARGS、预占 0.90、3 步）通过，`DEVICE_PEAK` 每卡 19,759,631,360 B（19.76 GB）——程序本身很小，问题是 0.95 预占后池外（NCCL/cuBLAS）不足。F2 把 e2e runner 预占改为 `${E2E_XLA_MEM_FRACTION:-0.90}`（非训练语义；GPU_PEAK 判据本即 72 GB=80×0.9）。诊断第 0 步：loss=0.0888（MotionMEM 80k 步 0 同为 0.0888）、grad_norm=1.1248、e2e_enc_grad_norm=0.0652。（e2e-memdiag-a01 因诊断脚本漏 source paths.sh 找不到 pi05_base，是主会话脚本错误。）
+4. 失败尝试的产物改名保留（未删）：`train-runs/.../e2e-smoke20.fail-a01|.fail-a02`、`bench/e2e-smoke20.fail-a01|.fail-a02`、`logs/e2e-smoke20.runner.log.fail-a01|.fail-a02`；诊断 run `train-runs/.../e2e-memdiag-a01|a02`。RB-E1 清理时一并列给用户。
+
+## 闸门结果（续）
+- G0（v1-store/logs/e2e-g0.log）：`DATA_LINEAGE=PASS encoder=wanvae-9980d252+e2e-s16 … files=4 mismatches=0`
+- G9（v1-store/logs/e2e-g9.log，cfbde91；F1 后在 worktree 复跑同样 PASS）：`INIT_EQ=PASS leaves_compared=65 mismatches=0 encoder_leaves=10 default_rng_count_before=8 after=8`、`R3_OFF_EQ=PASS yamls=4 leaves=256 mismatches=0 base=dd39f3d`
+- G3（v1-store/logs/e2e-g1g3-r2.log，88fd4e2）：`E2E_MEM_FP32=PASS rel_rmse=1.53039e-06 limit=1e-3`、`E2E_MEM_VS_MOTIONMEM=PASS windows=2048 eps=0.00496768 eps_ref_fwd=0.00522709 rel_rmse_bf16=0.00601303 limit=0.0206489 mask_mismatch=0 order_mismatch=0 depth=8`
+- G4（v1-store/logs/e2e-g4-a03.log，488d2eb，XLA_MEM_FRACTION=0.90）：`CKPT_LOAD=PASS step=19 leaves=75 enc_leaves=10 resolved_sha256=15454805…a63b`、`E2E_TRAINABLE=PASS groups_grad_nonzero=4/4 frozen_hits=0`、`SMOKE20=PASS steps=20 save_load=PASS`、DEVICE_PEAK 19.76 GB/卡、EXIT_CODE=0
+
+## 本轮 tmux 会话清单
+e2e-export、e2e-g1、e2e-h5fetch、e2e-g9、e2e-g0、e2e-g3-a01、e2e-g4-a01、e2e-g4-a02（挂死，已 kill-session 并按 PID 清理）、e2e-g1g3-r2、e2e-memdiag-a01、e2e-memdiag-a02、e2e-g4-a03、e2e-benchckpt-a01
