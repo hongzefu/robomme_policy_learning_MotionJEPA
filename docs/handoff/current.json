@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-18T08:35:00Z",
-    "america_new_york": "2026-11-18T03:35:00-05:00"
+    "utc": "2026-11-19T02:05:00Z",
+    "america_new_york": "2026-11-18T21:05:00-05:00"
   },
   "repo": {
     "branch": "v18-4task-modul-e2eenc-s16-50k",
@@ -320,28 +320,50 @@
         "file": "1117-e2e-enc-train-plan.html",
         "sha": "c618671"
       },
-      "state": "running",
-      "state_changed_at": "2026-11-18T08:35:00Z",
-      "state_reason": "闸门 G0/G1/G1b/G1c/G2/G3/G4/G6/G9/G5b 通过，G5 经用户裁定提前结束（RECORDED）；正式训练起跑",
+      "state": "closed",
+      "state_changed_at": "2026-11-19T02:05:00Z",
+      "state_reason": "训练 50001 步完成、692 局评估 EVAL692=PASS 337/692=48.70%（MotionMEM@50k 378/692=54.62%）、HF_VERIFY=PASS ckpts=10；无在跑句柄",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiSdfuvk3pVkwnNg4yV",
         "host": "ip-10-242-11-177"
       },
       "depends_on": [],
-      "pre_handoff": [],
-      "long_tail": [],
-      "running_handles": [
+      "pre_handoff": [
         {
-          "tmux": "e2e-train",
-          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/e2e-train.log",
-          "done_line": "EXIT_CODE=0（链脚本起评估后退出）"
+          "what": "G7 训练收尾",
+          "evidence": "TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/e2e-train.log",
+          "status": "pass"
         },
         {
-          "tmux": "e2e-shmmon",
-          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/e2e-shmmon.log",
-          "done_line": "SHM_PEAK=PASS"
+          "what": "G8 692 局评估",
+          "evidence": "EVAL692=PASS episodes=692 success=337 rate=0.4870 preseeded_errors=9 new_errors=0",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/e2e-eval.log",
+          "status": "pass"
+        },
+        {
+          "what": "EVAL692_RESULT_IDENTITY",
+          "evidence": "EVAL692_RESULT_IDENTITY=PASS manifest_sha=2d594d715b77d409 episodes=692",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/e2e-eval.log",
+          "status": "pass"
+        },
+        {
+          "what": "G5 在线观测对拍（用户裁定提前结束）",
+          "evidence": "RECORDED 159 步 obs_mis=0 act T==I True",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/e2e-g5-a01.log",
+          "status": "pass"
         }
       ],
+      "long_tail": [
+        {
+          "what": "ckpt 上传 HF 与读回",
+          "tmux": "e2e-hf",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/e2e-hf.log",
+          "done_line": "HF_VERIFY=PASS ckpts=10",
+          "status": "pass"
+        }
+      ],
+      "running_handles": [],
       "authorizations": [
         {
           "kind": "register",
@@ -374,14 +396,10 @@
           "scope": "G6 合成 benchckpt，SHM 判定移到正式训练前 2000 步"
         }
       ],
-      "pending_decisions": [],
-      "next_steps": [
-        {
-          "what": "正式训练 50001 步后链脚本自动起 e2e-eval 692 局评估",
-          "command": "见 launch.md",
-          "verdict_line": "TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10；EVAL692_RESULT_IDENTITY=PASS"
-        }
-      ]
+      "pending_decisions": [
+        "RB-E1：冒烟/测速/诊断 run 目录清理清单见 result.md ⑪，待用户确认"
+      ],
+      "next_steps": []
     }
   }
 }
