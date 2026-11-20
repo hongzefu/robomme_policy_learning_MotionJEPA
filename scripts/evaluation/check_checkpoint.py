@@ -110,7 +110,7 @@ RUNS = {
     # bucket HongzeFu/robomme-vla-modul-60k-v1，run v2-1600ep-m8x8-modul-b128-60k，motion 关闭，61 叶；
     # 59999 = primary700-gl 基线，50000 = 与 motion 50000 同步数对照（2026-09-18 加入；norm_stats 两步同一份 sha）
     'robomme-vla-modul-60k-v1': dict(
-        steps=('59999', '50000'), motion=False, config='mme_vla_suite', budget=512,
+        steps=('59999', '50000', '40000', '45000'), motion=False, config='mme_vla_suite', budget=512,
         resolved_sha256='804b25382af668d67c8f8ea2d1cca414aee9a184ec737dcad704bdff253a2f92',
         norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
     ),

@@ -99,7 +99,9 @@ check_local_gpu() {
         while [[ -n "$q" && "$q" != 0 && "$q" != 1 && " $roots " != *" $q "* ]]; do
             q="$(awk '/^PPid:/ {print $2}' "/proc/$q/status" 2>/dev/null || true)"
         done
-        [[ -n "$q" && " $roots " == *" $q "* ]] || {
+        # 查询与回溯之间进程已退出（同卡别片的 render_probe 等短命 GPU 进程，驱动列表滞后于 /proc）：
+        # 它已不在卡上，谈不上外来占用，跳过；仍存活而回溯不到登记根的照旧拒绝。
+        [[ -n "$q" && " $roots " == *" $q "* ]] || [[ ! -e "/proc/$p" ]] || {
             echo "所选 GPU 上的计算进程 $p 不属于已登记分片的进程树（根=$roots），停止起跑"
             return 2
         }
