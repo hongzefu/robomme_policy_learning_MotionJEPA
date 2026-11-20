@@ -67,3 +67,13 @@ context 模式 budget 512（8 帧 × 8×8，无 motion）在四任务 × 400 库
 ## 十二、归档文件清单
 
 本档案只引用 turbo 上的原始文件，不另拷贝：日志 `<GL_REPO>/v1-store/logs/v2-1600ep-m8x8-ctx-b128-50k-gl.log`，逐步指标 `<GL_REPO>/v1-store/train-records/v2-1600ep-m8x8-ctx-b128-50k-gl/attempt01/metrics.jsonl`（另有同目录 `run_meta.json`、`runtime.json`）。`<GL_REPO>` = `/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA`。
+
+## HF 备份（2026-11-20 美东）
+
+10 份 ckpt（5000–50000，原样 orbax 目录）与 run 根平文件已上传到**公开** bucket `HongzeFu/robomme-vla-4task-m8x8-ctx-b128-50k-gl-v1`，根下附 `SHA256SUMS`；`resume/` 未上传。上传与读回都在 GL standard 纯 CPU job 66535201 里做（脚本 `scripts/training/gl/hf_upload_verify_ckpt.sh`），读回为逐对象 `hf buckets cp <uri> -` 流式算 sha256 与字节数：
+
+```
+HF_VERIFY=PASS objects=183 sha_match=183 size_equal=183 missing=0 extra=0 bucket=HongzeFu/robomme-vla-4task-m8x8-ctx-b128-50k-gl-v1 bytes=115744238308
+```
+
+清单与清洗后的 job 日志见 `records/hf-upload/`。首次提交时 bucket 建成 private，账号 private 存储已满（约 1 TB），17:00 前后被 403 拒绝；按用户「上传公开的！！！！」改为公开后续传完成。
