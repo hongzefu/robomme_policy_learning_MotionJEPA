@@ -147,6 +147,12 @@
 | [`finalckpt-modul64frame50000-gl/`](finalckpt-modul64frame50000-gl/result.md) | 4096（64 帧）@50000 的 692 条：**45.23%**（313/692），与 2048 @50000 持平 |
 | [`finalckpt-modul64frame79999-gl/`](finalckpt-modul64frame79999-gl/result.md) | 4096 @79999 的 692 条：**45.95%**（318/692），与 2048 @79999 持平——感知上下文收益在 2048 饱和，512+motion 仍高 10 pp 以上 |
 
+### Table I 三 seed / 三 ckpt 补评（2026-11-20 美东起）
+
+| 档案 | 内容 |
+|---|---|
+| [`t1s-3seed-1120/`](t1s-3seed-1120/README.md) | Table I 12 行各补 seed 0/42、FrameSamp modulation 4 行补 40k/45k，共 32 次 692 局；逐次档案 `t1s-<键>[-c40k|-c45k]-s<seed>/`（进行中） |
+
 ## 五、已归档（`../archive/training-doc/`，34 项）
 
 环境 A 的吞吐 / 瓶颈基准 15 项、确定性四档 8 项、dtype 中间产物 3 项、v5 对拍与集群正式 run / smoke 7 项、未完成空壳 1 项（`eval-official-framesamp-modul`）。清单与理由见 [`../archive/README.md`](../archive/README.md)。

@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-21T00:30:00Z",
-    "America/New_York": "2026-11-20T19:30:00-0500"
+    "utc": "2026-11-21T03:25:00Z",
+    "America/New_York": "2026-11-20T22:25:00-0500"
   },
   "repo": {
     "branch": "v18-4task-modul-e2eenc-s16-50k",
@@ -406,9 +406,9 @@
         "file": "1120-table1-3seed-aws-local-eval-plan.html",
         "sha": "005efefdfce8cc36bf77a3519db380d9e6c11962"
       },
-      "state": "planned",
-      "state_changed_at": "2026-11-20T23:40:00Z",
-      "state_reason": "开工令已到（第二轮对抗验证后定稿 005efef），开工前一致性审查中",
+      "state": "running",
+      "state_changed_at": "2026-11-21T03:25:00Z",
+      "state_reason": "S0 完成：E-A1/E-A2 合入 v18（374d72f、9297dca），E-B 合入 t1s-1120-evalstack-v42@c3876b9；WT_READY=PASS wt=2 clean=2 sources_pass=2；EVAL_LOAD_SMOKE=PASS（v42）；CKPT_READY=PARTIAL rows=10 missing=fs512c,fs1024c（GL 上传 403）；起第一批",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiUE8cn3gckgXU3AQWp",
         "host": "ip-10-242-11-177"
@@ -435,7 +435,13 @@
         }
       ],
       "long_tail": [],
-      "running_handles": [],
+      "running_handles": [
+        {
+          "tmux": "t1s-batch1",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/t1s-batch1.log",
+          "done_line": "EXIT_CODE="
+        }
+      ],
       "authorizations": [
         {
           "kind": "go",
@@ -447,9 +453,9 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "等用户开工令后执行 S0（下载、E-A/E-B 改动、检出、DRY_RUN、GL 上传请求）",
-          "command": "见计划第二部分 三 S0 runbook",
-          "verdict_line": "CKPT_READY=PASS rows=12 missing=0；PAIR_PATCH=PASS"
+          "what": "第一批结束后起 t1s-batch2（cwd $W42），并做 S2 留档提交",
+          "command": "bash v1-store/jobs/t1s-1120/t1s-batch2.sh（tmux t1s-batch2）",
+          "verdict_line": "T1S_ITEM … EVAL692=PASS"
         }
       ]
     }
