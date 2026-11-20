@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-20T23:40:00Z",
-    "America/New_York": "2026-11-20T18:40:00-0500"
+    "utc": "2026-11-21T00:30:00Z",
+    "America/New_York": "2026-11-20T19:30:00-0500"
   },
   "repo": {
     "branch": "v18-4task-modul-e2eenc-s16-50k",
-    "base_head": "4e12c93"
+    "base_head": "005efef"
   },
   "freeze": {
     "active": false,
@@ -404,11 +404,11 @@
     "t1s-3seed-1120": {
       "plan": {
         "file": "1120-table1-3seed-aws-local-eval-plan.html",
-        "sha": null
+        "sha": "005efefdfce8cc36bf77a3519db380d9e6c11962"
       },
       "state": "planned",
       "state_changed_at": "2026-11-20T23:40:00Z",
-      "state_reason": "计划已写并经两轮 workflow 对抗验证修订（第二轮针对新增 3 ckpt），用户同意登记状态机；等开工令",
+      "state_reason": "开工令已到（第二轮对抗验证后定稿 005efef），开工前一致性审查中",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiUE8cn3gckgXU3AQWp",
         "host": "ip-10-242-11-177"
@@ -436,7 +436,14 @@
       ],
       "long_tail": [],
       "running_handles": [],
-      "authorizations": [],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-11-20",
+          "quote": "审查完了可以直接开始开工 / 如果缺ckpt就跳过 自动继续 不要停下来问我 / 尽可能自主决策 有问题问用户但尽可能不要停 尽可能做完",
+          "scope": "1120-table1-3seed-aws-local-eval-plan.html@005efef 全部步骤（S0–S4）；缺 ckpt 跳过不停"
+        }
+      ],
       "pending_decisions": [],
       "next_steps": [
         {
