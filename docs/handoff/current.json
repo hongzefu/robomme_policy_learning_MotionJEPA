@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-18T00:48:21+00:00",
-    "america_new_york": "2026-11-17T19:48:21-05:00"
+    "utc": "2026-11-20T12:18:53Z",
+    "America/New_York": "2026-11-20T07:18:53-0500"
   },
   "repo": {
     "branch": "v4.2-plswap-full",
@@ -2457,8 +2457,8 @@
         "sha": "d654df8"
       },
       "state": "running",
-      "state_changed_at": "2026-11-18T00:48:21+00:00",
-      "state_reason": "2026-11-17 美东 19:55：ctx512 训练完成并在原占位评完 692 局：EVAL692=PASS success=158 rate=0.2283 new_errors=0（modulation 对照 30.49%）；按 1116 R3 已 scancel 65943150。评估代码 4ba8b49（修 eval_v17 依赖错配）。ctx1024 训练进行中（估 11-20 约 06:00），评估链 g4c-ev1024-chain 在第 1 关等待。",
+      "state_changed_at": "2026-11-20T07:18:53-0500",
+      "state_reason": "running 2026-11-20 美东 07:30：ctx512 训练与 692 评估完成（158/692=22.83%，65943150 已 scancel）；ctx1024 训练 06:30 EXIT_CODE=0、ckpts=10，评估链 g4c-ev1024-chain 已过 g6b/压测，06:38 起 8 片评估 692 局（对照 291/692=42.05%），通过且 new_errors=0 后 scancel 65943151。",
       "owner": {
         "session": "Claude Code 会话（sled-aspen，本仓库主检出）",
         "host": "sled-aspen"
@@ -2473,13 +2473,13 @@
         },
         {
           "what": "ctx1024 训练完成",
-          "evidence": "",
+          "evidence": "TRAIN_DONE=PASS run=v2-1600ep-m16x8x8-ctx-b128-50k-gl steps=50000 ckpts=10 nonfinite=0 exit=0；EXIT_CODE=0（2026-11-20 06:30 美东）",
           "where": "<GL_REPO>/v1-store/logs/v2-1600ep-m16x8x8-ctx-b128-50k-gl.log",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "两份 result.md 已提交；占位转交 1116 计划 692 局评估（评估通过且 new_errors=0 后由评估任务 scancel）",
-          "evidence": "ctx512：训练 result.md（f793afb）、评估 docs/training-doc/gl692-ctx512-50k/result.md；65943150 sacct CANCELLED+；ctx1024 待完成",
+          "evidence": "ctx512：训练 result.md（f793afb）、评估 result.md（de9555b），65943150 CANCELLED+；ctx1024：训练 result.md 已写，692 局评估进行中，65943151 保留",
           "where": "docs/training-doc/",
           "status": "pending"
         }
@@ -2487,11 +2487,11 @@
       "long_tail": [],
       "running_handles": [
         {
-          "tmux": "g4c-train-1024",
+          "tmux": "g4c-ev1024-chain",
           "jobid": "65943151",
           "node": "gl1514",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/v2-1600ep-m16x8x8-ctx-b128-50k-gl.log",
-          "done_line": "EXIT_CODE=0"
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/g4c-ev1024-chain.log",
+          "done_line": "CHAIN_DONE tag=1024"
         }
       ],
       "authorizations": [

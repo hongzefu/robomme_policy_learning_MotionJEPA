@@ -356,7 +356,7 @@ a批次仅执行配置基线和2048 before-20的部分前缀，其余预建验�
 | [`finalckpt-modul64frame50000-gl/`](finalckpt-modul64frame50000-gl/result.md) | 4096（64 帧）@50000 的 692 条：**45.23%**（313/692），与 2048 @50000 持平 |
 | [`finalckpt-modul64frame79999-gl/`](finalckpt-modul64frame79999-gl/result.md) | 4096 @79999 的 692 条：**45.95%**（318/692），与 2048 @79999 持平——感知上下文收益在 2048 饱和，512+motion 仍高 10 pp 以上 |
 | [`gl692-ctx512-50k/`](gl692-ctx512-50k/result.md) | GL 四任务×400 context 512（无 motion）@50000 的 692 局，原占位 65943150 内评估（1116 计划）：**158/692 = 22.83%**，modulation 512 对照 30.49%（−7.66 pp），new_errors=0 |
-| [`gl692-ctx1024-50k/`](gl692-ctx1024-50k/launch.md) | 同上 context 1024 @50000，原占位 65943151 内评估，等训练 |
+| [`gl692-ctx1024-50k/`](gl692-ctx1024-50k/launch.md) | 同上 context 1024 @50000，原占位 65943151 内评估；训练 11-20 06:30 完成（`TRAIN_DONE=PASS`），692 局评估 06:38 起跑中 |
 
 ## 五、已归档（`../archive/training-doc/`，34 项）
 
