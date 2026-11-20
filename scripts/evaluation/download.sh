@@ -5,6 +5,7 @@
 #   - bucket 根有 SHA256SUMS.pre.txt 时按它 sha256sum --check；没有时按 bucket tree 的 size 逐文件核对（mode=size）
 #   - 落点已存在（首轮已下过别的 step 与根文件）时进入增量模式：只下载 <step>/ 下的文件、不碰根文件，
 #     用本地已有的 SHA256SUMS.pre.txt 校验；<step> 目录已存在或本地没有 SHA256SUMS.pre.txt 一律拒绝
+#   - 可选环境变量 HF_TOKEN_FILE：指定 HF 令牌文件路径；不设时默认读 $HOME/.cache/huggingface/token
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
 BUCKET="${1:?需要 bucket 名}"
@@ -21,7 +22,7 @@ if [[ -e "$DST" ]]; then
 fi
 mkdir -p "$DST"
 auth_curl() {
-    { printf 'header = "Authorization: Bearer '; tr -d '\r\n' < "$HOME/.cache/huggingface/token"; printf '"\n'; } |
+    { printf 'header = "Authorization: Bearer '; tr -d '\r\n' < "${HF_TOKEN_FILE:-$HOME/.cache/huggingface/token}"; printf '"\n'; } |
         curl --config - --fail --location --silent --show-error --retry 3 "$@"
 }
 # 增量模式下 bucket tree / 清单 / 校验选集都带 step 后缀，不覆盖首轮留下的文件
