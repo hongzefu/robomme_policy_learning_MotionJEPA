@@ -408,7 +408,7 @@
       },
       "state": "planned",
       "state_changed_at": "2026-11-20T23:40:00Z",
-      "state_reason": "计划已写并经 workflow 对抗验证修订，用户同意登记状态机；等开工令",
+      "state_reason": "计划已写并经两轮 workflow 对抗验证修订（第二轮针对新增 3 ckpt），用户同意登记状态机；等开工令",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiUE8cn3gckgXU3AQWp",
         "host": "ip-10-242-11-177"
@@ -416,14 +416,14 @@
       "depends_on": [],
       "pre_handoff": [
         {
-          "what": "24 次 692 局评估",
+          "what": "32 次 692 局评估（24 次 3 seed + FrameSamp modulation 4 行 40k/45k 共 8 次）",
           "evidence": "每次 EVAL692=PASS episodes=692 preseeded_errors=9 new_errors=0",
           "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/t1s-*/EVAL692.txt；/scratch/hongze/NativeMEM/runs/eval/t1s-native-*/EVAL692.txt",
           "status": "pending"
         },
         {
           "what": "G4 汇总",
-          "evidence": "TABLE1_3SEED=PASS rows=12 seeds=3 runs_new=24",
+          "evidence": "TABLE1_3SEED=PASS rows=12 seeds=3 ckpt_rows=4 ckpts=3 runs_new=32",
           "where": "docs/training-doc/t1s-3seed-1120/table1_3seed.json",
           "status": "pending"
         },
