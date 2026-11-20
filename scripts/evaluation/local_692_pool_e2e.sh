@@ -69,7 +69,7 @@ RETRY_ROOT="$EVAL_REPO/v1-store/evaluation/$RETRY_RUN"
 # 计划 §4 F8 必要参数（与历史 GL 口径一致，gl_hold_pool.sh 同样写死 EVAL_TIMEOUT=14400）
 export MMEVLA_MOTION_OVERFLOW=resample EXPECT_MOTION_STATS=1 EXPECT_DEMO_INJECT=1 CHUNK_EPISODES="$CHUNK" \
        MMEVLA_MOTION_PROV_RELAX=gpu_name,compute_cap,sm_count EPISODE_WALL_S="$WALL" EVAL_TIMEOUT="$TIMEOUT" \
-       LOCAL_GPU_SHARE="$PER_GPU" XLA_PYTHON_CLIENT_MEM_FRACTION="$MEM_FRACTION" ALLOW_RESUME=1 \
+       LOCAL_GPU_SHARE="${EVAL_GPU_CAP:-$PER_GPU}" XLA_PYTHON_CLIENT_MEM_FRACTION="$MEM_FRACTION" ALLOW_RESUME=1 \
        POLICY="${POLICY:-perceptual-framesamp-modul-8frame-8x8-e2eenc}" POLICY_CONFIG=mme_vla_suite_b128_80k \
        EXPECT_CKPT_ID="$CKPT_ID" DEMO_PREFIX_STORE="$STORE" \
        EXPECT_MOTION_STRIDE="${EXPECT_MOTION_STRIDE:-16}" EXPECT_MOTION_BUDGET="${EXPECT_MOTION_BUDGET:-160}"
@@ -306,22 +306,22 @@ PY
 py() { "${CLIENT_UV[@]}" -c "$PYHELP" "$@"; }
 
 # ── 每卡占位（C4）：占位文件每行「<分片标识> <run_shard.sh PID|pending>」，读写都在 <文件>.lock 的 flock 下 ──
-SLOT_DIR="$EVAL_ROOT/gpu-slots"
+SLOT_DIR="${EVAL_SLOT_DIR:-$EVAL_ROOT/gpu-slots}"
 slot_reserve() {  # $1=gpu $2=tag：锁内读已登记数，<PER_GPU 才登记（含本片 <= PER_GPU）
     local f="$SLOT_DIR/gpu$1"
     ( flock 9 || exit 1
       touch "$f"
       n="$(grep -c . "$f")"
-      (( n < PER_GPU )) || { echo "SLOT_REFUSED gpu=$1 tag=$2 registered=$n"; exit 3; }
+      (( n < ${EVAL_GPU_CAP:-$PER_GPU} )) || { echo "SLOT_REFUSED gpu=$1 tag=$2 registered=$n"; exit 3; }
       echo "$2 pending" >> "$f" ) 9>"$f.lock"
 }
-slot_set_pid() {  # $1=gpu $2=tag $3=run_shard.sh PID
+slot_set_pid() {  # $1=gpu $2=tag $3=run_shard.sh PID（只替换第一条同名 pending 行）
     local f="$SLOT_DIR/gpu$1"
-    ( flock 9 || exit 1; sed -i "s/^$2 pending\$/$2 $3/" "$f" ) 9>"$f.lock"
+    ( flock 9 || exit 1; sed -i "0,/^$2 pending\$/s//$2 $3/" "$f" ) 9>"$f.lock"
 }
-slot_release() {  # $1=gpu $2=tag
+slot_release() {  # $1=gpu $2=tag $3=run_shard.sh PID（按「片标识 + PID」整行精确删除，只动自己那一行）
     local f="$SLOT_DIR/gpu$1"
-    ( flock 9 || exit 1; sed -i "/^$2 /d" "$f" ) 9>"$f.lock"
+    ( flock 9 || exit 1; sed -i "/^$2 $3\$/d" "$f" ) 9>"$f.lock"
 }
 # 一片的完整生命周期（后台调用）：预占 → 子 shell 先登记自身 PID 再 exec 成 run_shard.sh（重定向而非管道，$! 即 run_shard.sh 自身 PID）→ wait → 释放 → 写 rc
 run_slot() {  # $1=gpu $2=tag $3=shard_index $4=plan $5=run_name $6=log $7=rc 文件
@@ -330,12 +330,12 @@ run_slot() {  # $1=gpu $2=tag $3=shard_index $4=plan $5=run_name $6=log $7=rc �
     # 先登记、后起跑：子 shell 把自身 PID（$BASHPID）写进占位文件再 exec，env→bash 逐级 exec 不换 PID，
     # 所以 run_shard.sh 的 $$ 与 $! 都等于登记值，不存在「已起跑但仍是 pending」的窗口。
     ( slot_set_pid "$gpu" "$tag" "$BASHPID"
-      exec env CUDA_VISIBLE_DEVICES="$gpu" SHARD_INDEX="$idx" LOCAL_GPU_SLOT_FILE="$SLOT_DIR/gpu$gpu" \
+      exec env CUDA_VISIBLE_DEVICES="$gpu" SHARD_INDEX="$(( ${EVAL_SHARD_BASE:-0} + idx ))" LOCAL_GPU_SLOT_FILE="$SLOT_DIR/gpu$gpu" \
         bash scripts/evaluation/run_shard.sh "$run" "$CKPT" "$plan" "$SEED" "$tag" ) > "$log" 2>&1 &
     pid=$!
     echo "SLOT_REGISTERED gpu=$gpu tag=$tag pid=$pid run=$run"
     wait "$pid"; rc=$?
-    slot_release "$gpu" "$tag"
+    slot_release "$gpu" "$tag" "$pid"
     echo "$rc" > "$rcf"
 }
 
@@ -364,7 +364,7 @@ PLAN_LINE="$(grep '^PLAN_OK ' "$PLAN_DIR/make_shard_plan.log")"
 [[ "$PLAN_RC" == 0 && -n "$PLAN_LINE" ]] || { echo "PLAN_OK 缺失或 make_shard_plan.py rc=$PLAN_RC，不起跑"; exit 2; }
 TOTAL="$(sed -n 's/^PLAN_OK .* total=\([0-9]*\) .*/\1/p' <<< "$PLAN_LINE")"
 for ((K=0; K<SHARDS; K++)); do
-    echo "SHARD_MAP shard=s$K gpu=$((K % 8)) port_base=$((18011 + K * 7)) plan=$PLAN_DIR/shard$K.json"
+    echo "SHARD_MAP shard=s$K gpu=$((K % 8)) port_base=$((18011 + (${EVAL_SHARD_BASE:-0} + K) * 7)) plan=$PLAN_DIR/shard$K.json"
 done
 # ── ②′ 692 身份闸（起 GPU 前；FAIL 即停，R1 停止项）──
 "${CLIENT_UV[@]}" "${IDENT[@]}" plan --plan-dir "$PLAN_DIR" --shards "$SHARDS" 2>&1 | tee "$PLAN_DIR/identity.log"
