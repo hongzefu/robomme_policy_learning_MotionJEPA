@@ -41,7 +41,7 @@ context 模式 budget 1024（16 帧 × 8×8，无 motion）在四任务 × 400 �
 - 压测：`EVAL_CAPACITY=PASS per_gpu=2 peak_mem_gb=35.6 free_gb=9.4 host_delta_gb=25.5`、`HOST_MEM=PASS projected_gb=102.0 limit=115`、`CAP_TIMEOUT=PASS wall_s=122 projected_chunk_s=4880 limit=14400`。
 - 正式评估：2026-11-20 06:38 美东开始，每卡 2 片 × 显存比例 0.38，共 8 片；`PLAN_OK shards=8 total=692 groups=14`、`PRESEED=PASS episodes=9 placed=9 duplicates=0`。
 
-成功率与对照比较写进评估档案的 result.md。
+结果（07:33 美东）：`EVAL692=PASS episodes=692 success=160 rate=0.2312 new_errors=0`，即 160/692 = 23.12%，modulation 1024 对照 42.05%（−18.93 pp）；07:34 按 R3 scancel 65943151。逐格对照见评估档案 result.md。
 
 ## 九、用户决策记录
 
@@ -54,7 +54,7 @@ context 模式 budget 1024（16 帧 × 8×8，无 motion）在四任务 × 400 �
 
 ## 十一、结论与下一步
 
-训练完成，可作为 context 1024 @50000 的最终 ckpt。下一步等 692 局评估出结果，与 modulation 对照 `v2-1600ep-m16x8x8-modul-b128-80k` @50000（291/692 = 42.05%）比较。
+训练完成，可作为 context 1024 @50000 的最终 ckpt。692 局评估 160/692 = 23.12%，比 modulation 对照 `v2-1600ep-m16x8x8-modul-b128-80k` @50000（291/692 = 42.05%）低 18.93 pp，与 context 512（22.83%）基本相同。
 
 ## 十二、归档文件清单
 

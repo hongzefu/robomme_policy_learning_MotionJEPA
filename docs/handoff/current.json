@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-20T12:18:53Z",
-    "America/New_York": "2026-11-20T07:18:53-0500"
+    "utc": "2026-11-20T12:36:16Z",
+    "America/New_York": "2026-11-20T07:36:16-0500"
   },
   "repo": {
     "branch": "v4.2-plswap-full",
@@ -2456,9 +2456,9 @@
         "file": "1111-gl-4task400-ctx512-1024-b128-50k-plan.html",
         "sha": "d654df8"
       },
-      "state": "running",
-      "state_changed_at": "2026-11-20T07:18:53-0500",
-      "state_reason": "running 2026-11-20 美东 07:30：ctx512 训练与 692 评估完成（158/692=22.83%，65943150 已 scancel）；ctx1024 训练 06:30 EXIT_CODE=0、ckpts=10，评估链 g4c-ev1024-chain 已过 g6b/压测，06:38 起 8 片评估 692 局（对照 291/692=42.05%），通过且 new_errors=0 后 scancel 65943151。",
+      "state": "done",
+      "state_changed_at": "2026-11-20T07:36:16-0500",
+      "state_reason": "done 2026-11-20 美东：两条训练与 692 评估均完成。ctx512 158/692=22.83%（modulation 30.49%）；ctx1024 160/692=23.12%（modulation 42.05%）；两份占位均已按 1116 R3 scancel。",
       "owner": {
         "session": "Claude Code 会话（sled-aspen，本仓库主检出）",
         "host": "sled-aspen"
@@ -2479,21 +2479,13 @@
         },
         {
           "what": "两份 result.md 已提交；占位转交 1116 计划 692 局评估（评估通过且 new_errors=0 后由评估任务 scancel）",
-          "evidence": "ctx512：训练 result.md（f793afb）、评估 result.md（de9555b），65943150 CANCELLED+；ctx1024：训练 result.md 已写，692 局评估进行中，65943151 保留",
+          "evidence": "ctx512：训练 result.md（f793afb）、评估 EVAL692=PASS success=158 rate=0.2283 new_errors=0（de9555b），65943150 CANCELLED+；ctx1024：训练 result.md（7fdcf6a）、评估 EVAL692=PASS episodes=692 success=160 rate=0.2312 preseeded_errors=9 new_errors=0，65943151 CANCELLED+（2026-11-20 07:34 美东）",
           "where": "docs/training-doc/",
-          "status": "pending"
+          "status": "pass"
         }
       ],
       "long_tail": [],
-      "running_handles": [
-        {
-          "tmux": "g4c-ev1024-chain",
-          "jobid": "65943151",
-          "node": "gl1514",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/g4c-ev1024-chain.log",
-          "done_line": "CHAIN_DONE tag=1024"
-        }
-      ],
+      "running_handles": [],
       "authorizations": [
         {
           "kind": "go",
@@ -2526,9 +2518,9 @@
       ],
       "next_steps": [
         {
-          "what": "训练完成后核 10 份 ckpt、写 result.md、更新本文件、scancel 对应占位（512→65943150，1024→65943151）",
-          "command": "tr '\\r' '\\n' < <log> | grep EXIT_CODE=；ls <run_dir>/{5000..50000}",
-          "verdict_line": "TRAIN_FINAL_RECORD=PASS step=50000 ckpts=10；EXIT_CODE=0"
+          "what": "1116 计划 E6：迁移评估产物并清理评估副本与子代理 worktree",
+          "command": "mv $W/v1-store/evaluation/gl692-* $G/v1-store/evaluation/；核对后 git -C $G worktree remove --force $W；本机清理 E1 worktree agent-a5422c6e11d0cdd35 与 F1 worktree agent-a6a55dfc768f43c67（分支 worktree-agent-a6a55dfc768f43c67）",
+          "verdict_line": "E6=PASS moved=<n> worktrees_removed=<n>"
         }
       ]
     },
