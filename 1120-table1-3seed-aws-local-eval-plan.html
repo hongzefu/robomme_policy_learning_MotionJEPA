@@ -192,7 +192,7 @@ pre{padding:10px 12px;overflow-x:auto;border-radius:6px}
 <tr><td><code>fs512c</code></td><td><code>$DL/v2-1600ep-m8x8-ctx-b128-50k-gl/50000</code></td><td><code>perceptual-framesamp-context-8frame-8x8</code></td><td><b><code>mme_vla_suite_b128_60k</code></b></td><td rowspan="2"><code>EXPECT_MOTION_STATS=0 MMEVLA_MOTION_OVERFLOW=</code>（<b>不设</b> <code>DEMO_PREFIX_ORIGINAL</code>，走本机前缀库的 E0.txt 闸，见下注）</td></tr>
 <tr><td><code>fs1024c</code></td><td><code>$DL/v2-1600ep-m16x8x8-ctx-b128-50k-gl/50000</code></td><td><code>perceptual-framesamp-context-16frame-8x8</code></td><td><code>mme_vla_suite_b128_80k</code></td></tr>
 </table>
-<p class="muted">所有行共用：同一个前缀库 <code>v1-store/demo-prefix/binfill-3b4de03a0b46</code>（E0.txt 首行为 <code>DEMO_PREFIX_SRC=PASS code_same=1 … ok=142 failed=8 diff_vs_old=40</code>；本机 <code>index.json</code> 的 sha256 实测为 <code>fd3531d6…</code>，<b>不是</b> GL 原库的 <code>3ef6b165…3f27</code>。两库同一份代码生成，但 142 局 BinFill 里有 40 局的 demo 前缀不同。seed 7 在 GL 上跑的 6 行（mm-mod、FrameSamp 6 行中的 4 行 modulation 和 2 行 context）用的是 GL 原库；新 seed 按 K2「不考虑aws/gl跨硬件等问题」一律用本机库，在盲区里写明。若用户要求同库，改为请 GL 侧会话把原库一起传回，ctx 两行再设 <code>DEMO_PREFIX_ORIGINAL=1</code> 并把 <code>STORE</code> 指过去）；同一份候选库；同一份预标清单 <code>docs/training-doc/finalckpt-nomotion59999-gl/records/preseeded-errors.json</code>。模型侧资产：v7 ep72 encoder 在 <code>v1-store/external/motionjepa/wan-full1600-filter2-b176x4-72ep-a/</code>，Wan VAE 在 <code>v1-store/cache/hf/hub/models--Wan-AI--Wan2.1-T2V-1.3B-Diffusers</code>，sidecar venv 在 <code>v1-store/venvs/wan</code>，都已在本机。</p>
+<p class="muted">所有行共用：同一个前缀库 <code>v1-store/demo-prefix/binfill-3b4de03a0b46</code>（E0.txt 首行为 <code>DEMO_PREFIX_SRC=PASS code_same=1 … ok=142 failed=8 diff_vs_old=40</code>；本机 <code>index.json</code> 的 sha256 实测为 <code>fd3531d6…</code>，<b>不是</b> GL 原库的 <code>3ef6b165…3f27</code>。两库同一份代码生成，但 142 局 BinFill 里有 40 局的 demo 前缀不同。seed 7 在 GL 上跑的 6 行（mm-mod、FrameSamp 6 行中的 4 行 modulation 和 2 行 context）用的是 GL 原库；新 seed 按 K2「不考虑aws/gl跨硬件等问题」一律用本机库，在盲区里写明（用户 2026-11-20 美东确认：「这个没问题」）。若用户要求同库，改为请 GL 侧会话把原库一起传回，ctx 两行再设 <code>DEMO_PREFIX_ORIGINAL=1</code> 并把 <code>STORE</code> 指过去）；同一份候选库；同一份预标清单 <code>docs/training-doc/finalckpt-nomotion59999-gl/records/preseeded-errors.json</code>。模型侧资产：v7 ep72 encoder 在 <code>v1-store/external/motionjepa/wan-full1600-filter2-b176x4-72ep-a/</code>，Wan VAE 在 <code>v1-store/cache/hf/hub/models--Wan-AI--Wan2.1-T2V-1.3B-Diffusers</code>，sidecar venv 在 <code>v1-store/venvs/wan</code>，都已在本机。</p>
 
 <p class="muted">表中「分片」一列是单跑的口径。配对的行（mm-mod、e2e、wan1、wan9、6 行 FrameSamp）改为两次各 <b>16 / 2 / 0.2</b>，共用一个占位目录，<code>EVAL_GPU_CAP=4</code>，seed 42 那次 <code>EVAL_SHARD_BASE=16</code>（§二′）。mm-ctx（24 / 3）和 native（32 / 4）单跑，不配对。</p>
 
@@ -326,7 +326,7 @@ tmux new-session -d -s t1s-batch1 \
 <tr><td>done 后可开工的下游</td><td>MacBook 侧稿件会话把 Table I 改为均值 ± 标准差（稿件版 S5，另行确认措辞）</td></tr>
 <tr><td>登记时点</td><td>用户同意登记时，随计划提交写入 <code>tasks</code>（<code>planned</code>）；开工令到达时写 <code>kind: go</code>；E-A 合入后、S1 起跑前写 <code>running</code>。这几次都是单独的小提交，全部排在 S1 之前；评估进行中不提交（R4），状态在 S2、S4 时更新</td></tr>
 </table>
-<p><b>待用户回答：是否把本任务登记进状态机？</b></p>
+<p><b>用户 2026-11-20 美东裁定</b>：「状态机同意加入」，已随本次计划修订写入 <code>docs/handoff/current.json</code>，状态为 <code>planned</code>。</p>
 
 <h2>八 本机核实记录（2026-11-20 美东，只读）</h2>
 <ul>

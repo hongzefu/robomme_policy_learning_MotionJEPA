@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-19T02:05:00Z",
-    "america_new_york": "2026-11-18T21:05:00-05:00"
+    "utc": "2026-11-20T23:40:00Z",
+    "America/New_York": "2026-11-20T18:40:00-0500"
   },
   "repo": {
     "branch": "v18-4task-modul-e2eenc-s16-50k",
-    "base_head": "6d9e36a"
+    "base_head": "4e12c93"
   },
   "freeze": {
     "active": false,
@@ -400,6 +400,51 @@
         "RB-E1：冒烟/测速/诊断 run 目录清理清单见 result.md ⑪，待用户确认"
       ],
       "next_steps": []
+    },
+    "t1s-3seed-1120": {
+      "plan": {
+        "file": "1120-table1-3seed-aws-local-eval-plan.html",
+        "sha": null
+      },
+      "state": "planned",
+      "state_changed_at": "2026-11-20T23:40:00Z",
+      "state_reason": "计划已写并经 workflow 对抗验证修订，用户同意登记状态机；等开工令",
+      "owner": {
+        "session": "https://claude.ai/code/session_01WvPQiUE8cn3gckgXU3AQWp",
+        "host": "ip-10-242-11-177"
+      },
+      "depends_on": [],
+      "pre_handoff": [
+        {
+          "what": "24 次 692 局评估",
+          "evidence": "每次 EVAL692=PASS episodes=692 preseeded_errors=9 new_errors=0",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/t1s-*/EVAL692.txt；/scratch/hongze/NativeMEM/runs/eval/t1s-native-*/EVAL692.txt",
+          "status": "pending"
+        },
+        {
+          "what": "G4 汇总",
+          "evidence": "TABLE1_3SEED=PASS rows=12 seeds=3 runs_new=24",
+          "where": "docs/training-doc/t1s-3seed-1120/table1_3seed.json",
+          "status": "pending"
+        },
+        {
+          "what": "汇总复核",
+          "evidence": "FETCH_VERIFY=PASS",
+          "where": "docs/training-doc/t1s-3seed-1120/",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [],
+      "pending_decisions": [],
+      "next_steps": [
+        {
+          "what": "等用户开工令后执行 S0（下载、E-A/E-B 改动、检出、DRY_RUN、GL 上传请求）",
+          "command": "见计划第二部分 三 S0 runbook",
+          "verdict_line": "CKPT_READY=PASS rows=12 missing=0；PAIR_PATCH=PASS"
+        }
+      ]
     }
   }
 }
