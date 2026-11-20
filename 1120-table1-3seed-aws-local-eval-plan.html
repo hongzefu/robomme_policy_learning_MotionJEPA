@@ -40,7 +40,7 @@ pre{padding:10px 12px;overflow-x:auto;border-radius:6px}
 <h2>1. 要做什么</h2>
 <p>Table I（<code>RSS2027-stage1/paper/tables/longcontext_main.tex</code>）共 12 行，每行目前只评估过一次（seed 7，692 局，50k 步左右的 ckpt）。本计划给每行补 <b>seed 0</b> 和 <b>seed 42</b> 两次（24 次）；另外 <b>FrameSamp modulation 4 行（fs512/1024/2048/4096）再各补 40k、45k 两个 ckpt</b>（seed 固定 7，和已有的 50k seed 7 凑成 3 个 ckpt，8 次）。一共 <b>32 次 692 局评估</b>，全部在本机 8 卡上完成。seed 7 的已有结果不动。</p>
 <p><b>同卡并行（用户 11-20：「eval过程也尽可能做到并行」「单卡多model」「但是不要搞太复杂 不要搞动态分配」）</b>：同一行的 seed 0 和 seed 42 <b>同时起跑</b>，每次 16 片、每卡 2 片，所以每张卡上同时有两个模型服务（seed 0 两片、seed 42 两片）。配对是静态写死的，不做动态调度。显存上限不变（每卡 4 片 × 显存占比 0.2）。只有两行不配对、单独跑：mm-ctx 每卡只放得下 3 片；NativeMEM 用的是另一个仓库的脚本。
-<p>按用户要求，<b>先跑 FrameSamp 以外的 6 行</b>（第一批，12 次，约 17 h），<b>再跑 6 行 FrameSamp</b>（第二批，12 次，约 8–10 h），最后跑 <b>FrameSamp modulation 的 40k/45k</b>（第三批，8 次，约 5–7 h）。<b>总计约 30–34 h</b>。下载和跨机传输与评估并行进行，不额外占墙钟时间。</p>
+<p>按用户要求，<b>先跑 FrameSamp 以外的 6 行</b>（第一批，12 次，约 17 h），<b>再跑 6 行 FrameSamp</b>（第二批，12 次，约 8–10 h），再跑 <b>FrameSamp modulation 的 40k/45k</b>（第三批，8 次，约 5–7 h），与第二批同一条链；要等 GL ckpt 的 ctx 两对排在整条链最后。<b>总计约 30–34 h</b>。下载和跨机传输与评估并行进行，不额外占墙钟时间。</p>
 
 <h3>已定口径（沿用稿件版，用户原话逐字保留）</h3>
 <table>
@@ -100,7 +100,7 @@ pre{padding:10px 12px;overflow-x:auto;border-radius:6px}
 <p><b>不改评估语义</b>（配置、采样参数、局号、判定都不动）。要做的有六件事：</p>
 <ol>
 <li><b>下载 15 份 ckpt</b>（7 行的 50k 约 78 GB，加 FrameSamp modulation 4 行的 40k/45k 共 8 份约 88 GB）。必须用 HongzeFu 的令牌：本机环境变量 <code>HF_TOKEN</code> 是另一个账号（yinpei-tri）的，会覆盖 HongzeFu 的令牌；而且 <code>download.sh</code> 写死读 <code>$HOME/.cache/huggingface/token</code>，这个文件在本机不存在；AGENTS.md 第 14 条又禁止覆盖 HOME，所以由 E-A 给它加一个可选变量 <code>HF_TOKEN_FILE</code>（不设时行为不变）。两个私有桶用 HongzeFu 令牌已实测能列出目录（HTTP 200）。</li>
-<li><b>从 GL 取 ctx 两行的 ckpt</b>（约 26 GB）。AWS 无法 SSH 到 GL，按第 28、31 条给 sled-aspen 上的会话发消息，请它把 turbo 上的两个 50000 目录连同 run 根目录的来源文件，上传到一个新的公开 HF 桶，读回校验通过后，本机再下载。</li>
+<li><b>从 GL 取 ctx 两行的 ckpt</b>（约 26 GB）。GL 侧会话已主动上传到两个私有桶（req=aspen746-11201700-1），对方发 <code>HF_VERIFY=PASS</code> 后本机用 HongzeFu 令牌下载 50000（S0-c）。</li>
 <li><b>建两个只读评估检出</b>（detached worktree，检出里不写代码）：<code>$W17</code> 为 <code>8181918</code>；<code>$W42</code> 为 S0-e 新建并推送的分支 <code>t1s-1120-evalstack-v42</code> 的头（d6ece8b 加同卡并行改动）。每个检出里放一个 <code>v1-store</code> 软链指向主 store（本机 <code>-eval-ffb307c</code> 已有先例）。</li>
 <li><b>两条串行链脚本</b>：<code>t1s-batch1.sh</code> 和 <code>t1s-batch2.sh</code>，各放进一个 detached tmux，挂 Monitor 盯着。</li>
 <li><b>汇总</b>：36 组 seed 计数（12 行 × 3 seed）加 12 组 ckpt 计数（4 行 × 3 ckpt，50k seed 7 两边共用），出 JSON，在本仓库留档并推送。</li>
@@ -111,13 +111,13 @@ pre{padding:10px 12px;overflow-x:auto;border-radius:6px}
 <table>
 <tr><th>#</th><th>查什么</th><th>判定行</th><th>状态</th></tr>
 <tr><td>G0</td><td>seed 不改局面</td><td><code>SEED_SCOPE=PASS env_seed_from_plan=1</code></td><td><b>已过</b></td></tr>
-<tr><td>G1</td><td>12 行的 ckpt 都已落盘，<code>check_checkpoint.py</code> 能认出来，每行 <code>DRY_RUN=1</code> 都能通过</td><td><code>CKPT_READY=PASS rows=12 missing=0</code></td><td>S0</td></tr>
+<tr><td>G1</td><td>12 行的 ckpt 都已落盘，<code>check_checkpoint.py</code> 能认出来，每行 <code>DRY_RUN=1</code> 都能通过</td><td><code>CKPT_READY=PASS rows=12 missing=0</code>；缺的行允许 <code>CKPT_READY=PARTIAL rows=&lt;n&gt; missing=&lt;键&gt;</code>，第一批 6 行必须齐</td><td>S0</td></tr>
 <tr><td>G1b</td><td>两个独立检出：工作区干净；子模块已初始化（b4e97f22）；客户端环境跑 <code>verify_sources.py</code> 得 <code>SOURCES_PASS</code>；服务端 import 的是检出里的 <code>src</code></td><td><code>WT_READY=PASS wt=2 clean=2 sources_pass=2 import_src=wt</code></td><td>S0</td></tr>
 <tr><td>G1c</td><td>d6ece8b 评估栈在本机能跑通 1 局（这套栈在 AWS 上从没跑过）</td><td><code>EVAL_LOAD_SMOKE=PASS episodes=1</code></td><td>S0，只做这一次</td></tr>
 <tr><td>G1d</td><td>同卡双 seed 改动：三个变量都不设时，<code>DRY_RUN=1</code> 输出里的 <code>SHARD_MAP</code>/<code>EVAL_ENV</code>/<code>EVAL_PARAMS</code>/<code>PLAN_OK</code> 行与改动前逐行相同（时间戳与 mktemp 路径不比）；设 <code>EVAL_SHARD_BASE=16</code> 时 <code>s0 port_base=18123</code>、<code>s15 port_base=18228</code>；占位函数 CPU 单测通过（同名片各自登记、各自释放）</td><td><code>PAIR_PATCH=PASS stacks=2 default_dry_identical=1 ports_disjoint=1 slot_unit=PASS</code></td><td>S0-e</td></tr>
 <tr><td>G2</td><td>每次评估完整：692 局全部跑完，只有那 9 个预标 error</td><td><code>EVAL692=PASS episodes=692 … preseeded_errors=9 new_errors=0</code></td><td>每次</td></tr>
 <tr><td>G3</td><td>结果目录不冲突：起跑前 <code>$RUN_NAME</code> 和 <code>$RUN_NAME-retry1</code> 都不存在（脚本自带拒绝覆盖）</td><td>脚本没有打印「拒绝覆盖」</td><td>每次</td></tr>
-<tr><td>G4</td><td>32 次新结果加 12 次 seed 7：12 行 × 3 seed（36 组）与 4 行 × 3 ckpt（12 组），每组带 14 个任务×难度格子的计数，汇成一份 JSON</td><td><code>TABLE1_3SEED=PASS rows=12 seeds=3 ckpt_rows=4 ckpts=3 runs_new=32</code></td><td>S4</td></tr>
+<tr><td>G4</td><td>32 次新结果加 12 次 seed 7：12 行 × 3 seed（36 组）与 4 行 × 3 ckpt（12 组），每组带 14 个任务×难度格子的计数，汇成一份 JSON</td><td><code>TABLE1_3SEED=PASS rows=12 seeds=3 ckpt_rows=4 ckpts=3 runs_new=32</code>；有跳过时写 <code>TABLE1_3SEED=PARTIAL … runs_new=&lt;实际数&gt; skipped=&lt;键&gt;</code></td><td>S4</td></tr>
 </table>
 
 <h2>6. 步骤</h2>
@@ -129,7 +129,7 @@ pre{padding:10px 12px;overflow-x:auto;border-radius:6px}
 <tr><td>S0-d</td><td>第一批 6 行逐行 <code>DRY_RUN=1</code>；对应桶下完后跑 <code>check_checkpoint.py</code></td><td>G1（第一批部分）</td><td>DRY_RUN 不需要 ckpt，可以立即跑；check_checkpoint 和 CKPT_READY 等对应下载校验通过后再跑</td></tr>
 <tr><td>S0-e</td><td>同卡双 seed 改动：两个写入子代理并行（v18、d6ece8b 各一个）→ 审查 → 合入（v18 直接合入主检出；d6ece8b 合入新分支 <code>t1s-1120-evalstack-v42</code>，<code>$W42</code> 检出这个分支的头）</td><td>G1d、<code>PRE_MERGE_REVIEW=PASS</code>、<code>POST_MERGE_REVIEW=PASS</code></td><td>与 S0-b、S0-c 同时进行（S0-a 等 E-A 的 download.sh 改动先合入）；必须在 S1 起跑前合入；合入后、S1 起跑前，把各 README 起跑段和状态机 <code>running</code> 一次提交推送；起跑后主检出就不能再提交（R4）</td></tr>
 <tr><td>S1</td><td>第一批 12 次评估，tmux <code>t1s-batch1</code></td><td>每次 G2、G3</td><td>评估期间下载第二批其余 3 份 50k 和第三批 8 份 40k/45k，并对它们跑 DRY_RUN</td></tr>
-<tr><td>S2</td><td>第一批结果留档提交并推送；把 6 行 × 3 seed 的计数交给用户</td><td>12 条都 G2=PASS</td><td>同时起第二批</td></tr>
+<tr><td>S2</td><td>第一批链出现 <code>EXIT_CODE=</code> 后立即起第二批（不以 12 条全 PASS 为闸门）；第一批结果留档提交并推送，把已 PASS 的计数交给用户</td><td>每条各自 G2；FAIL 项进补跑</td><td>与第二批起跑同时进行</td></tr>
 <tr><td>S3</td><td>第二批 12 次 + 第三批 8 次评估，同一条链 tmux <code>t1s-batch2</code>（cwd <code>$W42</code>）</td><td>每次 G2、G3</td><td>—</td></tr>
 <tr><td>S4</td><td>汇总 JSON，留档并推送；列出可删除的下载 ckpt，交用户确认</td><td>G4</td><td>—</td></tr>
 <tr><td>S5（另行确认）</td><td>稿件会话把 Table I 改为均值 ± 标准差（不在 AWS 上做）</td><td>—</td><td>—</td></tr>
@@ -150,7 +150,7 @@ pre{padding:10px 12px;overflow-x:auto;border-radius:6px}
 <p>S0 的核实已经由 5 个只读探索子代理（haiku）做完。</p>
 <ul>
 <li><b>写入子代理（opus，2 个并行，各自独立 worktree）</b>：E-A 改 v18 的两个评估池脚本和 <code>download.sh</code>；E-B 改 d6ece8b 的评估池脚本，移植 F4 那一行，并给 fs512 登记加 40000/45000（从 d6ece8b 建分支）。两边写集合互不相交，同时派出。每边交回后，派一个只读审查子代理（sonnet）钉住 BASE/TIP 审查；PASS 后由主会话 <code>--no-ff</code> 合入，跑 G1d，然后推送。</li>
-<li><b>盯盘子代理（opus，全程在线）</b>：按用户 11-20 要求（「做评估的过程中，你这个 opus 的 agent 要持续在线来盯盯着看，但是同时你也不要把这个事情搞太复杂了，就是说你不要搞那么多什么心跳检测什么的」），每条链各派一个运行型 opus 子代理（R1-batch1 盯 <code>t1s-batch1</code>，R1-batch2 盯 <code>t1s-batch2</code>，<code>t1s-fix&lt;n&gt;</code> 另派一个同类 R1）。它起跑本链，在本链日志上只挂<b>一个</b> Monitor（§四 的过滤管道），一直在线，直到本链日志出现 <code>EXIT_CODE=</code> 后退出，在最终交回里汇总全部 <code>T1S_ITEM</code> 和报错行。R1 无论什么原因提前返回，主会话立即为同一份链日志重挂 Monitor 或重派 R1。<b>不加心跳、不加定时巡检、不加额外校验</b>，唯一的信号就是这个 Monitor。它不改代码、不改参数、不重跑、不杀会话：遇到故障，把证据交给主会话，主会话修好后，等本条链跑完，再起一条补跑链 <code>t1s-fix&lt;n&gt;</code> 跑这些 <code>-r2</code> 项（同样由盯盘子代理盯）。</li>
+<li><b>盯盘子代理（opus，全程在线）</b>：按用户 11-20 要求（「做评估的过程中，你这个 opus 的 agent 要持续在线来盯盯着看，但是同时你也不要把这个事情搞太复杂了，就是说你不要搞那么多什么心跳检测什么的」），每条链各派一个运行型 opus 子代理（R1-batch1 盯 <code>t1s-batch1</code>，R1-batch2 盯 <code>t1s-batch2</code>，<code>t1s-fix&lt;n&gt;</code> 另派一个同类 R1）。它起跑本链，在本链日志上只挂<b>一个</b> Monitor（§四 的过滤管道），一直在线，直到本链日志出现 <code>EXIT_CODE=</code> 后退出，在最终交回里汇总全部 <code>T1S_ITEM</code> 和报错行。R1 无论什么原因提前返回，主会话立即为同一份链日志重挂 Monitor 或重派 R1。<b>不加心跳、不加定时巡检、不加额外校验</b>，唯一的信号就是这个 Monitor。它不改代码、不改参数、不重跑、不杀会话：遇到故障，把证据交给主会话，主会话修好后，等 <code>t1s-batch2</code> 跑完，再起补跑链 <code>t1s-fix&lt;n&gt;</code> 跑这些 <code>-r2</code> 项（同样由盯盘子代理盯；同一时刻只允许一条链占卡）。</li>
 <li><b>主会话</b>：负责 S0 的下载、检出、smoke、DRY_RUN 和 GL 请求，修复工程故障，并在两批之间与全部结束后做留档提交。</li>
 <li><b>复核</b>：S2、S4 把数字交给用户前，派一个只读审查子代理（sonnet），按 <code>merged/progress.json</code> 逐局复核汇总 JSON。</li>
 </ul>
@@ -175,7 +175,7 @@ pre{padding:10px 12px;overflow-x:auto;border-radius:6px}
 <li><b>R1</b> 不动 seed 7 的任何结果目录和留档。新 RUN_NAME 一律为 <code>t1s-&lt;行键&gt;-s&lt;seed&gt;</code>（第三批为 <code>t1s-&lt;行键&gt;-c40k-s7</code>、<code>t1s-&lt;行键&gt;-c45k-s7</code>），重跑时加 <code>-r2</code>。</li>
 <li><b>R2</b> 不改评估语义：配置、采样参数、局号、判定都不动。每行的环境变量照抄该行 seed 7 的留档（表二），只有分片数、每卡片数、显存占比可以调。代码改动只允许 §二′ 列出的几处（三个可选变量、占位登记与释放只动自己那一行、<code>HF_TOKEN_FILE</code>、v42 分支的 F4 那一行、v42 分支 fs512 登记表加 40000/45000 两步），不设变量时必须与原脚本行为一致（G1d）。</li>
 <li><b>R3</b> 评估约 30–34 h 占用 GPU，属于需要开工令的长时 GPU 任务（第 31 条）。下载和 HF 读回属于第 31 条中可以自行执行的操作，但同样等开工令后才做（计划未获开工令时不借第 31 条执行计划步骤）。</li>
-<li><b>R4</b> 本轮 tmux 名一律以 <code>t1s-</code> 开头，只用 <code>tmux kill-session -t '=确切名'</code> 清理。主检出、两个检出和 NativeMEM 仓库在评估期间必须保持工作区干净：<code>run_shard.sh</code> 要求 <code>git status --porcelain</code> 为空，所以链脚本和临时文件都放在 <code>v1-store/jobs/t1s-1120/</code>（该目录被 gitignore）。<b>评估期间不往主检出提交、不切分支。</b></li>
+<li><b>R4</b> 本轮 tmux 名一律以 <code>t1s-</code> 开头，只用 <code>tmux kill-session -t '=确切名'</code> 清理。主检出、两个检出和 NativeMEM 仓库在评估期间必须保持工作区干净：<code>run_shard.sh</code> 要求 <code>git status --porcelain</code> 为空，所以链脚本和临时文件都放在 <code>v1-store/jobs/t1s-1120/</code>（该目录被 gitignore）。<b>第一批（用主检出）运行期间不往主检出提交、不切分支；第二批与补跑链只用 <code>$W42</code>、<code>$W17</code>（mm-ctx 若补跑）和主检出的 <code>v1-store</code>，S2、S4 的留档提交可以在第二批运行中进行。</b>补跑链若含 v18 栈的行（mm-mod、e2e、wan1、wan9），起跑前主检出必须干净，S2 提交须先完成。</li>
 <li><b>R5</b> 结果只认 <code>EVAL692=PASS</code>。正常跑完但失败的局如实计 0；只有基础设施 error 才重试（脚本自带 retry1）。</li>
 <li><b>R6</b> 删除下载的 ckpt、软链或检出前，先列清单交用户确认。不删 HF 桶（见禁删清单记忆）。</li>
 </ul>
@@ -206,7 +206,7 @@ pre{padding:10px 12px;overflow-x:auto;border-radius:6px}
 <table>
 <tr><th>文件（锚点）</th><th>改什么</th><th>不设变量时</th><th>配对时</th></tr>
 <tr><td><code>local_692_pool.sh</code> 的 <code>SLOT_DIR=</code> 赋值</td><td>改为 <code>SLOT_DIR="${EVAL_SLOT_DIR:-$EVAL_ROOT/gpu-slots}"</code></td><td>与原来相同</td><td>两次评估指向同一个目录 <code>v1-store/jobs/t1s-1120/slots-&lt;键&gt;/</code>（每对新建）</td></tr>
-<tr><td><code>slot_reserve()</code> 的上限比较；传给 <code>run_shard.sh</code> 的 <code>LOCAL_GPU_SHARE</code></td><td>上限改为 <code>CAP="${EVAL_GPU_CAP:-$PER_GPU}"</code>，<code>LOCAL_GPU_SHARE=$CAP</code></td><td>CAP=PER_GPU，与原来相同</td><td>CAP=4，每次评估 PER_GPU=2</td></tr>
+<tr><td><code>slot_reserve()</code> 的上限比较；传给 <code>run_shard.sh</code> 的 <code>LOCAL_GPU_SHARE</code></td><td>上限在各使用处就近写成 <code>${EVAL_GPU_CAP:-$PER_GPU}</code>：<code>slot_reserve</code> 的比较、传给 <code>run_shard.sh</code> 的 <code>LOCAL_GPU_SHARE</code></td><td>CAP=PER_GPU，与原来相同</td><td>CAP=4，每次评估 PER_GPU=2</td></tr>
 <tr><td>两处：① <code>run_slot</code> 里的 <code>SHARD_INDEX="$idx"</code>；② <code>SHARD_MAP</code> 打印行里的 <code>port_base=$((18011 + K * 7))</code></td><td>① 改为 <code>SHARD_INDEX="$(( ${EVAL_SHARD_BASE:-0} + idx ))"</code>；② 改为 <code>port_base=$((18011 + (${EVAL_SHARD_BASE:-0} + K) * 7))</code>，打印行其余字符不变（GPU 仍是 <code>K%8</code>，片标识 <code>s$K</code> 不变）。三个池脚本各改这两处</td><td>BASE=0，与原来相同</td><td>seed 0 那次 BASE=0（端口 18011–18116），seed 42 那次 BASE=16（端口 18123–18228），两段不重叠</td></tr>
 <tr><td><code>slot_set_pid()</code></td><td>只替换<b>第一条</b>同名 pending 行：<code>sed -i "0,/^$2 pending\$/s//$2 $3/"</code>（同名的两条 pending 没有区别，谁先替换都可以）</td><td>只有一条同名行，结果与原来相同</td><td>两次评估的同名片各登记自己的 PID</td></tr>
 <tr><td><code>slot_release()</code> 及其调用处（含 retry1 阶段、e2e 脚本里用 <code>$BASHPID</code> 登记的那一处）</td><td>按「片标识 + PID」整行精确删除：<code>sed -i "/^$2 $3\$/d"</code>，调用处传入自己的 PID</td><td>与原来相同</td><td>只删自己那一行</td></tr>
@@ -220,7 +220,7 @@ pre{padding:10px 12px;overflow-x:auto;border-radius:6px}
 <h3>子代理分配表</h3>
 <table>
 <tr><th>编号</th><th>目标</th><th>可写文件</th><th>禁触</th><th>基线 / 分支</th><th>验收（在 worktree 内，CPU，&lt;5 min）</th><th>合并</th></tr>
-<tr><td>E-A</td><td>v18 两个评估池脚本：加三个可选变量，改 slot_set_pid / slot_release；<code>download.sh</code> 加可选 <code>HF_TOKEN_FILE</code></td><td><code>scripts/evaluation/local_692_pool.sh</code>、<code>scripts/evaluation/local_692_pool_e2e.sh</code>、<code>scripts/evaluation/download.sh</code></td><td>其余全部，尤其 <code>run_shard.sh</code>、<code>check_*.py</code>、<code>src/</code></td><td>主检出当时的 HEAD（计划提交之后，与 bbfdf9e 只差计划 HTML），worktree 分支 <code>worktree-agent-*</code></td><td>不设变量时，用 <code>DRY_RUN=1</code> 跑新旧两版，对 <code>SHARD_MAP</code>/<code>EVAL_ENV</code>/<code>PLAN_OK</code> 行做 diff，结果为空；设变量后 seed 42 的 <code>port_base</code> 从 18123 起；<b>占位函数 CPU 单测</b>：把三个占位函数抽出来，两个评估共用一个目录，各登记 <code>s0</code>、<code>s8</code>，交替 set_pid、release，核对每一步只动自己那一行、最后文件为空；回归 <code>test_f4_gpu_slot_race.py</code>、<code>test_s3_eval_local.py</code>、<code>test_e2e_runner_chain.py</code>、<code>test_raw9_runner_chain.py</code>，判据为「与改动前基线相比无新增失败」（先在改动前记录已红用例，如 <code>test_c4_slot_reserve_third_refused</code> 在 bbfdf9e 上已因 <code>PER_GPU</code> 未设而失败）；上限用 <code>${EVAL_GPU_CAP:-$PER_GPU}</code> 在 <code>slot_reserve</code> 函数内部计算，不新增顶层变量依赖；<code>bash -n</code> 通过</td><td>sonnet 审查 PASS → 主会话 <code>--no-ff</code> 合入 v18 → 推送（必须在 S1 前）</td></tr>
+<tr><td>E-A</td><td>v18 两个评估池脚本：加三个可选变量，改 slot_set_pid / slot_release；<code>download.sh</code> 加可选 <code>HF_TOKEN_FILE</code></td><td><code>scripts/evaluation/local_692_pool.sh</code>、<code>scripts/evaluation/local_692_pool_e2e.sh</code>、<code>scripts/evaluation/download.sh</code></td><td>其余全部，尤其 <code>run_shard.sh</code>、<code>check_*.py</code>、<code>src/</code></td><td>主检出当时的 HEAD（计划提交之后，与 bbfdf9e 只差计划 HTML），worktree 分支 <code>worktree-agent-*</code></td><td>不设变量时，用 <code>DRY_RUN=1</code> 跑新旧两版，对 <code>SHARD_MAP</code>/<code>EVAL_ENV</code>/<code>EVAL_PARAMS</code>/<code>PLAN_OK</code> 行做 diff（时间戳与 mktemp 路径不比），结果为空；设变量后 seed 42 的 <code>port_base</code> 从 18123 起；<b>占位函数 CPU 单测</b>：把三个占位函数抽出来，两个评估共用一个目录，各登记 <code>s0</code>、<code>s8</code>，交替 set_pid、release，核对每一步只动自己那一行、最后文件为空；回归 <code>test_f4_gpu_slot_race.py</code>、<code>test_s3_eval_local.py</code>、<code>test_e2e_runner_chain.py</code>、<code>test_raw9_runner_chain.py</code>，判据为「与改动前基线相比无新增失败」（先在改动前记录已红用例，如 <code>test_c4_slot_reserve_third_refused</code> 在 bbfdf9e 上已因 <code>PER_GPU</code> 未设而失败）；CAP 在每个使用处（<code>slot_reserve</code> 的比较、传给 <code>run_shard.sh</code> 的 <code>LOCAL_GPU_SHARE</code>）就近用 <code>${EVAL_GPU_CAP:-$PER_GPU}</code> 计算，<code>PER_GPU</code> 未设时不得因 <code>set -u</code> 新增报错；<code>bash -n</code> 通过</td><td>sonnet 审查 PASS → 主会话 <code>--no-ff</code> 合入 v18 → 推送（必须在 S1 前）</td></tr>
 <tr><td>E-B</td><td>d6ece8b 评估池脚本做与 E-A 相同的改动；<code>run_shard.sh</code> 移植 F4 那一行；<code>check_checkpoint.py</code> 中 <code>robomme-vla-modul-60k-v1</code> 的 <code>steps</code> 从 <code>('59999', '50000')</code> 加上 <code>'40000', '45000'</code>（其余字段不动；另三个 FrameSamp 桶的登记已含 5000–79999）</td><td><code>scripts/evaluation/local_692_pool.sh</code>、<code>scripts/evaluation/run_shard.sh</code>（只改这一行）、<code>scripts/evaluation/check_checkpoint.py</code>（只改这一处）</td><td>同上</td><td>d6ece8b；合入新分支 <code>t1s-1120-evalstack-v42</code>（首次 <code>git push -u</code>，开工令即授权）</td><td>占位函数 CPU 单测自行抽函数写（可参照 bbfdf9e 的 <code>test_f4_gpu_slot_race.py</code>，d6ece8b 上没有这个文件）；d6ece8b 上只回归 <code>test_s3_eval_local.py</code>，同样按「无新增失败」判；另核 <code>EVAL_NGPU</code> 原逻辑不变；<code>check_checkpoint.py</code> 对 <code>$DL/c40000/robomme-vla-modul-60k-v1/40000</code> 通过</td><td>审查 PASS → 合入该分支 → 推送；<code>$W42</code> 检出该分支头</td></tr>
 <tr><td>R1（运行型，opus，不加 worktree）</td><td>起跑并盯本链（每条链一个 R1：<code>t1s-batch1</code>、<code>t1s-batch2</code>、<code>t1s-fix&lt;n&gt;</code>），盯到本链日志出现 <code>EXIT_CODE=</code></td><td>只写链脚本自身产生的日志与评估产物</td><td>不改代码、配置、参数，不重跑，不杀会话，不清理</td><td>主检出 HEAD（E-A 合入后的 clean HEAD）；<code>$W42</code> 为 v42 分支头；<code>$W17</code> 为 8181918</td><td>起跑判据：10 min 内出现 <code>LOCAL692_START</code>；资源：8 卡全占、端口 18011–18228、tmux 名与日志见 §四；只挂一个 Monitor，不设心跳；单项超过预计 2 倍时看一次日志尾；重试上限 0，故障证据交主会话</td><td>无合并；主会话登记全部 tmux 名；下一条链由主会话新派 R1；R1 提前返回时主会话立即重挂 Monitor 或重派</td></tr>
 </table>
@@ -270,7 +270,7 @@ $MAIN/v1-store/envs/policy-eval-server/bin/python -c 'import mme_vla_suite;print
 dl robomme-vla-4task-m8x8-ctx-b128-50k-gl-v1      v2-1600ep-m8x8-ctx-b128-50k-gl
 dl robomme-vla-4task-m16x8x8-ctx-b128-50k-gl-v1   v2-1600ep-m16x8x8-ctx-b128-50k-gl
 # 下载后按根目录 SHA256SUMS 补一次 sha256 校验（只校 50000/ 与根文件那几行，xargs -P 并行）</pre>
-<p>如果对方迟迟没有 PASS，第二批其余 8 次和第三批照跑，这两行挂到链末尾单独补跑；到全部跑完仍拿不到，就跳过这两行，在汇总里如实标「未评」（用户 11-20：「如果缺ckpt就跳过 自动继续 不要停下来问我」）。注意：这两份 ckpt 的学习率调度不同（60k 与 80k），这是训练时的既成事实，评估不受影响，只在汇总表的脚注里注明。</p>
+<p>链上执行 <code>pair fs512c</code>、<code>pair fs1024c</code> 时只查一次 ckpt 是否在盘，不在就记 <code>T1S_ITEM_SKIP</code>，链继续往下；之后如果 ckpt 到了，由主会话在 <code>t1s-fix&lt;n&gt;</code> 里补跑。等 <code>t1s-batch2</code> 和 <code>t1s-fix</code> 都结束时仍拿不到，就跳过这两行，在汇总里如实标「未评」（用户 11-20：「如果缺ckpt就跳过 自动继续 不要停下来问我」）。注意：这两份 ckpt 的学习率调度不同（60k 与 80k），这是训练时的既成事实，评估不受影响，只在汇总表的脚注里注明。</p>
 
 <h3>S0-d DRY_RUN（每行一次，CPU，几秒）</h3>
 <pre>cd &lt;入口 cwd&gt; &amp;&amp; DRY_RUN=1 RUN_NAME=t1s-&lt;键&gt;-s0 POLICY=… [其余环境变量] bash scripts/evaluation/local_692_pool.sh &lt;ckpt&gt; 0
@@ -279,7 +279,7 @@ JAX_PLATFORMS=cpu &lt;server python&gt; scripts/evaluation/check_checkpoint.py &
 <p>12 行都过以后，写一行 <code>CKPT_READY=PASS rows=12 missing=0</code>。如果 ctx 两行还没拿到，先写 <code>CKPT_READY=PARTIAL rows=10 missing=fs512c,fs1024c</code>，拿到后补齐。</p>
 
 <h2>四 链脚本与 Monitor</h2>
-<pre># v1-store/jobs/t1s-1120/t1s-batch1.sh（静态顺序：上一单元全部结束才起下一单元；某次 EVAL692≠PASS 时记一行 T1S_ITEM_FAIL 后继续，主会话修复后，在本链结束后另起 t1s-fix&lt;n&gt; 补跑）
+<pre># v1-store/jobs/t1s-1120/t1s-batch1.sh（静态顺序：上一单元全部结束才起下一单元；某次 EVAL692≠PASS 时记一行 T1S_ITEM_FAIL 后继续；所有 FAIL 项与后到的 ckpt 由主会话修复后，在 t1s-batch2 结束后另起 t1s-fix&lt;n&gt; 串行补跑；同一时刻只允许一条链占卡）
 pair mm-mod            # seed 0、42 同时，各 16 片、每卡 2 片（§二′）
 pair e2e
 pair wan1
@@ -303,7 +303,7 @@ tmux new-session -d -s t1s-batch1 \
 <table>
 <tr><th>风险</th><th>后果</th><th>处置</th></tr>
 <tr><td>检出里 import 到主检出的 <code>src</code></td><td>数字悄悄失真</td><td>G1b 硬闸门；不过就建独立环境</td></tr>
-<tr><td>GL 侧会话没回复，或上传失败</td><td>ctx 两行跑不了</td><td>同一 req 重发一次；仍无回复就报告用户，这两行挂起，其余 22 次照常跑</td></tr>
+<tr><td>GL 侧会话没回复，或上传失败</td><td>ctx 两行跑不了</td><td>同一 req 重发一次；仍无回复就报告用户，这两行挂起，其余 28 次照常跑</td></tr>
 <tr><td>mm-mod 或 FrameSamp 4096 每卡 4 片显存不够</td><td>OOM 或 <code>EVAL692=FAIL reason=infra</code></td><td>降为 24 / 3，用 <code>-r2</code> 名重跑（工程修复，不问用户）</td></tr>
 <tr><td>同卡并发启动时登记竞争（Wan-9 留档里 s5 误判退出）</td><td>单片退出</td><td>F4 修复（2ad7c46）只改了 v18 的 <code>run_shard.sh</code> 和 <code>local_692_pool_e2e.sh</code>。E-B 把同一行 <code>/proc</code> 放行（<code>|| [[ ! -e "/proc/$p" ]]</code>）移植到 v42 分支的 <code>run_shard.sh</code>；8181918（mm-ctx 单跑，每卡 3 片，与 seed 7 同口径）不改。评估池对单片 exit 2 没有「只补跑一片」的入口，一律整次用 <code>-r2</code> 名重跑</td></tr>
 <tr><td>主检出在评估期间被改动（commit 或切分支）</td><td><code>必须从 clean HEAD 启动</code>，后续各项全部拒绝</td><td>R4：评估期间不动主检出；第一批结果的留档提交放在两批之间（S2）</td></tr>
@@ -334,7 +334,7 @@ tmux new-session -d -s t1s-batch1 \
 <table>
 <tr><th>项</th><th>内容</th></tr>
 <tr><td>任务 id</td><td><code>t1s-3seed-1120</code></td></tr>
-<tr><td>交接前必须完成</td><td>32 次评估各一行 <code>EVAL692=PASS</code>（G2，出处 <code>v1-store/evaluation/t1s-*/EVAL692.txt</code> 与 <code>NativeMEM/runs/eval/t1s-native-*/EVAL692.txt</code>）；<code>TABLE1_3SEED=PASS rows=12 seeds=3 ckpt_rows=4 ckpts=3 runs_new=32</code>（G4）；汇总 JSON 复核 <code>FETCH_VERIFY=PASS</code>；留档提交已推送；<code>t1s-</code> 开头的评估 tmux 全部退出</td></tr>
+<tr><td>交接前必须完成</td><td>32 次评估中，除记为 <code>T1S_ITEM_SKIP</code>（缺 ckpt）的以外，各一行 <code>EVAL692=PASS</code>（G2，出处 <code>v1-store/evaluation/t1s-*/EVAL692.txt</code> 与 <code>NativeMEM/runs/eval/t1s-native-*/EVAL692.txt</code>）；<code>TABLE1_3SEED=PASS|PARTIAL</code>（G4，PARTIAL 只允许因缺 ckpt 跳过）；汇总 JSON 复核 <code>FETCH_VERIFY=PASS</code>；留档提交已推送；<code>t1s-</code> 开头的评估 tmux 全部退出</td></tr>
 <tr><td>长尾</td><td>无。下载都在评估之前或评估期间完成，不留到交接之后</td></tr>
 <tr><td>上游依赖</td><td>无同仓库上游任务。跨机依赖：GL 侧会话上传 ctx 两份 ckpt（S0-c，判定以对方回传的桶名与 sha256，以及本机 <code>download.sh</code> 校验通过为准）</td></tr>
 <tr><td>done 后可开工的下游</td><td>MacBook 侧稿件会话把 Table I 改为均值 ± 标准差（稿件版 S5，另行确认措辞）</td></tr>
