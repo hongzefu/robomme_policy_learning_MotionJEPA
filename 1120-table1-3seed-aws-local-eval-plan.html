@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Table I 三 seed 本机评估</title>
+<style>
+:root{--fg:#1d1d1f;--muted:#555;--bg:#fff;--line:#d9d9de;--head:#f3f3f6;--warn:#8a4b00;--warnbg:#fff6e5;--ok:#0b6b2e;--okbg:#e9f7ee;--code:#f5f5f7}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--fg:#e8e8ea;--muted:#a8a8ad;--bg:#161618;--line:#3a3a3f;--head:#232327;--warn:#ffcf8a;--warnbg:#2e2412;--ok:#8fe0a8;--okbg:#14261a;--code:#222226}}
+:root[data-theme="dark"]{--fg:#e8e8ea;--muted:#a8a8ad;--bg:#161618;--line:#3a3a3f;--head:#232327;--warn:#ffcf8a;--warnbg:#2e2412;--ok:#8fe0a8;--okbg:#14261a;--code:#222226}
+body{background:var(--bg);color:var(--fg);font:15px/1.65 -apple-system,"PingFang SC","Noto Sans CJK SC",sans-serif;max-width:1080px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:24px;border-bottom:2px solid var(--line);padding-bottom:6px;margin-top:48px}
+h2{font-size:19px;margin-top:32px}
+h3{font-size:16px;margin-top:22px}
+table{border-collapse:collapse;width:100%;margin:10px 0 16px;font-size:13.5px;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+th{background:var(--head)}
+code,pre{background:var(--code);font:12.5px/1.5 ui-monospace,Menlo,monospace}
+code{padding:1px 4px;border-radius:3px;word-break:break-all}
+pre{padding:10px 12px;overflow-x:auto;border-radius:6px}
+.lead{border-left:4px solid var(--line);padding:8px 14px;background:var(--head);margin:16px 0}
+.warn{border-left:4px solid var(--warn);background:var(--warnbg);padding:8px 14px;margin:12px 0}
+.ok{border-left:4px solid var(--ok);background:var(--okbg);padding:8px 14px;margin:12px 0}
+.muted{color:var(--muted)}
+</style>
+</head>
+<body>
+
+<h1 style="margin-top:8px">Table I 补两个评估 seed：AWS 本机完整评估计划</h1>
+<p class="muted">文件：<code>1120-table1-3seed-aws-local-eval-plan.html</code> · 策略仓库 <code>robomme_policy_learning_MotionJEPA</code> 分支 <code>v18-4task-modul-e2eenc-s16-50k</code> 根目录 · 写于 2026-11-20（美东）· AWS <code>p4de.24xlarge</code>（8×A100 80GB）</p>
+
+<div class="lead">
+<b>来源</b>：本文件把稿件仓库的方案 <code>1120-table1-3seed-eval-plan.html</code>（commit <code>51d93617</code>，2026-11-20 15:54 美东，从 MacBook 写成）落到 AWS 本机。稿件版里留给 AWS 的待核项（G0、12 行的 ckpt、POLICY、评估栈）都已在本机只读核实，结果写进本文件。<b>稿件版的口径 K1–K5 原样保留</b>。下面 §0 列出稿件版写错或漏掉的地方。<br>
+<b>授权边界</b>：本文件只是计划，还没有执行任何评估、下载或跨会话请求。用户对本计划说「同意」「开工」才算开工令，开工令只覆盖本计划。把稿件 Table I 改成均值 ± 标准差是另一步（稿件版 S5），需要另行确认。<br>
+<b>放在哪里</b>：按 2026-11-17 用户要求（「aws不要留这个corlorkshop仓库」），稿件版只通过 <code>gh api</code> 读取，本计划放策略仓库。
+</div>
+
+<h1>第一部分（给人看）</h1>
+
+<h2>1. 要做什么</h2>
+<p>Table I（<code>RSS2027-stage1/paper/tables/longcontext_main.tex</code>）共 12 行，每行目前只评估过一次（seed 7，692 局，50k 步左右的 ckpt）。本计划给每行补 <b>seed 0</b> 和 <b>seed 42</b> 两次，一共 <b>24 次 692 局评估</b>，全部在本机 8 卡上完成。seed 7 的已有结果不动。</p>
+<p><b>同卡并行（用户 11-20：「eval过程也尽可能做到并行」「单卡多model」「但是不要搞太复杂 不要搞动态分配」）</b>：同一行的 seed 0 和 seed 42 <b>同时起跑</b>，每次 16 片、每卡 2 片，所以每张卡上同时有两个模型服务（seed 0 两片、seed 42 两片）。配对是静态写死的，不做动态调度。显存上限不变（每卡 4 片 × 显存占比 0.2）。只有两行不配对、单独跑：mm-ctx 每卡只放得下 3 片；NativeMEM 用的是另一个仓库的脚本。
+<p>按用户要求，<b>先跑 FrameSamp 以外的 6 行</b>（第一批，12 次，约 17 h），<b>再跑 6 行 FrameSamp</b>（第二批，12 次，约 8–10 h）。<b>总计约 25–27 h</b>，比逐次排队约省 3–5 h。下载和跨机传输与评估并行进行，不额外占墙钟时间。</p>
+
+<h3>已定口径（沿用稿件版，用户原话逐字保留）</h3>
+<table>
+<tr><th>#</th><th>口径</th><th>本机核实</th></tr>
+<tr><td>K1</td><td>评估 Table I 的全部模型，已有的 1 个 seed 不动，再评 2 个。「给出方案 在aws上评估TABLE 1 上的所有模型 已经评估过1个seed就不用动了 再评估2个」</td><td>12 行的出处都已找到，见 §3</td></tr>
+<tr><td>K2</td><td>不考虑跨硬件。「不考虑aws/gl跨硬件等问题」。新 seed 一律在 AWS 上跑，与 seed 7 直接合并</td><td>—</td></tr>
+<tr><td>K3</td><td>先跑非 FrameSamp 的行。「优先跑FrameSamp × 6之外的」</td><td>第一批 6 行，第二批 6 行</td></tr>
+<tr><td>K4</td><td>新 seed 取 0 和 42，与 16 任务表一致</td><td>—</td></tr>
+<tr><td>K5</td><td>seed 只决定策略的采样噪声，692 局的局号和 9 个预标 error 局都不变</td><td><b>已核实（G0 通过）</b>，见 §2</td></tr>
+</table>
+
+<h2>2. G0：seed 只改变采样噪声（已在本机核实）</h2>
+<div class="ok"><code>SEED_SCOPE=PASS env_seed_from_plan=1</code>（本机只读，2026-11-20 美东）</div>
+<ul>
+<li><b>策略仓库评估栈</b>（bbfdf9e，8181918 上两个文件逐字相同）：
+<ul>
+<li><code>examples/robomme/eval.py</code> 里的 <code>model_seed</code> 只用来拼结果目录名 <code>…/seed{model_seed}</code>（L280），不进入 <code>make_env</code> 或 <code>reset</code>。</li>
+<li>服务端 <code>serve_policy.py --seed</code> 经 <code>policy_config.py:257</code> 传到 <code>policy.py</code>：每局 <code>reset()</code> 时执行 <code>self._rng = jax.random.key(self._seed)</code>（L210），只用于去噪采样的噪声（L165–170）。</li>
+<li>环境种子来自候选库 <code>candidates.jsonl</code> 中每行的 <code>candidate["seed"]</code>（<code>env_runner.py:162-168</code> → <code>episode_config_resolver.py:290-335</code>）。分片计划 <code>make_shard_plan.py</code> 不接收 seed 参数。</li>
+</ul></li>
+<li><b>NativeMEM</b>（<code>a841a63</code>）：结构相同。<code>serve_nativemem.py:276-280</code> 每局重置 <code>policy._rng</code>；环境种子取自同一份 <code>candidates.jsonl</code>；分片计划也不带 seed。</li>
+<li><b>v4.2-plswap-full</b>（第二批要用的评估栈）的 <code>eval.py</code> 另有一条约束 <code>OFFICIAL_SEEDS = (0, 7, 42)</code>，只针对 official 模式。本计划用 692 注入模式，0 和 42 也都在这个集合里，不冲突。</li>
+</ul>
+<p>结论：换 seed 后得到的是「同一批 692 局、同一份权重、不同采样噪声」，可以与 seed 7 合并成均值 ± 标准差。</p>
+
+<h2>3. 12 行逐行清单</h2>
+<table>
+<tr><th>批</th><th>行键</th><th>Table I 行</th><th>seed 7（已有）</th><th>本机评估栈</th><th>ckpt 现状</th><th>每次预计</th></tr>
+<tr><td rowspan="6">一</td><td><code>mm-mod</code></td><td>MotionMEM 512+160 modulation</td><td>378/692 = 54.62%（GL A40，550+142 两份拼成）</td><td>主检出 bbfdf9e <code>local_692_pool.sh</code></td><td><b>需下载</b>：HF <code>robomme-vla-modul-motion-80k-v1</code>/50000，11.07 GiB</td><td>~1.8 h（估）</td></tr>
+<tr><td><code>e2e</code></td><td>E2E-Enc 512+160 modulation</td><td>337/692（AWS）</td><td>主检出 bbfdf9e <code>local_692_pool_e2e.sh</code></td><td>本机已有</td><td>1 h 50 m（实测）</td></tr>
+<tr><td><code>wan1</code></td><td>Wan-1 512+160 modulation</td><td>298/692（AWS，10 片）</td><td>主检出 bbfdf9e <code>local_692_pool.sh</code></td><td><b>需下载</b>：HF <code>robomme-vla-4task-modul-wantp768-50k-v1</code>/50000，11.07 GiB</td><td>~1.3 h（估；seed 7 用 10 片跑了 3 h 07 m）</td></tr>
+<tr><td><code>mm-ctx</code></td><td>MotionMEM 512+160 context</td><td>254/692（AWS）</td><td><b>独立检出 8181918</b>（v18 跑不了这一行，见 §0）</td><td>本机已有</td><td>1 h 47 m（实测，24 片）</td></tr>
+<tr><td><code>wan9</code></td><td>Wan-9 512+720 modulation</td><td>262/692（AWS）</td><td>主检出 bbfdf9e <code>local_692_pool.sh</code></td><td><b>需下载</b>：HF <code>robomme-4task-modul-wanraw9-s32-50k-v1</code>/50000，11.12 GiB</td><td>1 h 13 m（实测）</td></tr>
+<tr><td><code>native</code></td><td>NativeMEM（外部基线）</td><td>290/692（AWS）</td><td>NativeMEM 仓库 <code>local_692_pool_nativemem.sh</code></td><td>本机已有（ckpt 19999）</td><td>42 m（实测）</td></tr>
+<tr><td rowspan="6">二</td><td><code>fs512</code></td><td>FrameSamp 512 modulation</td><td>211/692 = 30.49%（GL）</td><td rowspan="6"><b>独立检出 d6ece8b</b>（v4.2-plswap-full 头；评估代码与 GL 跑 ctx 两行时用的 4ba8b49 相同）</td><td><b>需下载</b>：私有桶 <code>robomme-vla-modul-60k-v1</code>/50000</td><td rowspan="4">~0.6–0.9 h（估；AWS 上没有实测）</td></tr>
+<tr><td><code>fs1024</code></td><td>FrameSamp 1024 modulation</td><td>291/692 = 42.05%（GL）</td><td><b>需下载</b>：<code>robomme-vla-modul-1024-80k-v1</code>/50000，11.06 GiB</td></tr>
+<tr><td><code>fs2048</code></td><td>FrameSamp 2048 modulation</td><td>312/692 = 45.09%（GL）</td><td><b>需下载</b>：私有桶 <code>robomme-vla-modul-2048-80k-v1</code>/50000</td></tr>
+<tr><td><code>fs4096</code></td><td>FrameSamp 4096 modulation</td><td>313/692 = 45.23%（GL）</td><td><b>需下载</b>：<code>robomme-vla-modul-4096-80k-v1</code>/50000，11.06 GiB</td></tr>
+<tr><td><code>fs512c</code></td><td>FrameSamp 512 context</td><td>158/692 = 22.83%（GL，67 min）</td><td rowspan="2"><b>只在 GL turbo 上</b>，HF 上没有副本；需请 GL 侧会话上传（§4 S0-c）</td><td rowspan="2">~0.6–0.8 h（估）</td></tr>
+<tr><td><code>fs1024c</code></td><td>FrameSamp 1024 context</td><td>160/692 = 23.12%（GL，55 min）</td></tr>
+</table>
+<p class="muted">FrameSamp 的估时依据：GL 上用 4×A40、每卡 2 片、共 8 片时实测 55–67 min；本机是 8 卡、每卡 4 片、共 32 片，按比例估计。4096 行每步要编码 64 帧，按偏慢估。</p>
+
+<h3>耗时汇总</h3>
+<table>
+<tr><th>批</th><th>依次跑的单元</th><th>预计墙钟</th></tr>
+<tr><td>第一批</td><td>mm-mod 对（~3.3 h）→ e2e 对（~3.4 h）→ wan1 对（~2.4 h）→ mm-ctx s0、s42 单跑（2 × ~1.9 h）→ wan9 对（~2.2 h）→ native s0、s42 单跑（2 × ~0.8 h）</td><td><b>~17 h</b></td></tr>
+<tr><td>第二批</td><td>fs1024 对 → fs4096 对 → fs512 对 → fs2048 对 → fs512c 对 → fs1024c 对（每对 ~1.2–1.7 h）</td><td><b>~8–10 h</b></td></tr>
+<tr><td>合计</td><td>24 次 = 10 对 + 4 次单跑</td><td><b>~25–27 h</b></td></tr>
+</table>
+<p>一对评估的墙钟约等于单次 32 片墙钟的 2 倍，再减去重叠掉的加载、握手、合并时间（每次约 10 min）和片间长尾。显存仍然限制每卡总共 4 片，所以同卡并行省下的主要就是这两块，不会让总吞吐翻倍；数字是估计，按实测更新。第一批按稿件版顺序：<code>mm-mod → e2e → wan1 → mm-ctx → wan9 → native</code>。每行的 seed 0、seed 42 同时跑（mm-ctx、native 是先 seed 0 后 seed 42），每行一结束就能出均值 ± 标准差。第二批顺序：<code>fs1024 → fs4096 → fs512 → fs2048 → fs512c → fs1024c</code>。公开桶的两行排最前，需要从 GL 传过来的两行排最后，给传输留出约 25 h 的余量。</p>
+
+<h2>4. 我们这边要做什么</h2>
+<p><b>不改评估语义</b>（配置、采样参数、局号、判定都不动）。要做的有六件事：</p>
+<ol>
+<li><b>下载 7 份 ckpt</b>（约 78 GB）。必须用 HongzeFu 的令牌：本机环境变量 <code>HF_TOKEN</code> 是另一个账号（yinpei-tri）的，会覆盖 HongzeFu 的令牌；而且 <code>download.sh</code> 读的是 <code>$HOME/.cache/huggingface/token</code>，这个文件在本机不存在。两个私有桶用 HongzeFu 令牌已实测能列出目录（HTTP 200）。</li>
+<li><b>从 GL 取 ctx 两行的 ckpt</b>（约 26 GB）。AWS 无法 SSH 到 GL，按第 28、31 条给 sled-aspen 上的会话发消息，请它把 turbo 上的两个 50000 目录连同 run 根目录的来源文件，上传到一个新的公开 HF 桶，读回校验通过后，本机再下载。</li>
+<li><b>建两个只读评估检出</b>（detached worktree，不建分支、不写代码）：<code>8181918</code> 和 <code>d6ece8b</code>。每个检出里放一个 <code>v1-store</code> 软链指向主 store（本机 <code>-eval-ffb307c</code> 已有先例）。</li>
+<li><b>两条串行链脚本</b>：<code>t1s-batch1.sh</code> 和 <code>t1s-batch2.sh</code>，各放进一个 detached tmux，挂 Monitor 盯着。</li>
+<li><b>汇总</b>：36 组计数（12 行 × 3 seed），出 JSON，在本仓库留档并推送。</li>
+<li><b>同卡双 seed 的最小改动</b>（为什么非改不可：现有守卫只认本次评估自己的每卡占位文件，卡上出现另一次评估的进程会直接拒绝起跑；端口编号也按片号从 18011 开始，两次评估同时起跑会抢同一批端口）。在 v18 的 <code>local_692_pool.sh</code>、<code>local_692_pool_e2e.sh</code> 和 d6ece8b 的 <code>local_692_pool.sh</code> 里各加 3 个<b>可选</b>环境变量：<code>EVAL_SLOT_DIR</code>（两次评估共用一个每卡占位目录）、<code>EVAL_GPU_CAP</code>（每卡总片数上限，配对时设 4）、<code>EVAL_SHARD_BASE</code>（片号偏移，seed 42 那次设 16，端口错开）。三个变量都不设时行为与原来逐字一致。改动交给独立 worktree 子代理，审查后合入（§8）。</li>
+</ol>
+
+<h2>5. 验收闸门</h2>
+<table>
+<tr><th>#</th><th>查什么</th><th>判定行</th><th>状态</th></tr>
+<tr><td>G0</td><td>seed 不改局面</td><td><code>SEED_SCOPE=PASS env_seed_from_plan=1</code></td><td><b>已过</b></td></tr>
+<tr><td>G1</td><td>12 行的 ckpt 都已落盘，<code>check_checkpoint.py</code> 能认出来，每行 <code>DRY_RUN=1</code> 都能通过</td><td><code>CKPT_READY=PASS rows=12 missing=0</code></td><td>S0</td></tr>
+<tr><td>G1b</td><td>两个独立检出：工作区干净；服务端 import 的确实是检出里的 <code>src</code>，不是主检出的</td><td><code>WT_READY=PASS wt=2 clean=2 import_src=wt</code></td><td>S0</td></tr>
+<tr><td>G1c</td><td>d6ece8b 评估栈在本机能跑通 1 局（这套栈在 AWS 上从没跑过）</td><td><code>EVAL_LOAD_SMOKE=PASS episodes=1</code></td><td>S0，只做这一次</td></tr>
+<tr><td>G1d</td><td>同卡双 seed 改动：三个变量都不设时，<code>DRY_RUN=1</code> 的输出与改动前逐行相同；设了以后两次评估的 <code>SHARD_MAP</code> 端口互不重叠、每卡合计 4 片</td><td><code>PAIR_PATCH=PASS stacks=2 default_dry_identical=1 ports_disjoint=1 per_gpu_total=4</code></td><td>S0-e</td></tr>
+<tr><td>G2</td><td>每次评估完整：692 局全部跑完，只有那 9 个预标 error</td><td><code>EVAL692=PASS episodes=692 … preseeded_errors=9 new_errors=0</code></td><td>每次</td></tr>
+<tr><td>G3</td><td>结果目录不冲突：起跑前 <code>$RUN_NAME</code> 和 <code>$RUN_NAME-retry1</code> 都不存在（脚本自带拒绝覆盖）</td><td>脚本没有打印「拒绝覆盖」</td><td>每次</td></tr>
+<tr><td>G4</td><td>24 次新结果加 12 次 seed 7，每行 14 组计数汇成一份 JSON</td><td><code>TABLE1_3SEED=PASS rows=12 seeds=3 runs_new=24</code></td><td>S4</td></tr>
+</table>
+
+<h2>6. 步骤</h2>
+<table>
+<tr><th>阶段</th><th>内容</th><th>判据</th><th>与谁并行</th></tr>
+<tr><td>S0-a</td><td>准备令牌目录；按第一批顺序下载 3 份 ckpt（mm-mod、wan1、wan9）</td><td>download.sh 校验通过</td><td>与 S0-b、S0-c 同时进行</td></tr>
+<tr><td>S0-b</td><td>建两个检出，跑 G1b；在 d6ece8b 检出上跑 1 局 smoke（G1c）</td><td>G1b、G1c</td><td>smoke 要在第一批起跑前占卡几分钟</td></tr>
+<tr><td>S0-c</td><td>给 GL 侧会话发 ctx 两行的上传请求（三次握手）</td><td>对方回传桶名和 sha256</td><td>后台进行，最晚在第二批第 5 次评估前完成</td></tr>
+<tr><td>S0-d</td><td>第一批 6 行逐行 <code>DRY_RUN=1</code></td><td>G1（第一批部分）</td><td>—</td></tr>
+<tr><td>S0-e</td><td>同卡双 seed 改动：两个写入子代理并行（v18、d6ece8b 各一个）→ 审查 → 合入（v18 直接合入主检出；d6ece8b 合入新分支 <code>t1s-1120-evalstack-v42</code>，<code>$W42</code> 检出这个分支的头）</td><td>G1d、<code>PRE_MERGE_REVIEW=PASS</code>、<code>POST_MERGE_REVIEW=PASS</code></td><td>与 S0-a、S0-c 同时进行；必须在 S1 起跑前合入，起跑后主检出就不能再提交（R4）</td></tr>
+<tr><td>S1</td><td>第一批 12 次评估，tmux <code>t1s-batch1</code></td><td>每次 G2、G3</td><td>评估期间下载第二批的 4 份 ckpt，并对它们跑 DRY_RUN</td></tr>
+<tr><td>S2</td><td>第一批结果留档提交并推送；把 6 行 × 3 seed 的计数交给用户</td><td>12 条都 G2=PASS</td><td>同时起第二批</td></tr>
+<tr><td>S3</td><td>第二批 12 次评估，tmux <code>t1s-batch2</code></td><td>每次 G2、G3</td><td>—</td></tr>
+<tr><td>S4</td><td>汇总 JSON，留档并推送；列出可删除的下载 ckpt，交用户确认</td><td>G4</td><td>—</td></tr>
+<tr><td>S5（另行确认）</td><td>稿件会话把 Table I 改为均值 ± 标准差（不在 AWS 上做）</td><td>—</td><td>—</td></tr>
+</table>
+
+<h2>7. 停下来问用户的情形（其余情况一路跑完）</h2>
+<p>按用户 11-17 定下的原则「开工后尽可能一路跑到底」：工程故障（端口冲突、登记竞争、单片误判退出、环境变量缺失、OOM 后降并行度）由主会话自己修，然后用新的 RUN_NAME（后缀 <code>-r2</code>）重跑，不停下来问。<b>只有以下情况才停</b>：</p>
+<ul>
+<li>某一行只能改动评估语义才能跑（换 ckpt、换 POLICY_CONFIG、改 <code>max_steps</code> 或注入口径），或者要改同卡双 seed 改动以外的评估代码；</li>
+<li>692 局身份对不上（<code>PLAN_OK total≠692</code>，或 PRESEED 不是 9/9）；</li>
+<li>GL 那两份 ckpt 在第二批其余 10 次跑完时还拿不到：把那两行挂起，报告用户；</li>
+<li>要删除任何东西（包括下载下来的 ckpt），或要新增依赖。</li>
+</ul>
+
+<h2>8. 子代理分工（简述）</h2>
+<p>S0 的核实已经由 5 个只读探索子代理（haiku）做完。</p>
+<ul>
+<li><b>写入子代理（opus，2 个并行，各自独立 worktree）</b>：S1-A 只改 v18 的两个评估池脚本，S1-B 只改 d6ece8b 的评估池脚本（从 d6ece8b 建分支）。两边写集合互不相交，同时派出。每边交回后，派一个只读审查子代理（sonnet）钉住 BASE/TIP 审查；PASS 后由主会话 <code>--no-ff</code> 合入，跑 G1d，然后推送。</li>
+<li><b>盯盘子代理（opus，全程在线）</b>：按用户 11-20 要求（「做评估的过程中，你这个 opus 的 agent 要持续在线来盯盯着看，但是同时你也不要把这个事情搞太复杂了，就是说你不要搞那么多什么心跳检测什么的」），两条链各派一个运行型 opus 子代理。它负责起跑 <code>t1s-batch1</code>（之后是 <code>t1s-batch2</code>），在链日志上只挂<b>一个</b> Monitor（§四 的过滤管道），一直在线，直到链日志出现 <code>EXIT_CODE=</code>。每出现一条 <code>T1S_ITEM</code> 或报错行，就把原文转给主会话。<b>不加心跳、不加定时巡检、不加额外校验</b>，唯一的信号就是这个 Monitor。它不改代码、不改参数、不重跑、不杀会话：遇到故障，把证据交给主会话，主会话修好后，等本条链跑完，再起一条补跑链 <code>t1s-fix&lt;n&gt;</code> 跑这些 <code>-r2</code> 项（同样由盯盘子代理盯）。</li>
+<li><b>主会话</b>：负责 S0 的下载、检出、smoke、DRY_RUN 和 GL 请求，修复工程故障，并在两批之间与全部结束后做留档提交。</li>
+<li><b>复核</b>：S2、S4 把数字交给用户前，派一个只读审查子代理（sonnet），按 <code>merged/progress.json</code> 逐局复核汇总 JSON。</li>
+</ul>
+<p><b>并行安排</b>（用户「尽可能并行」「单卡多model」）：评估本身按上面的静态配对同卡并行，每卡总共 4 片（e2e 实测每卡 4 片时显存峰值 77.38 GB，再加就会 OOM）。其余能并行的也都并行：S0-e 的两个写入子代理与下载同时进行；S0-a 的 3 份下载各起一个进程；S0-b 建检出、S0-c 发 GL 请求、S0-d 跑 DRY_RUN 同时进行；第一批评估期间并行下载第二批的 4 份 ckpt、建 d6ece8b 检出环境、对第二批跑 DRY_RUN、接收 GL 上传；两批之间的留档提交与第二批起跑同时进行；S4 的复核与汇总 JSON 同时进行。</p>
+
+<h1>第二部分（技术细节，供 agent 追踪）</h1>
+
+<h2>〇 相对稿件版计划的更正与补充（本机核实）</h2>
+<table>
+<tr><th>#</th><th>稿件版写法</th><th>本机核实结果</th><th>出处</th></tr>
+<tr><td>C1</td><td>FrameSamp 512、2048 的 seed 7 出自 <code>legacy/CoRL2026-workshop/result.md</code></td><td>任何分支的工作树和历史里都没有这个路径。211/692 与 312/692 实际出自 <code>binfilldemo-nomotion50k-gl/result.md</code></td><td><code>bbfdf9e:docs/training-doc/binfilldemo-nomotion50k-gl/result.md:20,22</code></td></tr>
+<tr><td>C2</td><td>FrameSamp ctx 两行「GL 训练，需传到 AWS」</td><td>属实，而且比想象的麻烦：ckpt 只在 GL turbo 上（<code>/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_{60k,80k}/…-ctx-b128-50k-gl/50000</code>），HF 上没有副本，AWS 又不能 SSH 到 GL，只能请 GL 侧会话上传 HF 后再下载</td><td><code>d6ece8b:docs/training-doc/v2-1600ep-m{8x8,16x8x8}-ctx-b128-50k-gl/result.md</code></td></tr>
+<tr><td>C3</td><td>「评估代码不改，每次只覆盖 RUN_NAME、POLICY」，统一用 AWS 的 <code>local_692_pool.sh</code></td><td>v18 的 <code>local_692_pool.sh</code> 把 <code>POLICY_CONFIG=mme_vla_suite_b128_80k</code>、<code>MMEVLA_MOTION_OVERFLOW=resample</code>、<code>EXPECT_MOTION_STATS=1</code> 写死了，外部覆盖无效。fs512（config <code>mme_vla_suite</code>）和所有无 motion 的行在 v18 上都跑不了。v18 也删掉了 context 的 <code>check_checkpoint</code> 登记、<code>assert_integration</code> 和 <code>perceptual-framesamp-ctx-8frame-8x8-motion-v7ep72.yaml</code>，mm-ctx 同样跑不了。因此改为：<b>第一批 4 行用 v18；mm-ctx 用 8181918 检出；FrameSamp 6 行用 d6ece8b 检出</b>。d6ece8b 上这三项都可以覆盖，6 行全部有登记</td><td><code>bbfdf9e:scripts/evaluation/local_692_pool.sh</code>；<code>d6ece8b:scripts/evaluation/local_692_pool.sh:16-19</code>；<code>d6ece8b:scripts/evaluation/check_checkpoint.py</code></td></tr>
+<tr><td>C4</td><td>Wan-1 每次 ~1.3 h</td><td>seed 7 用旧版脚本跑的（10 片、每卡 2 片、显存占比 0.45），用了 3 h 07 m。本计划改为 32 片、每卡 4 片、0.2（分片数不必与历史一致，见用户 11-13 裁定）。结构相近的 Wan-9 这样跑实测 73 min，所以 Wan-1 仍估 ~1.3 h</td><td><code>v1-store/logs/w768-eval.log</code>；<code>v1-store/logs/r9-eval32.log</code></td></tr>
+<tr><td>C5</td><td>v4.2-plswap-full 头 d6ece8b；评估代码 4ba8b49</td><td>本机原本的 <code>origin/v4.2-plswap-full</code> 落后（指向 da29add），已 fetch 到 d6ece8b。4ba8b49 是 d6ece8b 的祖先，两者之间 <code>examples/ scripts/evaluation/ src/</code> 无差异</td><td><code>git diff --stat 4ba8b49 d6ece8b -- examples scripts/evaluation src</code> 输出为空</td></tr>
+<tr><td>C6</td><td>（未提）</td><td>本机 HF 令牌有陷阱，见第一部分 §4 第 1 条</td><td><code>whoami-v2</code> 实测</td></tr>
+<tr><td>C7</td><td>（未提）</td><td><code>check_checkpoint.py</code> 用 <b>ckpt 父目录名</b> 查登记表，并读父目录里的 <code>history_config.resolved.yaml</code> 比对 sha256。所以下载落点必须是 <code>…/&lt;登记键&gt;/50000</code>，根目录的来源文件也要一起下（<code>download.sh</code> 默认会下）</td><td><code>scripts/evaluation/check_checkpoint.py:287-298</code></td></tr>
+</table>
+
+<h2>一 红线</h2>
+<ul>
+<li><b>R1</b> 不动 seed 7 的任何结果目录和留档。新 RUN_NAME 一律为 <code>t1s-&lt;行键&gt;-s&lt;seed&gt;</code>，重跑时加 <code>-r2</code>。</li>
+<li><b>R2</b> 不改评估语义：配置、采样参数、局号、判定都不动。每行的环境变量照抄该行 seed 7 的留档（表二），只有分片数、每卡片数、显存占比可以调。代码改动只允许 §二′ 的同卡双 seed 三个可选变量，三个都不设时必须与原脚本行为逐字一致（G1d）。</li>
+<li><b>R3</b> 评估约 28–32 h 占用 GPU，属于需要开工令的长时 GPU 任务（第 31 条）。下载和 HF 读回属于第 31 条中可以自行执行的操作，但同样等开工令后才做（计划未获开工令时不借第 31 条执行计划步骤）。</li>
+<li><b>R4</b> 本轮 tmux 名一律以 <code>t1s-</code> 开头，只用 <code>tmux kill-session -t '=确切名'</code> 清理。主检出、两个检出和 NativeMEM 仓库在评估期间必须保持工作区干净：<code>run_shard.sh</code> 要求 <code>git status --porcelain</code> 为空，所以链脚本和临时文件都放在 <code>v1-store/jobs/t1s-1120/</code>（该目录被 gitignore）。<b>评估期间不往主检出提交、不切分支。</b></li>
+<li><b>R5</b> 结果只认 <code>EVAL692=PASS</code>。正常跑完但失败的局如实计 0；只有基础设施 error 才重试（脚本自带 retry1）。</li>
+<li><b>R6</b> 删除下载的 ckpt、软链或检出前，先列清单交用户确认。不删 HF 桶（见禁删清单记忆）。</li>
+</ul>
+
+<h2>二 逐行运行参数（照抄 seed 7 留档）</h2>
+<p>记号：<code>MAIN=/scratch/hongze/robomme_policy_learning_MotionJEPA</code>；<code>DL=$MAIN/v1-store/models/t1s-1120</code>；<code>W17=/scratch/hongze/worktrees/t1s-ev-8181918</code>；<code>W42=/scratch/hongze/worktrees/t1s-ev-d6ece8b</code>；<code>TR=$MAIN/v1-store/train-runs/mme_vla_suite_b128_80k</code>。</p>
+<table>
+<tr><th>行键</th><th>入口（cwd）</th><th>ckpt 绝对路径</th><th>POLICY</th><th>POLICY_CONFIG</th><th>其余环境变量</th><th>分片</th></tr>
+<tr><td><code>mm-mod</code></td><td><code>$MAIN</code> <code>scripts/evaluation/local_692_pool.sh</code></td><td><code>$DL/robomme-vla-modul-motion-80k-v1/50000</code></td><td><code>perceptual-framesamp-modul-8frame-8x8-motion</code></td><td>脚本写死为 <code>mme_vla_suite_b128_80k</code>（与留档一致）</td><td>脚本自带 resample / EXPECT_MOTION_STATS=1 / EXPECT_DEMO_INJECT=1；EXPECT_MOTION_STRIDE、EXPECT_MOTION_BUDGET 取默认 16 / 160</td><td>32 / 4 / 0.2；如果容量不够，降为 24 / 3（与 mm-ctx 同法）</td></tr>
+<tr><td><code>e2e</code></td><td><code>$MAIN</code> <code>scripts/evaluation/local_692_pool_e2e.sh</code></td><td><code>$TR/v2-1600ep-m8x8-modul-e2eenc-s16-b128-50k/50000</code></td><td>默认 <code>…-e2eenc</code></td><td>同上</td><td>脚本默认（CHUNK_EPISODES=5、STRIDE 16、BUDGET 160、身份闸门）</td><td>32 / 4 / 0.2</td></tr>
+<tr><td><code>wan1</code></td><td><code>$MAIN</code> <code>local_692_pool.sh</code></td><td><code>$DL/v2-1600ep-m8x8-modul-wantp768-b128-50k/50000</code></td><td><code>perceptual-framesamp-modul-8frame-8x8-wantp768</code></td><td>同上</td><td>脚本默认</td><td>32 / 4 / 0.2（seed 7 为 10 / 2 / 0.45）</td></tr>
+<tr><td><code>mm-ctx</code></td><td><code>$W17</code> <code>local_692_pool.sh</code></td><td><code>$TR/v2-1600ep-m8x8-ctx-motion-b128-50k/50000</code></td><td>该检出默认 <code>perceptual-framesamp-ctx-8frame-8x8-motion-v7ep72</code></td><td>同上</td><td>同 seed 7；<code>PYTHONPATH=$W17/src:$W17</code>（见 G1b）</td><td><b>24 / 3 / 0.2</b>（留档：每卡 4 片压测 FAIL）</td></tr>
+<tr><td><code>wan9</code></td><td><code>$MAIN</code> <code>local_692_pool.sh</code></td><td><code>$DL/v2-1600ep-m8x8-modul-wanraw9s32-b128-50k/50000</code></td><td><code>perceptual-framesamp-modul-8frame-8x8-wanraw9s32</code></td><td>同上</td><td><b><code>EXPECT_MOTION_STRIDE=32 EXPECT_MOTION_BUDGET=80</code></b></td><td>32 / 4 / 0.2</td></tr>
+<tr><td><code>native</code></td><td><code>/scratch/hongze/NativeMEM</code> <code>scripts/robomme/local_692_pool_nativemem.sh</code></td><td><code>/scratch/hongze/NativeMEM/checkpoints/nativemem_pi05_robomme4task/nativemem-4task1600-b128-20k/19999</code></td><td>脚本内置</td><td>脚本内置</td><td><code>EVAL_PER_GPU=4</code>；直接调用，不经 <code>nm_pipeline.sh</code>（那里 seed 写死为 7）；结果落在 <code>NativeMEM/runs/eval/$RUN_NAME</code></td><td>32 / 4 / 0.2</td></tr>
+<tr><td><code>fs512</code></td><td rowspan="6"><code>$W42</code> <code>local_692_pool.sh</code>，并设 <code>PYTHONPATH=$W42/src:$W42</code></td><td><code>$DL/robomme-vla-modul-60k-v1/50000</code></td><td><code>perceptual-framesamp-modul-8frame-8x8</code></td><td><b><code>mme_vla_suite</code></b></td><td rowspan="4"><code>EXPECT_MOTION_STATS=0 MMEVLA_MOTION_OVERFLOW=</code>（空串，与 GL ctx 两行一致）</td><td rowspan="6">32 / 4 / 0.2；4096 若 OOM，降为 24 / 3。设了 <code>EVAL_NGPU=8</code> 时，片数必须等于 8 × 每卡片数</td></tr>
+<tr><td><code>fs1024</code></td><td><code>$DL/robomme-vla-modul-1024-80k-v1/50000</code></td><td><code>perceptual-framesamp-modul-16frame-8x8</code></td><td><code>mme_vla_suite_b128_80k</code></td></tr>
+<tr><td><code>fs2048</code></td><td><code>$DL/robomme-vla-modul-2048-80k-v1/50000</code></td><td><code>perceptual-framesamp-modul-32frame-8x8</code></td><td><code>mme_vla_suite_b128_80k</code></td></tr>
+<tr><td><code>fs4096</code></td><td><code>$DL/robomme-vla-modul-4096-80k-v1/50000</code></td><td><code>perceptual-framesamp-modul-64frame-8x8</code></td><td><code>mme_vla_suite_b128_80k</code></td></tr>
+<tr><td><code>fs512c</code></td><td><code>$DL/v2-1600ep-m8x8-ctx-b128-50k-gl/50000</code></td><td><code>perceptual-framesamp-context-8frame-8x8</code></td><td><b><code>mme_vla_suite_b128_60k</code></b></td><td rowspan="2"><code>EXPECT_MOTION_STATS=0 MMEVLA_MOTION_OVERFLOW= DEMO_PREFIX_ORIGINAL=1</code>（照抄 GL 链前缀）</td></tr>
+<tr><td><code>fs1024c</code></td><td><code>$DL/v2-1600ep-m16x8x8-ctx-b128-50k-gl/50000</code></td><td><code>perceptual-framesamp-context-16frame-8x8</code></td><td><code>mme_vla_suite_b128_80k</code></td></tr>
+</table>
+<p class="muted">所有行共用：同一个前缀库 <code>v1-store/demo-prefix/binfill-3b4de03a0b46</code>（E0.txt 首行为 <code>DEMO_PREFIX_SRC=PASS</code>，index sha256 与 GL 原始库相同，都是 <code>3ef6b165…3f27</code>，S0 复算）；同一份候选库；同一份预标清单 <code>docs/training-doc/finalckpt-nomotion59999-gl/records/preseeded-errors.json</code>。模型侧资产：v7 ep72 encoder 在 <code>v1-store/external/motionjepa/wan-full1600-filter2-b176x4-72ep-a/</code>，Wan VAE 在 <code>v1-store/cache/hf/hub/models--Wan-AI--Wan2.1-T2V-1.3B-Diffusers</code>，sidecar venv 在 <code>v1-store/venvs/wan</code>，都已在本机。</p>
+
+<p class="muted">表中「分片」一列是单跑的口径。配对的行（mm-mod、e2e、wan1、wan9、6 行 FrameSamp）改为两次各 <b>16 / 2 / 0.2</b>，共用一个占位目录，<code>EVAL_GPU_CAP=4</code>，seed 42 那次 <code>EVAL_SHARD_BASE=16</code>（§二′）。mm-ctx（24 / 3）和 native（32 / 4）单跑，不配对。</p>
+
+<h2>二′ 同卡双 seed（静态配对）改动与子代理分配</h2>
+<p><b>为什么非改不可</b>（只读核实）：<code>run_shard.sh::check_local_gpu</code> 在 <code>LOCAL_GPU_SHARE≥2</code> 时，要求卡上每个计算进程都是本卡占位文件 <code>LOCAL_GPU_SLOT_FILE</code> 里登记过的 <code>run_shard.sh</code> PID 的子孙，否则打印「不属于已登记分片的进程树，停止起跑」。而占位目录是 <code>SLOT_DIR="$EVAL_ROOT/gpu-slots"</code>，每次评估各自一份，所以另一次评估的进程必然被拒绝。端口是 <code>PORT=18011+(SHARD_INDEX%100)*7</code>，起跑时探测占用后顺延；两次评估同时起跑时，server 还没 bind，探测就可能放过，最后由「监听者不在本次 server 进程树」的检查判失败。改动只在评估池脚本里做，<code>run_shard.sh</code> 一行不动。</p>
+<table>
+<tr><th>文件（锚点）</th><th>改什么</th><th>不设变量时</th><th>配对时</th></tr>
+<tr><td><code>local_692_pool.sh</code> 的 <code>SLOT_DIR=</code> 赋值</td><td>改为 <code>SLOT_DIR="${EVAL_SLOT_DIR:-$EVAL_ROOT/gpu-slots}"</code></td><td>与原来相同</td><td>两次评估指向同一个目录 <code>v1-store/jobs/t1s-1120/slots-&lt;键&gt;/</code>（每对新建）</td></tr>
+<tr><td><code>slot_reserve()</code> 的上限比较；传给 <code>run_shard.sh</code> 的 <code>LOCAL_GPU_SHARE</code></td><td>上限改为 <code>CAP="${EVAL_GPU_CAP:-$PER_GPU}"</code>，<code>LOCAL_GPU_SHARE=$CAP</code></td><td>CAP=PER_GPU，与原来相同</td><td>CAP=4，每次评估 PER_GPU=2</td></tr>
+<tr><td>起片时的 <code>SHARD_INDEX="$idx"</code>；<code>SHARD_MAP</code> 打印行</td><td>改为 <code>SHARD_INDEX=$(( ${EVAL_SHARD_BASE:-0} + idx ))</code>（只影响端口编号；GPU 仍是 <code>idx%8</code>，片标识不变）</td><td>BASE=0，与原来相同</td><td>seed 0 那次 BASE=0（端口 18011–18116），seed 42 那次 BASE=16（端口 18123–18228），两段不重叠</td></tr>
+</table>
+<p>每对的链写法（静态，两次同时起、一起等）：</p>
+<pre>pair(){ k=$1; D=v1-store/jobs/t1s-1120/slots-$k; mkdir -p $D
+  EVAL_SLOT_DIR=$D EVAL_GPU_CAP=4 EVAL_SHARDS=16 EVAL_PER_GPU=2 EVAL_SHARD_BASE=0  run $k 0  &amp;
+  EVAL_SLOT_DIR=$D EVAL_GPU_CAP=4 EVAL_SHARDS=16 EVAL_PER_GPU=2 EVAL_SHARD_BASE=16 run $k 42 &amp;
+  wait; }</pre>
+<p>每卡：seed 0 的 2 片加 seed 42 的 2 片，共 4 片，与单跑每卡 4 片的显存相同。fs4096 如果 OOM，就退回单跑 24 / 3（工程修复，不问用户）。</p>
+<h3>子代理分配表</h3>
+<table>
+<tr><th>编号</th><th>目标</th><th>可写文件</th><th>禁触</th><th>基线 / 分支</th><th>验收（在 worktree 内，CPU，&lt;5 min）</th><th>合并</th></tr>
+<tr><td>S1-A</td><td>v18 两个评估池脚本加三个可选变量</td><td><code>scripts/evaluation/local_692_pool.sh</code>、<code>scripts/evaluation/local_692_pool_e2e.sh</code></td><td>其余全部，尤其 <code>run_shard.sh</code>、<code>check_*.py</code>、<code>src/</code></td><td>bbfdf9e，worktree 分支 <code>worktree-agent-*</code></td><td>不设变量时，用 <code>DRY_RUN=1</code> 跑新旧两版，对 <code>SHARD_MAP</code>/<code>EVAL_ENV</code>/<code>PLAN_OK</code> 行做 diff，结果为空；设变量后 seed 42 的 <code>port_base</code> 从 18123 起；<code>bash -n</code> 通过</td><td>sonnet 审查 PASS → 主会话 <code>--no-ff</code> 合入 v18 → 推送（必须在 S1 前）</td></tr>
+<tr><td>S1-B</td><td>d6ece8b 评估池脚本加同样的三个变量</td><td><code>scripts/evaluation/local_692_pool.sh</code></td><td>同上</td><td>d6ece8b；合入新分支 <code>t1s-1120-evalstack-v42</code>（首次 <code>git push -u</code>，开工令即授权）</td><td>同上；另核 <code>EVAL_NGPU</code> 原逻辑不变</td><td>审查 PASS → 合入该分支 → 推送；<code>$W42</code> 检出该分支头</td></tr>
+</table>
+<p>两个子代理写集合不相交，同时派出。commit subject 前缀 <code>sub/S1-A: </code>、<code>sub/S1-B: </code>，不 push、不合主分支；合并前后的审查与 <code>PRE_MERGE_REVIEW</code>/<code>POST_MERGE_REVIEW</code> 判定行按 <code>CLAUDE.md</code>「计划执行模式」执行。</p>
+
+<h2>三 S0 runbook</h2>
+<h3>S0-a 下载（CPU / 网络，不占 GPU）</h3>
+<pre>HH=/scratch/hongze/.cache/t1s-hfhome            # 只放一个令牌软链，不进 $HOME
+mkdir -p $HH/.cache/huggingface
+ln -s /scratch/hongze/.cache/huggingface-hongzefu/token $HH/.cache/huggingface/token
+cd $MAIN
+dl(){ env -u HF_TOKEN HOME=$HH bash scripts/evaluation/download.sh "HongzeFu/$1" 50000 "$DL/$2"; }
+dl robomme-vla-modul-motion-80k-v1           robomme-vla-modul-motion-80k-v1
+dl robomme-vla-4task-modul-wantp768-50k-v1   v2-1600ep-m8x8-modul-wantp768-b128-50k
+dl robomme-4task-modul-wanraw9-s32-50k-v1    v2-1600ep-m8x8-modul-wanraw9s32-b128-50k
+# 第一批起跑后再下（第二批）：
+dl robomme-vla-modul-1024-80k-v1  robomme-vla-modul-1024-80k-v1
+dl robomme-vla-modul-4096-80k-v1  robomme-vla-modul-4096-80k-v1
+dl robomme-vla-modul-60k-v1       robomme-vla-modul-60k-v1
+dl robomme-vla-modul-2048-80k-v1  robomme-vla-modul-2048-80k-v1</pre>
+<p>整串命令写进 <code>v1-store/jobs/t1s-1120/dl-batch1.sh</code> 和 <code>dl-batch2.sh</code>，放进 tmux <code>t1s-dl1</code> / <code>t1s-dl2</code>，日志 <code>v1-store/logs/t1s-dl{1,2}.log</code>，结束写 <code>EXIT_CODE=</code>。<code>download.sh</code> 自带 sha256 或 size 校验。三份文件互不依赖，可以并发下载（每个桶各起一个进程），但要先看网速，确认带宽已经跑满再决定是否并发。磁盘：<code>/scratch</code> 现有 350 GB 空闲，9 份共约 104 GB，下完后约剩 245 GB。</p>
+<p><b>盲区</b>：这两个私有桶（60k、2048）根目录是否有 <code>SHA256SUMS.pre.txt</code> 还没看。没有的话，<code>download.sh</code> 会退回逐文件比对大小（<code>mode=size</code>），汇报时要如实写明。</p>
+
+<h3>S0-b 两个检出</h3>
+<pre>cd $MAIN
+git worktree add --detach $W17 8181918
+git worktree add --detach $W42 &lt;t1s-1120-evalstack-v42 头&gt;   # S0-e 合入后；在此之前可先用 d6ece8b 做 G1b
+for W in $W17 $W42; do
+  git -C $W submodule update --init third_party/robomme_benchmark   # 应为 b4e97f22
+  ln -s $MAIN/v1-store $W/v1-store
+  git -C $W status --porcelain     # 必须为空；如果软链显示为未跟踪，就在 $(git rev-parse --git-common-dir)/info/exclude 加一行 /v1-store
+done
+# import 来源核对（G1b）：
+PYTHONPATH=$W/src:$W $MAIN/v1-store/envs/policy-eval-server/bin/python -I -c 'import mme_vla_suite,sys;print(mme_vla_suite.__file__)'
+#   注意 -I 会忽略 PYTHONPATH，实际核对时去掉 -I；输出路径必须以 $W/src 开头</pre>
+<p><b>为什么要核 import 来源</b>：本机评估 venv 是可编辑安装，指向主检出的 <code>src</code>。如果不加 <code>PYTHONPATH</code>，检出里跑的会是 v18 的模型代码，表面上一切正常，但数字已经不可比。GL 跑 ctx 两行时也是靠加 <code>PYTHONPATH=$W</code> 解决的（<code>gl692-ctx512-50k/result.md</code> ②）。如果加了 <code>PYTHONPATH</code> 仍然 import 到主检出（例如 <code>.pth</code> 排在前面），就改用 <code>$W/scripts/evaluation/setup.sh</code> 给该检出建独立的 server / client 环境（CPU，约 1.5 h，参照 GL 11-17 的先例）。这一步是工程修复，不需要问用户。</p>
+<p>G1c：<code>cd $W42 &amp;&amp; RUN_NAME=t1s-g6b-d6ece8b POLICY=perceptual-framesamp-modul-16frame-8x8 EXPECT_MOTION_STATS=0 MMEVLA_MOTION_OVERFLOW= PYTHONPATH=$W42/src:$W42 bash scripts/evaluation/local_692_pool.sh --g6b $DL/robomme-vla-modul-1024-80k-v1/50000 0</code>。只跑 1 局加同卡双片握手，约 5 min。要等 fs1024 下载完才能跑，可以安排在第一批起跑前，或放到第一批和第二批之间。</p>
+
+<h3>S0-c 请 GL 侧上传 ctx 两份 ckpt（跨会话请求原文草稿）</h3>
+<pre>仅答复本请求；答复后保持你收信前的状态（执行中继续执行、等待中继续等待、停工与空闲保持不动），不因本消息推进或停止任何任务。
+req=aws-t1s-&lt;美东 MMDDHHMM&gt;-1
+请把 GL turbo 上下面两个 run 的 50000 ckpt 上传到 HF 公开桶 HongzeFu/robomme-vla-4task-ctx-framesamp-50k-gl-v1（第 31 条，自行执行）：
+  &lt;GL_REPO&gt;/v1-store/train-runs/mme_vla_suite_b128_60k/v2-1600ep-m8x8-ctx-b128-50k-gl/{50000/, history_config.resolved.yaml, history_config.resolved.sha256, history_config.txt, motion_provenance.json}
+  &lt;GL_REPO&gt;/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m16x8x8-ctx-b128-50k-gl/{同上}
+桶内路径保持 &lt;run 名&gt;/…，根目录附 SHA256SUMS.pre.txt；读回校验后回传：桶名、两个 50000 的文件数、字节数、SHA256SUMS 的 sha256。期限：美东 &lt;第一批起跑 + 20 h&gt;。</pre>
+<p>AWS 收到回传后，对每个 run 下载 <code>&lt;run&gt;/50000</code> 加根文件，落到 <code>$DL/&lt;run 名&gt;/</code>。桶内多了一层 run 目录，<code>download.sh</code> 的 step 参数要相应调整，下载前先 dry 列一遍桶的目录树核对。注意：这两份 ckpt 的 LR 调度不同（60k 与 80k），这是训练时的既成事实，评估不受影响，只在汇总表的脚注里注明。</p>
+
+<h3>S0-d DRY_RUN（每行一次，CPU，几秒）</h3>
+<pre>cd &lt;入口 cwd&gt; &amp;&amp; DRY_RUN=1 RUN_NAME=t1s-&lt;键&gt;-s0 POLICY=… [其余环境变量] bash scripts/evaluation/local_692_pool.sh &lt;ckpt&gt; 0
+# 判据：PLAN_OK shards=&lt;N&gt; total=692 … 且没有「拒绝」「找不到」「未登记的 run 根目录」；check_checkpoint 在 DRY 下是否执行，S0 读脚本确认；不执行的话，就单独跑
+&lt;server python&gt; scripts/evaluation/check_checkpoint.py &lt;ckpt&gt;   # 在对应检出里、带对应 PYTHONPATH</pre>
+<p>12 行都过以后，写一行 <code>CKPT_READY=PASS rows=12 missing=0</code>。如果 ctx 两行还没拿到，先写 <code>CKPT_READY=PARTIAL rows=10 missing=fs512c,fs1024c</code>，拿到后补齐。</p>
+
+<h2>四 链脚本与 Monitor</h2>
+<pre># v1-store/jobs/t1s-1120/t1s-batch1.sh（静态顺序：上一单元全部结束才起下一单元；某次 EVAL692≠PASS 时记一行 T1S_ITEM_FAIL 后继续，主会话修复后，在本链结束后另起 t1s-fix&lt;n&gt; 补跑）
+pair mm-mod            # seed 0、42 同时，各 16 片、每卡 2 片（§二′）
+pair e2e
+pair wan1
+run  mm-ctx 0 ; run mm-ctx 42      # 单跑 24 / 3（检出 $W17）
+pair wan9
+run  native 0 ; run native 42      # 单跑，NativeMEM 仓库脚本
+# run &lt;键&gt; &lt;seed&gt;：按表二进入 cwd、设好环境变量，执行
+#   bash &lt;入口&gt; &lt;ckpt&gt; &lt;seed&gt; 2&gt;&amp;1 | tee v1-store/logs/t1s-&lt;键&gt;-s&lt;seed&gt;.log &gt;/dev/null
+# 结束后从 EVAL692.txt 抄一行 T1S_ITEM key=&lt;键&gt; seed=&lt;seed&gt; &lt;EVAL692 行&gt; 到链日志（配对时两行各写各的）
+
+tmux new-session -d -s t1s-batch1 \
+  "cd $MAIN &amp;&amp; set -o pipefail; PYTHONUNBUFFERED=1 bash v1-store/jobs/t1s-1120/t1s-batch1.sh 2&gt;&amp;1 | tee v1-store/logs/t1s-batch1.log; echo \"EXIT_CODE=\$?\" &gt;&gt; v1-store/logs/t1s-batch1.log"</pre>
+<p>Monitor 只挂链日志（每份日志一个 Monitor）：</p>
+<pre>tail -n +1 -F $MAIN/v1-store/logs/t1s-batch1.log | stdbuf -oL tr '\r' '\n' \
+  | grep --line-buffered -E "T1S_ITEM|EVAL692=|LOCAL692_START|LOCAL692_DONE|拒绝|失败|FAIL|错误|找不到|未登记|Traceback|out of memory|RESOURCE_EXHAUSTED|SLOT_REFUSED|EXIT_CODE="</pre>
+<p>这个 Monitor 由盯盘子代理（opus）持有，全程在线，主会话不再另挂一份（每份日志只挂一个 Monitor）。预计约 10 min 内出现第一个事件 <code>LOCAL692_START</code>。不另设心跳或定时巡检；某一项明显超时（超过预计时长的 2 倍还没出 <code>EVAL692=</code>）时，盯盘子代理去看一次该项日志尾部，把看到的内容报给主会话。第二批同法起 <code>t1s-batch2</code>（cwd 为 <code>$W42</code>），顺序：<code>pair fs1024 → pair fs4096 → pair fs512 → pair fs2048 → pair fs512c → pair fs1024c</code>。</p>
+
+<h2>五 风险登记</h2>
+<table>
+<tr><th>风险</th><th>后果</th><th>处置</th></tr>
+<tr><td>检出里 import 到主检出的 <code>src</code></td><td>数字悄悄失真</td><td>G1b 硬闸门；不过就建独立环境</td></tr>
+<tr><td>GL 侧会话没回复，或上传失败</td><td>ctx 两行跑不了</td><td>同一 req 重发一次；仍无回复就报告用户，这两行挂起，其余 22 次照常跑</td></tr>
+<tr><td>mm-mod 或 FrameSamp 4096 每卡 4 片显存不够</td><td>OOM 或 <code>EVAL692=FAIL reason=infra</code></td><td>降为 24 / 3，用 <code>-r2</code> 名重跑（工程修复，不问用户）</td></tr>
+<tr><td>同卡并发启动时登记竞争（Wan-9 留档里 s5 误判退出）</td><td>单片退出</td><td>v18 已含 F4 修复（2ad7c46）；d6ece8b 与 8181918 没有这个修复，出现时只补跑该片，参照 r9 的先例</td></tr>
+<tr><td>主检出在评估期间被改动（commit 或切分支）</td><td><code>必须从 clean HEAD 启动</code>，后续各项全部拒绝</td><td>R4：评估期间不动主检出；第一批结果的留档提交放在两批之间（S2）</td></tr>
+<tr><td>同卡双 seed：两次评估的守卫或端口互相干扰</td><td>起跑几十秒内某片退出（「不属于已登记分片的进程树」「监听者不在本次 server 进程树」）</td><td>G1d 先验；真出现时把该对改为两次单跑（32 / 4），用 <code>-r2</code> 名重跑，不再调试配对（简单优先）</td></tr>
+<tr><td>环境变量 <code>HF_TOKEN</code> 覆盖了 HongzeFu 令牌</td><td>私有桶报 not found</td><td>下载一律加 <code>env -u HF_TOKEN</code></td></tr>
+<tr><td>seed 7 与新 seed 的评估栈不同（GL 9 月栈、A40、10 片）</td><td>标准差里混进栈与硬件的差异</td><td>K2：不处理，只在盲区里写明</td></tr>
+</table>
+
+<h2>六 盲区诚实清单</h2>
+<ul>
+<li>mm-mod 与 FrameSamp 6 行在 AWS 上没有评估耗时实测，耗时是估计值，第二批可能偏差 ±30%。</li>
+<li>mm-mod、FrameSamp 4 行 modulation 和 ctx 2 行的 seed 7 是在 GL 上跑的，用的评估栈也不一样；mm-mod 的 seed 7 还是两次评估拼起来的（550 + 142）。按 K2 直接合并，标准差里会混进这部分差异。</li>
+<li>d6ece8b 和 8181918 两个检出在 AWS 上以 worktree 方式跑评估，这是第一次（8181918 以前在主检出上跑过）。</li>
+<li>robomme 包内部的 <code>make_env_for_spec</code> 是否还读了别的全局随机源，没有深追。但 seed 7 的 692 局在不同硬件上身份一致（<code>KEYSET_MISMATCH_GROUPS=0</code>），这个风险很低。</li>
+<li>两个私有桶的 50000 目录总字节数和有没有 SHA256SUMS 还没列出来；下载阶段补上。</li>
+</ul>
+
+<h2>七 留档与 commit 纪律</h2>
+<ul>
+<li>本仓库：留档放在 <code>docs/evaluation-doc/t1s-3seed-1120/</code>。<code>launch.md</code> 在第一批起跑后写；<code>result.md</code> 和 <code>records/</code> 在每批结束后写。<code>records/</code> 里每次评估只放 <code>EVAL692.txt</code>、<code>merged/progress.json</code>、<code>merged/log.json</code>，外加汇总 <code>table1_3seed.json</code>。commit subject 沿用 <code>commitV18.x: …</code> 体例，逐路径 <code>git add</code>，提交后立即推送。<b>提交只在两批之间和全部结束后做</b>，评估进行时不做（R4）。</li>
+<li>NativeMEM 的两次结果留在 NativeMEM 仓库自己的 <code>runs/eval/</code>（gitignore）。判定行和计数抄进本仓库的汇总。</li>
+<li>状态机：开工时在 <code>docs/handoff/current.json</code> 登记任务 <code>t1s-3seed-1120</code>，每批结束更新，全部完成后置 <code>done</code>。</li>
+<li>稿件仓库：AWS 不碰。S4 的汇总 JSON 推送后，告诉用户 commit sha，由 MacBook 侧的稿件会话按稿件版 S5 处理。</li>
+</ul>
+
+<h2>八 本机核实记录（2026-11-20 美东，只读）</h2>
+<ul>
+<li>稿件版计划：<code>gh api repos/hongzefu/motionjepa-paper-CoRLWorkshop/contents/1120-table1-3seed-eval-plan.html</code>（18,286 字节，commit 51d93617）；Table I tex 同样经 <code>gh api</code> 读取，12 行的数字与 §3 一致。</li>
+<li>5 个只读探索子代理（haiku）分别负责 G0、Wan 两行、MotionMEM 两行、FrameSamp 6 行、NativeMEM。主会话补核了：v4.2 分支 fetch 到 d6ece8b、<code>gl692-ctx{512,1024}-50k</code> 留档、两个私有桶用 HongzeFu 令牌 HTTP 200、<code>HF_TOKEN</code> 是 yinpei-tri 的、<code>check_checkpoint</code> 的登记键、<code>download.sh</code> 的令牌路径。</li>
+<li>核实时 8 卡全空闲（0 MiB），没有 <code>t1s-</code> 开头的 tmux，<code>/scratch</code> 空闲 350 GB；主检出工作区干净，HEAD 为 bbfdf9e。</li>
+</ul>
+
+</body>
+</html>
