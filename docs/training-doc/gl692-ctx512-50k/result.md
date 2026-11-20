@@ -101,8 +101,8 @@ g6b 关连续三次失败，都是工程故障，各自修复后重起。失败�
 
 - 在相同训练库、相同 50k 步数下，context 融合（budget 512）比 modulation 融合低 7.66 pp。主要差在 RouteStick（easy 档差 50 pp）和 BinFill medium/hard。context 只在 VideoUnmaskSwap 略好。
 - 占位 65943150 已 scancel。ctx1024 训练预计 11-20 约 06:00 美东结束，其评估链 `g4c-ev1024-chain` 已换上新脚本，在第 1 关等待；对照为 291/692 = 42.05%。
-- 两条评估都完成后按计划 E6 迁移评估产物、移除评估副本 worktree。
+- 两条评估都已完成；E6 已于 11-20 执行：评估产物迁到 `<GL_REPO>/v1-store/evaluation/gl692-ctx512-*`，评估副本 worktree 已移除。
 
 ## ⑫ 归档文件清单（`records/`）
 
-`EVAL692.txt`、`preseeded-errors.json`、`retries.json`、`merged-{log,errors,progress,shards,retry_plan}.json`、`g4c-ev512-chain.summary.log`（第四次、成功的链日志，tqdm 已清洗），以及三次失败的链日志清洗版。逐片原始输出（client/server log、视频）在 `<GL_REPO>/v1-store/eval-wt/97f237ac/v1-store/evaluation/gl692-ctx512-50k/`，E6 时迁到 `<GL_REPO>/v1-store/evaluation/`。
+`EVAL692.txt`、`preseeded-errors.json`、`retries.json`、`merged-{log,errors,progress,shards,retry_plan}.json`、`g4c-ev512-chain.summary.log`（第四次、成功的链日志，tqdm 已清洗），以及三次失败的链日志清洗版。逐片原始输出（client/server log、视频）已于 E6 迁到 `<GL_REPO>/v1-store/evaluation/gl692-ctx512-50k/`。

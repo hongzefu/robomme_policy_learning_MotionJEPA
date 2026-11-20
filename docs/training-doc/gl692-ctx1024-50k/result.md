@@ -95,8 +95,8 @@ MERGE_OK shards=8 episodes=692 successes=160 errors=9
 ## ⑪ 结论与下一步
 
 - 在相同训练库、相同 50k 步数下，context 融合 budget 1024 比 modulation 融合低 18.93 pp，差距比 512 档（−7.66 pp）更大。原因是 modulation 从 512 涨到 1024 时获益明显（30.49% → 42.05%），而 context 几乎不变（22.83% → 23.12%）。差距最大的是 RouteStick medium/hard（各 −48 pp）和 BinFill medium（−44.9 pp）。
-- 占位 65943151 已 scancel；1116 计划的两条评估都已完成。下一步按计划 E6：把评估产物从评估副本迁到 `<GL_REPO>/v1-store/evaluation/`，再移除评估副本 worktree 与 E1/F1 子代理 worktree。
+- 占位 65943151 已 scancel；1116 计划的两条评估都已完成。E6 已于 11-20 执行：评估产物迁到 `<GL_REPO>/v1-store/evaluation/`，评估副本 worktree 与 E1/F1 子代理 worktree 已移除。
 
 ## ⑫ 归档文件清单（`records/`）
 
-`EVAL692.txt`、`preseeded-errors.json`、`retries.json`、`merged-{log,errors,progress,shards,retry_plan}.json`、`g4c-ev1024-chain.summary.log`（链日志，tqdm 已清洗）。逐片原始输出（client/server log、视频）在 `<GL_REPO>/v1-store/eval-wt/97f237ac/v1-store/evaluation/gl692-ctx1024-50k/`，E6 时迁到 `<GL_REPO>/v1-store/evaluation/`。
+`EVAL692.txt`、`preseeded-errors.json`、`retries.json`、`merged-{log,errors,progress,shards,retry_plan}.json`、`g4c-ev1024-chain.summary.log`（链日志，tqdm 已清洗）。逐片原始输出（client/server log、视频）已于 E6 迁到 `<GL_REPO>/v1-store/evaluation/gl692-ctx1024-50k/`。

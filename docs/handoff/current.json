@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-20T12:36:16Z",
-    "America/New_York": "2026-11-20T07:36:16-0500"
+    "utc": "2026-11-20T12:54:33Z",
+    "America/New_York": "2026-11-20T07:54:33-0500"
   },
   "repo": {
     "branch": "v4.2-plswap-full",
@@ -2456,9 +2456,9 @@
         "file": "1111-gl-4task400-ctx512-1024-b128-50k-plan.html",
         "sha": "d654df8"
       },
-      "state": "done",
-      "state_changed_at": "2026-11-20T07:36:16-0500",
-      "state_reason": "done 2026-11-20 美东：两条训练与 692 评估均完成。ctx512 158/692=22.83%（modulation 30.49%）；ctx1024 160/692=23.12%（modulation 42.05%）；两份占位均已按 1116 R3 scancel。",
+      "state": "closed",
+      "state_changed_at": "2026-11-20T07:54:33-0500",
+      "state_reason": "done 2026-11-20 美东：两条训练与 692 评估均完成。ctx512 158/692=22.83%（modulation 30.49%）；ctx1024 160/692=23.12%（modulation 42.05%）；两份占位均已按 1116 R3 scancel。 E6 完成（2026-11-20 美东）：8 个 gl692-* 目录迁到 <GL_REPO>/v1-store/evaluation/（2113097 KiB 前后一致），评估副本 eval-wt/97f237ac 已 worktree remove，本机 E1/F1 子代理 worktree 与分支已删；无长尾。",
       "owner": {
         "session": "Claude Code 会话（sled-aspen，本仓库主检出）",
         "host": "sled-aspen"
@@ -2516,13 +2516,7 @@
         "计划外旧事项：gl-abl-encoders-train 仍写 running，但占位 65209321/65209330 已于 2026-11-09 CANCELLED+，结果未核，交用户处理",
         "冒烟与诊断产物待用户决定是否删除：turbo v1-store/train-runs/*/g4c-smoke-512-11120516、g4c-smoke-1024-11120641（各含 EMA ckpt 与约 45 GiB resume/）、v1-store/diagnostics/g4c-v4；本机 /data v1-store/diagnostics/g4c-local（157G）与 g4c-v10-store"
       ],
-      "next_steps": [
-        {
-          "what": "1116 计划 E6：迁移评估产物并清理评估副本与子代理 worktree",
-          "command": "mv $W/v1-store/evaluation/gl692-* $G/v1-store/evaluation/；核对后 git -C $G worktree remove --force $W；本机清理 E1 worktree agent-a5422c6e11d0cdd35 与 F1 worktree agent-a6a55dfc768f43c67（分支 worktree-agent-a6a55dfc768f43c67）",
-          "verdict_line": "E6=PASS moved=<n> worktrees_removed=<n>"
-        }
-      ]
+      "next_steps": []
     },
     "steer-4task-1115": {
       "plan": {
