@@ -1,0 +1,186 @@
+{
+  "success_rate": {
+    "BinFill/easy": 0.8979591836734694,
+    "BinFill/hard": 0.3181818181818182,
+    "BinFill/medium": 0.7959183673469388,
+    "RouteStick/easy": 0.98,
+    "RouteStick/hard": 0.86,
+    "RouteStick/medium": 0.98,
+    "RouteStick/xhard": 0.46,
+    "VideoRepick/easy": 0.3,
+    "VideoRepick/medium": 0.16,
+    "VideoRepick/xhard": 0.32,
+    "VideoUnmaskSwap/easy": 0.32,
+    "VideoUnmaskSwap/hard": 0.06,
+    "VideoUnmaskSwap/medium": 0.28,
+    "VideoUnmaskSwap/xhard": 0.06
+  },
+  "macro_success_rate": 0.485147097800159,
+  "micro_success_rate": 0.48554913294797686,
+  "episodes": 692,
+  "successes": 336,
+  "errors": 9,
+  "by_task": {
+    "BinFill": {
+      "successes": 97,
+      "episodes": 142,
+      "success_rate": 0.6830985915492958
+    },
+    "RouteStick": {
+      "successes": 164,
+      "episodes": 200,
+      "success_rate": 0.82
+    },
+    "VideoRepick": {
+      "successes": 39,
+      "episodes": 150,
+      "success_rate": 0.26
+    },
+    "VideoUnmaskSwap": {
+      "successes": 36,
+      "episodes": 200,
+      "success_rate": 0.18
+    }
+  },
+  "by_difficulty": {
+    "easy": {
+      "successes": 124,
+      "episodes": 199,
+      "success_rate": 0.6231155778894473
+    },
+    "hard": {
+      "successes": 60,
+      "episodes": 144,
+      "success_rate": 0.4166666666666667
+    },
+    "medium": {
+      "successes": 110,
+      "episodes": 199,
+      "success_rate": 0.5527638190954773
+    },
+    "xhard": {
+      "successes": 42,
+      "episodes": 150,
+      "success_rate": 0.28
+    }
+  },
+  "groups": {
+    "BinFill/easy": {
+      "episodes": 49,
+      "evaluated": 49,
+      "successes": 44,
+      "errors": 0,
+      "success_rate": 0.8979591836734694
+    },
+    "BinFill/hard": {
+      "episodes": 44,
+      "evaluated": 44,
+      "successes": 14,
+      "errors": 0,
+      "success_rate": 0.3181818181818182
+    },
+    "BinFill/medium": {
+      "episodes": 49,
+      "evaluated": 49,
+      "successes": 39,
+      "errors": 0,
+      "success_rate": 0.7959183673469388
+    },
+    "RouteStick/easy": {
+      "episodes": 50,
+      "evaluated": 50,
+      "successes": 49,
+      "errors": 0,
+      "success_rate": 0.98
+    },
+    "RouteStick/hard": {
+      "episodes": 50,
+      "evaluated": 50,
+      "successes": 43,
+      "errors": 0,
+      "success_rate": 0.86
+    },
+    "RouteStick/medium": {
+      "episodes": 50,
+      "evaluated": 50,
+      "successes": 49,
+      "errors": 0,
+      "success_rate": 0.98
+    },
+    "RouteStick/xhard": {
+      "episodes": 50,
+      "evaluated": 50,
+      "successes": 23,
+      "errors": 0,
+      "success_rate": 0.46
+    },
+    "VideoRepick/easy": {
+      "episodes": 50,
+      "evaluated": 49,
+      "successes": 15,
+      "errors": 1,
+      "success_rate": 0.3
+    },
+    "VideoRepick/medium": {
+      "episodes": 50,
+      "evaluated": 47,
+      "successes": 8,
+      "errors": 3,
+      "success_rate": 0.16
+    },
+    "VideoRepick/xhard": {
+      "episodes": 50,
+      "evaluated": 47,
+      "successes": 16,
+      "errors": 3,
+      "success_rate": 0.32
+    },
+    "VideoUnmaskSwap/easy": {
+      "episodes": 50,
+      "evaluated": 50,
+      "successes": 16,
+      "errors": 0,
+      "success_rate": 0.32
+    },
+    "VideoUnmaskSwap/hard": {
+      "episodes": 50,
+      "evaluated": 50,
+      "successes": 3,
+      "errors": 0,
+      "success_rate": 0.06
+    },
+    "VideoUnmaskSwap/medium": {
+      "episodes": 50,
+      "evaluated": 50,
+      "successes": 14,
+      "errors": 0,
+      "success_rate": 0.28
+    },
+    "VideoUnmaskSwap/xhard": {
+      "episodes": 50,
+      "evaluated": 48,
+      "successes": 3,
+      "errors": 2,
+      "success_rate": 0.06
+    }
+  },
+  "motion": {
+    "episodes": 683,
+    "budget": [
+      160
+    ],
+    "overflow": [
+      "resample"
+    ],
+    "k_max": 131,
+    "exec_start_idx_max": 1107,
+    "episodes_downsampled": 0,
+    "downsample_steps_total": 0,
+    "downsampled_n": 0,
+    "downsampled_successes": 0,
+    "downsampled_errors": 0,
+    "not_downsampled_n": 683,
+    "not_downsampled_successes": 336,
+    "not_downsampled_errors": 0
+  }
+}

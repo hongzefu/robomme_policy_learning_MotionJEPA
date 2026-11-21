@@ -1,7 +1,7 @@
 # t1s-mm-mod-s0 评估档案（Table I 三 seed / 三 ckpt 补评）
 
 ## ①一句话结论与指标速览
-（评估完成后补写）
+第一次尝试（t1s-batch1）EVAL692=FAIL reason=infra：motion sidecar 加载 v7 encoder 时 state_dict 结构不符（共用 venvs/wan 装的是 MotionJEPA ee719fb，v18/8181918 锁文件钉 2a484ad）。venvs/wan 同步到 2a484ad 后在补跑链 t1s-fix1 以 RUN_NAME `t1s-mm-mod-s0-r2` 重跑，结果见下。
 
 ## ②版本与代码状态
 - 计划：策略仓 v18 分支 `1120-table1-3seed-aws-local-eval-plan.html`（开工版 1431a26，开工令见 docs/handoff/current.json 任务 t1s-3seed-1120）。

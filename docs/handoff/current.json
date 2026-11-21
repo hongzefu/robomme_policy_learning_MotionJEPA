@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-21T03:25:00Z",
-    "America/New_York": "2026-11-20T22:25:00-0500"
+    "utc": "2026-11-21T09:10:00Z",
+    "America/New_York": "2026-11-21T04:10:00-0500"
   },
   "repo": {
     "branch": "v18-4task-modul-e2eenc-s16-50k",
@@ -408,7 +408,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-11-21T03:25:00Z",
-      "state_reason": "S0 完成：E-A1/E-A2 合入 v18（374d72f、9297dca），E-B 合入 t1s-1120-evalstack-v42@c3876b9；WT_READY=PASS wt=2 clean=2 sources_pass=2；EVAL_LOAD_SMOKE=PASS（v42）；CKPT_READY=PARTIAL rows=10 missing=fs512c,fs1024c（GL 上传 403）；起第一批",
+      "state_reason": "第一批完成（11-21 03:59 美东）：e2e/wan1/wan9/native 各 2 次 PASS；mm-mod/mm-ctx 4 次因 venvs/wan MotionJEPA ee719fb≠锁定 2a484ad 失败，进 t1s-fix1；GL ctx 两份已到（CKPT_READY=PASS rows=12）",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiUE8cn3gckgXU3AQWp",
         "host": "ip-10-242-11-177"
@@ -437,8 +437,8 @@
       "long_tail": [],
       "running_handles": [
         {
-          "tmux": "t1s-batch1",
-          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/t1s-batch1.log",
+          "tmux": "t1s-fix1",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/t1s-fix1.log",
           "done_line": "EXIT_CODE="
         }
       ],
@@ -453,9 +453,9 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "第一批结束后起 t1s-batch2（cwd $W42），并做 S2 留档提交",
-          "command": "bash v1-store/jobs/t1s-1120/t1s-batch2.sh（tmux t1s-batch2）",
-          "verdict_line": "T1S_ITEM … EVAL692=PASS"
+          "what": "t1s-fix1 结束后起 t1s-batch2（cwd $W42）；全部结束后 venvs/wan 还原到 b5bdccf 锁（ee719fb）",
+          "command": "bash v1-store/jobs/t1s-1120/t1s-batch2.sh；bash v1-store/jobs/t1s-1120/wan-venv-sync.sh b5bdccf",
+          "verdict_line": "T1S_ITEM … EVAL692=PASS；WAN_VENV_MOTION_JEPA= ee719fb"
         }
       ]
     }
