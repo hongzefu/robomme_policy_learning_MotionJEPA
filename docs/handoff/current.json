@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-21T09:10:00Z",
-    "America/New_York": "2026-11-21T04:10:00-0500"
+    "utc": "2026-11-21T17:30:00Z",
+    "America/New_York": "2026-11-21T12:30:00-0500"
   },
   "repo": {
     "branch": "v18-4task-modul-e2eenc-s16-50k",
@@ -408,7 +408,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-11-21T03:25:00Z",
-      "state_reason": "第一批完成（11-21 03:59 美东）：e2e/wan1/wan9/native 各 2 次 PASS；mm-mod/mm-ctx 4 次因 venvs/wan MotionJEPA ee719fb≠锁定 2a484ad 失败，进 t1s-fix1；GL ctx 两份已到（CKPT_READY=PASS rows=12）",
+      "state_reason": "第一批 6 行三 seed 全部完成（含 fix1/fix2 补跑）；第二批+第三批 t1s-batch2 于 11-21 12:22 美东起跑",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiUE8cn3gckgXU3AQWp",
         "host": "ip-10-242-11-177"
@@ -437,8 +437,8 @@
       "long_tail": [],
       "running_handles": [
         {
-          "tmux": "t1s-fix1",
-          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/t1s-fix1.log",
+          "tmux": "t1s-next",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/t1s-batch2.log",
           "done_line": "EXIT_CODE="
         }
       ],

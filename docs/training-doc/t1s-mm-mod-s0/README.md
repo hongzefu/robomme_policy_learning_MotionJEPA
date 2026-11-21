@@ -3,6 +3,8 @@
 ## ①一句话结论与指标速览
 第一次尝试（t1s-batch1）EVAL692=FAIL reason=infra：motion sidecar 加载 v7 encoder 时 state_dict 结构不符（共用 venvs/wan 装的是 MotionJEPA ee719fb，v18/8181918 锁文件钉 2a484ad）。venvs/wan 同步到 2a484ad 后在补跑链 t1s-fix1 以 RUN_NAME `t1s-mm-mod-s0-r2` 重跑，结果见下。
 
+**最终结果**（RUN_NAME `t1s-mm-mod-s0-r2`）：`EVAL692=PASS episodes=692 success=387 rate=0.5592 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1`
+
 ## ②版本与代码状态
 - 计划：策略仓 v18 分支 `1120-table1-3seed-aws-local-eval-plan.html`（开工版 1431a26，开工令见 docs/handoff/current.json 任务 t1s-3seed-1120）。
 - 评估栈：v18 主检出 local_692_pool.sh。v18 主检出含 E-A1（374d72f）、E-A2（9297dca）；v42 分支 t1s-1120-evalstack-v42@c3876b9（d6ece8b + E-B）；mm-ctx 用 8181918 detached 检出。
