@@ -1,0 +1,213 @@
+{
+  "schema": "t1s-3seed-1120 interim",
+  "written_at_et": "2026-11-21 13:45",
+  "episodes": 692,
+  "rows": {
+    "mm-mod": {
+      "name": "MotionMEM 512+160 modulation",
+      "seed7": {
+        "success": 378,
+        "source": "GL（primary700-motion50k-gl + binfilldemo-motion50k-gl）"
+      },
+      "seed0": {
+        "run": "t1s-mm-mod-s0-r2",
+        "eval692": "EVAL692=PASS episodes=692 success=387 rate=0.5592 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1",
+        "success": 387,
+        "episodes": 692,
+        "pass": true
+      },
+      "seed42": {
+        "run": "t1s-mm-mod-s42-r3",
+        "eval692": "EVAL692=PASS episodes=692 success=375 rate=0.5419 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1",
+        "success": 375,
+        "episodes": 692,
+        "pass": true
+      },
+      "mean_pct": 54.91,
+      "sd_pct": 0.9
+    },
+    "e2e": {
+      "name": "E2E-Enc 512+160 modulation",
+      "seed7": {
+        "success": 337,
+        "source": "AWS"
+      },
+      "seed0": {
+        "run": "t1s-e2e-s0",
+        "eval692": "EVAL692=PASS episodes=692 success=344 rate=0.4971 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1",
+        "success": 344,
+        "episodes": 692,
+        "pass": true
+      },
+      "seed42": {
+        "run": "t1s-e2e-s42",
+        "eval692": "EVAL692=PASS episodes=692 success=336 rate=0.4855 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1",
+        "success": 336,
+        "episodes": 692,
+        "pass": true
+      },
+      "mean_pct": 48.99,
+      "sd_pct": 0.63
+    },
+    "wan1": {
+      "name": "Wan-1 512+160 modulation",
+      "seed7": {
+        "success": 298,
+        "source": "AWS"
+      },
+      "seed0": {
+        "run": "t1s-wan1-s0",
+        "eval692": "EVAL692=PASS episodes=692 success=281 rate=0.4061 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1",
+        "success": 281,
+        "episodes": 692,
+        "pass": true
+      },
+      "seed42": {
+        "run": "t1s-wan1-s42",
+        "eval692": "EVAL692=PASS episodes=692 success=286 rate=0.4133 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1",
+        "success": 286,
+        "episodes": 692,
+        "pass": true
+      },
+      "mean_pct": 41.67,
+      "sd_pct": 1.26
+    },
+    "mm-ctx": {
+      "name": "MotionMEM 512+160 context",
+      "seed7": {
+        "success": 254,
+        "source": "AWS"
+      },
+      "seed0": {
+        "run": "t1s-mm-ctx-s0-r2",
+        "eval692": "EVAL692=PASS episodes=692 success=245 rate=0.3540 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1",
+        "success": 245,
+        "episodes": 692,
+        "pass": true
+      },
+      "seed42": {
+        "run": "t1s-mm-ctx-s42-r2",
+        "eval692": "EVAL692=PASS episodes=692 success=247 rate=0.3569 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1",
+        "success": 247,
+        "episodes": 692,
+        "pass": true
+      },
+      "mean_pct": 35.93,
+      "sd_pct": 0.68
+    },
+    "wan9": {
+      "name": "Wan-9 512+720 modulation",
+      "seed7": {
+        "success": 262,
+        "source": "AWS"
+      },
+      "seed0": {
+        "run": "t1s-wan9-s0",
+        "eval692": "EVAL692=PASS episodes=692 success=258 rate=0.3728 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1",
+        "success": 258,
+        "episodes": 692,
+        "pass": true
+      },
+      "seed42": {
+        "run": "t1s-wan9-s42",
+        "eval692": "EVAL692=PASS episodes=692 success=269 rate=0.3887 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1",
+        "success": 269,
+        "episodes": 692,
+        "pass": true
+      },
+      "mean_pct": 38.01,
+      "sd_pct": 0.8
+    },
+    "native": {
+      "name": "NativeMEM",
+      "seed7": {
+        "success": 290,
+        "source": "AWS"
+      },
+      "seed0": {
+        "run": "t1s-native-s0",
+        "eval692": "EVAL692=PASS episodes=692 success=291 rate=0.4205 preseeded_errors=9 new_errors=0 retried=0",
+        "success": 291,
+        "episodes": 692,
+        "pass": true
+      },
+      "seed42": {
+        "run": "t1s-native-s42",
+        "eval692": "EVAL692=PASS episodes=692 success=278 rate=0.4017 preseeded_errors=9 new_errors=0 retried=0",
+        "success": 278,
+        "episodes": 692,
+        "pass": true
+      },
+      "mean_pct": 41.38,
+      "sd_pct": 1.05
+    },
+    "fs512": {
+      "name": "FrameSamp 512 modulation",
+      "seed7": {
+        "success": 211,
+        "source": "GL"
+      },
+      "seed0": null,
+      "seed42": null
+    },
+    "fs1024": {
+      "name": "FrameSamp 1024 modulation",
+      "seed7": {
+        "success": 291,
+        "source": "GL"
+      },
+      "seed0": {
+        "run": "t1s-fs1024-s0",
+        "eval692": "EVAL692=PASS episodes=692 success=279 rate=0.4032 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=0",
+        "success": 279,
+        "episodes": 692,
+        "pass": true
+      },
+      "seed42": {
+        "run": "t1s-fs1024-s42",
+        "eval692": "EVAL692=PASS episodes=692 success=279 rate=0.4032 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=0",
+        "success": 279,
+        "episodes": 692,
+        "pass": true
+      },
+      "mean_pct": 40.9,
+      "sd_pct": 1.0
+    },
+    "fs2048": {
+      "name": "FrameSamp 2048 modulation",
+      "seed7": {
+        "success": 312,
+        "source": "GL"
+      },
+      "seed0": null,
+      "seed42": null
+    },
+    "fs4096": {
+      "name": "FrameSamp 4096 modulation",
+      "seed7": {
+        "success": 313,
+        "source": "GL"
+      },
+      "seed0": null,
+      "seed42": null
+    },
+    "fs512c": {
+      "name": "FrameSamp 512 context",
+      "seed7": {
+        "success": 158,
+        "source": "GL"
+      },
+      "seed0": null,
+      "seed42": null
+    },
+    "fs1024c": {
+      "name": "FrameSamp 1024 context",
+      "seed7": {
+        "success": 160,
+        "source": "GL"
+      },
+      "seed0": null,
+      "seed42": null
+    }
+  }
+}

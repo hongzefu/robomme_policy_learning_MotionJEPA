@@ -6,6 +6,10 @@
 - GL ctx 两份：GL 会话上传遇 HF 403（私有存储满），未到；到时缺则 T1S_ITEM_SKIP。
 - 汇总：结束后写 `table1_3seed.json`。
 
+## 中间汇总
+
+见 [`interim-20261121.md`](interim-20261121.md)（数据 `table1_3seed_interim.json`）。
+
 ## 逐次档案
 
 - [t1s-mm-mod-s0](../t1s-mm-mod-s0/README.md)
