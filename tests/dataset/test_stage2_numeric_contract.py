@@ -113,18 +113,16 @@ def test_window_grid_subsample_follows_layout(tmp_path):
         V.validate_window(item, 2)
 
 
-def test_store_layout_params_and_window_budget_registry():
+def test_store_layout_params_from_store_meta():
+    grid16 = V.stage2_grid16_layout()
+    assert grid16 == "motion-stage2-1x1024-grid16-demopad17-v1"
     assert V.store_layout_params(dict(layout=V.LAYOUT, grid_stride=32)) == (V.LAYOUT, 32, 2)
-    assert V.store_layout_params(dict(layout=V.GRID16_LAYOUT, grid_stride=16)) == (V.GRID16_LAYOUT, 16, 1)
-    assert set(V.stage2_layouts()) == {V.LAYOUT, V.GRID16_LAYOUT}
-    for raw in (dict(layout=V.GRID16_LAYOUT, grid_stride=32), dict(layout=V.LAYOUT, grid_stride=16),
+    assert V.store_layout_params(dict(layout=grid16, grid_stride=16)) == (grid16, 16, 1)
+    assert set(V.stage2_layouts()) == {V.LAYOUT, grid16}
+    for raw in (dict(layout=grid16, grid_stride=32), dict(layout=V.LAYOUT, grid_stride=16),
                 dict(layout="motion-768-grid16-v1", grid_stride=16), dict(layout=V.LAYOUT, grid_stride=32.0)):
         with pytest.raises(ValueError):
             V.store_layout_params(raw)
-    assert V.window_budget_for_stride(32) == 96 and V.window_budget_for_stride(16) == 192
-    for stride in (8, 24, 64, "16"):
-        with pytest.raises(ValueError):
-            V.window_budget_for_stride(stride)
 
 
 def test_pixel_hash_catches_wrong_source_mapping(tmp_path):

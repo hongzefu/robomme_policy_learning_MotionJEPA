@@ -720,12 +720,3 @@ def test_g4_cached_verdict_does_not_claim_numeric_parity(tmp_path, monkeypatch, 
     output = capsys.readouterr().out
     assert ("ONLINE_INPUT_IDENTITY=PASS" in output) == cached
     assert ("ONLINE_OFFLINE_PARITY=PASS" in output) != cached
-
-
-def test_restore_snapshot_window_budget_follows_yaml_stride():
-    """恢复快照的窗口预算按 yaml motion.stride 对应的已登记 stage2 布局核对：grid32→96，grid16→192。"""
-    layouts = restore.load_validate_stage2()
-    assert layouts.window_budget_for_stride(32) == 96
-    assert layouts.window_budget_for_stride(16) == 192
-    with pytest.raises(ValueError, match="stride"):
-        layouts.window_budget_for_stride(8)

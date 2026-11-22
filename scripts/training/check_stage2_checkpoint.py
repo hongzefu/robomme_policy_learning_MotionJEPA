@@ -28,15 +28,6 @@ ROOT_FILES = {"history_config.txt", "history_config.resolved.yaml", "history_con
               "online_restore_inputs.npz"}
 
 
-def load_validate_stage2():
-    """读取 stage2 布局登记（validate_stage2.py 只依赖 numpy 与标准库）。"""
-    path = REPO_ROOT / "scripts/dataset/wan_stage2/validate_stage2.py"
-    spec = importlib.util.spec_from_file_location("_stage2_layout_registry", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
 def canonical(value):
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode()
 
@@ -169,7 +160,9 @@ def verify_snapshot(root, delivery=None):
     provenance = read_json(inside(root, "motion_provenance.json"))
     motion_store.validate_stage2_provenance(provenance)
     from mme_vla_suite.policies.motion_client import validate_stage2_evidence
-    validate_stage2_evidence(provenance, Path(root))
+    import yaml
+    resolved = yaml.safe_load(inside(root, "history_config.resolved.yaml").read_text(encoding="utf-8"))
+    validate_stage2_evidence(provenance, Path(root), grid_stride=resolved["motion"]["stride"])
     yaml_sha = files["history_config.resolved.yaml"]
     if (inside(root, "history_config.resolved.sha256").read_text().strip() != yaml_sha
             or provenance.get("resolved_sha256") != yaml_sha or provenance.get("motion_enabled") is not True):
@@ -577,10 +570,9 @@ def restore_and_check(args, report):
         raise ValueError("恢复快照不是已开启的 stage2 encoder")
     from mme_vla_suite.datastore.motion_adapter import motion_policy_spec
     motion_spec = motion_policy_spec(resolved.motion)
-    # stride 随快照 yaml 取值，窗口预算按该步长对应的已登记 stage2 布局核对（grid32→96，grid16→192）。
-    layouts = load_validate_stage2()
+    # stride、budget 随快照 yaml 取值（训练侧唯一真源），不再写死 32/96。
     if (motion_spec.readout not in ("stage2_pool4_concat_v1", "stage2_pool4_split_v1")
-            or motion_spec.window_budget != layouts.window_budget_for_stride(resolved.motion.stride)
+            or motion_spec.budget != resolved.motion.budget
             or resolved.budget != 512 or resolved.token_per_image not in (16, 64)
             or resolved.num_views != 1 or resolved.streaming_obs_horizon != 16
             or resolved.motion.window_frames != 33

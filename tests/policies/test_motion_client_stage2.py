@@ -277,6 +277,7 @@ def _handshake_client(provenance, root):
     client.encoder_kind = C.STAGE2_KIND
     client._provenance_root = root
     client._online_gpu = "0"
+    client._grid_stride = 32
     client.provenance = {k: copy.deepcopy(provenance[k]) for k in
                          ("encoder", "encoder_state_sha256", "source_pin", "numerics")}
     client.provenance.update(online_vae=copy.deepcopy(provenance["stage2_compat"]["online_vae"]),
@@ -336,6 +337,13 @@ def test_g0_source_grid_parity_follows_layout_grid_stride(provenance, tmp_path):
         C.validate_stage2_evidence(provenance, tmp_path, grid_stride=32)
     with pytest.raises(ValueError, match="grid_stride"):
         C.validate_stage2_evidence(provenance, tmp_path, grid_stride=24)
+    # 客户端握手核对使用构造时传入的 store 步长。
+    client = _handshake_client(provenance, tmp_path)
+    client._grid_stride = 16
+    client._check_stage2_provenance(provenance)
+    client._grid_stride = 32
+    with pytest.raises(ValueError, match="G0 窗口来源不完整"):
+        client._check_stage2_provenance(provenance)
 
 
 @pytest.mark.parametrize("gate,group", [("G2", "source_pin"), ("G3", "source_pin"),

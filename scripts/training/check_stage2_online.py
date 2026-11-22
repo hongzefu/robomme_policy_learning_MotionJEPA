@@ -295,7 +295,7 @@ def run(args):
     ms.validate_stage2_provenance(meta.provenance)
     ms.run_fast_checks(meta)
     ms.run_full_checks(meta)
-    layout, grid_stride, subsample = V.store_layout_params(meta.raw)
+    _, grid_stride, subsample = V.store_layout_params(meta.raw)
     if meta.status != "verified":
         raise ValueError("G4 必须消费已全表认证并 verified 的 stage2 表")
     if ms.stage2_uses_cache(meta.provenance):
@@ -313,7 +313,7 @@ def run(args):
     from mme_vla_suite.datastore.motion_adapter import motion_policy_spec
     policy_spec = motion_policy_spec(motion)
     if (policy_spec.readout not in ("stage2_pool4_concat_v1", "stage2_pool4_split_v1")
-            or policy_spec.window_budget != V.STAGE2_WINDOW_BUDGETS[layout] or config.get("budget") != 512
+            or policy_spec.budget != motion.get("budget") or config.get("budget") != 512
             or config.get("token_per_image") not in (16, 64) or config.get("num_views") != 1
             or config.get("memory_token_dim") != {"context": 2048, "modulation": 1024}.get(config.get("integration_type"))):
         raise ValueError("history的帧布局、motion读法或融合维度不符")
@@ -338,7 +338,7 @@ def run(args):
         reference, reference_record = reference_subprocess(args, meta, v1, directory)
     common = dict(encoder_kind="stage2_pool4_concat", online_gpu=motion["online_gpu"], source_run=source_run,
                   expected_ckpt_sha256=enc["checkpoint_sha256"], store_provenance=meta.provenance,
-                  provenance_root=meta.root, v1_store=v1)
+                  provenance_root=meta.root, v1_store=v1, grid_stride=grid_stride)
     real = MotionEncoderClient(**common, stub=False)
     try:
         require_handshake(real, stub=False)

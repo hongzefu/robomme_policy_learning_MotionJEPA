@@ -23,26 +23,20 @@ REPO = HERE.parents[2]
 LATENT_SHAPE = (9, 16, 32, 32)
 CHUNK_BYTES = 589824
 LAYOUT = "motion-stage2-1x1024-grid32-demopad17-v1"
-GRID16_LAYOUT = "motion-stage2-1x1024-grid16-demopad17-v1"
 PRODUCER = "stage2-numeric-validator-v1"
 # G0 的 source_grid 以 Wan latent 的 16 帧格为单位；布局步长 / 16 即取格间隔（grid32=2，grid16=1）。
 LATENT_GRID_STRIDE = 16
-# 按布局登记的窗口预算（stride 减半、窗口数约翻倍，budget 同比翻倍；见 1122 方案第三节）。
-STAGE2_WINDOW_BUDGETS = {LAYOUT: 96, GRID16_LAYOUT: 192}
+
+
+def stage2_grid16_layout():
+    from mme_vla_suite.datastore import motion_store as ms
+    return getattr(ms, "STAGE2_GRID16_LAYOUT", "motion-stage2-1x1024-grid16-demopad17-v1")
 
 
 def stage2_layouts():
     """已知 stage2 布局集合，以 motion_store 定义为准。"""
     from mme_vla_suite.datastore import motion_store as ms
-    return getattr(ms, "STAGE2_LAYOUTS", (ms.STAGE2_LAYOUT, GRID16_LAYOUT))
-
-
-def window_budget_for_stride(stride):
-    """按 motion.stride 找登记的 stage2 布局并返回其窗口预算；未登记的步长直接拒绝。"""
-    matches = [budget for layout, budget in STAGE2_WINDOW_BUDGETS.items() if f"-grid{stride}-" in layout]
-    if type(stride) is not int or len(matches) != 1:
-        raise ValueError(f"motion.stride 不对应已登记的 stage2 布局: {stride!r}")
-    return matches[0]
+    return getattr(ms, "STAGE2_LAYOUTS", (ms.STAGE2_LAYOUT, stage2_grid16_layout()))
 
 
 def store_layout_params(raw):
