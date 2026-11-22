@@ -53,3 +53,13 @@ AWS p4de 8×A100-80GB，本地 NVMe RAID `/dev/md0`。G2–G7 约 40 分钟；60
 ## 盯盘项
 
 各日志单独挂 Monitor：chain（`O16S16_|SMOKE20|TRAIN60K|S16_RUN|=FAIL|拒绝|失败|错误|找不到|Traceback|EXIT_CODE=`）、训练日志（`nan|NaN|inf|RESOURCE_EXHAUSTED|out of memory|Killed|Step [0-9]*000:|EXIT_CODE=`）、inc（`INC_|HF_VERIFY|FAIL|403|EXIT_CODE=`）、g3fetch。
+
+## 起跑锚点变更与续跑记录（2026-11-22 美东）
+
+| 轮次 | 时间（美东） | 结果 | 处置 |
+|---|---|---|---|
+| r1 | 11-22 00:30 | `O16S16_CHAIN=FAIL at=head_check`：主检出切换后 `.agentmetarules` 子模块指针未对齐 | 手工 `git submodule update --init .agentmetarules`；单次 `grep -m1` 等待漏报，GPU 空转约 12.5 h，至 13:07 才发现，之后加每小时兜底巡检 |
+| r2 | 13:08–13:48 | E-G3 FAIL：闸门脚本写死的 MJ 工作树已前进到 b7cb8a2，`rgb_gtxyz_reader.py` 与钉版 b5d23a5 不同 | 新建只读钉版工作树 `/scratch/hongze/worktrees/mj-pin-b5d23a5`，原命令只换 `--mj-root` |
+| r2→r3 | 13:50–15:52 | E 通过；G2 `EVEN_GRID_BITEXACT=PASS mode=bitexact compared=23253 mismatches=0`；G3 `VERIFY_MOTION=PASS scanned=45228`；G4 训练侧 `TRAIN_ES_BOUND=PASS max_windows=86 budget=192 headroom=106`；评估侧逐任务串行过慢 | 15:52 停 r2，r3 复用 5 任务、其余 11 任务 8 卡并行 |
+| r3 | 15:52–16:42 | `EVAL_ES_BOUND=PASS tasks=16 episodes=800 es_max=1135 budget=192 headroom=42`；G5 FAIL：`motion_client.validate_stage2_evidence` 缓存分支未传 grid_subsample | S6 修复（commitV11.91），本提交为新锚点 |
+| r4 | 本提交后 | 链脚本 `v1-store/jobs/o16s16/chain4.sh`：主检出 detached 到本锚点 → G5 → G6 → G7 → 60k → seed42 | — |
