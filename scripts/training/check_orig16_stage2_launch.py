@@ -54,7 +54,6 @@ BUCKETS = {RUNS["context", SPLIT]: "HongzeFu/robomme-vla-orig100-ctx32x4x4-motio
 # pair 是配对的已有 yaml，二者只允许 diff_keys 所列 motion 键不同。
 S16_HISTORY = "perceptual-framesamp-modul-32frame-4x4-motion-stage2-1x1024-s16-orig16.yaml"
 S16_RUN = "orig100-m32x4x4-modul-motion-s2concat1x1024-s16-b128-60k"
-GRID16_LAYOUT_NAME = "motion-stage2-1x1024-grid16-demopad17-v1"
 STRIDE_RUNS = {S16_HISTORY: dict(
     run=S16_RUN, bucket="HongzeFu/robomme-vla-orig100-modul-s2concat-s16-60k-v1",
     fusion="modul", readout="1x1024", store_dir="motion-stage2-1024-grid16", layout="grid16",
@@ -71,19 +70,14 @@ HISTORIES = tuple(f"perceptual-framesamp-{fusion}-{frames}-motion-stage2-{readou
 GL_FSDP = (2, 4)
 
 
-def grid16_layout():
-    """grid16 布局名只读引用 motion_store 常量（S1 定义）；未合入时用约定字符串。"""
-    from mme_vla_suite.datastore import motion_store as ms
-    return getattr(ms, "STAGE2_GRID16_LAYOUT", GRID16_LAYOUT_NAME)
-
-
 def stride_contract(contract, name):
     """登记表内 history 换成其 run 的 motion 口径；表外原样返回（旧 run 行为不变）。"""
+    from mme_vla_suite.datastore import motion_store as ms
     item = STRIDE_RUNS.get(name)
     if item is None:
         return contract
     return dataclasses.replace(contract, store_dir=item["store_dir"],
-        motion_layout=grid16_layout() if item["layout"] == "grid16" else item["layout"],
+        motion_layout=ms.STAGE2_GRID16_LAYOUT if item["layout"] == "grid16" else item["layout"],
         motion_stride=item["stride"], motion_budget=item["budget"],
         motion_rows=item["motion_rows"], train_max=item["train_max"])
 
@@ -490,9 +484,10 @@ def check_dataset(rec, store, contract, history, env=None):
         if bad:
             raise ValueError(f"重定根证据SHA不符: {bad}")
         print(f"EVIDENCE_REBASE=PASS files={files} sha_mismatch=0")
-        validate_stage2_evidence(rebase_provenance(motion.provenance, evidence_root), motion.root)
+        validate_stage2_evidence(rebase_provenance(motion.provenance, evidence_root), motion.root,
+                                 grid_stride=contract.motion_stride)
     else:
-        validate_stage2_evidence(motion.provenance, motion.root)
+        validate_stage2_evidence(motion.provenance, motion.root, grid_stride=contract.motion_stride)
     rec("INPUT_EQUIVALENCE", True, "G0/G2/G3/缓存收据逐SHA回读并验证；输出数值按用户裁决不作同值准入")
     lineage = load_script("scripts/training/check_data_lineage.py")
     checkpoint = store / "v1-store/external/motionjepa" / contract.encoder_run / "checkpoint_epoch_105.pt"
@@ -642,12 +637,14 @@ def main(raw=None):
         try:
             from mme_vla_suite.datastore import motion_store as ms
             from mme_vla_suite.policies.motion_client import validate_stage2_evidence
-            provenance = ms.MotionMeta.load(args.store).provenance
+            meta = ms.MotionMeta.load(args.store)
+            provenance = meta.provenance
             files, bad = verify_evidence_root(args.verify_evidence_root, provenance)
             if bad:
                 print(f"EVIDENCE_REBASE=FAIL files={files} sha_mismatch={len(bad)} bad={','.join(bad)}")
                 return 1
-            validate_stage2_evidence(rebase_provenance(provenance, args.verify_evidence_root), args.store)
+            validate_stage2_evidence(rebase_provenance(provenance, args.verify_evidence_root), args.store,
+                                     grid_stride=meta.spec.grid_stride)
         except (OSError, ValueError, KeyError, TypeError) as error:
             print(f"EVIDENCE_REBASE=FAIL reason={error}")
             return 1

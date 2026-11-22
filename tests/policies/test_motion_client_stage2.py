@@ -413,11 +413,14 @@ def test_relocated_encoder_entities(provenance, tmp_path):
         C.resolve_stage2_dependencies(tmp_path, provenance)
 
 
-def test_policy_passes_full_sources_and_overrides_gpu_in_copy(provenance, tmp_path, monkeypatch):
+@pytest.mark.parametrize("stride", [None, 16])
+def test_policy_passes_full_sources_and_overrides_gpu_in_copy(provenance, tmp_path, monkeypatch, stride):
     from omegaconf import OmegaConf
     from mme_vla_suite.policies import policy_config as PC
-    original = OmegaConf.create({"motion": {"enabled": True, "encoder_kind": C.STAGE2_KIND,
-                                           "source_run": SOURCE_RUN, "online_gpu": 4}})
+    motion = {"enabled": True, "encoder_kind": C.STAGE2_KIND, "source_run": SOURCE_RUN, "online_gpu": 4}
+    if stride is not None:
+        motion["stride"] = stride
+    original = OmegaConf.create({"motion": motion})
     raw = OmegaConf.to_yaml(original).encode()
     digest = hashlib.sha256(raw).hexdigest()
     (tmp_path / "history_config.resolved.yaml").write_bytes(raw)
@@ -459,6 +462,8 @@ def test_policy_passes_full_sources_and_overrides_gpu_in_copy(provenance, tmp_pa
     assert captured["client"]["provenance_root"] == tmp_path
     assert captured["client"]["store_provenance"] == provenance
     assert captured["client"]["online_gpu"] == 0
+    # 评估 server 入口按 yaml motion.stride 传 grid_stride；缺省为旧 grid32 的 32
+    assert captured["client"]["grid_stride"] == (32 if stride is None else stride)
     assert captured["history"].motion.online_gpu == 0 and original.motion.online_gpu == 4
     assert (tmp_path / "history_config.resolved.yaml").read_bytes() == raw
 
