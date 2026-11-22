@@ -467,6 +467,8 @@ def main(argv=None):
     parser.add_argument("--store")
     parser.add_argument("--reference-output")
     parser.add_argument("--cache-import-receipt")
+    parser.add_argument("--grid-subsample", type=int, choices=(2, 1), default=None,
+                        help="G0 取格间隔：2=grid32 偶数格（缺省），1=grid16 全部格；给 --store 时须与 store 布局一致")
     args = parser.parse_args(argv)
     revoke_report(args.out, gate=args.gate)
     try:
@@ -474,10 +476,15 @@ def main(argv=None):
         if sha_file(args.ckpt) != args.expected_sha256:
             raise ValueError("checkpoint SHA 与显式参数不符")
         samples_sha = sha_file(args.samples)
-        subsample = layout_subsample()
+        subsample = args.grid_subsample
         if args.store:
             from mme_vla_suite.datastore import motion_store as ms
-            subsample = store_layout_params(ms.MotionMeta.load(args.store).raw)[2]
+            store_subsample = store_layout_params(ms.MotionMeta.load(args.store).raw)[2]
+            if subsample is not None and subsample != store_subsample:
+                raise ValueError(f"--grid-subsample={subsample} 与 store 布局取格间隔 {store_subsample} 冲突")
+            subsample = store_subsample
+        if subsample is None:
+            subsample = layout_subsample()
         args.grid_subsample = subsample
         samples = load_samples(args.samples, subsample)
         if args.gate == "G3" and not args.rgb_root:

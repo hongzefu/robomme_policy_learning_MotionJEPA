@@ -295,7 +295,7 @@ def test_cli_missing_manifest_reports_failure_without_output(sample, tmp_path):
 
 def test_failed_cli_does_not_publish_pass(sample, tmp_path, monkeypatch):
     original_select = g0.select_windows
-    monkeypatch.setattr(g0, "select_windows", lambda m, p: original_select(m, p, tasks=1, min_demo_tail=1))
+    monkeypatch.setattr(g0, "select_windows", lambda m, p, **kw: original_select(m, p, tasks=1, min_demo_tail=1, **kw))
     path = sample.latents / "Task00_ep1_demo.bin"
     with path.open("r+b") as stream:
         stream.write(b"corrupted")
@@ -308,7 +308,7 @@ def test_failed_cli_does_not_publish_pass(sample, tmp_path, monkeypatch):
 
 def test_atomic_publication_does_not_overwrite_concurrent_writer(sample, tmp_path, monkeypatch):
     out = tmp_path / "windows.json"
-    monkeypatch.setattr(g0, "build_inputs", lambda *args: {"counts": {"demo_tail": 16}})
+    monkeypatch.setattr(g0, "build_inputs", lambda *args, **kwargs: {"counts": {"demo_tail": 16}})
     original_link = g0.os.link
 
     def concurrent_link(src, dst):
@@ -320,3 +320,32 @@ def test_atomic_publication_does_not_overwrite_concurrent_writer(sample, tmp_pat
         g0.main(cli_args(sample, out))
     assert out.read_text() == "先到的结果"
     assert not list(tmp_path.glob(".windows.json.*"))
+
+
+def test_grid_subsample_controls_candidate_parity(sample):
+    """缺省 grid_subsample=2 只抽偶数格（旧 G0 不变）；grid16（=1）从全部格抽样、可抽到奇数格；其他值拒绝。"""
+    def pick(**kw):
+        return g0.select_windows(sample.manifest, sample.latents, tasks=1, per_task=4, min_demo_tail=1, **kw)
+    default = pick()
+    assert default == pick(grid_subsample=2)
+    assert all(item[3] % 2 == 0 for item in default)
+    # 夹具每段 3 格（0、1、2）、共 6 个 grid16 候选；全取时必含奇数格 1，grid32 只有 4 个偶数格候选。
+    full = g0.select_windows(sample.manifest, sample.latents, tasks=1, per_task=6, min_demo_tail=1, grid_subsample=1)
+    assert sorted(item[3] for item in full) == [0, 0, 1, 1, 2, 2]
+    with pytest.raises(ValueError, match="候选数不足"):
+        g0.select_windows(sample.manifest, sample.latents, tasks=1, per_task=6, min_demo_tail=1)
+    with pytest.raises(ValueError, match="grid_subsample"):
+        pick(grid_subsample=3)
+
+
+def test_cli_passes_grid_subsample(sample, tmp_path, monkeypatch):
+    seen = {}
+
+    def fake(*args, **kwargs):
+        seen.update(kwargs)
+        return {"counts": {"demo_tail": 16}}
+    monkeypatch.setattr(g0, "build_inputs", fake)
+    g0.main(cli_args(sample, tmp_path / "a.json"))
+    assert seen["grid_subsample"] == 2
+    g0.main(cli_args(sample, tmp_path / "b.json") + ["--grid-subsample", "1"])
+    assert seen["grid_subsample"] == 1

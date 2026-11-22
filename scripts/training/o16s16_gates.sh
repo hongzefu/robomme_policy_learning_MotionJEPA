@@ -3,17 +3,19 @@
 # 参数以旧 orig100 建库档案 docs/dataset-build-doc/16task-orig100-1600ep-9e109419/launch.md 与
 # v1-store/logs/o16-20261028/post-build-checks.sh 的真实命令为准，只把 subsample/stride/budget/目录换成 grid16 新值。
 #
+# 调用时点：须在 t1s 结束且 8 卡空闲后由 o16s16-chain 调用（E/G2/G4/G5 要占卡）。
 # 用法（须在主检出运行；worktree 没有 v1-store 与 third_party 子模块）：
 #   bash scripts/training/o16s16_gates.sh              # 依次跑 E→G2→G3→G4→G5→G6，任一 FAIL 即非零退出
 #   DRY_RUN=1 bash scripts/training/o16s16_gates.sh    # 只打印全部命令，不执行、不建目录
 #   GATES="G4 G6" bash scripts/training/o16s16_gates.sh  # 只跑列出的闸门（续跑用；默认全部）
 # 环境变量：GATE_GPU（父进程/导出/G3 证据用卡，默认 0）、ONLINE_GPU（G5 sidecar 物理卡号，默认 1）、
-#           RGBROOT（G3 证据所需配对训练缓存根，默认旧档案路径）。
+#           RGBROOT（G3 证据所需配对训练缓存根，默认主会话下载的子集根 v1-store/external/rgb-gtxyz-g3-subset）。
 #
 # E（证据重建）：grid16 库只能用恢复版 latent（v1-store/cache/orig16-wan-timepool1024-recovery/wan-latents，
 #   metadata sha 3650385…），其导入收据是 wan-cache-import.restored.json；旧 validation/orig16-stage2 的
 #   G0/G2/G3 绑定旧收据（1a97618…）与旧 latent metadata（824ef22…），打包时 validate_stage2_cache_evidence
-#   会拒绝，所以先在新目录 validation/orig16-stage2-grid16 重建 G0/G2/G3（命令同旧档案，只换收据/latent/输出）。
+#   会拒绝，所以先在新目录 validation/orig16-stage2-grid16 重建 G0/G2/G3（命令同旧档案，只换收据/latent/输出，
+#   并传 --grid-subsample 1：G0 从全部 grid16 格抽样，自然含奇数格）。
 set -euo pipefail
 [[ $# == 0 ]] || { echo '本脚本不接受参数' >&2; exit 2; }
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
@@ -39,7 +41,7 @@ STAGE2_VENV="$V1/venvs/wan-stage2"
 ROBOMME_PY=/scratch/hongze/micromamba/envs/robomme/bin/python
 # encoder config.data.data_root（dataset-rgb-gtxyz-16views-stride2-v1）已删，血缘 build_spec 用保留的 keep-meta 副本。
 LINEAGE_SPEC=/scratch/hongze/dataset-rgb-gtxyz-16views-stride2-v1-keep-meta/control/build_spec.json
-RGBROOT=${RGBROOT:-/scratch/hongze/dataset-rgb-gtxyz-16views-stride2-v1}
+RGBROOT=${RGBROOT:-$ROOT/v1-store/external/rgb-gtxyz-g3-subset}
 # ── grid16 新值 ──
 RECOVERY="$V1/cache/orig16-wan-timepool1024-recovery"
 LATENTS="$RECOVERY/wan-latents"
@@ -125,14 +127,14 @@ if want E; then
   run_or_fail O16S16_EVIDENCE e-g0 env CUDA_VISIBLE_DEVICES= JAX_PLATFORMS=cpu uv run --no-sync python \
     scripts/dataset/check_stage2_validation_inputs.py --manifest "$MANI" --latents "$LATENTS" --source "$LIB/source" \
     --h5-root "$RAW" --input-manifest "$INMANI" --mj-index "$MJIDX" --cache-import-receipt "$RECEIPT" \
-    --out "$VALID16/G0.json"
+    --grid-subsample 1 --out "$VALID16/G0.json"
   run_or_fail O16S16_EVIDENCE e-g2 env CUDA_VISIBLE_DEVICES= JAX_PLATFORMS=cpu uv run --no-sync python \
     scripts/dataset/wan_stage2/orig16_wan_cache.py check --samples "$VALID16/G0.json" --receipt "$RECEIPT" \
     --raw-dir "$RAW" --out "$VALID16/G2.json" --grid-subsample 1
   run_or_fail O16S16_EVIDENCE e-g3 env CUDA_VISIBLE_DEVICES="$GATE_GPU" UV_PROJECT_ENVIRONMENT="$STAGE2_VENV" \
     uv run --project scripts/dataset/wan_stage2 --no-sync python scripts/dataset/wan_stage2/validate_stage2.py \
     --gate G3 --samples "$VALID16/G0.json" --ckpt "$CKPT" --expected-sha256 "$CKPT_SHA" --rgb-root "$RGBROOT" \
-    --mj-root "$MJW" --cache-import-receipt "$RECEIPT" --out "$VALID16/G3.json"
+    --mj-root "$MJW" --cache-import-receipt "$RECEIPT" --grid-subsample 1 --out "$VALID16/G3.json"
   [[ $DRY_RUN == 1 ]] || echo "O16S16_EVIDENCE=PASS root=$VALID16"
 fi
 
@@ -143,8 +145,8 @@ if want G2; then
     --latents "$LATENTS" --manifest "$MANI" --input-manifest "$INMANI" --out "$TOKENS16" --grid-subsample 1 \
     --batch 1 --check-dropout 64 --expected-counts "$SEGMENTS,$ROWS" --lineage-build-spec "$LINEAGE_SPEC"
   expect_line g2-export "^STAGE2_EXPORT=PASS segments=$SEGMENTS rows=$ROWS\$" STAGE2_EXPORT
-  [[ $DRY_RUN == 1 ]] || echo "STAGE2_EXPORT=PASS windows=$ROWS segments=$SEGMENTS"
-  # grid16 第 2j 行应与旧 grid32 第 j 行逐字节相同（同一 latent、同一 encoder、batch=1）。
+  # grid16 第 2j 行对旧 grid32 第 j 行：先逐字节（mode=bitexact）；不等时 max_abs≤1e-4 判 mode=tol
+  # （旧表 latent 与恢复版为跨次拷贝，note=cross_latent_copy），否则 FAIL 停链。
   run_or_fail EVEN_GRID_BITEXACT g2-even env CUDA_VISIBLE_DEVICES= uv run --no-sync python - "$OLD_TOKENS" "$TOKENS16" <<'PY'
 import json, sys
 from pathlib import Path
@@ -155,7 +157,9 @@ new_keys = json.loads((new_root / "export_record.json").read_text())["segment_ke
 if sorted(old_keys) != sorted(new_keys):
     print(f"EVEN_GRID_BITEXACT=FAIL reason=segment_set old={len(old_keys)} new={len(new_keys)}")
     raise SystemExit(1)
+TOL = 1e-4
 compared = mismatches = 0
+max_abs = 0.0
 for key in old_keys:
     old = np.fromfile(old_root / f"{key}.f32.bin", dtype="<f4").reshape(-1, 1024)
     new = np.fromfile(new_root / f"{key}.f32.bin", dtype="<f4").reshape(-1, 1024)
@@ -164,9 +168,18 @@ for key in old_keys:
         print(f"EVEN_GRID_BITEXACT=FAIL reason=rows key={key} old={old.shape[0]} new_even={even.shape[0]}")
         raise SystemExit(1)
     compared += old.shape[0]
-    mismatches += int((even.view(np.uint32) != old.view(np.uint32)).any(axis=1).sum())
-print(f"EVEN_GRID_BITEXACT={'PASS' if mismatches == 0 else 'FAIL'} segments={len(old_keys)} compared={compared} mismatches={mismatches}")
-raise SystemExit(int(mismatches != 0))
+    rows = (even.view(np.uint32) != old.view(np.uint32)).any(axis=1)
+    if rows.any():
+        mismatches += int(rows.sum())
+        max_abs = max(max_abs, float(np.max(np.abs(even[rows].astype(np.float64) - old[rows].astype(np.float64)))))
+if mismatches == 0:
+    print(f"EVEN_GRID_BITEXACT=PASS mode=bitexact segments={len(old_keys)} compared={compared} mismatches=0")
+elif np.isfinite(max_abs) and max_abs <= TOL:
+    print(f"EVEN_GRID_BITEXACT=PASS mode=tol max_abs={max_abs!r} mismatched_rows={mismatches} note=cross_latent_copy "
+          f"segments={len(old_keys)} compared={compared}")
+else:
+    print(f"EVEN_GRID_BITEXACT=FAIL max_abs={max_abs!r} mismatched_rows={mismatches} tol={TOL} compared={compared}")
+    raise SystemExit(1)
 PY
   expect_line g2-even '^EVEN_GRID_BITEXACT=PASS ' EVEN_GRID_BITEXACT
 fi
@@ -182,7 +195,6 @@ if want G3; then
   run_or_fail MOTION_PACK_VERIFY g3-verify env CUDA_VISIBLE_DEVICES= JAX_PLATFORMS=cpu uv run --no-sync python \
     scripts/dataset/pack_motion_store.py verify --store "$STORE16" --resume --check-padding
   expect_line g3-verify "^VERIFY_MOTION=PASS scanned=$ROWS mismatches=0" MOTION_PACK_VERIFY
-  [[ $DRY_RUN == 1 ]] || echo "MOTION_PACK_VERIFY=PASS rows=$ROWS mismatches=0 store=$STORE16"
 fi
 
 # ── G4：预算（训练侧读 manifest，CPU；评估侧经真实 EnvRunner.reset 采集官方 test 集 es，需仿真环境与 1 卡渲染）──
@@ -218,11 +230,13 @@ if want G5; then
     --history "$HISTORY" --framesamp-store "$LIB/framesamp-4x4" --h5-root "$RAW" --input-manifest "$INMANI" \
     --online-gpu "$ONLINE_GPU" --out "$VALID16/G4-mod.json"
   expect_line g5-online '^ONLINE_INPUT_IDENTITY=PASS windows=64 ' ONLINE_STAGE2
-  # 方案要求抽样 ≥64 窗、奇数格 ≥16、含 demo 尾补帧窗；按 G5 报告与 G0 实际窗口统计并判定。
+  # 方案要求抽样 ≥64 窗、奇数格 ≥16、含 demo 尾补帧窗；统计 G5 报告里实际在线编码的窗口，
+  # 段类型与补帧数按 (key, source_grid) 回查 G0 窗口记录。
   run_or_fail ONLINE_STAGE2 g5-sample env CUDA_VISIBLE_DEVICES= uv run --no-sync python - "$VALID16/G0.json" "$VALID16/G4-mod.json" <<'PY'
 import json, sys
 g0, report = (json.load(open(p)) for p in sys.argv[1:])
-windows = g0["windows"]
+by_id = {(w["key"], w["source_grid"]): w for w in g0["windows"]}
+windows = [by_id[(r["key"], r["source_grid"])] for r in report.get("windows", [])]
 odd = sum(w["source_grid"] % 2 == 1 for w in windows)
 tail = sum(w["segment_kind"] == "demo" and w["pad_frames"] > 0 for w in windows)
 ok = report.get("status") == "PASS" and len(windows) >= 64 and odd >= 16 and tail >= 1

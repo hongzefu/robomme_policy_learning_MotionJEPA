@@ -51,8 +51,14 @@ def read_json(path):
 
 
 def select_windows(manifest, latents, *, tasks=TASKS, per_task=PER_TASK, min_demo_tail=MIN_DEMO_TAIL,
-                   routes=None):
-    """按排序后的候选和 seed=0 抽样，优先轮转覆盖不同任务的 demo 补帧尾窗。"""
+                   routes=None, grid_subsample=2):
+    """按排序后的候选和 seed=0 抽样，优先轮转覆盖不同任务的 demo 补帧尾窗。
+
+    grid_subsample 是目标布局相对 grid16 latent 的取格间隔：2=旧 grid32 只取偶数格（缺省，旧 G0 不变），
+    1=grid16 从全部格抽样（候选含奇数格）。
+    """
+    if grid_subsample not in (1, 2):
+        raise ValueError(f"grid_subsample 只允许 1 或 2: {grid_subsample!r}")
     grouped = {}
     total = read_json(latents / "metadata.json")
     expected = {"schema": 3, "stage": "wan", "grid_stride": GRID_STRIDE,
@@ -101,7 +107,7 @@ def select_windows(manifest, latents, *, tasks=TASKS, per_task=PER_TASK, min_dem
                     or any(k not in bound or lm.get(k) != bound[k] for k in bound_fields)):
                 raise ValueError(f"{key} 历史 metadata 与清单或固定总表不符")
             require_sha256(lm.get("sha256"), f"{key} sha256")
-            for old_grid in range(0, count, 2):
+            for old_grid in range(0, count, grid_subsample):
                 row = lm["rows"][old_grid]
                 start = start_global + old_grid * GRID_STRIDE
                 real = min(33, length - old_grid * GRID_STRIDE)
@@ -366,7 +372,7 @@ def materialize_h5_window(item, *, h5_root, inputs, mapping, file_sha_cache):
                     "source_frame_indices": [{"source": 0, "index": frame} for frame in frame_ids]}
 
 
-def build_h5_inputs(manifest_path, latents, source, h5_root, input_manifest, mj_index, receipt_path):
+def build_h5_inputs(manifest_path, latents, source, h5_root, input_manifest, mj_index, receipt_path, grid_subsample=2):
     manifest = load_manifest(require_file(manifest_path))
     inputs, mappings, routes, index_path = read_h5_context(manifest, input_manifest, mj_index, receipt_path)
     receipt = read_strict_json(receipt_path)
@@ -374,7 +380,7 @@ def build_h5_inputs(manifest_path, latents, source, h5_root, input_manifest, mj_
             or receipt["latents"]["metadata_sha256"] != ms.sha256_file(latents / "metadata.json")):
         raise ValueError("缓存收据与 episode manifest 或 latent metadata 不同源")
     output_files = {item["path"]: item for item in receipt["latents"]["files"]}
-    selected = select_windows(manifest, latents, routes=routes)
+    selected = select_windows(manifest, latents, routes=routes, grid_subsample=grid_subsample)
     windows, checked = [], {}
     for item in selected:
         mapping = mappings[(item[2], item[3])]
@@ -424,15 +430,16 @@ def build_h5_inputs(manifest_path, latents, source, h5_root, input_manifest, mj_
 
 
 def build_inputs(manifest_path, latents, source, demo_root, *, h5_root=None, input_manifest=None,
-                 mj_index=None, cache_import_receipt=None):
+                 mj_index=None, cache_import_receipt=None, grid_subsample=2):
     latents, source, demo_root = (pathlib.Path(p).resolve() for p in (latents, source, demo_root))
     original_args = (h5_root, input_manifest, mj_index, cache_import_receipt)
     if any(x is not None for x in original_args):
         if not all(x is not None for x in original_args):
             raise ValueError("原版 H5 模式必须同时提供 --h5-root --input-manifest --mj-index --cache-import-receipt")
-        return build_h5_inputs(manifest_path, latents, source, h5_root, input_manifest, mj_index, cache_import_receipt)
+        return build_h5_inputs(manifest_path, latents, source, h5_root, input_manifest, mj_index, cache_import_receipt,
+                               grid_subsample)
     manifest = load_manifest(require_file(manifest_path))
-    selected = select_windows(manifest, latents)
+    selected = select_windows(manifest, latents, grid_subsample=grid_subsample)
     control = demo_root.parent / "control"
     scope_path = control / "scope.json"
     scope_record = read_json(scope_path)
@@ -486,6 +493,8 @@ def main(argv=None):
                         default=pathlib.Path("/scratch/hongze/dataset-local-a100-16task-mixed8-200/data-raw"))
     for name in ("h5-root", "input-manifest", "mj-index", "cache-import-receipt"):
         parser.add_argument(f"--{name}", type=pathlib.Path)
+    parser.add_argument("--grid-subsample", type=int, choices=(2, 1), default=2,
+                        help="目标布局取格间隔：2=grid32 只抽偶数格（缺省，旧 G0 不变），1=grid16 从全部格抽样")
     args = parser.parse_args(argv)
     originals = (args.h5_root, args.input_manifest, args.mj_index, args.cache_import_receipt)
     if any(x is not None for x in originals) and not all(x is not None for x in originals):
@@ -495,6 +504,7 @@ def main(argv=None):
     kwargs = {} if not any(x is not None for x in originals) else {
         "h5_root": args.h5_root, "input_manifest": args.input_manifest,
         "mj_index": args.mj_index, "cache_import_receipt": args.cache_import_receipt}
+    kwargs["grid_subsample"] = args.grid_subsample
     result = build_inputs(args.manifest, args.latents.resolve(), args.source.resolve(), args.demo_root.resolve(), **kwargs)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     tmp = None

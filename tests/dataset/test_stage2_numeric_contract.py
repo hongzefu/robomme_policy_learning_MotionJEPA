@@ -398,3 +398,36 @@ def test_portable_restore_uses_real_state_rows_and_rejects_drift(tmp_path, monke
     bad.write_bytes(pickle.dumps(payload))
     with pytest.raises(ValueError, match="state"):
         O.prepare_restore_inputs(meta, dict(windows=[item]), tmp_path, tmp_path)
+
+
+
+@pytest.mark.parametrize("given,store_layout,expected", [
+    (None, None, 2), ("1", None, 1), ("2", None, 2), (None, "grid16", 1), ("1", "grid16", 1), ("1", "grid32", "conflict")])
+def test_main_grid_subsample_flag_and_store_conflict(tmp_path, monkeypatch, given, store_layout, expected):
+    """显式 --grid-subsample 生效（缺省 2）；同时给 --store 时以 store 为准，两者不一致即报错。"""
+    from mme_vla_suite.datastore import motion_store as ms
+    ckpt, samples = tmp_path / "ckpt.pt", tmp_path / "G0.json"
+    ckpt.write_bytes(b"ckpt")
+    samples.write_text("{}")
+    argv = ["--gate", "G2", "--samples", str(samples), "--ckpt", str(ckpt),
+            "--expected-sha256", V.sha_file(ckpt), "--out", str(tmp_path / "G2.json")]
+    if given is not None:
+        argv += ["--grid-subsample", given]
+    if store_layout is not None:
+        layout = {"grid16": ms.STAGE2_GRID16_LAYOUT, "grid32": ms.STAGE2_LAYOUT}[store_layout]
+        raw = dict(layout=layout, grid_stride=ms.LAYOUT_SPECS[layout].grid_stride)
+        monkeypatch.setattr(ms.MotionMeta, "load", lambda root: SimpleNamespace(raw=raw))
+        argv += ["--store", str(tmp_path / "store")]
+    seen = {}
+
+    def stop(path, subsample):
+        seen["subsample"] = subsample
+        raise RuntimeError("已取到取格间隔")
+    monkeypatch.setattr(V, "load_samples", stop)
+    if expected == "conflict":
+        with pytest.raises(ValueError, match="冲突"):
+            V.main(argv)
+        return
+    with pytest.raises(RuntimeError, match="已取到"):
+        V.main(argv)
+    assert seen["subsample"] == expected
