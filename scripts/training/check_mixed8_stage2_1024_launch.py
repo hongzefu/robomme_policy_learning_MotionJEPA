@@ -64,6 +64,10 @@ class Contract:
     input_manifest_sha256: str = "d7dd651edb8cb9652fa647a73a2d0d3c4be64d6876e1d7a186a5e8c75b02aafb"
     canonical_manifest_sha256: str = "d6a3ddb2b579b5cf50cd66fbefedd36478766e2b4cc07833a7efae29769742ad"
     motion_layout: str = "motion-stage2-1x1024-grid32-demopad17-v1"
+    # motion 表目录、窗口步长与预算按 run 登记；默认值即 mixed8 stage2 1024 原口径。
+    store_dir: str = "motion-stage2-1024"
+    motion_stride: int = 32
+    motion_budget: int = 96
     motion_rows: int = 65419
     motion_row_bytes: int = 4096
     train_max: int = 62
@@ -232,12 +236,19 @@ MOTION_FIXED = {
 }
 
 
-def check_history(rec, formal, frame):
+def motion_fixed(contract=None):
+    """按合同登记的 stride/budget/store_dir 生成期望 motion 节；默认合同逐键等于 MOTION_FIXED。"""
+    contract = Contract() if contract is None else contract
+    return {**MOTION_FIXED, "stride": contract.motion_stride, "budget": contract.motion_budget,
+            "store_path": contract.parent_rel + "/" + contract.store_dir}
+
+
+def check_history(rec, formal, frame, contract=None):
     rec("YAML_FRAME_UNCHANGED", {k: v for k, v in formal.items() if k != "motion"}
         == {k: v for k, v in frame.items() if k != "motion"}, "帧路完整结构与旧8帧配置相同")
     motion = formal.get("motion", {})
     rec("YAML_MOTION", {k: v for k, v in motion.items() if k != "checkpoint_sha256"}
-        == MOTION_FIXED, "stage2全部配置键必须精确匹配")
+        == motion_fixed(contract), "stage2全部配置键必须精确匹配")
     sha = motion.get("checkpoint_sha256", "")
     rec("YAML_SHA_FORMAT", isinstance(sha, str) and re.fullmatch(r"[0-9a-f]{64}", sha) is not None,
         "checkpoint_sha256须为G3已核验值")
@@ -271,16 +282,16 @@ def check_parent(rec, store, contract):
     rec("PARENT_SOURCE_DIR", (parent / "source/data").is_dir(), f"{parent}/source/data")
 
 
-def manifest_bounds(manifest, *, eval_steps=1300):
-    """独立复算 stride32、demo 最少17帧、exec 完整33帧的可见窗数。"""
+def manifest_bounds(manifest, *, eval_steps=1300, stride=32):
+    """独立复算给定窗口步长（默认 stride32）、demo 最少17帧、exec 完整33帧的可见窗数。"""
     counts, total, train_max, demo_max = {}, 0, 0, 0
     for episode in manifest["episodes"]:
         g, length, demo = (episode[k] for k in ("global_episode_idx", "num_timesteps", "exec_start_idx"))
         if any(type(v) is not int for v in (g, length, demo)) or not 0 <= demo < length or g in counts:
             raise ValueError(f"manifest episode 身份或长度非法: {episode}")
         # 最后一个 exec 样本看到全部合法窗；任一更早时刻只可能更少。
-        nd = len(range(0, max(0, demo - 16), 32))
-        ne = len(range(0, max(0, length - demo - 32), 32))
+        nd = len(range(0, max(0, demo - 16), stride))
+        ne = len(range(0, max(0, length - demo - 32), stride))
         counts[g] = nd + ne
         total += nd + ne
         train_max = max(train_max, nd + ne)
@@ -288,17 +299,18 @@ def manifest_bounds(manifest, *, eval_steps=1300):
     if not counts:
         raise ValueError("manifest 没有 episode")
     return {"counts": counts, "rows": total, "train_max": train_max,
-            "eval_max": demo_max + len(range(0, max(0, eval_steps - 32), 32))}
+            "eval_max": demo_max + len(range(0, max(0, eval_steps - 32), stride))}
 
 
 def check_budget(rec, manifest, contract, entries=None):
     """精确公式与实际 loader 的可见窗枚举必须逐 episode 相等。"""
-    bounds = manifest_bounds(manifest, eval_steps=contract.eval_steps)
+    bounds = manifest_bounds(manifest, eval_steps=contract.eval_steps, stride=contract.motion_stride)
+    budget = contract.motion_budget
     rec("BUDGET_ROWS", bounds["rows"] == contract.motion_rows, f"rows={bounds['rows']}")
-    rec("BUDGET_TRAIN", bounds["train_max"] == contract.train_max <= MOTION_FIXED["budget"],
-        f"train_max={bounds['train_max']} budget={MOTION_FIXED['budget']}")
-    rec("BUDGET_EVAL", bounds["eval_max"] == contract.eval_max <= MOTION_FIXED["budget"],
-        f"eval_max={bounds['eval_max']} eval_steps={contract.eval_steps} budget={MOTION_FIXED['budget']}")
+    rec("BUDGET_TRAIN", bounds["train_max"] == contract.train_max <= budget,
+        f"train_max={bounds['train_max']} budget={budget}")
+    rec("BUDGET_EVAL", bounds["eval_max"] == contract.eval_max <= budget,
+        f"eval_max={bounds['eval_max']} eval_steps={contract.eval_steps} budget={budget}")
     if entries is not None:
         from mme_vla_suite.datastore.motion_store import max_visible_count
         actual = {entry.g: max_visible_count(entry) for entry in entries}
@@ -306,7 +318,7 @@ def check_budget(rec, manifest, contract, entries=None):
             "loader 末帧可见窗数与 manifest 独立公式逐 episode 比较")
         ok = not any(name.startswith("BUDGET_") for name in rec.failed)
         print(f"TRAIN_ES_BOUND={'PASS' if ok else 'FAIL'} train_max={bounds['train_max']} "
-              f"eval_max={bounds['eval_max']} budget={MOTION_FIXED['budget']}", flush=True)
+              f"eval_max={bounds['eval_max']} budget={budget}", flush=True)
     return bounds
 
 
@@ -314,20 +326,21 @@ def check_motion(rec, repo, store, fields, contract):
     """验证实际库、来源、完整表摘要和注册的ep105实体副本。"""
     from mme_vla_suite.datastore import motion_store as ms
     from mme_vla_suite.datastore.manifest import load_manifest
-    root = store / contract.parent_rel / "motion-stage2-1024"
-    rec("MOTION_PATH", fields["store_path"] == contract.parent_rel + "/motion-stage2-1024"
+    root = store / contract.parent_rel / contract.store_dir
+    rec("MOTION_PATH", fields["store_path"] == contract.parent_rel + "/" + contract.store_dir
         and root.is_dir() and not root.is_symlink(), str(root))
     meta = json.loads((root / "meta/store_meta.json").read_text())
     loaded = ms.MotionMeta.load(root)
     table = meta["tables"]["motion_token"]
     rec("MOTION_LAYOUT", meta.get("layout") == contract.motion_layout and meta.get("status") == "verified"
-        and loaded.spec.grid_stride == 32, "已verified的stage2 grid32库")
+        and loaded.spec.grid_stride == contract.motion_stride, f"已verified的stage2 grid{contract.motion_stride}库")
     rec("MOTION_ROWS", meta.get("num_rows") == table.get("num_rows") == contract.motion_rows,
-        f"期望65419，实际{meta.get('num_rows')}")
+        f"期望{contract.motion_rows}，实际{meta.get('num_rows')}")
     body = root / table["relpath"]
-    rec("MOTION_TABLE", table.get("row_bytes") == 4096 and table.get("row_shape") == [1, 1024]
-        and table.get("dtype") == "float32" and table.get("byte_count") == 267956224
-        and body.stat().st_size == 267956224 and sha256_file(body) == loaded.table_sha256,
+    byte_count = contract.motion_rows * contract.motion_row_bytes
+    rec("MOTION_TABLE", table.get("row_bytes") == contract.motion_row_bytes and table.get("row_shape") == [1, 1024]
+        and table.get("dtype") == "float32" and table.get("byte_count") == byte_count
+        and body.stat().st_size == byte_count and sha256_file(body) == loaded.table_sha256,
         "逐字节摘要与元数据相同")
     rec("MOTION_MANIFEST", meta.get("manifest_sha256") == contract.canonical_manifest_sha256)
     provenance = meta["provenance"]
@@ -483,7 +496,7 @@ def run(args, argv, env=None, contract=Contract()):
     history = rec.guard("YAML", lambda: (load_yaml(repo, HISTORY_CONFIG), load_yaml(repo, FRAME_CONFIG)))
     fields = None
     if history is not None:
-        result = rec.guard("YAML", check_history, rec, *history)
+        result = rec.guard("YAML", check_history, rec, *history, contract)
         if result is not None:
             fields = result
     if fields is not None and not any(PLACEHOLDER in str(v) for v in fields.values()):
@@ -506,7 +519,7 @@ def run(args, argv, env=None, contract=Contract()):
             leaves = rec.guard("LEAVES", lambda: (
                 model_leaves(cfg, OmegaConf.create(history[0])),
                 model_leaves(base, OmegaConf.create({**history[1], "motion": {
-                    **MOTION_FIXED, "checkpoint_sha256": fields["checkpoint_sha256"]}})),
+                    **motion_fixed(contract), "checkpoint_sha256": fields["checkpoint_sha256"]}})),
                 base_leaves(cfg.weight_loader.params_path),
                 model_leaves(base, None)))
             if leaves is not None:
