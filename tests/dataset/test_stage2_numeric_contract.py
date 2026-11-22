@@ -102,6 +102,29 @@ def test_window_rejects_wrong_grid_padding(tmp_path, field, value):
         V.validate_window(item)
 
 
+def test_window_grid_subsample_follows_layout(tmp_path):
+    """grid16 布局（subsample=1）认奇数 latent 格；缺省 grid32（subsample=2）照旧拒绝。"""
+    item, _ = window(tmp_path)
+    item["source_grid"] = 3
+    V.validate_window(item, 1)
+    with pytest.raises(ValueError):
+        V.validate_window(item)
+    with pytest.raises(ValueError):
+        V.validate_window(item, 2)
+
+
+def test_store_layout_params_from_store_meta():
+    grid16 = V.stage2_grid16_layout()
+    assert grid16 == "motion-stage2-1x1024-grid16-demopad17-v1"
+    assert V.store_layout_params(dict(layout=V.LAYOUT, grid_stride=32)) == (V.LAYOUT, 32, 2)
+    assert V.store_layout_params(dict(layout=grid16, grid_stride=16)) == (grid16, 16, 1)
+    assert set(V.stage2_layouts()) == {V.LAYOUT, grid16}
+    for raw in (dict(layout=grid16, grid_stride=32), dict(layout=V.LAYOUT, grid_stride=16),
+                dict(layout="motion-768-grid16-v1", grid_stride=16), dict(layout=V.LAYOUT, grid_stride=32.0)):
+        with pytest.raises(ValueError):
+            V.store_layout_params(raw)
+
+
 def test_pixel_hash_catches_wrong_source_mapping(tmp_path):
     item, _ = window(tmp_path)
     item["source_frame_indices"][0]["index"] = 1
@@ -266,6 +289,24 @@ def test_actual_memory_state_machine_with_frame_ids():
     result = O.check_state_machine(Client(), config)
     assert result["frame_ids_mismatch"] == result["state_machine_mismatch"] == 0
     assert result["stub_windows"] == 6 and result["reset"] == 1
+
+
+def test_actual_memory_state_machine_stride16_budget192():
+    """stride16：demo 0/16/32、exec 49..113 五窗、reset 后 1 窗；保留的原帧从下一未编码起点 129 起。"""
+    from mme_vla_suite.policies import motion_protocol as protocol
+
+    class Client:
+        alive = True
+
+        def __call__(self, pixels, start):
+            assert protocol.stub_decode(pixels)[0] == start
+            return np.full(1024, start, np.float32)
+
+    config = dict(stride=16, window_frames=33, budget=192, frame_size=256, pos_dim=256, dim=1024,
+                  demo_min_real_frames=17, demo_tail_pad="repeat_last")
+    result = O.check_state_machine(Client(), config)
+    assert result["frame_ids_mismatch"] == result["state_machine_mismatch"] == 0
+    assert result["stub_windows"] == 9 and result["reset"] == 1
 
 
 def test_torch_ema_and_real_geometry_in_isolated_cpu_environment():

@@ -108,8 +108,15 @@ def check_state_machine(client, motion_cfg, *, token_per_image=64):
                                    [np.zeros(8, np.float32) for _ in range(lo, hi)], es)
         memory.add_buffer(packed["images"], packed["state"], list(range(lo, hi)), exec_start_idx=es)
 
+    stride = int(motion_cfg["stride"])
+
+    def next_exec_start(last, es):
+        # 下一个尚未编码的 exec 起点：已编码起点之后再走一个步长。
+        starts = list(range(es, max(es, last - 31), stride))
+        return starts[-1] + stride if starts else es
+
     def check(last, es):
-        expected = list(range(0, max(0, es - 16), 32)) + list(range(es, max(es, last - 31), 32))
+        expected = list(range(0, max(0, es - 16), stride)) + list(range(es, max(es, last - 31), stride))
         if list(memory._history_feats_motion) != expected or memory.visible_motion_frames(last) != expected:
             raise ValueError("在线状态机起点与独立边界公式不同")
         emb, _, mask, times = memory._prepare_motion(last)
@@ -123,14 +130,14 @@ def check_state_machine(client, motion_cfg, *, token_per_image=64):
             if ids != want:
                 raise ValueError("stub 反推33帧发现跨段、漏帧或错补位")
 
-    # 49帧demo包含17帧补尾；连续exec的相邻窗共用第32帧。
+    # 49帧demo包含17帧补尾；连续exec只保留下一个未编码起点及其后的原帧（stride32 时即共享的第32帧）。
     add(0, 50, 49)
     check(49, 49)
     for lo in range(50, 146, 16):
         hi = lo + 16
         add(lo, hi, 49)
         check(hi - 1, 49)
-    if set(memory._raw_frames) != {145}:
+    if set(memory._raw_frames) != set(range(next_exec_start(145, 49), 146)):
         raise ValueError("连续exec没有精确保留下一窗的共享边界帧")
     before_reset = len(seen)
     memory.clear()
@@ -288,7 +295,8 @@ def run(args):
     ms.validate_stage2_provenance(meta.provenance)
     ms.run_fast_checks(meta)
     ms.run_full_checks(meta)
-    if meta.raw["layout"] != V.LAYOUT or meta.status != "verified":
+    _, grid_stride, subsample = V.store_layout_params(meta.raw)
+    if meta.status != "verified":
         raise ValueError("G4 必须消费已全表认证并 verified 的 stage2 表")
     if ms.stage2_uses_cache(meta.provenance):
         if not all((args.framesamp_store, args.h5_root, args.input_manifest)):
@@ -296,7 +304,7 @@ def run(args):
         if V.sha_file(args.input_manifest) != meta.provenance["input_manifest_sha256"]:
             raise ValueError("G4的input manifest与motion来源合同不同")
     samples_sha, history_sha = V.sha_file(args.samples), V.sha_file(args.history)
-    samples = V.load_samples(args.samples)
+    samples = V.load_samples(args.samples, subsample)
     g0 = meta.provenance["stage2_compat"]["evidence"]["G0"]
     if g0["sha256"] != samples_sha or samples["manifest_sha256"] != meta.manifest_sha256:
         raise ValueError("G4 样本不是当前 store 固定的 G0")
@@ -305,11 +313,11 @@ def run(args):
     from mme_vla_suite.datastore.motion_adapter import motion_policy_spec
     policy_spec = motion_policy_spec(motion)
     if (policy_spec.readout not in ("stage2_pool4_concat_v1", "stage2_pool4_split_v1")
-            or policy_spec.window_budget != 96 or config.get("budget") != 512
+            or policy_spec.budget != motion.get("budget") or config.get("budget") != 512
             or config.get("token_per_image") not in (16, 64) or config.get("num_views") != 1
             or config.get("memory_token_dim") != {"context": 2048, "modulation": 1024}.get(config.get("integration_type"))):
         raise ValueError("history的帧布局、motion读法或融合维度不符")
-    expected = dict(enabled=True, encoder_kind="stage2_pool4_concat", stride=32,
+    expected = dict(enabled=True, encoder_kind="stage2_pool4_concat", stride=grid_stride,
                     window_frames=33, demo_min_real_frames=17, demo_tail_pad="repeat_last")
     if any(motion.get(k) != value for k, value in expected.items()):
         raise ValueError("history motion 不满足 stage2 固定合同")
@@ -330,14 +338,14 @@ def run(args):
         reference, reference_record = reference_subprocess(args, meta, v1, directory)
     common = dict(encoder_kind="stage2_pool4_concat", online_gpu=motion["online_gpu"], source_run=source_run,
                   expected_ckpt_sha256=enc["checkpoint_sha256"], store_provenance=meta.provenance,
-                  provenance_root=meta.root, v1_store=v1)
+                  provenance_root=meta.root, v1_store=v1, grid_stride=grid_stride)
     real = MotionEncoderClient(**common, stub=False)
     try:
         require_handshake(real, stub=False)
         gpu = verify_gpu(real.provenance, args.online_gpu)
         cache, rows = {}, []
         for i, window in enumerate(samples["windows"]):
-            result = real(V.read_window_frames(window, cache), window["frame_ids"][0])
+            result = real(V.read_window_frames(window, cache, subsample), window["frame_ids"][0])
             if result.shape != (1024,) or result.dtype != np.float32 or not np.isfinite(result).all():
                 raise ValueError("真实客户端输出形制或有限性错误")
             delta = float(np.max(np.abs(result.astype(np.float64) - reference[i].astype(np.float64))))

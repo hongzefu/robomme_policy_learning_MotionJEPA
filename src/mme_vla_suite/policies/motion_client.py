@@ -80,8 +80,17 @@ def _evidence_path(value: str, root: pathlib.Path | None) -> pathlib.Path:
     return resolved
 
 
-def validate_stage2_evidence(provenance: dict, root: pathlib.Path | None) -> None:
-    """实际读取引用证据并核内容身份；历史 VAE 身份不改写成当前源码。"""
+STAGE2_LATENT_GRID_STRIDE = 16   # G0 的 source_grid 以 Wan latent 的 16 帧格为单位
+
+
+def validate_stage2_evidence(provenance: dict, root: pathlib.Path | None, *, grid_stride: int = 32) -> None:
+    """实际读取引用证据并核内容身份；历史 VAE 身份不改写成当前源码。
+
+    `grid_stride` 是该 store 布局的窗口步长：grid32（缺省，旧行为）只认偶数 latent 格，grid16 认任意整数格。
+    """
+    if type(grid_stride) is not int or grid_stride <= 0 or grid_stride % STAGE2_LATENT_GRID_STRIDE:
+        raise ValueError(f"阶段二 grid_stride 必须是 {STAGE2_LATENT_GRID_STRIDE} 的正整数倍: {grid_stride!r}")
+    subsample = grid_stride // STAGE2_LATENT_GRID_STRIDE
     compat = provenance["stage2_compat"]
     evidence = compat["evidence"]
     from mme_vla_suite.datastore import motion_store as ms
@@ -128,7 +137,7 @@ def validate_stage2_evidence(provenance: dict, root: pathlib.Path | None) -> Non
         if (len(window.get("frame_ids", [])) != 33
                 or len(window.get("source_frame_indices", [])) != 33
                 or not window.get("sources") or type(window.get("source_grid")) is not int
-                or window["source_grid"] % 2):
+                or window["source_grid"] % subsample):
             raise ValueError("阶段二 G0 窗口来源不完整")
     if len(tasks) != 16 or set(tasks.values()) != {4}:
         raise ValueError("阶段二 G0 必须每任务四窗")
@@ -207,7 +216,8 @@ class MotionEncoderClient:
                  v1_store: str | pathlib.Path | None = None, handshake_timeout: float = P.HANDSHAKE_TIMEOUT_S,
                  source_run: str | None = None, encoder_kind: str = "v10",
                  provenance_root: str | pathlib.Path | None = None,
-                 stage2_python: str | None = None, eval_target_contract: str | pathlib.Path | None = None):
+                 stage2_python: str | None = None, eval_target_contract: str | pathlib.Path | None = None,
+                 grid_stride: int = 32):
         self.encoder_kind = encoder_kind
         self._eval_target_contract = eval_target_contract
         if encoder_kind != STAGE2_KIND and (stage2_python or eval_target_contract):
@@ -216,7 +226,8 @@ class MotionEncoderClient:
             self._init_stage2(online_gpu=online_gpu, encoder_run_dir=encoder_run_dir,
                              expected_ckpt_sha256=expected_ckpt_sha256, store_provenance=store_provenance,
                              stub=stub, v1_store=v1_store, handshake_timeout=handshake_timeout,
-                             source_run=source_run, provenance_root=provenance_root, stage2_python=stage2_python)
+                             source_run=source_run, provenance_root=provenance_root, stage2_python=stage2_python,
+                             grid_stride=grid_stride)
             return
         if encoder_kind != "v10":
             raise ValueError(f"未知 motion.encoder_kind: {encoder_kind}")
@@ -280,8 +291,11 @@ class MotionEncoderClient:
         self.total_s = 0.0
 
     def _init_stage2(self, *, online_gpu, encoder_run_dir, expected_ckpt_sha256, store_provenance,
-                     stub, v1_store, handshake_timeout, source_run, provenance_root, stage2_python=None) -> None:
+                     stub, v1_store, handshake_timeout, source_run, provenance_root, stage2_python=None,
+                     grid_stride=32) -> None:
         self._lock = threading.Lock()
+        # store 布局的窗口步长（store meta grid_stride / yaml motion.stride），供 G0 证据取格间隔校验。
+        self._grid_stride = grid_stride
         self.stub = bool(stub)
         self._online_gpu = str(online_gpu)
         self._provenance_root = pathlib.Path(provenance_root) if provenance_root is not None else None
@@ -290,7 +304,7 @@ class MotionEncoderClient:
                 raise ValueError("真实阶段二编码必须提供完整 store_provenance")
             from mme_vla_suite.datastore.motion_store import validate_stage2_provenance
             validate_stage2_provenance(store_provenance)
-            validate_stage2_evidence(store_provenance, self._provenance_root)
+            validate_stage2_evidence(store_provenance, self._provenance_root, grid_stride=grid_stride)
             if expected_ckpt_sha256 != store_provenance["encoder"]["checkpoint_sha256"]:
                 raise ValueError("阶段二 expected_ckpt_sha256 与来源不一致")
         match = re.fullmatch(r"([A-Za-z0-9][A-Za-z0-9_.-]*)/(checkpoint_epoch_\d+\.pt)#model", source_run or "")
@@ -430,7 +444,7 @@ class MotionEncoderClient:
     def _check_stage2_provenance(self, store_prov: dict) -> None:
         from mme_vla_suite.datastore.motion_store import validate_stage2_provenance
         validate_stage2_provenance(store_prov)
-        validate_stage2_evidence(store_prov, self._provenance_root)
+        validate_stage2_evidence(store_prov, self._provenance_root, grid_stride=self._grid_stride)
         target = None
         if getattr(self, "_eval_target_contract", None) is not None:
             from scripts.evaluation.runtime_contract import validate_eval_runtime_contract

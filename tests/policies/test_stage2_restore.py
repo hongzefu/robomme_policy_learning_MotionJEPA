@@ -582,9 +582,10 @@ def test_restore_uuid_prefix_is_format_only(uuid):
         restore.verified_sidecar_pid(client, 1, inventory)
 
 
+@pytest.mark.parametrize("stride,keys2,keys4", [(32, [0, 17], [0, 17, 49]), (16, [0, 17], [0, 17, 33, 49])])
 @pytest.mark.parametrize("fusion,dim", [("context", 2048), ("modulation", 1024)])
 @pytest.mark.parametrize("schedule", [[33, 32], [1, 16, 16, 16, 16]])
-def test_restore_online_real_policy_dplus1_split896(monkeypatch, fusion, dim, schedule):
+def test_restore_online_real_policy_dplus1_split896(monkeypatch, fusion, dim, schedule, stride, keys2, keys4):
     """真实pack_buffer/FrameSampMemory/policy组包；sidecar与动作网络用确定性CPU夹具。"""
     import functools
     import jax.numpy as jnp
@@ -593,6 +594,7 @@ def test_restore_online_real_policy_dplus1_split896(monkeypatch, fusion, dim, sc
     from mme_vla_suite.policies.framesamp_memory import FrameSampMemory
     hc = OmegaConf.load(SCRIPT.parents[2] / "src/mme_vla_suite/models/config/robomme/perceptual-framesamp-ctx-32frame-4x4-motion-stage2-4x256-orig16.yaml")
     hc.integration_type, hc.memory_token_dim = fusion, dim
+    hc.motion.stride = stride
     monkeypatch.setattr(module.nnx_utils, "module_jit", lambda fn: fn)
     monkeypatch.setattr(module, "FrameSampMemory", functools.partial(FrameSampMemory, max_steps=128))
     monkeypatch.setattr(restore, "verified_sidecar_pid", lambda *args: 11)
@@ -625,9 +627,10 @@ def test_restore_online_real_policy_dplus1_split896(monkeypatch, fusion, dim, sc
                   states=np.zeros((82, 8), np.float32), wrist_image=np.zeros((256, 256, 3), np.uint8))
     result = restore.run_online(policy, dict(exec_start_idx=17, exec_batch_lengths=schedule, prompt="夹具"), arrays, 1, {})
     assert seen == [(18, 17, 0), (16, 17, 18), (16, 17, 34), (16, 17, 50), (16, 17, 66)]
-    assert result["memory_tokens"] == 896 and result["sidecar_calls"] == 3 and result["reset"] == 1
-    assert result["batches"][2]["motion_keys"] == [0, 17]
-    assert result["batches"][4]["motion_keys"] == [0, 17, 49]
+    assert result["memory_tokens"] == 896 and result["sidecar_calls"] == len(keys4) and result["reset"] == 1
+    assert result["batches"][2]["motion_keys"] == keys2
+    assert result["batches"][4]["motion_keys"] == keys4
+    assert result["batches"][2]["raw_frame_keys"] == list(range(17 + stride, 50))
 
 
 @pytest.mark.parametrize("tokens,layout", [(16, "4x4"), (64, "8x8")])
@@ -682,9 +685,10 @@ def test_raw_h5_portable_state_source_and_layout(tmp_path, monkeypatch, tokens, 
             samples, tmp_path, tmp_path, **kwargs)
 
 
+@pytest.mark.parametrize("stride,windows", [(32, 6), (16, 9)])
 @pytest.mark.parametrize("tokens", [16, 64])
 @pytest.mark.parametrize("split", [False, True])
-def test_g4_state_machine_both_layouts_and_readouts(tokens, split):
+def test_g4_state_machine_both_layouts_and_readouts(tokens, split, stride, windows):
     from mme_vla_suite.policies import motion_protocol as protocol
     spec = importlib.util.spec_from_file_location("o16_g4_machine", SCRIPT.with_name("check_stage2_online.py"))
     online = importlib.util.module_from_spec(spec); spec.loader.exec_module(online)
@@ -696,12 +700,13 @@ def test_g4_state_machine_both_layouts_and_readouts(tokens, split):
             assert protocol.stub_decode(frames)[0] == start
             return np.full(1024, start, np.float32)
 
-    motion = dict(stride=32, window_frames=33, budget=384 if split else 96, frame_size=256,
+    budget = 96 * 32 // stride
+    motion = dict(stride=stride, window_frames=33, budget=budget * 4 if split else budget, frame_size=256,
         pos_dim=256, dim=256 if split else 1024, demo_min_real_frames=17, demo_tail_pad="repeat_last",
         source_shape=[1, 1024], num_tokens=4 if split else 1,
         readout="stage2_pool4_split_v1" if split else "stage2_pool4_concat_v1")
     result = online.check_state_machine(Client(), motion, token_per_image=tokens)
-    assert result["stub_windows"] == 6 and result["first_packet"] == "D+1" and result["max_followup_frames"] == 16
+    assert result["stub_windows"] == windows and result["first_packet"] == "D+1" and result["max_followup_frames"] == 16
 
 
 @pytest.mark.parametrize("cached", [False, True])

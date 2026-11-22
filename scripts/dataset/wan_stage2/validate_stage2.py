@@ -24,6 +24,29 @@ LATENT_SHAPE = (9, 16, 32, 32)
 CHUNK_BYTES = 589824
 LAYOUT = "motion-stage2-1x1024-grid32-demopad17-v1"
 PRODUCER = "stage2-numeric-validator-v1"
+# G0 的 source_grid 以 Wan latent 的 16 帧格为单位；布局步长 / 16 即取格间隔（grid32=2，grid16=1）。
+LATENT_GRID_STRIDE = 16
+
+
+def stage2_grid16_layout():
+    from mme_vla_suite.datastore import motion_store as ms
+    return getattr(ms, "STAGE2_GRID16_LAYOUT", "motion-stage2-1x1024-grid16-demopad17-v1")
+
+
+def stage2_layouts():
+    """已知 stage2 布局集合，以 motion_store 定义为准。"""
+    from mme_vla_suite.datastore import motion_store as ms
+    return getattr(ms, "STAGE2_LAYOUTS", (ms.STAGE2_LAYOUT, stage2_grid16_layout()))
+
+
+def store_layout_params(raw):
+    """从 store meta 读布局与 grid_stride，返回 (layout, grid_stride, subsample)。"""
+    layout, stride = raw.get("layout"), raw.get("grid_stride")
+    if layout not in stage2_layouts():
+        raise ValueError(f"不是已知 stage2 布局: {layout!r}")
+    if type(stride) is not int or stride <= 0 or stride % LATENT_GRID_STRIDE or f"-grid{stride}-" not in layout:
+        raise ValueError(f"store meta 的 grid_stride 与布局不符: {layout!r} {stride!r}")
+    return layout, stride, stride // LATENT_GRID_STRIDE
 
 
 def canonical(value):
@@ -87,7 +110,7 @@ def load_module(path, name):
     return module
 
 
-def load_samples(path):
+def load_samples(path, subsample=2):
     data = read_json(path)
     if (data.get("schema") != "stage2-validation-inputs-v1" or data.get("gate") != "G0"
             or data.get("status") != "PASS" or data.get("seed") != 0):
@@ -104,22 +127,22 @@ def load_samples(path):
     for field in ("manifest_sha256", "latent_metadata_sha256"):
         require_sha(data.get(field), field)
     for window in windows:
-        validate_window(window)
+        validate_window(window, subsample)
     return data
 
 
-def validate_window(window):
+def validate_window(window, subsample=2):
     kind, grid = window.get("segment_kind"), window.get("source_grid")
     real, pad = window.get("real_frames"), window.get("pad_frames")
     ids = window.get("frame_ids")
-    if (kind not in ("demo", "exec") or type(grid) is not int or grid < 0 or grid % 2
+    if (kind not in ("demo", "exec") or type(grid) is not int or grid < 0 or grid % subsample
             or type(real) is not int or type(pad) is not int or real + pad != 33
             or real < (17 if kind == "demo" else 33) or pad < 0
             or not isinstance(ids, list) or len(ids) != 33
             or any(type(x) is not int or x < 0 for x in ids)
             or ids[:real] != list(range(ids[0], ids[0] + real))
             or ids[real:] != [ids[real - 1]] * pad):
-        raise ValueError("窗口偶数格、真实帧与尾部重复合同错误")
+        raise ValueError("窗口取格间隔、真实帧与尾部重复合同错误")
     if window.get("pad_source_frame") != (ids[real - 1] if pad else None):
         raise ValueError("pad_source_frame 与真实末帧不同")
     for field in ("input_frames_sha256", "latent_block_sha256"):
@@ -133,9 +156,9 @@ def validate_window(window):
             raise ValueError("原帧来源索引越界")
 
 
-def read_window_frames(window, hash_cache=None):
+def read_window_frames(window, hash_cache=None, subsample=2):
     """按 G0 显式映射读取原像素；exec 的图像键固定为 image。"""
-    validate_window(window)
+    validate_window(window, subsample)
     cache = {} if hash_cache is None else hash_cache
     images = {}
     for number, source in enumerate(window["sources"]):
@@ -301,7 +324,7 @@ def gate_g2(args, samples, runtime):
     rows, cache = [], {}
     with torch.no_grad():
         for window in samples["windows"]:
-            pixels = read_window_frames(window, cache)
+            pixels = read_window_frames(window, cache, getattr(args, "grid_subsample", 2))
             x = torch.from_numpy(pixels).permute(3, 0, 1, 2).unsqueeze(0).float() / 127.5 - 1.0
             actual = full.encode_b2(encode, full.to_encoder_input(x, args.device))[0].cpu().numpy()
             mse, maximum = normalized_error(actual, read_latent(window), std)
@@ -394,8 +417,7 @@ def reference_g4(args, samples, runtime):
     from mme_vla_suite.datastore import motion_store as ms
     meta = ms.MotionMeta.load(args.store)
     cached = ms.stage2_uses_cache(meta.provenance)
-    if meta.raw["layout"] != LAYOUT:
-        raise ValueError("G4 仅支持 stage2 表")
+    _, _, subsample = store_layout_params(meta.raw)
     assert_encoder_identity(info, meta.provenance)
     ms.run_full_checks(meta)
     sidecar = load_module(HERE / "stage2_sidecar.py", "_stage2_numeric_sidecar")
@@ -411,7 +433,7 @@ def reference_g4(args, samples, runtime):
             offline = memory.encode_windows(encoder, latent.unsqueeze(0))[0].cpu().numpy()
             online = np.asarray(sidecar.encode_latent(encoder, latent))
             part = lookup[window["key"]]
-            index = window["source_grid"] // 2
+            index = window["source_grid"] // subsample
             if index >= part.num_grid:
                 raise ValueError("G0 窗口不在 packed 索引内")
             packed = table[part.row_base + index]
@@ -454,7 +476,12 @@ def main(argv=None):
         if sha_file(args.ckpt) != args.expected_sha256:
             raise ValueError("checkpoint SHA 与显式参数不符")
         samples_sha = sha_file(args.samples)
-        samples = load_samples(args.samples)
+        subsample = 2
+        if args.store:
+            from mme_vla_suite.datastore import motion_store as ms
+            subsample = store_layout_params(ms.MotionMeta.load(args.store).raw)[2]
+        args.grid_subsample = subsample
+        samples = load_samples(args.samples, subsample)
         if args.gate == "G3" and not args.rgb_root:
             raise ValueError("G3 必须指定 --rgb-root")
         if args.gate == "G4-reference" and (not args.store or not args.reference_output):

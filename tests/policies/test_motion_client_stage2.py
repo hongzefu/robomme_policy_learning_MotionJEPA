@@ -277,6 +277,7 @@ def _handshake_client(provenance, root):
     client.encoder_kind = C.STAGE2_KIND
     client._provenance_root = root
     client._online_gpu = "0"
+    client._grid_stride = 32
     client.provenance = {k: copy.deepcopy(provenance[k]) for k in
                          ("encoder", "encoder_state_sha256", "source_pin", "numerics")}
     client.provenance.update(online_vae=copy.deepcopy(provenance["stage2_compat"]["online_vae"]),
@@ -316,6 +317,33 @@ def test_rehashed_failing_gate_still_rejected(provenance, tmp_path):
     provenance["stage2_compat"]["evidence"]["G2"] = _write(path, record)
     with pytest.raises(ValueError, match="G2"):
         C.validate_stage2_evidence(provenance, tmp_path)
+
+
+def test_g0_source_grid_parity_follows_layout_grid_stride(provenance, tmp_path):
+    """grid32（缺省）只认偶数 latent 格；grid16 布局认任意整数格；步长须为 16 的倍数。"""
+    evidence = provenance["stage2_compat"]["evidence"]
+    g0 = json.loads((tmp_path / "G0.json").read_text())
+    for i, window in enumerate(g0["windows"]):
+        window["source_grid"] = i % 3
+    evidence["G0"] = _write(tmp_path / "G0.json", g0)
+    for gate in ("G2", "G3"):
+        record = json.loads((tmp_path / f"{gate}.json").read_text())
+        record["samples_sha256"] = evidence["G0"]["sha256"]
+        evidence[gate] = _write(tmp_path / f"{gate}.json", record)
+    C.validate_stage2_evidence(provenance, tmp_path, grid_stride=16)
+    with pytest.raises(ValueError, match="G0 窗口来源不完整"):
+        C.validate_stage2_evidence(provenance, tmp_path)
+    with pytest.raises(ValueError, match="G0 窗口来源不完整"):
+        C.validate_stage2_evidence(provenance, tmp_path, grid_stride=32)
+    with pytest.raises(ValueError, match="grid_stride"):
+        C.validate_stage2_evidence(provenance, tmp_path, grid_stride=24)
+    # 客户端握手核对使用构造时传入的 store 步长。
+    client = _handshake_client(provenance, tmp_path)
+    client._grid_stride = 16
+    client._check_stage2_provenance(provenance)
+    client._grid_stride = 32
+    with pytest.raises(ValueError, match="G0 窗口来源不完整"):
+        client._check_stage2_provenance(provenance)
 
 
 @pytest.mark.parametrize("gate,group", [("G2", "source_pin"), ("G3", "source_pin"),

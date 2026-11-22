@@ -160,7 +160,9 @@ def verify_snapshot(root, delivery=None):
     provenance = read_json(inside(root, "motion_provenance.json"))
     motion_store.validate_stage2_provenance(provenance)
     from mme_vla_suite.policies.motion_client import validate_stage2_evidence
-    validate_stage2_evidence(provenance, Path(root))
+    import yaml
+    resolved = yaml.safe_load(inside(root, "history_config.resolved.yaml").read_text(encoding="utf-8"))
+    validate_stage2_evidence(provenance, Path(root), grid_stride=resolved["motion"]["stride"])
     yaml_sha = files["history_config.resolved.yaml"]
     if (inside(root, "history_config.resolved.sha256").read_text().strip() != yaml_sha
             or provenance.get("resolved_sha256") != yaml_sha or provenance.get("motion_enabled") is not True):
@@ -442,8 +444,9 @@ def run_online(policy, record, arrays, online_gpu, inventory):
     sidecar_pid = verified_sidecar_pid(client, online_gpu, inventory)
     policy.reset()
     es = record["exec_start_idx"]
-    demo_starts = list(range(0, es - 16, 32))
-    counts = []
+    stride = int(policy.config.motion.stride)
+    demo_starts = list(range(0, es - 16, stride))
+    counts, keep_raw = [], []
     cursor = 0
     # 两种素材记录均用当前生产流式协议：完整demo加exec[0]，之后最多16帧。
     for count, boundary in ((es + 1, es), (16, es), (16, es), (16, es), (16, es)):
@@ -451,11 +454,14 @@ def run_online(policy, record, arrays, online_gpu, inventory):
         policy.add_buffer(utils.pack_buffer(list(arrays["images"][cursor:end]), list(arrays["states"][cursor:end]), boundary))
         counts.append({"frames": end, "motion_keys": sorted(policy.mem_buffer._history_feats_motion),
                        "raw_frame_keys": sorted(policy.mem_buffer._raw_frames)})
-        expected = demo_starts + list(range(es, max(es, end - 32), 32))
+        exec_starts = list(range(es, max(es, end - 32), stride))
+        expected = demo_starts + exec_starts
+        # 只保留下一个未编码 exec 起点及其后的原帧（stride32 时即共享边界帧）。
+        keep_raw.append(list(range(exec_starts[-1] + stride if exec_starts else es, end)))
         if counts[-1]["motion_keys"] != expected or policy.exec_start_idx != es or policy.step_idx != end - 1:
             raise ValueError(f"原 pack_buffer 在线状态机不符: {counts[-1]}")
         cursor = end
-    if counts[2]["raw_frame_keys"] != [es + 32] or counts[4]["raw_frame_keys"] != [es + 64]:
+    if any(counts[i]["raw_frame_keys"] != keep_raw[i] for i in (2, 4)):
         raise ValueError("连续 exec 批次未正确保留共享边界帧")
     from mme_vla_suite.datastore.motion_adapter import motion_policy_spec
     spec = motion_policy_spec(policy.config.motion)
@@ -474,7 +480,7 @@ def run_online(policy, record, arrays, online_gpu, inventory):
         raise ValueError(f"真实 infer 输出形状或有限值错误: {actions.shape}")
     gpu = verify_process_gpus(os.getpid(), sidecar_pid, inventory, online_gpu)
     calls = int(client.n_calls)
-    if calls != len(demo_starts) + 2:
+    if calls != len(expected):
         raise ValueError(f"真实 sidecar 编码调用数不符: {calls}")
     policy.reset()
     if (policy._motion_client is not client or not client.alive or policy.mem_buffer.n_steps != 0
@@ -564,10 +570,12 @@ def restore_and_check(args, report):
         raise ValueError("恢复快照不是已开启的 stage2 encoder")
     from mme_vla_suite.datastore.motion_adapter import motion_policy_spec
     motion_spec = motion_policy_spec(resolved.motion)
+    # stride、budget 随快照 yaml 取值（训练侧唯一真源），不再写死 32/96。
     if (motion_spec.readout not in ("stage2_pool4_concat_v1", "stage2_pool4_split_v1")
-            or motion_spec.window_budget != 96 or resolved.budget != 512 or resolved.token_per_image not in (16, 64)
+            or motion_spec.budget != resolved.motion.budget
+            or resolved.budget != 512 or resolved.token_per_image not in (16, 64)
             or resolved.num_views != 1 or resolved.streaming_obs_horizon != 16
-            or resolved.motion.stride != 32 or resolved.motion.window_frames != 33
+            or resolved.motion.window_frames != 33
             or resolved.memory_token_dim != {"context": 2048, "modulation": 1024}.get(resolved.integration_type)):
         raise ValueError("恢复快照的帧、motion或融合合同不符")
     report["memory"] = dict(tokens=512 + motion_spec.budget, readout=motion_spec.readout,
