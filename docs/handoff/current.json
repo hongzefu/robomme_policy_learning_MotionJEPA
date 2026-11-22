@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-21T17:30:00Z",
-    "America/New_York": "2026-11-21T12:30:00-0500"
+    "utc": "2026-11-22T05:50:00Z",
+    "America/New_York": "2026-11-22T00:50:00-0500"
   },
   "repo": {
     "branch": "v18-4task-modul-e2eenc-s16-50k",
-    "base_head": "005efef"
+    "base_head": "161d29d"
   },
   "freeze": {
     "active": false,
@@ -406,9 +406,9 @@
         "file": "1120-table1-3seed-aws-local-eval-plan.html",
         "sha": "005efefdfce8cc36bf77a3519db380d9e6c11962"
       },
-      "state": "running",
-      "state_changed_at": "2026-11-21T03:25:00Z",
-      "state_reason": "第一批 6 行三 seed 全部完成（含 fix1/fix2 补跑）；第二批+第三批 t1s-batch2 于 11-21 12:22 美东起跑",
+      "state": "done",
+      "state_changed_at": "2026-11-22T05:50:00Z",
+      "state_reason": "32 次评估全部 EVAL692=PASS；TABLE1_3SEED=PASS rows=12 seeds=3 ckpt_rows=4 ckpts=3 runs_new=32；FETCH_VERIFY=PASS claims=124 mismatches=0；结果提交 161d29d；venvs/wan 已还原 ee719fb；无在跑句柄",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiUE8cn3gckgXU3AQWp",
         "host": "ip-10-242-11-177"
@@ -416,32 +416,26 @@
       "depends_on": [],
       "pre_handoff": [
         {
-          "what": "32 次 692 局评估（24 次 3 seed + FrameSamp modulation 4 行 40k/45k 共 8 次）",
-          "evidence": "每次 EVAL692=PASS episodes=692 preseeded_errors=9 new_errors=0",
-          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/t1s-*/EVAL692.txt；/scratch/hongze/NativeMEM/runs/eval/t1s-native-*/EVAL692.txt",
-          "status": "pending"
+          "what": "32 次 692 局评估",
+          "evidence": "32 × EVAL692=PASS preseeded_errors=9 new_errors=0",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/docs/training-doc/t1s-*/records/EVAL692.txt",
+          "status": "pass"
         },
         {
           "what": "G4 汇总",
           "evidence": "TABLE1_3SEED=PASS rows=12 seeds=3 ckpt_rows=4 ckpts=3 runs_new=32",
           "where": "docs/training-doc/t1s-3seed-1120/table1_3seed.json",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "汇总复核",
-          "evidence": "FETCH_VERIFY=PASS",
-          "where": "docs/training-doc/t1s-3seed-1120/",
-          "status": "pending"
+          "evidence": "FETCH_VERIFY=PASS urls=0 claims=124 mismatches=0",
+          "where": "161d29d commit body",
+          "status": "pass"
         }
       ],
       "long_tail": [],
-      "running_handles": [
-        {
-          "tmux": "t1s-next",
-          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/t1s-batch2.log",
-          "done_line": "EXIT_CODE="
-        }
-      ],
+      "running_handles": [],
       "authorizations": [
         {
           "kind": "go",
@@ -450,12 +444,14 @@
           "scope": "1120-table1-3seed-aws-local-eval-plan.html@005efef 全部步骤（S0–S4）；缺 ckpt 跳过不停"
         }
       ],
-      "pending_decisions": [],
+      "pending_decisions": [
+        "下载的 17 份 ckpt（v1-store/models/t1s-1120，约 220 GB）、两个评估检出 /scratch/hongze/worktrees/t1s-ev-8181918 与 t1s-ev-d6ece8b、子代理 worktree 是否删除，待用户确认"
+      ],
       "next_steps": [
         {
-          "what": "t1s-fix1 结束后起 t1s-batch2（cwd $W42）；全部结束后 venvs/wan 还原到 b5bdccf 锁（ee719fb）",
-          "command": "bash v1-store/jobs/t1s-1120/t1s-batch2.sh；bash v1-store/jobs/t1s-1120/wan-venv-sync.sh b5bdccf",
-          "verdict_line": "T1S_ITEM … EVAL692=PASS；WAN_VENV_MOTION_JEPA= ee719fb"
+          "what": "稿件会话把 Table I 改为均值±标准差（稿件版 S5，另行确认措辞）",
+          "command": "读 docs/training-doc/t1s-3seed-1120/final.md 与 table1_3seed.json",
+          "verdict_line": "—"
         }
       ]
     }
