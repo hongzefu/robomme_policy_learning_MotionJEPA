@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-22T02:05:00Z",
-    "America/New_York": "2026-11-21T21:05:00-0500"
+    "utc": "2026-11-22T02:25:00Z",
+    "America/New_York": "2026-11-21T21:25:00-0500"
   },
   "repo": {
     "branch": "v19-orig16-modul-s2concat-s16-60k",
-    "base_head": "8a632f85"
+    "base_head": "b28a9a5d"
   },
   "freeze": {
     "active": false,
@@ -1407,7 +1407,7 @@
     "o16-modul-s2cat-s16-60k": {
       "plan": {
         "file": "1122-orig16-modul-s2concat-s16-60k-plan.md",
-        "sha": "8a632f85"
+        "sha": "b28a9a5d"
       },
       "state": "running",
       "state_changed_at": "2026-11-22T02:05:00Z",
@@ -1424,6 +1424,12 @@
         }
       ],
       "pre_handoff": [
+        {
+          "what": "开工前对抗审查",
+          "evidence": "PLAN_CONSISTENCY_REVIEW=PASS base=8a632f85 findings=15 blocking=0",
+          "where": "workflow wf_b11709d8-7d3；方案 九′ 节 @b28a9a5d",
+          "status": "pass"
+        },
         {
           "what": "G0–G6 开训前闸门",
           "evidence": "",
@@ -1474,9 +1480,9 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "workflow 对抗验证结论处置并修订方案",
-          "command": "Workflow wf_b11709d8-7d3",
-          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS"
+          "what": "派 S1–S4 写入子代理（opus worktree），按 S1→S2→S3→S4 审查合入",
+          "command": "Agent ×4",
+          "verdict_line": "PRE_MERGE_REVIEW=PASS ×4；POST_MERGE_REVIEW=PASS ×4"
         }
       ]
     }
