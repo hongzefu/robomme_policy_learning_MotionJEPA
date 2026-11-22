@@ -80,8 +80,17 @@ def _evidence_path(value: str, root: pathlib.Path | None) -> pathlib.Path:
     return resolved
 
 
-def validate_stage2_evidence(provenance: dict, root: pathlib.Path | None) -> None:
-    """实际读取引用证据并核内容身份；历史 VAE 身份不改写成当前源码。"""
+STAGE2_LATENT_GRID_STRIDE = 16   # G0 的 source_grid 以 Wan latent 的 16 帧格为单位
+
+
+def validate_stage2_evidence(provenance: dict, root: pathlib.Path | None, *, grid_stride: int = 32) -> None:
+    """实际读取引用证据并核内容身份；历史 VAE 身份不改写成当前源码。
+
+    `grid_stride` 是该 store 布局的窗口步长：grid32（缺省，旧行为）只认偶数 latent 格，grid16 认任意整数格。
+    """
+    if type(grid_stride) is not int or grid_stride <= 0 or grid_stride % STAGE2_LATENT_GRID_STRIDE:
+        raise ValueError(f"阶段二 grid_stride 必须是 {STAGE2_LATENT_GRID_STRIDE} 的正整数倍: {grid_stride!r}")
+    subsample = grid_stride // STAGE2_LATENT_GRID_STRIDE
     compat = provenance["stage2_compat"]
     evidence = compat["evidence"]
     from mme_vla_suite.datastore import motion_store as ms
@@ -128,7 +137,7 @@ def validate_stage2_evidence(provenance: dict, root: pathlib.Path | None) -> Non
         if (len(window.get("frame_ids", [])) != 33
                 or len(window.get("source_frame_indices", [])) != 33
                 or not window.get("sources") or type(window.get("source_grid")) is not int
-                or window["source_grid"] % 2):
+                or window["source_grid"] % subsample):
             raise ValueError("阶段二 G0 窗口来源不完整")
     if len(tasks) != 16 or set(tasks.values()) != {4}:
         raise ValueError("阶段二 G0 必须每任务四窗")
