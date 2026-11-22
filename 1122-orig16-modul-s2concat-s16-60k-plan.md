@@ -1,6 +1,6 @@
 # 1122 官方16×100 modulation + motion（concat 1×1024，stride 16）60k 训练与单 seed 评估方案
 
-状态：方案，等开工令。分支 `v19-orig16-modul-s2concat-s16-60k`（自 `origin/v4-gl-orig100-1031@1c652dc7`）。
+状态：定稿（2026-11-21 美东），等开工令。分支 `v19-orig16-modul-s2concat-s16-60k`（自 `origin/v4-gl-orig100-1031@1c652dc7`）。
 
 用户原话（2026-11-21 美东）：「给出方案 重新训modulation + motion 但是这次stride 16 且不要split4 先只eval一个seed　在评估结束后立刻开始训 之前可以写代码　还是60k」
 
@@ -69,9 +69,9 @@
 
 ## 七、ckpt 与磁盘
 
-- /scratch 只剩 **132 GB**（使用率 99%），12 份 ckpt 合计约 143 GB，放不下。
-- 做法：增量上传 tmux `o16s16-inc`。每出 1 份 ckpt 就上传到公开 bucket `HongzeFu/robomme-vla-orig100-modul-s2concat-s16-60k-v1`，读回校验 sha 通过后删掉本地这份。本地始终只留最近 2 份，59999 那份留到评估结束。
-- 磁盘低于 40 GB 时停下报告。
+- 11-21 美东用户批准清理：删除本地 `/scratch/hongze/dataset-4task-rgb-state-stride2-16views-v1`（约 1.8 TB，HF 公开 bucket `robomme-4task-rgb-state-stride2-16views-fp16-v1` 有完整副本，`HF_VERIFY=PASS files=11038`；记录文件留档 `/scratch/hongze/logs/4task-rgb-state-1113/local-deleted-20261122/`）。删后余量约 1.9 TB，12 份 ckpt（约 143 GB）可全部留在本地。
+- 做法：增量上传 tmux `o16s16-inc`。每出 1 份 ckpt 就上传到公开 bucket `HongzeFu/robomme-vla-orig100-modul-s2concat-s16-60k-v1`，读回校验 sha 通过即可；本地 12 份全部保留，不删。
+- 磁盘余量低于 200 GB 时停下报告。
 
 ## 八、评估
 
@@ -82,7 +82,7 @@
 
 1. budget 192（用户已定：96 翻倍；实测超过 192 时停下问）。
 2. 评估用哪个 seed（默认 42，可直接和 split 那条的 seed 42 比）。
-3. 磁盘：本地只留最近 2 份 ckpt，其余上传读回后删除（默认这样）。另外 `orig16-wan-timepool1024-recovery/published`（362 GB，HF 数据集仓库已有副本）本轮不删。
+3. 磁盘：已按用户批准清掉 1.8 TB，ckpt 本地全留并增量上传（已定）。
 4. 状态机登记任务 `o16-modul-s2cat-s16-60k`，并 `git push -u` 本分支（默认登记并推送）。
 
 开工令覆盖：第四节写代码与 G0–G6（含 1 张空闲卡约 30 分钟的导出与在线校验）＋ 第六节自动起跑的 60k 训练和 seed 42 评估。中途只在以下情况停下：闸门 FAIL、训练崩溃、预算超 192、磁盘不足；其余工程故障自行修复后继续。
@@ -130,7 +130,7 @@
 ## 三、风险
 
 - 评估侧窗口数超过 192：停下问用户（G4 会提前暴露）。
-- 磁盘：增量上传要是跟不上 ckpt 写入速度（每份约 12 GB、每 5000 步约 80 分钟），本地会积压；按「只留 2 份」控制，低于 40 GB 就停。
+- 磁盘：清理后余量约 1.9 TB，12 份 ckpt 约 143 GB，不构成风险；余量低于 200 GB 才停。
 - t1s 评估异常拖长：训练顺延，不抢卡。
 
 ## 四、盲区
