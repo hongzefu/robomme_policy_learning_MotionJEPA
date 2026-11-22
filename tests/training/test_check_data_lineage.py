@@ -134,3 +134,35 @@ def test_cli_fail_is_exit_3_without_pass(sources, fault):
     assert result.returncode == 3
     assert "DATA_LINEAGE=FAIL" in result.stderr
     assert "DATA_LINEAGE=PASS" not in result.stdout
+
+
+def _move_build_spec(sources, tmp_path):
+    """把 data_root 下的 build_spec 挪到元数据副本位置，模拟训练源已删、只留元数据。"""
+    _, paths = sources
+    keep = tmp_path / "keep-meta/control/build_spec.json"
+    keep.parent.mkdir(parents=True)
+    paths["encoder"].rename(keep)
+    return keep
+
+
+def test_lineage_build_spec_reads_given_file(sources, tmp_path, capsys):
+    keep = _move_build_spec(sources, tmp_path)
+    # 缺省路径已不存在：旧行为照常报 FileNotFoundError。
+    with pytest.raises(FileNotFoundError):
+        lineage.check_lineage(*args(sources))
+    result = lineage.check_lineage(*args(sources), lineage_build_spec=str(keep))
+    assert result["status"] == "PASS" and result["files"] == 3 and result["mismatches"] == 0
+    assert lineage.main([*cli_args(sources), "--lineage-build-spec", str(keep)]) == 0
+    assert "files=3 mismatches=0" in capsys.readouterr().out
+
+
+def test_lineage_build_spec_tampered_sha_fails(sources, tmp_path, capsys):
+    keep = _move_build_spec(sources, tmp_path)
+    spec = lineage.read_json(keep)
+    spec["identity"]["source_pin"]["files"][0]["sha256"] = "a" * 64
+    write_json(keep, spec)
+    with pytest.raises(ValueError, match="三源 H5 集合不同 mismatches=1"):
+        lineage.check_lineage(*args(sources), lineage_build_spec=str(keep))
+    assert lineage.main([*cli_args(sources), "--lineage-build-spec", str(keep)]) == 3
+    captured = capsys.readouterr()
+    assert "DATA_LINEAGE=FAIL" in captured.err and "DATA_LINEAGE=PASS" not in captured.out
