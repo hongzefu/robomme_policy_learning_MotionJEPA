@@ -59,7 +59,9 @@ STRIDE_RUNS = {S16_HISTORY: dict(
     fusion="modul", readout="1x1024", store_dir="motion-stage2-1024-grid16", layout="grid16",
     stride=16, budget=192, motion_rows=None, train_max=None,
     pair="perceptual-framesamp-modul-32frame-4x4-motion-stage2-1x1024-orig16.yaml",
-    diff_keys=("stride", "budget", "store_path"))}
+    diff_keys=("stride", "budget", "store_path"),
+    # encoder 训练源 data_root 已于 11-11 删除，只留元数据副本；谱系比对改读此 build_spec。
+    lineage_build_spec="/scratch/hongze/dataset-rgb-gtxyz-16views-stride2-v1-keep-meta/control/build_spec.json")}
 FUSIONS = {"ctx": "context", "modul": "modulation"}
 READOUTS = {"4x256": SPLIT, "1x1024": CONCAT}
 ATTEMPT_KEYS = {"base_run", "run", "history", "train_head", "decision", "bucket"}
@@ -79,7 +81,8 @@ def stride_contract(contract, name):
     return dataclasses.replace(contract, store_dir=item["store_dir"],
         motion_layout=ms.STAGE2_GRID16_LAYOUT if item["layout"] == "grid16" else item["layout"],
         motion_stride=item["stride"], motion_budget=item["budget"],
-        motion_rows=item["motion_rows"], train_max=item["train_max"])
+        motion_rows=item["motion_rows"], train_max=item["train_max"],
+        lineage_build_spec=item["lineage_build_spec"])
 
 
 def history_tags(name):
@@ -198,6 +201,8 @@ class Contract:
     motion_budget: int = 96
     evidence_dir: str = "evidence"
     mj_source_manifest: str = "/scratch/hongze/dataset-original-robomme-16x100-wan21-v1/dataset/source_manifest.json"
+    # None 表示沿用 encoder config.yaml::data.data_root/control/build_spec.json（旧 run 行为）。
+    lineage_build_spec: str | None = None
     episodes: int = 1600
     tasks: int = 16
     batch_size: int = 128
@@ -500,7 +505,7 @@ def check_dataset(rec, store, contract, history, env=None):
             (evidence_dir / f"{role}.json").is_file() for role in ms.stage2_evidence_roles(motion.provenance)):
         return check_evidence_lineage(rec, evidence_dir, motion, checkpoint, contract)
     result = lineage.check_lineage(checkpoint, contract.encoder_sha256, parent / "meta/input_manifest.json",
-                                   contract.mj_source_manifest)
+                                   contract.mj_source_manifest, lineage_build_spec=contract.lineage_build_spec)
     rec("ENCODER_DATA_LINEAGE", result["files"] == contract.tasks and result["mismatches"] == 0)
     print(f"DATA_LINEAGE=PASS encoder_ckpt={result['encoder_ckpt'][:8]} encoder_source_pin={result['encoder_source_pin']} vla_input_pin={result['vla_input_pin']} files={result['files']} mismatches=0")
     return result

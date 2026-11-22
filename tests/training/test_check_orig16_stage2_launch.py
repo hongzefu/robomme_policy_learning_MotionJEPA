@@ -617,6 +617,36 @@ def test_s16_registry_identity():
     assert ms.STAGE2_GRID16_LAYOUT == "motion-stage2-1x1024-grid16-demopad17-v1"
     assert launch.history_tags(S16) == ("modul", "1x1024")
     assert launch.PLACEHOLDER not in str(dataclasses.asdict(c))
+    # encoder 训练源 data_root 已删，新 run 谱系改读本机元数据副本；旧 run 默认 None。
+    assert c.lineage_build_spec == (
+        "/scratch/hongze/dataset-rgb-gtxyz-16views-stride2-v1-keep-meta/control/build_spec.json")
+    assert launch.Contract().lineage_build_spec is None
+
+
+@pytest.mark.parametrize("tamper", [False, True])
+def test_lineage_build_spec_passed_to_check_lineage(fx, tmp_path, tamper):
+    """合同的 lineage_build_spec 传进 check_lineage：data_root 下 build_spec 缺失时读副本，篡改一个 sha 即 FAIL。"""
+    import yaml
+    config = yaml.safe_load((fx.root / "v1-store/external/motionjepa" / fx.contract.encoder_run
+                             / "config.yaml").read_text())
+    original = Path(config["data"]["data_root"]) / "control/build_spec.json"
+    before = original.read_bytes()
+    keep = tmp_path / "keep-meta/control/build_spec.json"
+    keep.parent.mkdir(parents=True)
+    value = json.loads(before)
+    if tamper:
+        value["identity"]["source_pin"]["files"][0]["sha256"] = "0" * 64
+    keep.write_text(json.dumps(value))
+    original.unlink()
+    try:
+        # 缺省合同读 data_root：build_spec 已删即失败（复现缺陷）。
+        assert run_contract(fx, launch.HISTORIES[0]).failed
+        patched = SimpleNamespace(**{**vars(fx), "contract": dataclasses.replace(
+            fx.contract, lineage_build_spec=str(keep))})
+        rec = run_contract(patched, launch.HISTORIES[0])
+        assert bool(rec.failed) is tamper, rec.failed
+    finally:
+        original.write_bytes(before)
 
 
 def test_s16_yaml_differs_only_in_three_keys(tmp_path):

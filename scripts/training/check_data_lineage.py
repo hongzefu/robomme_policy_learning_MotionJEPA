@@ -67,8 +67,13 @@ def input_files(manifest):
     return normalize_files(((name, item["size"], item["sha256"]) for name, item in files.items()), label="VLA")
 
 
-def check_lineage(encoder_ckpt, expected_ckpt_sha256, vla_input_manifest, mj_source_manifest):
-    """独立核算 checkpoint SHA 后，逐文件比对三份来源清单，不加载模型。"""
+def check_lineage(encoder_ckpt, expected_ckpt_sha256, vla_input_manifest, mj_source_manifest,
+                  lineage_build_spec=None):
+    """独立核算 checkpoint SHA 后，逐文件比对三份来源清单，不加载模型。
+
+    lineage_build_spec 给定时读该 build_spec（encoder 训练源已删、只留元数据副本的情形），
+    否则沿用 config.yaml::data.data_root/control/build_spec.json；比对判据不变。
+    """
     checkpoint = Path(encoder_ckpt).resolve()
     expected = require_sha256(expected_ckpt_sha256, "expected_ckpt_sha256")
     checkpoint_sha = sha256_file(checkpoint)
@@ -82,7 +87,7 @@ def check_lineage(encoder_ckpt, expected_ckpt_sha256, vla_input_manifest, mj_sou
     root = Path(root)
     if not root.is_absolute():
         root = config_path.parent / root
-    build_spec_path = root / "control/build_spec.json"
+    build_spec_path = Path(lineage_build_spec) if lineage_build_spec is not None else root / "control/build_spec.json"
     source_pin = read_json(build_spec_path)["identity"]["source_pin"]
     source_records = source_pin["files"]
     if not isinstance(source_records, list):
@@ -116,10 +121,13 @@ def main(argv=None):
     lineage = sub.add_parser("lineage")
     for name in ("encoder-ckpt", "expected-ckpt-sha256", "vla-input-manifest", "mj-source-manifest"):
         lineage.add_argument(f"--{name}", required=True)
+    lineage.add_argument("--lineage-build-spec", default=None,
+                         help="encoder 源 build_spec.json 路径；缺省为 data_root/control/build_spec.json")
     args = parser.parse_args(argv)
     try:
         result = check_lineage(args.encoder_ckpt, args.expected_ckpt_sha256,
-                               args.vla_input_manifest, args.mj_source_manifest)
+                               args.vla_input_manifest, args.mj_source_manifest,
+                               lineage_build_spec=args.lineage_build_spec)
     except (OSError, ValueError, KeyError, TypeError, AttributeError, yaml.YAMLError) as exc:
         print(f"DATA_LINEAGE=FAIL error={exc}", file=sys.stderr)
         return 3
