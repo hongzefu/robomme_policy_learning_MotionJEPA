@@ -62,7 +62,7 @@ def stage2_identity():
                                          historical_vae=vae, online_vae=online, evidence=evidence))
 
 
-@pytest.mark.parametrize("layout", [name for name in ms.LAYOUT_SPECS if name != ms.STAGE2_LAYOUT])
+@pytest.mark.parametrize("layout", [name for name in ms.LAYOUT_SPECS if name not in ms.STAGE2_LAYOUTS])
 def test_legacy_baseline_1000_cases_byte_exact(layout):
     old = baseline_module("src/mme_vla_suite/datastore/motion_store.py", "baseline_motion_store")
     rng = np.random.default_rng(3)

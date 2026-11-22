@@ -10,6 +10,7 @@
     "scripts/dataset/wan_stage2/export_stage2_memory.py"
   ],
   "changes": [
-    "仅新增可选 --lineage-build-spec，显式覆盖来源 build_spec.json 路径；不传时沿用原配置路径。"
+    "仅新增可选 --lineage-build-spec，显式覆盖来源 build_spec.json 路径；不传时沿用原配置路径。",
+    "--grid-subsample 参数化：2（默认，旧行为）取偶数格写 grid32 布局；1 取全部格写 motion-stage2-1x1024-grid16-demopad17-v1、grid_stride=16；编码函数不变。"
   ]
 }

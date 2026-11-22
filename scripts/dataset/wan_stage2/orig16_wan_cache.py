@@ -688,7 +688,7 @@ def validate_receipt(receipt):
     return validate_wan_cache_import_receipt(receipt)
 
 
-def check_import(samples_path, receipt_path, raw_dir):
+def check_import(samples_path, receipt_path, raw_dir, grid_subsample=2):
     receipt, samples = read_json(receipt_path), read_json(samples_path)
     mapping = validate_receipt(receipt)
     receipt_sha = sha_file(receipt_path)
@@ -748,8 +748,9 @@ def check_import(samples_path, receipt_path, raw_dir):
     counts = Counter()
     for sample in samples["windows"]:
         identity = (sample["key"], sample["source_grid"])
-        if identity in seen or identity[1] % 2:
-            raise ValueError("G0 重复窗口或非 grid32 窗口")
+        # grid_subsample：目标布局相对 grid16 的取格间隔（grid32=2 只认偶数格，grid16=1 认全部格）
+        if identity in seen or identity[1] % grid_subsample:
+            raise ValueError(f"G0 重复窗口或不在 grid_subsample={grid_subsample} 的格上")
         seen.add(identity)
         row = mapping[identity]
         for key in ("frame_ids", "input_frames_sha256", "real_frames", "pad_frames", "pad_source_frame"):
@@ -874,6 +875,8 @@ def main(argv=None):
         child = sub.add_parser(command)
         for argument in arguments:
             child.add_argument("--" + argument, required=True)
+    sub.choices["check"].add_argument("--grid-subsample", type=int, choices=(2, 1), default=2,
+                                      help="目标布局取格间隔：2=grid32 偶数格（默认），1=grid16 全部格")
     args = parser.parse_args(argv)
     if args.command == "plan":
         result = build_plan(args.manifest, args.input_manifest, args.published_index)
@@ -883,7 +886,7 @@ def main(argv=None):
     elif args.command == "import":
         result = import_plan(args.plan, args.cache_root, args.raw_dir, args.out, args.receipt, args.gpus)
     else:
-        result = check_import(args.samples, args.receipt, args.raw_dir)
+        result = check_import(args.samples, args.receipt, args.raw_dir, args.grid_subsample)
         if Path(args.out).exists():
             raise FileExistsError("G2 已存在，拒绝覆盖")
         write_json(args.out, result)

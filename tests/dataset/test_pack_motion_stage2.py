@@ -29,6 +29,17 @@ def load(path):
 
 @pytest.fixture
 def stage2_fx(tmp_path, monkeypatch):
+    return build_stage2_fx(tmp_path, monkeypatch, subsample=2)
+
+
+@pytest.fixture
+def stage2_grid16_fx(tmp_path, monkeypatch):
+    return build_stage2_fx(tmp_path, monkeypatch, subsample=1)
+
+
+def build_stage2_fx(tmp_path, monkeypatch, subsample=2):
+    """subsample=2 为旧 grid32（偶数格）夹具；subsample=1 为 grid16 全部格夹具。"""
+    layout = ms.STAGE2_LAYOUT_BY_SUBSAMPLE[subsample]
     monkeypatch.setattr(legacy, "SPECS", [(165,100),(83,50),(32,0)])
     fx = legacy.fx.__wrapped__(tmp_path)
     # 复用旧夹具的真实历史 receipt 核验；只改变合成缓存所需的固定身份值。
@@ -66,21 +77,21 @@ def stage2_fx(tmp_path, monkeypatch):
     pin_path = pin_dir / "SOURCE_PIN.json";dump(pin_path,pin)
     groups = {k: copy.deepcopy(identity[k]) for k in ("encoder","encoder_state_sha256","source_pin","numerics")}
     groups["source_pin"] = {k:pin[k] for k in ("mj_repo_commit","export_source_sha256","encoder_source_sha256")}
-    entries = ms.build_index_entries(fx.manifest,ms.LAYOUT_SPECS[ms.STAGE2_LAYOUT])
+    entries = ms.build_index_entries(fx.manifest,ms.LAYOUT_SPECS[layout])
     fx.tokens.mkdir()
     content = {}
     for e,seg,key,base,ng in pack.iter_rows_in_order(entries):
         lm = load(fx.latents / f"{key}.metadata.json")
-        selected = list(range(0,lm["num_grid"],2))
+        selected = list(range(0,lm["num_grid"],subsample))
         latent = (fx.latents / f"{key}.bin").read_bytes()
         blob = (np.arange(ng*1024,dtype=np.float32)+base*1024).reshape(ng,1,1024).tobytes()
         content[key] = blob
         (fx.tokens/f"{key}.f32.bin").write_bytes(blob)
         (fx.tokens/f"{key}.f32.bin.sha256").write_text(ms.sha256_bytes(blob)+f"  {key}.f32.bin\n")
-        metadata = {**groups,"worker":{"pid":123,"device":"cpu","hostname":"fixture"},"schema":"stage2-memory-export-v1","layout":ms.STAGE2_LAYOUT,
+        metadata = {**groups,"worker":{"pid":123,"device":"cpu","hostname":"fixture"},"schema":"stage2-memory-export-v1","layout":layout,
                     "manifest_sha256":ms.sha256_file(fx.manifest_path),
                     "segment":key,"segment_kind":seg,"seg_start_global":lm["seg_start_global"],"seg_len":lm["seg_len"],
-                    "grid_stride":32,"window_frames":33,"row_shape":[1,1024],"dtype":"float32",
+                    "grid_stride":16*subsample,"window_frames":33,"row_shape":[1,1024],"dtype":"float32",
                     "token_dim":1024,"token_bytes":4096,"num_grid":ng,"bytes":len(blob),"sha256":ms.sha256_bytes(blob),
                     "source_grid":selected,"rows":[lm["rows"][g] for g in selected],
                     "input_latent_sha256":ms.sha256_bytes(latent),
@@ -113,7 +124,7 @@ def stage2_fx(tmp_path, monkeypatch):
         dump(validation/f"{gate}.json",dict(schema="stage2-validation-gate-v1",gate=gate,status="PASS",checkpoint_sha256=fx.ckpt_sha,
              samples_sha256=ms.sha256_file(validation/"windows.json"),metrics=metrics[gate],source_pin=pin,
              numerics=groups["numerics"],**({"online_vae":online_vae} if gate=="G2" else {})))
-    args=SimpleNamespace(layout="stage2",latent_grid_subsample=2,stage2_validation=str(validation),stage2_source_pin=str(pin_path),
+    args=SimpleNamespace(layout="stage2",latent_grid_subsample=subsample,stage2_validation=str(validation),stage2_source_pin=str(pin_path),
           manifest=str(fx.manifest_path),tokens=str(fx.tokens),latents=str(fx.latents),out=str(tmp_path/"store"),
           raw_dir=fx.manifest["raw_dir"],encoder_run_dir=str(fx.enc_dir),oracle_report=None,restore_receipt=str(fx.receipt),
           expected_ckpt_sha256=fx.ckpt_sha,resume=False,force_break_lock=False)
@@ -122,7 +133,7 @@ def stage2_fx(tmp_path, monkeypatch):
 
 def certify(stage2):
     root=pathlib.Path(stage2.args.out);meta=ms.MotionMeta.load(root)
-    record=dict(schema="stage2-encoder-bitexact-v1",scope="full",layout=ms.STAGE2_LAYOUT,status="PASS",
+    record=dict(schema="stage2-encoder-bitexact-v1",scope="full",layout=meta.raw["layout"],status="PASS",
                 compared=meta.num_rows,mismatches=0,store_table_sha256=meta.table_sha256,motion_index_sha256=meta.motion_index_sha256,
                 checkpoint_sha256=meta.provenance["encoder"]["checkpoint_sha256"],source_grid_sha256=meta.provenance["source_grid_sha256"])
     dump(root/pack.BITEXACT_RELPATH,record)
@@ -207,5 +218,69 @@ def test_certification_and_lock_handoff(stage2_fx,fault):
         else:value["host"]="另一台机器"
         dump(root/ms.LOCK_RELPATH,value)
     dump(root/pack.BITEXACT_RELPATH,record)
+    with pytest.raises(RuntimeError):pack.cmd_verify(verify_args(s))
+    assert ms.MotionMeta.load(root).status=="packed"
+
+
+# ── grid16（stride 16，全部格）布局：同一套打包/verify 链路，旧 grid32 用例不变 ──
+
+
+def test_grid16_layout_spec_and_constants():
+    spec = ms.LAYOUT_SPECS[ms.STAGE2_GRID16_LAYOUT]
+    assert ms.STAGE2_GRID16_LAYOUT == "motion-stage2-1x1024-grid16-demopad17-v1"
+    assert ms.STAGE2_LAYOUTS == (ms.STAGE2_LAYOUT, ms.STAGE2_GRID16_LAYOUT)
+    assert spec == dataclasses.replace(ms.LAYOUT_SPECS[ms.STAGE2_LAYOUT], grid_stride=16)
+    assert (spec.demo_min_real, spec.exec_min_real, spec.demo_tail_pad, spec.row_shape) == (17, 33, "repeat_last", (1, 1024))
+    assert ms.STAGE2_GRID_SUBSAMPLE == {ms.STAGE2_LAYOUT: 2, ms.STAGE2_GRID16_LAYOUT: 1}
+    assert pack.stage2_layout_of(spec) == (ms.STAGE2_GRID16_LAYOUT, 1)
+    assert pack.stage2_layout_of(ms.LAYOUT_SPECS[ms.STAGE2_LAYOUT]) == (ms.STAGE2_LAYOUT, 2)
+    assert pack.stage2_layout_of(ms.LAYOUT_SPECS[ms.LAYOUT]) is None
+
+
+def test_grid16_demo_tail_rule_matches_grid32():
+    """demo 尾窗 ≥17 真实帧 + repeat_last、exec 全真实：grid16 只改步长，起点集是 grid32 的超集。"""
+    for length in range(1, 400):
+        for minimum in (17, 33):
+            g16 = ms.segment_grid_starts(length, minimum, 16)
+            g32 = ms.segment_grid_starts(length, minimum, 32)
+            assert g32 == g16[::2] and g16 == list(range(0, max(0, length - minimum + 1), 16))
+            assert all(min(33, length - s) >= minimum for s in g16)
+
+
+def test_grid16_pack_takes_all_grids_and_verifies(stage2_grid16_fx):
+    s=stage2_grid16_fx;pack.cmd_pack(s.args)
+    root=pathlib.Path(s.args.out);meta=ms.MotionMeta.load(root)
+    assert meta.raw["layout"]==ms.STAGE2_GRID16_LAYOUT and meta.raw["grid_stride"]==16 and meta.spec.grid_stride==16
+    assert meta.entries[0].demo.num_grid == 6        # demo 100 帧：起点 0..80 每 16 帧
+    assert meta.num_rows == ms.index_totals(s.entries)["rows"]
+    assert (root/ms.MOTION_TABLE_RELPATH).read_bytes() == b"".join(s.content.values())
+    for _e,_seg,key,_base,ng in pack.iter_rows_in_order(s.entries):
+        tm=load(s.fx.tokens/f"{key}.metadata.json");lm=load(s.fx.latents/f"{key}.metadata.json")
+        assert tm["source_grid"]==list(range(lm["num_grid"])) and ng==lm["num_grid"]   # subsample=1 取全部格
+        assert [r["seg_offset"] for r in tm["rows"]]==[16*j for j in range(ng)]
+    source_grid={key:list(range(ng)) for _,_,key,_,ng in pack.iter_rows_in_order(s.entries)}
+    assert meta.provenance["source_grid_sha256"]==ms.sha256_bytes(ms.canonical_json_bytes(source_grid))
+    certify(s);pack.cmd_verify(verify_args(s))
+    meta=ms.MotionMeta.load(root);assert meta.status=="verified"
+    assert meta.raw["verify"]["demo_tail_padded"]==2   # 两段 demo 尾窗（20 与 18 真实帧）repeat_last
+    record=json.loads(meta.provenance["stage2_compat"]["encoder_validation"]["record_json"])
+    assert record["layout"]==ms.STAGE2_GRID16_LAYOUT
+
+
+@pytest.mark.parametrize("fault",["stride32_meta","even_only","grid32_layout_meta","subsample_missing"])
+def test_grid16_contract_faults_rejected(stage2_grid16_fx,fault):
+    s=stage2_grid16_fx;key=next(iter(s.content));path=s.fx.tokens/f"{key}.metadata.json";value=load(path)
+    if fault=="stride32_meta":value["grid_stride"]=32
+    elif fault=="even_only":value["source_grid"]=value["source_grid"][::2]
+    elif fault=="grid32_layout_meta":value["layout"]=ms.STAGE2_LAYOUT
+    else:s.args.latent_grid_subsample=None
+    dump(path,value)
+    with pytest.raises(ValueError):pack.cmd_pack(s.args)
+    assert not (pathlib.Path(s.args.out)/ms.MOTION_TABLE_RELPATH).exists()
+
+
+def test_grid16_certificate_layout_must_match(stage2_grid16_fx):
+    s=stage2_grid16_fx;pack.cmd_pack(s.args);record=certify(s);root=pathlib.Path(s.args.out)
+    record["layout"]=ms.STAGE2_LAYOUT;dump(root/pack.BITEXACT_RELPATH,record)
     with pytest.raises(RuntimeError):pack.cmd_verify(verify_args(s))
     assert ms.MotionMeta.load(root).status=="packed"

@@ -554,12 +554,12 @@ CONCAT_INDEX = (2, 3)
 
 
 def test_runs_include_two_concat_pairs(exporter):
-    assert list(exporter.RUNS)[2:] == ["orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k",
-                                       "orig100-m32x4x4-modul-motion-s2concat1x1024-b128-60k"]
-    assert [exporter.RUNS[run][0] for run in list(exporter.RUNS)[2:]] == [
+    assert list(exporter.RUNS)[2:4] == ["orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k",
+                                        "orig100-m32x4x4-modul-motion-s2concat1x1024-b128-60k"]
+    assert [exporter.RUNS[run][0] for run in list(exporter.RUNS)[2:4]] == [
         "HongzeFu/robomme-vla-orig100-ctx32x4x4-motion-s2concat1x1024-60k-v1",
         "HongzeFu/robomme-vla-orig100-m32x4x4-modul-motion-s2concat1x1024-60k-v1"]
-    for run in list(exporter.RUNS)[2:]:
+    for run in list(exporter.RUNS)[2:4]:
         assert exporter.history_name(run).endswith("-32frame-4x4-motion-stage2-1x1024-orig16.yaml")
         assert exporter.readme_path(run).is_file() and "concat" in exporter.readme_path(run).name
 
@@ -683,3 +683,41 @@ def test_concat_wrapper_rejects_other_role_attempt(tmp_path, exporter):
                             capture_output=True, text=True, timeout=60)
     assert result.returncode == 2 and "base_run" in result.stderr
     assert not (tmp_path / "export").exists()
+
+
+S16_RUN = "orig100-m32x4x4-modul-motion-s2concat1x1024-s16-b128-60k"
+
+
+def test_s16_run_registered_with_grid16_motion(exporter, monkeypatch):
+    """grid16 新 run 按 run 登记 layout/budget/库目录；旧四条 run 的默认不变。"""
+    assert list(exporter.RUNS)[4:] == [S16_RUN]
+    assert exporter.RUNS[S16_RUN] == ("HongzeFu/robomme-vla-orig100-modul-s2concat-s16-60k-v1",
+                                      "modul", "modulation", 1024, "1x1024")
+    assert exporter.history_name(S16_RUN) == "perceptual-framesamp-modul-32frame-4x4-motion-stage2-1x1024-s16-orig16.yaml"
+    monkeypatch.setattr(exporter, "RUN", S16_RUN)
+    assert exporter.store_dir() == "motion-stage2-1024-grid16"
+    assert exporter.tokens_dir() == "motion-tokens-stage2-grid16"
+    assert exporter.run_motion("layout", exporter.LAYOUT) == "motion-stage2-1x1024-grid16-demopad17-v1"
+    assert exporter.run_motion("budget", exporter.MOTION_BUDGET) == 192
+    for run in list(exporter.RUNS)[:4]:
+        monkeypatch.setattr(exporter, "RUN", run)
+        assert (exporter.store_dir(), exporter.tokens_dir()) == ("motion-stage2-1024", "motion-tokens-stage2")
+        assert exporter.run_motion("layout", exporter.LAYOUT) == "motion-stage2-1x1024-grid32-demopad17-v1"
+        assert exporter.run_motion("budget", exporter.MOTION_BUDGET) == 96
+
+
+def test_s16_history_requires_192_budget_and_grid16_store(tmp_path, exporter, monkeypatch):
+    run, _ = make_run(tmp_path, exporter, monkeypatch, 3)
+    history = json.loads((run / "history_config.resolved.yaml").read_text())
+    monkeypatch.setattr(exporter, "RUN", S16_RUN)
+    history["motion"].update(budget=192, store_path=f"v1-store/datasets/{exporter.DATASET}/motion-stage2-1024-grid16")
+    yaml_dir = exporter.REPO / "src/mme_vla_suite/models/config/robomme"
+    write(yaml_dir / exporter.history_name(S16_RUN), history)
+    exporter.check_history(history)
+    for change, match in (({"budget": 96}, "192窗"),
+                          ({"store_path": f"v1-store/datasets/{exporter.DATASET}/motion-stage2-1024"}, "固定库名")):
+        bad = json.loads(json.dumps(history))
+        bad["motion"].update(change)
+        write(yaml_dir / exporter.history_name(S16_RUN), bad)
+        with pytest.raises(ValueError, match=match):
+            exporter.check_history(bad)

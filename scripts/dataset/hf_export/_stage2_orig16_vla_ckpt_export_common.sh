@@ -44,6 +44,16 @@ RUNS = {
         "HongzeFu/robomme-vla-orig100-ctx32x4x4-motion-s2concat1x1024-60k-v1", "ctx", "context", 2048, "1x1024"),
     "orig100-m32x4x4-modul-motion-s2concat1x1024-b128-60k": (
         "HongzeFu/robomme-vla-orig100-m32x4x4-modul-motion-s2concat1x1024-60k-v1", "modul", "modulation", 1024, "1x1024"),
+    "orig100-m32x4x4-modul-motion-s2concat1x1024-s16-b128-60k": (
+        "HongzeFu/robomme-vla-orig100-modul-s2concat-s16-60k-v1", "modul", "modulation", 1024, "1x1024"),
+}
+# 按 run 登记的 motion 表参数；未登记的 run 沿用旧 grid32 默认（layout/budget96/库目录/逐段输出目录）。
+RUN_MOTION = {
+    "orig100-m32x4x4-modul-motion-s2concat1x1024-s16-b128-60k": {
+        "layout": "motion-stage2-1x1024-grid16-demopad17-v1", "budget": 192,
+        "store_dir": "motion-stage2-1024-grid16", "tokens_dir": "motion-tokens-stage2-grid16",
+        "history": "perceptual-framesamp-modul-32frame-4x4-motion-stage2-1x1024-s16-orig16.yaml",
+        "readme": "orig16_modul32x4x4_concat_s16_60k_bucket_README.md"},
 }
 # 与启动契约的 encoder 身份同名；旧四条 RUNS 保留原映射与默认行为。
 ENCODERS = {
@@ -70,7 +80,9 @@ RUN = os.environ.get("RUN", "")
 ATTEMPT = None
 ENC_RUN = "stage2-full144-1025-a"
 ARCH = "wan-latent-stage2-blockwise-pool4-three-decoder"
-LAYOUT = "motion-stage2-1x1024-grid32-demopad17-v1"
+LAYOUT = "motion-stage2-1x1024-grid32-demopad17-v1"     # 未登记 run 的默认布局（grid32）
+MOTION_BUDGET = 96                                        # 未登记 run 的默认 concat 窗口预算
+TOKENS_DIR = "motion-tokens-stage2"                       # 未登记 run 的默认 encoder 逐段输出目录
 STEPS = tuple(range(5000, 60000, 5000)) + (59999,)
 ROOT_FILES = frozenset({"history_config.txt", "history_config.resolved.yaml",
     "history_config.resolved.sha256", "motion_provenance.json", "encoder_dependencies.json",
@@ -140,8 +152,17 @@ def checkpoint_steps():
 def train_config():
     return "mme_vla_suite_orig16_b64_80k" if base_run() in ABLATION_RUNS else "mme_vla_suite_orig16_b128_60k"
 
+def run_motion(key, default):
+    """按 base_run 取登记的 motion 参数；未登记沿用旧默认。"""
+    return RUN_MOTION.get(base_run(), {}).get(key, default)
+
 def store_dir():
-    return ENCODERS[encoder_run()]["store_dir"] if base_run() in ABLATION_RUNS else "motion-stage2-1024"
+    if base_run() in ABLATION_RUNS:
+        return ENCODERS[encoder_run()]["store_dir"]
+    return run_motion("store_dir", "motion-stage2-1024")
+
+def tokens_dir():
+    return run_motion("tokens_dir", TOKENS_DIR)
 
 def check_encoder(encoder, sha=None):
     expected = {"run_name": encoder_run(), "checkpoint_name": "checkpoint_epoch_105.pt", "epoch": 105,
@@ -200,6 +221,8 @@ def history_name(run):
     spec = run_spec(run)
     if run in ABLATION_RUNS:
         return ENCODERS[spec[5]]["yaml"]
+    if run in RUN_MOTION:
+        return RUN_MOTION[run]["history"]
     return f"perceptual-framesamp-{spec[1]}-32frame-4x4-motion-stage2-{spec[4]}-orig16.yaml"
 
 
@@ -208,6 +231,8 @@ def readme_path(run):
     if run in ABLATION_RUNS:
         tag = ENCODERS[spec[5]]["store_dir"].removeprefix("motion-stage2-1024-")
         return EXPORT / f"orig16_ctx32x4x4_{tag}_split_80k_bucket_README.md"
+    if run in RUN_MOTION:
+        return EXPORT / RUN_MOTION[run]["readme"]
     return EXPORT / f"orig16_{spec[1]}32x4x4_{README_KIND[spec[4]]}_60k_bucket_README.md"
 
 
@@ -239,7 +264,8 @@ def check_history(history):
          "motion库与固定库名不符")
     if run_spec(base)[4] == "1x1024":
         need(motion.get("readout") == "stage2_pool4_concat_v1" and motion.get("num_tokens") == 1
-             and motion.get("dim") == 1024 and motion.get("budget") == 96, "concat训练必须为1×1024、96窗读法")
+             and motion.get("dim") == 1024 and motion.get("budget") == run_motion("budget", MOTION_BUDGET),
+             f"concat训练必须为1×1024、{run_motion('budget', MOTION_BUDGET)}窗读法")
     else:
         need(motion.get("readout") == "stage2_pool4_split_v1" and motion.get("num_tokens") == 4
              and motion.get("dim") == 256, "正式训练必须为4×256读法")
@@ -335,7 +361,7 @@ def validate_store(repo, prov, history):
     loaded = MotionMeta.load(root)
     meta_path = member(root, "meta/store_meta.json")
     meta = json_file(meta_path)
-    need(meta.get("status") == "verified" and meta.get("layout") == LAYOUT, "motion表未验证或layout错误")
+    need(meta.get("status") == "verified" and meta.get("layout") == run_motion("layout", LAYOUT), "motion表未验证或layout错误")
     need(prov.get("motion_root") == str(root) and prov.get("motion_store_meta_sha256") == file_info(meta_path)["sha256"],
          "根快照未绑定实际motion表")
     table = meta["tables"]["motion_token"]
@@ -634,23 +660,23 @@ def run_trainset(smoke, root):
     stage = root / "stage"
     # 公开前扫描源文本，tar内元数据也在打包前扫描；原始数据字节不作脱敏改写。
     sources = {}
-    for sub in ("meta", "source", "framesamp-4x4", "framesamp-8x8", "wan-latents", "motion-tokens-stage2", "motion-stage2-1024"):
+    for sub in ("meta", "source", "framesamp-4x4", "framesamp-8x8", "wan-latents", tokens_dir(), store_dir()):
         base = no_symlink(lib / sub)
         need(base.is_dir(), f"缺交付目录: {sub}")
         sources.update({p.relative_to(lib).as_posix(): p for p in base.rglob("*") if p.is_file() and hygiene.is_text(p)})
     sources["assets/robomme/norm_stats.json"] = norm
-    mo = json_file(member(lib, "motion-stage2-1024/meta/store_meta.json"))
+    mo = json_file(member(lib, f"{store_dir()}/meta/store_meta.json"))
     compat = mo["provenance"]["stage2_compat"]
     need(compat.get("kind") == "published-cache-with-local-fill" and set(compat.get("evidence", {})) == set(EVIDENCE_FILES),
          "训练库缓存来源证据集合不符")
     for role, ref in compat["evidence"].items():
         path = Path(ref["path"])
         if not path.is_absolute():
-            path = lib / "motion-stage2-1024" / path
+            path = lib / store_dir() / path
         need(file_info(path)["sha256"] == ref["sha256"], f"训练库证据SHA不符: {role}")
         sources[f"evidence/{role}.json"] = path
     scan(sources, allow)
-    packed = ("source/data", "source/features", "wan-latents", "motion-tokens-stage2")
+    packed = ("source/data", "source/features", "wan-latents", tokens_dir())
     estimated = sum(p.stat().st_size + 1024 for sub in packed for p in (lib / sub).rglob("*") if p.is_file())
     have = sum(p.stat().st_size for p in stage.rglob("*.tar"))
     required = max(0, estimated - have) + 100 * 1024**3 + DISK_MARGIN

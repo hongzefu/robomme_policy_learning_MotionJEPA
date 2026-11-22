@@ -168,6 +168,18 @@ def test_full_compare_recomputes_every_even_source_grid(tmp_path):
     assert calls == [0, 2]
 
 
+def test_full_compare_grid16_recomputes_every_source_grid(tmp_path):
+    """grid16（grid_subsample=1）逐格比较全部源格，表行与源格一一对应。"""
+    arguments, calls = comparison_fixture(tmp_path)
+    arguments.update(table=np.stack([np.full(1024, i, np.float32) for i in range(3)]),
+                     segments=[("Task_ep0_demo", 0, 3)], grid_subsample=1)
+    compared, mapping = C.compare_rows(**arguments)
+    assert compared == 3 and mapping == {"Task_ep0_demo": [0, 1, 2]}
+    assert calls == [0, 1, 2]
+    with pytest.raises(ValueError, match="grid_subsample=2"):
+        C.compare_rows(**{**arguments, "grid_subsample": 2})
+
+
 def test_compare_detects_changed_unselected_odd_source_block(tmp_path):
     arguments, _ = comparison_fixture(tmp_path)
     original = arguments["encode"]

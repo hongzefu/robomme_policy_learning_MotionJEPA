@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""只读恢复的 latent，按偶数格导出阶段二运动表，并核验所有 IO 身份。"""
+"""只读恢复的 grid16 latent，按 grid-subsample 取格（2=偶数格 grid32、1=全部格 grid16）导出阶段二运动表，并核验所有 IO 身份。"""
 
 from __future__ import annotations
 
@@ -25,6 +25,9 @@ from motion_jepa.export.stage2_memory import (
 
 SCHEMA = "stage2-memory-export-v1"
 LAYOUT = "motion-stage2-1x1024-grid32-demopad17-v1"
+GRID16_LAYOUT = "motion-stage2-1x1024-grid16-demopad17-v1"
+# grid-subsample → (输出布局, 输出网格步长)；源 latent 恒为 grid16。与 motion_store.STAGE2_LAYOUTS 同值。
+SUBSAMPLE_LAYOUTS = {2: (LAYOUT, 32), 1: (GRID16_LAYOUT, 16)}
 LATENT_SHAPE = (9, 16, 32, 32)
 LATENT_BYTES = 589824
 ROW_BYTES = 4096
@@ -64,7 +67,7 @@ def integer(value, label):
 
 
 def parse_expected_counts(value):
-    """命令行显式指定全表段数、grid32 行数，不预设某个数据集规模。"""
+    """命令行显式指定全表段数、按 grid-subsample 取格后的行数，不预设某个数据集规模。"""
     if not re.fullmatch(r"[0-9]+,[0-9]+", value):
         raise argparse.ArgumentTypeError("expected-counts 必须为 <正整数段数>,<正整数行数>")
     counts = tuple(int(part) for part in value.split(","))
@@ -159,8 +162,13 @@ def verify_sidecar(path, digest):
         raise ValueError(f"SHA sidecar 文件名不同：{sidecar}")
 
 
-def source_segment(root, key, expected):
-    """完整校验源段索引、整文件 SHA 及偶数块 SHA，绝不改写历史元数据。"""
+def subsampled_count(num_grid, subsample):
+    """源段 num_grid 个 grid16 窗按 subsample 取格后的行数（grid32 即 (n+1)//2）。"""
+    return len(range(0, num_grid, subsample))
+
+
+def source_segment(root, key, expected, subsample=2):
+    """完整校验源段索引、整文件 SHA 及所取格块 SHA，绝不改写历史元数据。"""
     path, meta_path = root / f"{key}.bin", root / f"{key}.metadata.json"
     meta = read_json(meta_path)
     for field, wanted in expected.items():
@@ -194,13 +202,13 @@ def source_segment(root, key, expected):
             if len(block) != LATENT_BYTES:
                 raise ValueError(f"源段读取不完整：{key}")
             digest.update(block)
-            if index % 2 == 0:
+            if index % subsample == 0:
                 blocks.append(hashlib.sha256(block).hexdigest())
         if stream.read(1):
             raise ValueError(f"源段含多余尾字节：{key}")
     require_equal(digest.hexdigest(), valid_sha(meta["sha256"]), f"{key} 源 SHA256")
     verify_sidecar(path, digest.hexdigest())
-    return {"path": path, "metadata": meta, "source_grid": list(range(0, expected["num_grid"], 2)),
+    return {"path": path, "metadata": meta, "source_grid": list(range(0, expected["num_grid"], subsample)),
             "input_latent_sha256": digest.hexdigest(), "input_block_sha256": blocks,
             "input_metadata_sha256": file_sha256(meta_path)}
 
@@ -230,13 +238,14 @@ def atomic_new(path, content):
         os.unlink(temporary)
 
 
-def output_metadata(source, info, manifest_sha, worker):
+def output_metadata(source, info, manifest_sha, worker, subsample=2):
     old = source["metadata"]
     grid = source["source_grid"]
-    return {"schema": SCHEMA, "layout": LAYOUT,
+    layout, grid_stride = SUBSAMPLE_LAYOUTS[subsample]
+    return {"schema": SCHEMA, "layout": layout,
             **{name: old[name] for name in ("segment", "g", "h5_file", "raw_ep_idx",
                                             "segment_kind", "seg_start_global", "seg_len")},
-            "grid_stride": 32, "window_frames": 33, "row_shape": [1, 1024],
+            "grid_stride": grid_stride, "window_frames": 33, "row_shape": [1, 1024],
             "dtype": "float32", "token_dim": 1024, "token_bytes": ROW_BYTES,
             "num_grid": len(grid), "bytes": len(grid) * ROW_BYTES,
             "source_grid": grid, "rows": [deepcopy(old["rows"][i]) for i in grid],
@@ -266,8 +275,9 @@ def verify_output(out, key, expected):
 
 def export(args):
     """参数已定时执行一次导出；全量与冒烟的根记录明确分开。"""
-    if args.grid_subsample != 2 or args.batch != 1:
-        raise ValueError("阶段二导出固定 grid-subsample=2、batch=1")
+    if args.grid_subsample not in SUBSAMPLE_LAYOUTS or args.batch != 1:
+        raise ValueError("阶段二导出只支持 grid-subsample∈{2,1}、batch=1")
+    subsample = args.grid_subsample
     if args.max_segments is not None and args.max_segments < 1:
         raise ValueError("max-segments 必须为正整数")
     if args.check_dropout not in (0, 64):
@@ -305,7 +315,7 @@ def export(args):
                              f"缺少={sorted(expected_keys - actual)[:5]} 多余={sorted(actual - expected_keys)[:5]}")
     keys = list(segments)
     if scope == "full":
-        counts = (len(keys), sum((entry["num_grid"] + 1) // 2 for entry in segments.values()))
+        counts = (len(keys), sum(subsampled_count(entry["num_grid"], subsample) for entry in segments.values()))
         require_equal(counts, expected_counts, "全表段数与行数（expected-counts）")
     else:
         keys = keys[:args.max_segments]
@@ -325,7 +335,7 @@ def export(args):
               "checkpoint_path": str(checkpoint_path), "latents_path": str(latent_root),
               "output_path": str(out)}
     root_identity = {"schema": SCHEMA, "scope": scope, "segments": len(keys),
-                     "rows": sum((segments[key]["num_grid"] + 1) // 2 for key in keys),
+                     "rows": sum(subsampled_count(segments[key]["num_grid"], subsample) for key in keys),
                      "segment_keys": keys, "manifest_sha256": manifest_sha,
                      **{name: deepcopy(info[name]) for name in IDENTITY_FIELDS}}
     record_path = out / "export_record.json"
@@ -339,7 +349,7 @@ def export(args):
     dropout_inputs, dropout_result, prepared = [], None, {}
     if args.check_dropout:
         for key in keys:
-            source = source_segment(latent_root, key, segments[key])
+            source = source_segment(latent_root, key, segments[key], subsample)
             prepared[key] = source
             for index in range(len(source["source_grid"])):
                 dropout_inputs.append(read_window(source, index, "cpu"))
@@ -355,8 +365,8 @@ def export(args):
     out.mkdir(parents=True, exist_ok=args.resume)
     written = []
     for key in keys:
-        source = prepared.pop(key) if key in prepared else source_segment(latent_root, key, segments[key])
-        expected = output_metadata(source, info, manifest_sha, worker)
+        source = prepared.pop(key) if key in prepared else source_segment(latent_root, key, segments[key], subsample)
+        expected = output_metadata(source, info, manifest_sha, worker, subsample)
         paths = [out / f"{key}{suffix}" for suffix in (".f32.bin", ".f32.bin.sha256", ".metadata.json")]
         exists = [path.exists() for path in paths]
         if any(exists):
@@ -395,10 +405,11 @@ def main(argv=None):
     for name in ("ckpt", "expected-sha256", "latents", "manifest", "input-manifest", "out"):
         parser.add_argument("--" + name, required=True)
     parser.add_argument("--expected-counts", type=parse_expected_counts,
-                        help="全表必填的 <段数>,<grid32行数>；冒烟不强制核对计数")
+                        help="全表必填的 <段数>,<行数>；行数按 grid-subsample 取格（2 为 grid32 行数，1 为全部 grid16 窗数）；冒烟不强制核对计数")
     parser.add_argument("--lineage-build-spec",
                         help="显式指定迁移后的训练来源 build_spec.json；默认沿用 config.data.data_root")
-    parser.add_argument("--grid-subsample", type=int, default=2)
+    parser.add_argument("--grid-subsample", type=int, default=2,
+                        help="2=偶数格 grid32（默认，旧行为）；1=全部格 grid16")
     parser.add_argument("--batch", type=int, default=1)
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--max-segments", type=int)
@@ -406,7 +417,7 @@ def main(argv=None):
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args(argv)
     if args.max_segments is None and args.expected_counts is None:
-        parser.error("全表导出必须提供 --expected-counts <段数>,<grid32行数>")
+        parser.error("全表导出必须提供 --expected-counts <段数>,<行数>")
     try:
         export(args)
     except Exception as error:

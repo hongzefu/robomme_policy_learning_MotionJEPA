@@ -46,6 +46,9 @@ logger = logging.getLogger(__name__)
 # ── 布局常量 ──────────────────────────────────────────────────────────────────
 LAYOUT = "motion-v10-8x256-grid16-demopad17-v1"
 STAGE2_LAYOUT = "motion-stage2-1x1024-grid32-demopad17-v1"
+STAGE2_GRID16_LAYOUT = "motion-stage2-1x1024-grid16-demopad17-v1"
+# 已知 stage2 布局集合：grid32（偶数格子集）与 grid16（全部格）；窗口契约除步长外完全相同
+STAGE2_LAYOUTS = (STAGE2_LAYOUT, STAGE2_GRID16_LAYOUT)
 STAGE2_ARCH = "wan-latent-stage2-blockwise-pool4-three-decoder"
 STAGE2_GROUPS = ("encoder", "encoder_state_sha256", "source_pin", "numerics", "stage2_compat", "vae")
 STAGE2_CACHE_ORIGIN = "published-cache-with-local-fill"
@@ -118,7 +121,11 @@ LAYOUT_SPECS = {
     "motion-768-grid16-demopad17-v1": LayoutSpec(17, 33, "repeat_last"),
     "motion-v10-8x256-grid16-demopad17-v1": LayoutSpec(17, 33, "repeat_last", (8, 256)),
     STAGE2_LAYOUT: LayoutSpec(17, 33, "repeat_last", (1, 1024), grid_stride=32),
+    STAGE2_GRID16_LAYOUT: LayoutSpec(17, 33, "repeat_last", (1, 1024), grid_stride=16),
 }
+# stage2 布局相对 grid16 Wan latent 的取格间隔：grid32 每 2 格取 1，grid16 全取
+STAGE2_GRID_SUBSAMPLE = {name: LAYOUT_SPECS[name].grid_stride // GRID_STRIDE for name in STAGE2_LAYOUTS}
+STAGE2_LAYOUT_BY_SUBSAMPLE = {v: k for k, v in STAGE2_GRID_SUBSAMPLE.items()}
 if LAYOUT not in LAYOUT_SPECS or any(
     f"-grid{spec.grid_stride}-" not in name or not name.endswith("-v1") for name, spec in LAYOUT_SPECS.items()
 ):
@@ -596,8 +603,12 @@ def _validate_stage2_cache_provenance(provenance):
         raise ValueError("缓存收据引用与合同身份不符")
 
 
-def validate_stage2_cache_evidence(provenance, records):
-    """共用 G0/G2/G3 消费校验，不把跨精度输出差异伪标为 PASS。"""
+def validate_stage2_cache_evidence(provenance, records, *, grid_subsample=2):
+    """共用 G0/G2/G3 消费校验，不把跨精度输出差异伪标为 PASS。
+
+    grid_subsample 是目标布局相对 grid16 latent 的取格间隔（grid32=2、grid16=1），
+    G0 窗口的 source_grid 必须落在该间隔的格上。
+    """
     compat = provenance["stage2_compat"]
     receipt, g0, g3 = records["wan_cache_import"], records["G0"], records["G3"]
     mapping = validate_wan_cache_import_receipt(receipt, manifest_sha256=provenance.get("manifest_sha256"),
@@ -618,8 +629,8 @@ def validate_stage2_cache_evidence(provenance, records):
     for window in windows:
         identity = (window.get("key"), window.get("source_grid"))
         row = mapping.get(identity)
-        if row is None or identity in seen or type(identity[1]) is not int or identity[1] % 2:
-            raise ValueError("缓存 G0 窗口重复、缺映射或不是偶数格")
+        if row is None or identity in seen or type(identity[1]) is not int or identity[1] % grid_subsample:
+            raise ValueError(f"缓存 G0 窗口重复、缺映射或不在 grid_subsample={grid_subsample} 的格上")
         seen.add(identity)
         for key in ("frame_ids", "real_frames", "pad_frames", "pad_source_frame", "input_frames_sha256", "route"):
             if window.get(key) != row.get(key):
@@ -676,8 +687,11 @@ def validate_stage2_cache_evidence(provenance, records):
 
 
 def validate_stage2_encoder_validation(summary, provenance, *, total_rows=None,
-                                       table_sha256=None, index_sha256=None):
-    """校验随快照携带的认证原文与覆盖范围；交付环境不依赖原机器索引。"""
+                                       table_sha256=None, index_sha256=None, layout=None):
+    """校验随快照携带的认证原文与覆盖范围；交付环境不依赖原机器索引。
+
+    layout 给定时认证原文须与之相同；未给定（只看 provenance）时须是已知 stage2 布局之一。
+    """
     if not isinstance(summary, dict) or not isinstance(summary.get("record_json"), str):
         raise ValueError("encoder认证摘要缺完整UTF8原文")
     if sha256_bytes(summary["record_json"].encode("utf-8")) != require_sha256(summary.get("record_sha256"), "encoder认证原文SHA"):
@@ -686,9 +700,12 @@ def validate_stage2_encoder_validation(summary, provenance, *, total_rows=None,
         record = json.loads(summary["record_json"])
     except json.JSONDecodeError as exc:
         raise ValueError("encoder认证原文不可解析") from exc
+    record_layout = record.get("layout") if isinstance(record, dict) else None
+    if record_layout not in STAGE2_LAYOUTS or (layout is not None and record_layout != layout):
+        raise ValueError("encoder认证原文的布局与目标表不符")
     if stage2_uses_cache(provenance):
         rows = summary.get("total_rows")
-        fixed = dict(schema="stage2-packed-integrity-v1", scope="full", layout=STAGE2_LAYOUT, status="PASS",
+        fixed = dict(schema="stage2-packed-integrity-v1", scope="full", layout=record_layout, status="PASS",
                      compared=rows, packed_compared=rows, mismatches=0, nonfinite=0,
                      output_numerics=SAME_INPUT_NOT_REQUIRED,
                      checkpoint_sha256=provenance["encoder"]["checkpoint_sha256"],
@@ -708,7 +725,7 @@ def validate_stage2_encoder_validation(summary, provenance, *, total_rows=None,
     scope = summary.get("scope")
     rows = summary.get("total_rows")
     if (not isinstance(record, dict) or scope not in ("full", "sampled") or record.get("scope") != scope
-            or record.get("status") != "PASS" or record.get("layout") != STAGE2_LAYOUT
+            or record.get("status") != "PASS"
             or type(rows) is not int or rows <= 0 or (total_rows is not None and rows != total_rows)
             or type(summary.get("packed_compared")) is not int or summary["packed_compared"] != rows
             or type(record.get("mismatches")) is not int or record["mismatches"] != 0):
@@ -805,7 +822,7 @@ def stage2_encoder_sample_plan(entries):
     """任务名排序、同一seed0随机源的分层1024窗；pad8是优先配额，随机余量仍可选更多pad。"""
     grouped, cursor = {}, 0
     for entry in entries:
-        if entry.spec != LAYOUT_SPECS[STAGE2_LAYOUT]:
+        if entry.spec not in (LAYOUT_SPECS[name] for name in STAGE2_LAYOUTS):
             raise ValueError("encoder抽样只能消费stage2索引")
         pools = grouped.setdefault(task_of_h5(entry.h5_file), {"demo": [], "exec": [], "padded": [], "plain_demo": []})
         for kind in SEGMENTS:
@@ -927,7 +944,7 @@ def parse_index(raw: dict, ctx: str = "motion_index.json") -> list[IndexEntry]:
     for key, want in (("grid_stride", spec.grid_stride), ("window_frames", WINDOW_FRAMES),
                       ("grid_origin", GRID_ORIGIN), ("window_direction", WINDOW_DIRECTION),
                       ("truncation_policy", TRUNCATION_POLICY)):
-        if need(key) != want or (raw["layout"] == STAGE2_LAYOUT and type(raw[key]) is not type(want)):
+        if need(key) != want or (raw["layout"] in STAGE2_LAYOUTS and type(raw[key]) is not type(want)):
             raise ValueError(f"{ctx} {key}={raw[key]!r} != 格式常量 {want!r}")
     entries: list[IndexEntry] = []
     cursor = 0
@@ -1029,14 +1046,14 @@ class MotionMeta:
         if int(need("schema")) != META_SCHEMA:
             raise ValueError(f"schema={raw['schema']} != {META_SCHEMA}")
         spec = layout_spec(raw, str(meta_path))
-        if raw["layout"] in (LAYOUT, STAGE2_LAYOUT) and need("manifest_scope") != "full":
+        if raw["layout"] in (LAYOUT, *STAGE2_LAYOUTS) and need("manifest_scope") != "full":
             raise ValueError("raw8 motion 表必须完整覆盖绑定清单（manifest_scope=full）")
         if need("byte_order") != BYTE_ORDER or need("array_order") != ARRAY_ORDER:
             raise ValueError("byte_order/array_order 与格式常量不符")
         for key, want in (("grid_stride", spec.grid_stride), ("window_frames", WINDOW_FRAMES),
                           ("grid_origin", GRID_ORIGIN), ("window_direction", WINDOW_DIRECTION),
                           ("truncation_policy", TRUNCATION_POLICY), ("frame_size", FRAME_SIZE)):
-            if need(key) != want or (raw["layout"] == STAGE2_LAYOUT and type(raw[key]) is not type(want)):
+            if need(key) != want or (raw["layout"] in STAGE2_LAYOUTS and type(raw[key]) is not type(want)):
                 raise ValueError(f"store_meta {key}={raw[key]!r} != 格式常量 {want!r}")
         status = need("status")
         if status not in ("packed", "verified"):
@@ -1073,14 +1090,14 @@ class MotionMeta:
         provenance = need("provenance")
         if not isinstance(provenance, dict):
             raise ValueError("provenance 须为对象")
-        if raw["layout"] == STAGE2_LAYOUT:
+        if raw["layout"] in STAGE2_LAYOUTS:
             validate_stage2_provenance(provenance)
             if status == "verified" and stage2_uses_cache(provenance) and "encoder_validation" not in provenance["stage2_compat"]:
                 raise ValueError("已 verified 的缓存表缺完整性认证")
             if "encoder_validation" in provenance["stage2_compat"]:
                 validate_stage2_encoder_validation(provenance["stage2_compat"]["encoder_validation"], provenance,
                                                    total_rows=num_rows, table_sha256=t.get("sha256"),
-                                                   index_sha256=raw["motion_index_sha256"])
+                                                   index_sha256=raw["motion_index_sha256"], layout=raw["layout"])
         return cls(root=root, raw=raw, status=status, num_rows=num_rows,
                    manifest_sha256=need("manifest_sha256"), manifest_path=need("manifest_path"),
                    motion_index_sha256=raw["motion_index_sha256"], table_sha256=t.get("sha256"),

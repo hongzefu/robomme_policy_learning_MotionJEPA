@@ -138,6 +138,14 @@ def _segment_key(entry: ms.IndexEntry, seg: str) -> str:
     return ms.segment_key(entry.h5_file, entry.raw_ep_idx, seg)
 
 
+def stage2_layout_of(spec: ms.LayoutSpec) -> tuple[str, int] | None:
+    """stage2 布局名及其相对 grid16 latent 的取格间隔（grid32=2、grid16=1）；非 stage2 返回 None。"""
+    for name in ms.STAGE2_LAYOUTS:
+        if spec == ms.LAYOUT_SPECS[name]:
+            return name, ms.STAGE2_GRID_SUBSAMPLE[name]
+    return None
+
+
 def read_segment_tokens(tokens_root: pathlib.Path, key: str, num_grid: int, *,
                         spec: ms.LayoutSpec | None = None) -> tuple[bytes, dict]:
     """读一段 token 文件：核字节数 + sidecar sha256 + metadata 可解析；返回 (原始字节, metadata)。"""
@@ -162,17 +170,19 @@ def read_segment_tokens(tokens_root: pathlib.Path, key: str, num_grid: int, *,
                     "bytes": size}
         if any(meta.get(k) != v for k, v in contract.items()):
             raise ValueError(f"{p} 原始 motion 合同不符，期望 {contract}")
-    if spec == ms.LAYOUT_SPECS[ms.STAGE2_LAYOUT]:
-        contract = {"schema": "stage2-memory-export-v1", "layout": ms.STAGE2_LAYOUT,
+    if stage2_layout_of(spec) is not None:
+        layout, subsample = stage2_layout_of(spec)
+        contract = {"schema": "stage2-memory-export-v1", "layout": layout,
                     "row_shape": [1, 1024], "dtype": "float32", "token_dim": 1024,
-                    "token_bytes": 4096, "bytes": size, "num_grid": num_grid, "grid_stride": 32, "window_frames": 33}
+                    "token_bytes": 4096, "bytes": size, "num_grid": num_grid, "grid_stride": spec.grid_stride,
+                    "window_frames": 33}
         if any(type(meta.get(k)) is not type(v) or meta[k] != v for k, v in contract.items()):
             raise ValueError(f"{p} stage2 行合同不符")
         if (any(type(v) is not int for v in meta["row_shape"])
                 or not isinstance(meta.get("source_grid"), list)
                 or any(type(v) is not int for v in meta["source_grid"])
-                or meta["source_grid"] != list(range(0, num_grid * 2, 2))):
-            raise ValueError(f"{p} source_grid 不是连续偶数格")
+                or meta["source_grid"] != list(range(0, num_grid * subsample, subsample))):
+            raise ValueError(f"{p} source_grid 不是按 subsample={subsample} 连续取的格")
     arr = np.frombuffer(data, dtype=np.float32)
     if not np.isfinite(arr).all():
         raise ValueError(f"{p} 含非有限值")
@@ -465,7 +475,7 @@ def gather_provenance(latents_root: pathlib.Path, tokens_root: pathlib.Path, ent
 
 
 def validate_stage2_segments(latents_root, tokens_root, entries):
-    """精确段集合、偶数格映射及补帧契约；合法零窗段仍由索引保留。"""
+    """精确段集合、按布局取格（grid32 偶数格 / grid16 全部格）映射及补帧契约；合法零窗段仍由索引保留。"""
     expected = {key for _, _, key, _, _ in iter_rows_in_order(entries)}
     for suffix in (".f32.bin", ".f32.bin.sha256", ".metadata.json"):
         actual = {p.name[:-len(suffix)] for p in tokens_root.glob(f"*{suffix}")}
@@ -482,6 +492,7 @@ def validate_stage2_segments(latents_root, tokens_root, entries):
         lm = _load_json(latents_root / f"{key}.metadata.json")
         _, tm = read_segment_tokens(tokens_root, key, ng, spec=entry.spec)
         info = getattr(entry, segment)
+        stride = entry.spec.grid_stride
         start = 0 if segment == "demo" else entry.exec_start_idx
         legacy_count = ms.seg_num_grid(info.seg_len, entry.spec.min_real(segment))
         fixed = {"segment": key, "segment_kind": segment, "seg_start_global": start, "seg_len": info.seg_len}
@@ -494,25 +505,26 @@ def validate_stage2_segments(latents_root, tokens_root, entries):
             raise ValueError(f"{key} 原始行身份与 receipt 固定的总 metadata 不符")
         for j, source_grid in enumerate(tm["source_grid"]):
             row = tm["rows"][j]
-            real = min(33, info.seg_len - 32 * j)
+            real = min(33, info.seg_len - stride * j)
             pad = 33 - real
-            want = {"m": source_grid, "seg_offset": 32 * j, "start_global_frame": start + 32 * j,
+            want = {"m": source_grid, "seg_offset": stride * j, "start_global_frame": start + stride * j,
                     "real_frames": real, "pad_frames": pad,
                     "pad_source_frame": start + info.seg_len - 1 if pad else None,
                     "input_shape": [33, 256, 256, 3], "input_dtype": "uint8"}
             if (ms.canonical_json_bytes(row) != ms.canonical_json_bytes(lm["rows"][source_grid])
                     or any(type(row.get(k)) is not type(v) or row[k] != v for k, v in want.items())):
-                raise ValueError(f"{key} 第 {j} 行不等于原偶数格，或 padding/起点身份不符")
+                raise ValueError(f"{key} 第 {j} 行不等于原 grid16 源格，或 padding/起点身份不符")
             ms.require_sha256(row.get("input_frames_sha256"), f"{key} input_frames_sha256")
             if pad and (segment != "demo" or j != ng - 1 or real < 17):
                 raise ValueError(f"{key} 非 demo 末窗补帧或真实帧不足17")
             summary["demo_tail_padded"] += int(pad > 0)
-        if segment == "demo" and 0 < info.seg_len - ng * 32 <= 16:
+        if segment == "demo" and 0 < info.seg_len - ng * stride <= 16:
             summary["demo_tail_dropped"] += 1
     return summary
 
 
-def _stage2_validation(validation_root, *, manifest, latent_sha, checkpoint_sha, source_pin, numerics, online_vae):
+def _stage2_validation(validation_root, *, manifest, latent_sha, checkpoint_sha, source_pin, numerics, online_vae,
+                       grid_subsample=2):
     """读取已封口的 G0/G2/G3，要求输入摘要与关键数值指标完整绑定。"""
     samples_path = validation_root / "windows.json"
     samples = _load_json(samples_path)
@@ -535,7 +547,7 @@ def _stage2_validation(validation_root, *, manifest, latent_sha, checkpoint_sha,
         tasks[window["task"]] = tasks.get(window["task"], 0) + 1
         if (len(window.get("frame_ids", [])) != 33 or len(window.get("source_frame_indices", [])) != 33
                 or not window.get("sources") or type(window.get("source_grid")) is not int
-                or window["source_grid"] < 0 or window["source_grid"] % 2
+                or window["source_grid"] < 0 or window["source_grid"] % grid_subsample
                 or type(window["episode"]) is not int or window["episode"] < 0
                 or window["segment_kind"] not in ms.SEGMENTS
                 or window["key"] != f"{window['task']}_ep{window['episode']}_{window['segment_kind']}"
@@ -673,7 +685,8 @@ def load_cache_import(receipt_path, latents_root, manifest_path, raw_dir):
 def gather_stage2_provenance(latents_root, tokens_root, entries, manifest, index_sha, *,
                             encoder_run_dir, raw_dir, input_manifest_path, vae_compat,
                             expected_ckpt_sha256, validation_root, source_pin_path, manifest_file_sha256):
-    """stage2 专属来源链：整 latent 与偶数块分别核 SHA，保留全部 encoder 身份。"""
+    """stage2 专属来源链：整 latent 与所取格块分别核 SHA，保留全部 encoder 身份。"""
+    subsample = stage2_layout_of(entries[0].spec)[1] if entries else 2
     if vae_compat is None:
         raise ValueError("stage2 必须使用已封口的历史 VAE receipt")
     ms.require_sha256(expected_ckpt_sha256, "stage2 expected_ckpt_sha256")
@@ -717,14 +730,14 @@ def gather_stage2_provenance(latents_root, tokens_root, entries, manifest, index
         old_count = lm["num_grid"]
         blocks = tm.get("input_block_sha256")
         if path.stat().st_size != old_count * CHUNK_BYTES or not isinstance(blocks, list) or len(blocks) != ng:
-            raise ValueError(f"{key} latent 字节数或偶数块 SHA 数量不符")
+            raise ValueError(f"{key} latent 字节数或所取格块 SHA 数量不符")
         whole = hashlib.sha256()
         with path.open("rb") as stream:
             for g in range(old_count):
                 block = stream.read(CHUNK_BYTES)
                 whole.update(block)
-                if g % 2 == 0 and ms.sha256_bytes(block) != blocks[g // 2]:
-                    raise ValueError(f"{key} 偶数格 {g} latent 字节 SHA 不符")
+                if g % subsample == 0 and ms.sha256_bytes(block) != blocks[g // subsample]:
+                    raise ValueError(f"{key} 所取格 {g} latent 字节 SHA 不符")
         if not (whole.hexdigest() == tm.get("input_latent_sha256") == lm.get("sha256") == total["segments"][key]["sha256"]):
             raise ValueError(f"{key} 整 latent SHA 不符（含未选中的奇数块）")
         source_grid[key] = tm["source_grid"]
@@ -773,7 +786,7 @@ def gather_stage2_provenance(latents_root, tokens_root, entries, manifest, index
     else:
         evidence = _stage2_validation(validation_root, manifest=manifest, latent_sha=latent_sha,
                                  checkpoint_sha=expected_ckpt_sha256, source_pin=pin,
-                                 numerics=identity["numerics"], online_vae=online_vae)
+                                 numerics=identity["numerics"], online_vae=online_vae, grid_subsample=subsample)
         evidence.update(restore_receipt={"path": vae_compat["receipt_path"], "sha256": vae_compat["receipt_sha256"]},
                     SOURCE_PIN={"path": str(source_pin_path.resolve()), "sha256": ms.sha256_file(source_pin_path)})
         compat = {"schema": "stage2-compat-v1", "restore_receipt_sha256": vae_compat["receipt_sha256"],
@@ -790,7 +803,8 @@ def gather_stage2_provenance(latents_root, tokens_root, entries, manifest, index
                   "workers_vae": vae_workers, "workers_encoder": workers}
     ms.validate_stage2_provenance(provenance)
     if cached:
-        ms.validate_stage2_cache_evidence(provenance, {key: _load_json(path) for key, path in paths.items()})
+        ms.validate_stage2_cache_evidence(provenance, {key: _load_json(path) for key, path in paths.items()},
+                                          grid_subsample=subsample)
     return provenance
 
 
@@ -827,13 +841,14 @@ def cmd_pack(args) -> None:
     if (cached and (not stage2 or not getattr(args, "cache_import_receipt", None)
                     or getattr(args, "restore_receipt", None))) or (getattr(args, "cache_import_receipt", None) and not cached):
         raise ValueError("缓存导入收据仅用于显式 stage2 published-cache-with-local-fill，不可混用历史收据")
-    layout = ms.STAGE2_LAYOUT if stage2 else ms.LAYOUT
-    spec = ms.LAYOUT_SPECS[layout]
-    if stage2 and (getattr(args, "latent_grid_subsample", None) != 2
+    subsample = getattr(args, "latent_grid_subsample", None)
+    if stage2 and (subsample not in ms.STAGE2_LAYOUT_BY_SUBSAMPLE
                    or not getattr(args, "stage2_validation", None)
                    or not getattr(args, "stage2_source_pin", None)
                    or not (getattr(args, "restore_receipt", None) or cached)):
-        raise ValueError("stage2 必须显式提供 subsample=2、G0/G2/G3 目录、SOURCE_PIN 和恢复 receipt")
+        raise ValueError("stage2 必须显式提供 subsample∈{2(grid32),1(grid16)}、G0/G2/G3 目录、SOURCE_PIN 和恢复 receipt")
+    layout = ms.STAGE2_LAYOUT_BY_SUBSAMPLE[subsample] if stage2 else ms.LAYOUT
+    spec = ms.LAYOUT_SPECS[layout]
     if stage2 and args.force_break_lock:
         raise ValueError("stage2 禁止强制破锁")
     entries = ms.build_index_entries(manifest, spec)
@@ -967,7 +982,8 @@ def cmd_verify(args) -> None:
     entries = ms.build_index_entries(manifest, meta.spec)
     if [dataclass_tuple(e) for e in entries] != [dataclass_tuple(e) for e in meta.entries]:
         raise RuntimeError("verify: 现场按清单重算的 index 与 meta 内 motion_index 不同")
-    stage2 = meta.raw["layout"] == ms.STAGE2_LAYOUT
+    stage2 = meta.raw["layout"] in ms.STAGE2_LAYOUTS
+    subsample = ms.STAGE2_GRID_SUBSAMPLE.get(meta.raw["layout"])
     cached = stage2 and ms.stage2_uses_cache(meta.provenance)
     latents_root = None
     if stage2:
@@ -979,7 +995,7 @@ def cmd_verify(args) -> None:
         raise ValueError("stage2 verify 必须 --check-padding 且禁止强制破锁")
     padding = validate_stage2_segments(latents_root, tokens_root, entries) if stage2 else {}
     if stage2:
-        source_grid = {key: list(range(0, ng * 2, 2)) for _, _, key, _, ng in iter_rows_in_order(entries)}
+        source_grid = {key: list(range(0, ng * subsample, subsample)) for _, _, key, _, ng in iter_rows_in_order(entries)}
         if ms.sha256_bytes(ms.canonical_json_bytes(source_grid)) != meta.provenance.get("source_grid_sha256"):
             raise ValueError("verify source_grid 摘要与当前索引不符")
         if ms.sha256_file(latents_root / "metadata.json") != meta.provenance["latents_metadata_sha256"]:
@@ -1040,7 +1056,7 @@ def cmd_verify(args) -> None:
     if stage2:
         raw["verify"].update(padding, nonfinite=0, segment_set_mismatch=0)
         if cached:
-            certification = dict(schema="stage2-packed-integrity-v1", scope="full", layout=ms.STAGE2_LAYOUT,
+            certification = dict(schema="stage2-packed-integrity-v1", scope="full", layout=meta.raw["layout"],
                 status="PASS", compared=scanned, packed_compared=scanned, mismatches=0, nonfinite=0,
                 output_numerics=dict(ms.SAME_INPUT_NOT_REQUIRED), store_table_sha256=meta.table_sha256,
                 motion_index_sha256=meta.motion_index_sha256,
@@ -1054,7 +1070,8 @@ def cmd_verify(args) -> None:
             raise RuntimeError("verify: encoder认证在全表CPU校验期间改变")
         summary = _encoder_validation_summary(certification_bytes, certification, meta.num_rows, scanned)
         ms.validate_stage2_encoder_validation(summary, raw["provenance"], total_rows=meta.num_rows,
-                                              table_sha256=meta.table_sha256, index_sha256=meta.motion_index_sha256)
+                                              table_sha256=meta.table_sha256, index_sha256=meta.motion_index_sha256,
+                                              layout=meta.raw["layout"])
         raw["provenance"]["stage2_compat"]["encoder_validation"] = summary
     raw["row_digests"] = {"relpath": ms.ROW_DIGESTS_RELPATH, "algo": "blake2b-128", "covered_rows": scanned,
                           "coverage": ms.ROW_DIGEST_COVERAGE, "byte_count": len(digests),
@@ -1089,8 +1106,8 @@ def check_bitexact_record(store_root: pathlib.Path, raw_meta: dict, *, latents_r
     want = {"status": "PASS", "compared": int(raw_meta["num_rows"]), "mismatches": 0,
             "store_table_sha256": table["sha256"], "motion_index_sha256": raw_meta["motion_index_sha256"],
             "checkpoint_sha256": raw_meta["provenance"]["encoder"]["checkpoint_sha256"]}
-    if raw_meta["layout"] == ms.STAGE2_LAYOUT:
-        want.update(schema="stage2-encoder-bitexact-v1", scope="full", layout=ms.STAGE2_LAYOUT,
+    if raw_meta["layout"] in ms.STAGE2_LAYOUTS:
+        want.update(schema="stage2-encoder-bitexact-v1", scope="full", layout=raw_meta["layout"],
                     source_grid_sha256=raw_meta["provenance"]["source_grid_sha256"])
         if ms.sha256_file(store_root / ms.MOTION_TABLE_RELPATH) != table["sha256"]:
             raise RuntimeError("verify: 当前表与认证所绑定的 SHA 不符")
@@ -1115,14 +1132,15 @@ def check_bitexact_record(store_root: pathlib.Path, raw_meta: dict, *, latents_r
     bad = [k for k, v in want.items() if type(rec.get(k)) is not type(v) or rec[k] != v]
     if bad:
         raise RuntimeError(f"verify: 逐位比较记录与当前表不符 {bad}")
-    if raw_meta["layout"] == ms.STAGE2_LAYOUT and rec.get("scope") == "sampled":
+    if raw_meta["layout"] in ms.STAGE2_LAYOUTS and rec.get("scope") == "sampled":
         summary = _encoder_validation_summary(path.read_bytes(), rec, int(raw_meta["num_rows"]), int(raw_meta["num_rows"]))
         try:
             ms.validate_stage2_encoder_validation(summary, raw_meta["provenance"], total_rows=int(raw_meta["num_rows"]),
-                                                  table_sha256=table["sha256"], index_sha256=raw_meta["motion_index_sha256"])
+                                                  table_sha256=table["sha256"], index_sha256=raw_meta["motion_index_sha256"],
+                                                  layout=raw_meta["layout"])
         except ValueError as exc:
             raise RuntimeError(f"verify: 抽样认证不自洽: {exc}") from exc
-    if raw_meta["layout"] == ms.STAGE2_LAYOUT:
+    if raw_meta["layout"] in ms.STAGE2_LAYOUTS:
         carried = raw_meta["provenance"]["stage2_compat"].get("encoder_validation")
         if carried is not None and carried.get("record_sha256") != ms.sha256_file(path):
             raise RuntimeError("verify: 携带的encoder认证与当前认证文件不同")
@@ -1152,7 +1170,8 @@ def main() -> None:
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("pack")
     p.add_argument("--layout", choices=("legacy", "stage2"), default="legacy")
-    p.add_argument("--latent-grid-subsample", type=int, default=1)
+    p.add_argument("--latent-grid-subsample", type=int, default=None,
+                   help="stage2 必填：2=偶数格 grid32 布局，1=全部格 grid16 布局")
     p.add_argument("--stage2-validation", default=None)
     p.add_argument("--stage2-source-pin", default=None)
     p.add_argument("--latents-origin", choices=("historical-restore-receipt", ms.STAGE2_CACHE_ORIGIN), default=None)
