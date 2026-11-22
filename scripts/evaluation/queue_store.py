@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import time
 import uuid
 
 try:
@@ -65,6 +66,13 @@ def confirm_step_terminal(job_id, step_id, slurm_host="greatlakes"):
             or rows[0][2] in ("", "Unknown", "None")):
         raise ValueError(f"尚未明确确认旧step终态：{exact}；{raw.strip()}")
     return {"job_id": str(job_id), "step_id": str(step_id), "state": rows[0][1], "end": rows[0][2], "raw": raw}
+
+
+def confirm_local_terminal(job_id, step_id):
+    """本机worker：step_id是其PID，/proc中已不存在才算结束。"""
+    if job_id != "local" or Path(f"/proc/{step_id}").exists():
+        raise ValueError(f"尚未确认本机worker结束：{job_id}/{step_id}")
+    return {"job_id": job_id, "step_id": step_id, "state": "LOCAL_EXITED", "end": time.time(), "raw": ""}
 
 
 class QueueStore:

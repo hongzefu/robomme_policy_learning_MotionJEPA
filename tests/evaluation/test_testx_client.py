@@ -149,7 +149,29 @@ def test_testx_budget():
         candidate.validate_budget(2000)
 
 
-@pytest.mark.parametrize("overrides", [{"model_seed": 7}, {"max_steps": 2000}])
+def test_stride16_budget192():
+    # 旧口径缺省不变：k_exec=40、上限 96。
+    assert candidate.validate_budget(500)["conservative_exec_windows"] == 40
+    # stride 16：k_exec=(1300−32)//16+1=80，demo 窗按 16 格计；k_demo+80 ≤ 192。
+    ok = candidate.validate_budget(1793, stride=16, budget=192)
+    assert ok == {"demo_frames": 1793, "demo_windows": (1793 - 17) // 16 + 1, "conservative_exec_windows": 80}
+    assert ok["demo_windows"] + 80 == 192
+    with pytest.raises(candidate.ContractError):
+        candidate.validate_budget(1793 + 16, stride=16, budget=192)
+    # 同一 D 在旧 96 预算下被拒，说明 stride/budget 确实随参数生效。
+    with pytest.raises(candidate.ContractError):
+        candidate.validate_budget(1000, stride=16, budget=96)
+
+
+def test_cli_parses_motion_stride_budget():
+    import tyro
+    args = tyro.cli(candidate.Args, args=["--motion-stride", "16", "--motion-budget", "192"])
+    assert (args.motion_stride, args.motion_budget) == (16, 192)
+    assert (candidate.Args().motion_stride, candidate.Args().motion_budget) == (32, 96)
+
+
+# 官方口径 seed 已放开到 0／7／42，非官方 seed（1）仍须被拒。
+@pytest.mark.parametrize("overrides", [{"model_seed": 1}, {"max_steps": 2000}])
 def test_official_still_rejects_testx_values(tmp_path, overrides):
     args = make_args(tmp_path, [("BinFill", 0, "hard")], **overrides)
     with pytest.raises(candidate.ContractError):
