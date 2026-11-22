@@ -17,6 +17,10 @@ except ImportError:
     from utils import EpisodeState, RolloutRecorder, TASK_NAME_LIST, TASK_WITH_VIDEO_DEMO, pack_buffer
     from env_runner import EnvRunner
 
+# 官方评估允许的模型 seed（官方 benchmark 三个 seed）。
+OFFICIAL_SEEDS = (0, 7, 42)
+# 窗长 33：一个 exec 窗覆盖 [u, u+32]，max_steps=1300 时最后一窗起点 ≤ 1300−32。
+WINDOW_SPAN = 32
 
 @dataclasses.dataclass
 class Args:
@@ -35,8 +39,11 @@ class Args:
     max_steps: int = 1300
     dataset: str = "test"
     use_history: bool = True
-    # official：官方 test 16×50、seed 42、1300 步；testx：hold-out xhard 清单，放宽只在此口径生效。
+    # official：官方 test 16×50、seed 0／7／42、1300 步；testx：hold-out xhard 清单，放宽只在此口径生效。
     profile: str = "official"
+    # motion 窗口步长与窗口预算：缺省 32／96 为旧 grid32 口径；stride 16 的 run 由 spec 传 16／192。
+    motion_stride: int = 32
+    motion_budget: int = 96
 
 
 class UncertainRPC(RuntimeError):
@@ -104,17 +111,19 @@ def validate_metadata(metadata, args):
             raise ContractError(f"服务端身份不符：{key}")
 
 
-def validate_budget(demo_frames, profile="official", max_steps=1300):
-    k_demo = max(0, (demo_frames - 17) // 32 + 1)
+def validate_budget(demo_frames, profile="official", max_steps=1300, stride=32, budget=96):
+    # demo 尾窗须 ≥17 真实帧：起点 u ≤ D−17，按步长取格。stride/budget 缺省即旧 grid32 口径（k_exec=40、上限 96）。
+    k_demo = max(0, (demo_frames - 17) // stride + 1)
     if profile == "testx":
-        # testx 只查帧数上限；窗口超 96 由服务端抽稀处理，客户端不按窗口数拒绝。
+        # testx 只查帧数上限；窗口超预算由服务端抽稀处理，客户端不按窗口数拒绝。
         q = max_steps + 1
         if demo_frames + q >= 4096:
             raise ContractError(f"testx 帧预算越界：D={demo_frames} q={q}")
-        return {"demo_frames": demo_frames, "demo_windows": k_demo, "conservative_exec_windows": q // 32}
-    if demo_frames + 1301 >= 4096 or k_demo + 40 > 96:
-        raise ContractError(f"零截断预算越界：D={demo_frames} k_demo={k_demo} k_exec=40")
-    return {"demo_frames": demo_frames, "demo_windows": k_demo, "conservative_exec_windows": 40}
+        return {"demo_frames": demo_frames, "demo_windows": k_demo, "conservative_exec_windows": q // stride}
+    k_exec = (1300 - WINDOW_SPAN) // stride + 1
+    if demo_frames + 1301 >= 4096 or k_demo + k_exec > budget:
+        raise ContractError(f"零截断预算越界：D={demo_frames} k_demo={k_demo} k_exec={k_exec} budget={budget}")
+    return {"demo_frames": demo_frames, "demo_windows": k_demo, "conservative_exec_windows": k_exec}
 
 
 def require_ack(response, field, rpc):
@@ -151,7 +160,8 @@ class EpisodeEvaluator:
         epstate.wrist_image_buffer.extend(wrists)
         epstate.state_buffer.extend(states)
         epstate.exec_start_idx = len(images) - 1
-        self.budget = validate_budget(epstate.exec_start_idx, self.args.profile, self.args.max_steps)
+        self.budget = validate_budget(epstate.exec_start_idx, self.args.profile, self.args.max_steps,
+                                      self.args.motion_stride, self.args.motion_budget)
         try:
             pack_buffer(images, states, epstate.exec_start_idx)
         except ValueError as exc:
@@ -293,8 +303,8 @@ def evaluate(args: Args, *, runner_factory=EnvRunner, client_factory=EvaluationC
                 or args.max_steps <= 0 or args.model_seed <= 0):
             raise ContractError("testx 评估固定 test、16 步和历史模式，max_steps、model_seed 与 RPC 超时须为正")
     elif (args.dataset != "test" or args.max_steps != 1300 or args.obs_horizon != 16 or not args.use_history
-            or args.rpc_timeout_seconds <= 0 or args.model_seed != 42):
-        raise ContractError("官方评估固定 test、1300、16 步和历史模式，RPC 超时须为正")
+            or args.rpc_timeout_seconds <= 0 or args.model_seed not in OFFICIAL_SEEDS):
+        raise ContractError("官方评估固定 test、1300、16 步和历史模式，seed 须为官方 0／7／42，RPC 超时须为正")
     require_sha256(args.run_identity_sha256)
     if not all((args.episode_manifest, args.chunk, args.attempt_output, args.run_identity_sha256,
                 args.expected_server_nonce, args.model_kind)):
