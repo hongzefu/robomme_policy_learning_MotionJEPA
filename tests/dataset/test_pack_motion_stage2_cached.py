@@ -299,3 +299,39 @@ def test_cached_rejects_consistent_segment_tampering_without_root_update(cached_
     else:
         assert load(root / ms.META_RELPATH)["status"] == "packed"
         assert not (root / pack.BITEXACT_RELPATH).exists()
+
+
+def test_cached_evidence_odd_g0_grid_follows_store_grid_stride(cached_fx, tmp_path):
+    """缓存来源：G0 含奇数 source_grid 时 grid16（grid_stride=16）通过、grid32 拒绝。"""
+    s = cached_fx
+    pack.cmd_pack(s.args)
+    root = pathlib.Path(s.args.out)
+    pack.cmd_verify(verify_args(s))
+    provenance = copy.deepcopy(ms.MotionMeta.load(root).provenance)
+    evidence = provenance["stage2_compat"]["evidence"]
+    records = {k: load(root / evidence[k]["path"]) for k in ("G0", "G2", "G3")}
+    rows = {(w["key"], w["m"]): w for w in load(s.receipt)["windows"]}
+    # 把一个无尾 pad 的 copy 窗换成同段下一格（奇数格）的 copy 窗，路线与尾窗计数不变。
+    for window in records["G0"]["windows"]:
+        row = rows.get((window["key"], window["source_grid"] + 1))
+        if window["route"] == "copy" and row is not None and row["route"] == "copy" and row["pad_frames"] == 0:
+            window.update(source_grid=row["m"], frame_ids=row["frame_ids"], real_frames=row["real_frames"],
+                          pad_frames=row["pad_frames"], pad_source_frame=row["pad_source_frame"],
+                          input_frames_sha256=row["input_frames_sha256"], latent_block_sha256=row["latent_sha256"],
+                          source_frame_indices=[dict(source=0, index=f) for f in row["frame_ids"]])
+            break
+    else:
+        pytest.fail("夹具中没有可替换的奇数格 copy 窗")
+
+    def rewrite(key):
+        path = tmp_path / f"odd-{key}.json"
+        dump(path, records[key])
+        evidence[key] = dict(path=str(path), sha256=ms.sha256_file(path))
+
+    rewrite("G0")
+    for key in ("G2", "G3"):
+        records[key]["samples_sha256"] = evidence["G0"]["sha256"]
+        rewrite(key)
+    validate_stage2_evidence(provenance, root, grid_stride=16)
+    with pytest.raises(ValueError, match="grid_subsample=2"):
+        validate_stage2_evidence(provenance, root, grid_stride=32)

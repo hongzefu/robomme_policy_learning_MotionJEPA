@@ -102,7 +102,7 @@ def validate_stage2_evidence(provenance: dict, root: pathlib.Path | None, *, gri
             raise ValueError(f"阶段二证据 SHA 不符: {key}")
         records[key] = json.loads(path.read_text(encoding="utf-8"))
     if ms.stage2_uses_cache(provenance):
-        ms.validate_stage2_cache_evidence(provenance, records)
+        ms.validate_stage2_cache_evidence(provenance, records, grid_subsample=subsample)
         return
     if records["SOURCE_PIN"] != provenance["source_pin"]:
         raise ValueError("证据 SOURCE_PIN 与来源不一致")
