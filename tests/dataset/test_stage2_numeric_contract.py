@@ -114,11 +114,13 @@ def test_window_grid_subsample_follows_layout(tmp_path):
 
 
 def test_store_layout_params_from_store_meta():
-    grid16 = V.stage2_grid16_layout()
+    from mme_vla_suite.datastore import motion_store as ms
+    grid16 = ms.STAGE2_GRID16_LAYOUT
+    assert V.LAYOUT == ms.STAGE2_LAYOUT and V.layout_subsample() == 2 and V.layout_subsample(grid16) == 1
     assert grid16 == "motion-stage2-1x1024-grid16-demopad17-v1"
     assert V.store_layout_params(dict(layout=V.LAYOUT, grid_stride=32)) == (V.LAYOUT, 32, 2)
     assert V.store_layout_params(dict(layout=grid16, grid_stride=16)) == (grid16, 16, 1)
-    assert set(V.stage2_layouts()) == {V.LAYOUT, grid16}
+    assert set(ms.STAGE2_LAYOUTS) == {V.LAYOUT, grid16}
     for raw in (dict(layout=grid16, grid_stride=32), dict(layout=V.LAYOUT, grid_stride=16),
                 dict(layout="motion-768-grid16-v1", grid_stride=16), dict(layout=V.LAYOUT, grid_stride=32.0)):
         with pytest.raises(ValueError):

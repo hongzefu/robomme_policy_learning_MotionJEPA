@@ -161,6 +161,8 @@ def create_trained_policy(
             online_gpu=mcfg.get("online_gpu", 1), stub=motion_stub, store_provenance=store_prov,
             encoder_kind=encoder_kind, provenance_root=run_root,
             stage2_python=mcfg.get("stage2_python"), eval_target_contract=eval_target_contract,
+            # 阶段二 G0 证据取格间隔按 yaml motion.stride（grid32=32、grid16=16）；v10 路径不使用该参数。
+            grid_stride=int(mcfg.get("stride", 32)),
             expected_ckpt_sha256=(store_prov["encoder"] or {}).get("checkpoint_sha256") if not motion_stub else None)
 
     return _policy.MME_VLA_Policy(

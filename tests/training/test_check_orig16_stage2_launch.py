@@ -11,6 +11,8 @@ from types import SimpleNamespace
 
 import pytest
 
+from mme_vla_suite.datastore import motion_store as ms
+
 CR_SCALARS = ("loss", "grad_norm", "llm_grad_norm", "param_norm", "mem_enc_norm")
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tests/dataset"))
@@ -611,8 +613,8 @@ def test_s16_registry_identity():
     assert S16_ITEM["run"] not in launch.RUNS.values() and S16_ITEM["run"] not in launch.BUCKETS
     c = launch.stride_contract(launch.Contract(), S16)
     assert (c.store_dir, c.motion_layout, c.motion_stride, c.motion_budget, c.motion_rows, c.train_max) == (
-        "motion-stage2-1024-grid16", launch.grid16_layout(), 16, 192, None, None)
-    assert launch.grid16_layout() == "motion-stage2-1x1024-grid16-demopad17-v1"
+        "motion-stage2-1024-grid16", ms.STAGE2_GRID16_LAYOUT, 16, 192, None, None)
+    assert ms.STAGE2_GRID16_LAYOUT == "motion-stage2-1x1024-grid16-demopad17-v1"
     assert launch.history_tags(S16) == ("modul", "1x1024")
     assert launch.PLACEHOLDER not in str(dataclasses.asdict(c))
 

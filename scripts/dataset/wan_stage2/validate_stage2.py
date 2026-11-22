@@ -22,31 +22,27 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
 LATENT_SHAPE = (9, 16, 32, 32)
 CHUNK_BYTES = 589824
+# 与 motion_store.STAGE2_LAYOUT 同值（测试钉死）。本模块须能在不含主包依赖的独立 torch 环境导入
+# （隔离 EMA/geometry 合同测试），故 motion_store 一律在函数内按需导入，不在模块级导入。
 LAYOUT = "motion-stage2-1x1024-grid32-demopad17-v1"
 PRODUCER = "stage2-numeric-validator-v1"
-# G0 的 source_grid 以 Wan latent 的 16 帧格为单位；布局步长 / 16 即取格间隔（grid32=2，grid16=1）。
-LATENT_GRID_STRIDE = 16
 
 
-def stage2_grid16_layout():
+def layout_subsample(layout=LAYOUT):
+    """G0 的 source_grid 以 Wan latent 的 16 帧格为单位；取格间隔按布局查 ms.STAGE2_GRID_SUBSAMPLE（grid32=2，grid16=1）。"""
     from mme_vla_suite.datastore import motion_store as ms
-    return getattr(ms, "STAGE2_GRID16_LAYOUT", "motion-stage2-1x1024-grid16-demopad17-v1")
-
-
-def stage2_layouts():
-    """已知 stage2 布局集合，以 motion_store 定义为准。"""
-    from mme_vla_suite.datastore import motion_store as ms
-    return getattr(ms, "STAGE2_LAYOUTS", (ms.STAGE2_LAYOUT, stage2_grid16_layout()))
+    return ms.STAGE2_GRID_SUBSAMPLE[layout]
 
 
 def store_layout_params(raw):
     """从 store meta 读布局与 grid_stride，返回 (layout, grid_stride, subsample)。"""
+    from mme_vla_suite.datastore import motion_store as ms
     layout, stride = raw.get("layout"), raw.get("grid_stride")
-    if layout not in stage2_layouts():
+    if layout not in ms.STAGE2_LAYOUTS:
         raise ValueError(f"不是已知 stage2 布局: {layout!r}")
-    if type(stride) is not int or stride <= 0 or stride % LATENT_GRID_STRIDE or f"-grid{stride}-" not in layout:
+    if type(stride) is not int or stride != ms.LAYOUT_SPECS[layout].grid_stride:
         raise ValueError(f"store meta 的 grid_stride 与布局不符: {layout!r} {stride!r}")
-    return layout, stride, stride // LATENT_GRID_STRIDE
+    return layout, stride, ms.STAGE2_GRID_SUBSAMPLE[layout]
 
 
 def canonical(value):
@@ -110,7 +106,7 @@ def load_module(path, name):
     return module
 
 
-def load_samples(path, subsample=2):
+def load_samples(path, subsample=None):
     data = read_json(path)
     if (data.get("schema") != "stage2-validation-inputs-v1" or data.get("gate") != "G0"
             or data.get("status") != "PASS" or data.get("seed") != 0):
@@ -131,7 +127,9 @@ def load_samples(path, subsample=2):
     return data
 
 
-def validate_window(window, subsample=2):
+def validate_window(window, subsample=None):
+    """subsample 缺省取旧 grid32 布局的取格间隔（ms.STAGE2_GRID_SUBSAMPLE[LAYOUT]）。"""
+    subsample = layout_subsample() if subsample is None else subsample
     kind, grid = window.get("segment_kind"), window.get("source_grid")
     real, pad = window.get("real_frames"), window.get("pad_frames")
     ids = window.get("frame_ids")
@@ -156,7 +154,7 @@ def validate_window(window, subsample=2):
             raise ValueError("原帧来源索引越界")
 
 
-def read_window_frames(window, hash_cache=None, subsample=2):
+def read_window_frames(window, hash_cache=None, subsample=None):
     """按 G0 显式映射读取原像素；exec 的图像键固定为 image。"""
     validate_window(window, subsample)
     cache = {} if hash_cache is None else hash_cache
@@ -324,7 +322,7 @@ def gate_g2(args, samples, runtime):
     rows, cache = [], {}
     with torch.no_grad():
         for window in samples["windows"]:
-            pixels = read_window_frames(window, cache, getattr(args, "grid_subsample", 2))
+            pixels = read_window_frames(window, cache, getattr(args, "grid_subsample", None))
             x = torch.from_numpy(pixels).permute(3, 0, 1, 2).unsqueeze(0).float() / 127.5 - 1.0
             actual = full.encode_b2(encode, full.to_encoder_input(x, args.device))[0].cpu().numpy()
             mse, maximum = normalized_error(actual, read_latent(window), std)
@@ -476,7 +474,7 @@ def main(argv=None):
         if sha_file(args.ckpt) != args.expected_sha256:
             raise ValueError("checkpoint SHA 与显式参数不符")
         samples_sha = sha_file(args.samples)
-        subsample = 2
+        subsample = layout_subsample()
         if args.store:
             from mme_vla_suite.datastore import motion_store as ms
             subsample = store_layout_params(ms.MotionMeta.load(args.store).raw)[2]
