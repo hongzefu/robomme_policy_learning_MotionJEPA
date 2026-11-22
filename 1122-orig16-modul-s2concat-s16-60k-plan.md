@@ -14,7 +14,7 @@
 |---|---|---|
 | motion 读出 | split：每窗 4 个 256 维 token | **concat：每窗 1 个 1024 维 token**（4 个 pool 位按第 0/3/5/8 组首尾相接） |
 | 窗口步长 | 32 | **16**（窗长仍 33 帧，相邻窗重叠 17 帧） |
-| motion budget | 96 | **160**（理由见第三节） |
+| motion budget | 96 | **192**（96 翻倍，用户 11-21 指定；理由见第三节） |
 
 其余完全不变：训练库 `16task-orig100-1600ep-9e109419`；帧记忆 32 帧×4×4＝512；encoder `stage2-full144-1025-a/checkpoint_epoch_105.pt` 的 EMA（sha256 `27daa832…`，冻结）；pi05_base 起训；8 卡 FSDP8，batch 128，workers 16，seed 42；60k 步，预热 5k，lr 5e-5，EMA 0.999；norm_stats 沿用库内 `c5d45b4b…`；每 5000 步存 1 份 ckpt，共 12 份。DATA_LINEAGE：encoder 训练源和 VLA 库都是官方 16×100，同源。
 
@@ -26,13 +26,13 @@
 - 旧的 `motion-tokens-stage2/` 只对偶数格做过 encoder，因此对全部 45,228 窗重新跑一遍 stage2 encoder（单卡；上次 2.3 万窗约 7 分钟，这次估计约 15 分钟）。导出后打包成新库 `motion-stage2-1024-grid16/`（layout `motion-stage2-1x1024-grid16-demopad17-v1`，约 4.6 万行，约 190 MB）。旧的 grid32 库不动。
 - demo 尾窗规则不变：≥17 个真实帧才保留，用最后一帧补满（repeat_last）；执行段窗口必须全是真实帧。
 
-## 三、budget 160 的理由（开工后实测，结果写进本文）
+## 三、budget 192（96 翻倍，用户指定；开工后实测，结果写进本文）
 
 - 训练侧粗算：最坏的 VideoPlaceOrder ep4（demo 1118 帧、exec 293 帧）在 stride 16 下有 69＋17＝86 窗，96 只剩 10 的余量。
 - 评估侧每局最多 1300 步，执行段最多 (1300−32)//16＋1＝80 窗，再加 demo 段，会超过 96。超预算在代码里是直接报错（raise），不会截断。
-- mixed8 上 stride 16 用的就是 160（训练侧最大 123，评估侧最坏 157）。
-- 闸门：`train_es_bound.py --layout <grid16> --budget 160` 和 `eval_es_bound.py`（已按 stride 16 写死）都必须 PASS。若评估侧最坏超过 160，**停下问用户**，不自动放大。
-- 代价：记忆序列从 608 变成 672 个 token（512＋160），比上一条 split 的 896 还短，速度预计不慢于上一条的 0.97 s/步。
+- 用户 11-21 美东原话：「budget 96翻倍！」——步长减半、窗口数约翻倍，budget 同比翻倍到 192。参照：mixed8 上 stride 16 用 160 时，评估侧最坏已到 157。
+- 闸门：`train_es_bound.py --layout <grid16> --budget 192` 和 `eval_es_bound.py --budget 192`（已按 stride 16 写死）都必须 PASS。若评估侧最坏超过 192，**停下问用户**，不自动放大。
+- 代价：记忆序列从 608 变成 704 个 token（512＋192），比上一条 split 的 896 还短，速度预计不慢于上一条的 0.97 s/步。
 
 ## 四、代码改动（评估结束前完成，只用 CPU 和 1 张空闲卡）
 
@@ -55,7 +55,7 @@
 | G1 单测 | 全部 pytest 通过 | 代码合入后 |
 | G2 encoder 导出 | `STAGE2_EXPORT=PASS windows=45228`；偶数格行与旧 grid32 表逐字节相等（`EVEN_GRID_BITEXACT=PASS`） | 1 张空闲卡，约 15 分钟 |
 | G3 打包校验 | `MOTION_PACK_VERIFY=PASS mismatches=0` | CPU |
-| G4 预算 | `TRAIN_ES_BOUND=PASS budget=160`、`EVAL_ES_BOUND=PASS budget=160` | CPU |
+| G4 预算 | `TRAIN_ES_BOUND=PASS budget=192`、`EVAL_ES_BOUND=PASS budget=192` | CPU |
 | G5 在线离线一致 | `ONLINE_STAGE2=PASS`（在线 sidecar 算出的 token 与离线表逐位一致，抽样 ≥64 窗） | 1 张空闲卡 |
 | G6 启动合同 | `LAUNCH_CONTRACT=PASS`（相对已有 modul concat yaml 只差 stride/budget/store_path 三项） | CPU |
 | G7 8 卡 20 步短测 | `SMOKE20=PASS save_load=PASS` | **评估结束后**，正式链的第一步 |
@@ -80,12 +80,12 @@
 
 ## 九、需要用户确认（括号内是默认）
 
-1. budget 160（默认 160；评估侧实测超过 160 时停下问）。
+1. budget 192（用户已定：96 翻倍；实测超过 192 时停下问）。
 2. 评估用哪个 seed（默认 42，可直接和 split 那条的 seed 42 比）。
 3. 磁盘：本地只留最近 2 份 ckpt，其余上传读回后删除（默认这样）。另外 `orig16-wan-timepool1024-recovery/published`（362 GB，HF 数据集仓库已有副本）本轮不删。
 4. 状态机登记任务 `o16-modul-s2cat-s16-60k`，并 `git push -u` 本分支（默认登记并推送）。
 
-开工令覆盖：第四节写代码与 G0–G6（含 1 张空闲卡约 30 分钟的导出与在线校验）＋ 第六节自动起跑的 60k 训练和 seed 42 评估。中途只在以下情况停下：闸门 FAIL、训练崩溃、预算超 160、磁盘不足；其余工程故障自行修复后继续。
+开工令覆盖：第四节写代码与 G0–G6（含 1 张空闲卡约 30 分钟的导出与在线校验）＋ 第六节自动起跑的 60k 训练和 seed 42 评估。中途只在以下情况停下：闸门 FAIL、训练崩溃、预算超 192、磁盘不足；其余工程故障自行修复后继续。
 
 ## 十、交接顺序与状态机登记
 
@@ -121,7 +121,7 @@
 2. 并行派 S1–S4，按上节顺序合入。
 3. G2：`CUDA_VISIBLE_DEVICES=<空闲卡> uv run python scripts/dataset/wan_stage2/export_stage2_memory.py --grid-subsample 1 ...`，输出到 `v1-store/datasets/16task-orig100-1600ep-9e109419/motion-tokens-stage2-grid16/`；再把偶数格行与旧表逐字节比对。
 4. G3：`pack_motion_store.py pack --layout stage2 --latent-grid-subsample 1` 生成 `motion-stage2-1024-grid16/`，然后跑 verify。
-5. G4：`train_es_bound.py --layout motion-stage2-1x1024-grid16-demopad17-v1 --budget 160`、`eval_es_bound.py aggregate --budget 160`。
+5. G4：`train_es_bound.py --layout motion-stage2-1x1024-grid16-demopad17-v1 --budget 192`、`eval_es_bound.py aggregate --budget 192`。
 6. G5/G6：`check_stage2_online.py`（stride 16）、`check_orig16_stage2_launch.py`。
 7. 写 `docs/training-doc/orig100-m32x4x4-modul-motion-s2concat1x1024-s16-b128-60k/launch.md`，打 Beta commit，确认工作区干净。
 8. 起 tmux `o16s16-chain`（脚本落 `v1-store/jobs/o16s16/chain.sh`）：等 t1s 结束且 8 卡空闲 → 20 步短测 → 正式 60k → `local_eval.py --profile modulcat16 --seed 42`。起 tmux `o16s16-inc` 做增量上传。每份日志单独挂一个 Monitor。
@@ -129,12 +129,12 @@
 
 ## 三、风险
 
-- 评估侧窗口数超过 160：停下问用户（G4 会提前暴露）。
+- 评估侧窗口数超过 192：停下问用户（G4 会提前暴露）。
 - 磁盘：增量上传要是跟不上 ckpt 写入速度（每份约 12 GB、每 5000 步约 80 分钟），本地会积压；按「只留 2 份」控制，低于 40 GB 就停。
 - t1s 评估异常拖长：训练顺延，不抢卡。
 
 ## 四、盲区
 
-- 官方 test 800 局的最坏 demo 长度还没实测，budget 160 是否够要等 G4。
+- 官方 test 800 局的最坏 demo 长度还没实测，budget 192 是否够要等 G4。
 - 本机 `local_eval.py` 还没跑过 modulation + 在线 stage2 的组合，G5 和评估冒烟是第一次验证。
 - stride 16 的步速是按记忆长度更短推算的，还没实测。
