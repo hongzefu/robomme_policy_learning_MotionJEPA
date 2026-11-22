@@ -41,8 +41,9 @@ def check_sidecar(path, digest):
 
 
 def hash_latent(job):
-    """单次完整读取含奇数格的latent，并逐偶数块核S1记录；最多四线程调用。"""
-    path, old_count, expected_sha, expected_blocks, stamp = job
+    """单次完整读取全部 grid16 格的latent，并逐所取格块（grid32 偶数格 / grid16 全部格）核S1记录；最多四线程调用。"""
+    path, old_count, expected_sha, expected_blocks, stamp = job[:5]
+    subsample = job[5] if len(job) > 5 else 2
     digest, blocks = hashlib.sha256(), []
     with Path(path).open("rb") as stream:
         for grid in range(old_count):
@@ -52,16 +53,16 @@ def hash_latent(job):
             if not np.isfinite(np.frombuffer(block, dtype="<f4")).all():
                 raise ValueError(f"源latent含非有限数：{path}")
             digest.update(block)
-            if grid % 2 == 0:
+            if grid % subsample == 0:
                 blocks.append(V.sha_bytes(block))
         if stream.read(1):
             raise ValueError(f"源latent含多余尾字节：{path}")
     if digest.hexdigest() != expected_sha or blocks != expected_blocks or file_stamp(path) != stamp:
-        raise ValueError(f"源latent完整SHA、偶数块SHA或读取期间身份不符：{path}")
+        raise ValueError(f"源latent完整SHA、所取格块SHA或读取期间身份不符：{path}")
     check_sidecar(path, digest.hexdigest())
 
 
-def compare_sampled_rows(*, table, segments, encode, latent_root, sample_plan):
+def compare_sampled_rows(*, table, segments, encode, latent_root, sample_plan, grid_subsample=2):
     """只执行共享计划给出的1024次前向；不预热、不扩大或替换样本。"""
     indices = sample_plan["sample_indices"]
     if (sample_plan.get("seed") != 0 or not isinstance(indices, list) or len(indices) != 1024
@@ -77,7 +78,7 @@ def compare_sampled_rows(*, table, segments, encode, latent_root, sample_plan):
             raise ValueError("抽样行未被段索引覆盖")
         key, base, _ = segments[segment_index]
         with (Path(latent_root) / f"{key}.bin").open("rb") as stream:
-            stream.seek(2 * (row - base) * V.CHUNK_BYTES)
+            stream.seek(grid_subsample * (row - base) * V.CHUNK_BYTES)
             block = stream.read(V.CHUNK_BYTES)
         if len(block) != V.CHUNK_BYTES:
             raise ValueError("抽样latent块被截断")
@@ -100,6 +101,8 @@ def cpu_full_integrity(*, meta, table, latent_root, hash_workers=4):
         raise ValueError("CPU散列线程必须在1至4之间")
     pack = V.load_module(V.REPO / "scripts/dataset/pack_motion_store.py", "_stage2_compare_pack_contract")
     segments = list(pack.iter_rows_in_order(meta.entries))
+    # 取格间隔随布局：grid32=2（偶数格）、grid16=1（全部格）
+    subsample = pack.stage2_layout_of(meta.entries[0].spec)[1] if meta.entries else 2
     keys = [item[2] for item in segments]
     expected = set(keys)
     if not keys or len(keys) != len(expected):
@@ -122,7 +125,7 @@ def cpu_full_integrity(*, meta, table, latent_root, hash_workers=4):
     if (manifest_sha != meta.provenance["episode_manifest_file_sha256"]
             or V.sha_file(latent_root / "metadata.json") != meta.provenance["latents_metadata_sha256"]):
         raise ValueError("清单或源latent总metadata与packed来源不符")
-    # 只复用既有只读的偶数格、段集合、逐行起点及尾窗合同，不调用pack/verify写入口。
+    # 只复用既有只读的取格映射、段集合、逐行起点及尾窗合同，不调用pack/verify写入口。
     pack.validate_stage2_segments(latent_root, tokens_root, meta.entries)
     root_metadata = V.read_json(latent_root / "metadata.json")
     export_path = tokens_root / "export_record.json"
@@ -167,14 +170,14 @@ def cpu_full_integrity(*, meta, table, latent_root, hash_workers=4):
                 raise ValueError(f"{key} 元数据episode身份与当前索引不同：{field}")
         old_count = lm["num_grid"]
         digest = V.require_sha(lm.get("sha256"), f"{key} latent SHA")
-        if (old_count <= 0 or (old_count + 1) // 2 != count
+        if (old_count <= 0 or len(range(0, old_count, subsample)) != count
                 or latent_path.stat().st_size != old_count * V.CHUNK_BYTES or lm.get("bytes") != old_count * V.CHUNK_BYTES
                 or tm.get("input_metadata_sha256") != V.sha_file(latent_meta_path)
                 or tm.get("input_latent_sha256") != digest or root_metadata["segments"][key].get("sha256") != digest
                 or not isinstance(tm.get("input_block_sha256"), list) or len(tm["input_block_sha256"]) != count):
             raise ValueError(f"{key} 完整源latent与S1身份不闭合")
-        mapping[key] = list(range(0, old_count, 2))
-        jobs.append((str(latent_path), old_count, digest, tm["input_block_sha256"], stamps[str(latent_path)]))
+        mapping[key] = list(range(0, old_count, subsample))
+        jobs.append((str(latent_path), old_count, digest, tm["input_block_sha256"], stamps[str(latent_path)], subsample))
         cursor += count
     if cursor != len(table) or cursor != meta.num_rows:
         raise ValueError("CPU字节比较未覆盖完整packed表")
@@ -188,12 +191,12 @@ def cpu_full_integrity(*, meta, table, latent_root, hash_workers=4):
     else:
         executor.shutdown(wait=True)
     check_stamps(stamps)
-    return dict(packed_compared=cursor, packed_mismatches=0, source_grid=mapping,
+    return dict(packed_compared=cursor, packed_mismatches=0, source_grid=mapping, grid_subsample=subsample,
                 source_tokens_manifest_sha256=V.sha_file(export_path), source_stamps=stamps,
                 segments=[(key, base, count) for _, _, key, base, count in segments])
 
 
-def compare_rows(*, table, segments, encode, latent_root, root_metadata):
+def compare_rows(*, table, segments, encode, latent_root, root_metadata, grid_subsample=2):
     """遍历全部索引行；encode 接收一个原始 latent，而非已抽取 token 文件。"""
     compared, mapping, file_hashes = 0, {}, {}
     for key, row_base, count in segments:
@@ -203,16 +206,16 @@ def compare_rows(*, table, segments, encode, latent_root, root_metadata):
         meta_path = path.with_suffix(".metadata.json")
         metadata = V.read_json(meta_path)
         old_count = metadata.get("num_grid")
-        if (type(old_count) is not int or old_count <= 0 or (old_count + 1) // 2 != count
+        if (type(old_count) is not int or old_count <= 0 or len(range(0, old_count, grid_subsample)) != count
                 or metadata.get("bytes") != old_count * V.CHUNK_BYTES
                 or path.stat().st_size != old_count * V.CHUNK_BYTES):
-            raise ValueError(f"{key} 源网格/字节数不符合偶数格选择合同")
+            raise ValueError(f"{key} 源网格/字节数不符合 grid_subsample={grid_subsample} 取格合同")
         digest = V.sha_file(path)
         if digest != metadata.get("sha256") or digest != root_metadata["segments"][key]["sha256"]:
             raise ValueError(f"{key} 源 latent 全文件 SHA 不符")
         file_hashes[str(path)] = digest
         file_hashes[str(meta_path)] = V.sha_file(meta_path)
-        source_grid = list(range(0, old_count, 2))
+        source_grid = list(range(0, old_count, grid_subsample))
         mapping[key] = source_grid
         with path.open("rb") as stream:
             for index, grid in enumerate(source_grid):
@@ -259,9 +262,11 @@ def certify(args):
         if args.scope not in ("full", "sampled") or args.batch != 1:
             raise ValueError("认证强制 scope=full或sampled、batch=1")
         meta = ms.MotionMeta.load(root)
-        if (meta.raw["layout"] != V.LAYOUT or type(getattr(args, "expect_rows", None)) is not int
+        # 已知 stage2 布局集合（grid32/grid16）均可认证；取格间隔随布局
+        if (meta.raw["layout"] not in ms.STAGE2_LAYOUTS or type(getattr(args, "expect_rows", None)) is not int
                 or args.expect_rows <= 0 or meta.num_rows != args.expect_rows):
             raise ValueError("正式 G5a 行数必须与显式 --expect-rows 相同")
+        layout, subsample = meta.raw["layout"], ms.STAGE2_GRID_SUBSAMPLE[meta.raw["layout"]]
         ms.run_fast_checks(meta)
         ms.run_full_checks(meta)
         bound_paths = [root / ms.META_RELPATH, root / ms.INDEX_RELPATH,
@@ -285,11 +290,11 @@ def certify(args):
             mapping = integrity["source_grid"]
             source_sha = V.sha_bytes(V.canonical(mapping))
             if source_sha != meta.provenance["source_grid_sha256"]:
-                raise ValueError("缓存完整偶数格映射与 store 来源不同")
+                raise ValueError("缓存完整取格映射与 store 来源不同")
             for path, digest in hashes.items():
                 if V.sha_file(path) != digest:
                     raise ValueError(f"完整性检查期间绑定文件改变：{path}")
-            record = dict(schema=INTEGRITY_SCHEMA, status="PASS", scope="full", layout=V.LAYOUT,
+            record = dict(schema=INTEGRITY_SCHEMA, status="PASS", scope="full", layout=layout,
                           compared=meta.num_rows, packed_compared=meta.num_rows, mismatches=0, nonfinite=0,
                           source_grid_sha256=source_sha, output_numerics=dict(ms.SAME_INPUT_NOT_REQUIRED),
                           store_table_sha256=meta.table_sha256, motion_index_sha256=meta.motion_index_sha256,
@@ -314,19 +319,21 @@ def certify(args):
 
         if args.scope == "full":
             compared, mapping = compare_rows(table=table, segments=segments, encode=encode, latent_root=args.latents,
-                                             root_metadata=V.read_json(Path(args.latents) / "metadata.json"))
+                                             root_metadata=V.read_json(Path(args.latents) / "metadata.json"),
+                                             grid_subsample=subsample)
         else:
             compared = compare_sampled_rows(table=table, segments=integrity["segments"], encode=encode,
-                                             latent_root=args.latents, sample_plan=sample_plan)
+                                             latent_root=args.latents, sample_plan=sample_plan,
+                                             grid_subsample=subsample)
             mapping = integrity["source_grid"]
             check_stamps(integrity["source_stamps"])
         source_sha = V.sha_bytes(V.canonical(mapping))
         if source_sha != meta.provenance["source_grid_sha256"]:
-            raise ValueError("完整偶数格映射与 store 来源不同")
+            raise ValueError("完整取格映射与 store 来源不同")
         for path, digest in hashes.items():
             if V.sha_file(path) != digest:
                 raise ValueError(f"比较期间绑定文件改变：{path}")
-        record = dict(schema=SCHEMA, status="PASS", producer=V.PRODUCER, scope=args.scope, layout=V.LAYOUT,
+        record = dict(schema=SCHEMA, status="PASS", producer=V.PRODUCER, scope=args.scope, layout=layout,
                       compared=compared, mismatches=0, source_grid_sha256=source_sha,
                       store_table_sha256=hashes[str(root / ms.MOTION_TABLE_RELPATH)],
                       motion_index_sha256=hashes[str(root / ms.INDEX_RELPATH)],

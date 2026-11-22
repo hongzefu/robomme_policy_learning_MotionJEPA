@@ -166,3 +166,16 @@ def test_g2_rejects_exec_pixels_even_with_updated_pkl_sha(imported, tmp_path):
     cache.write_json(path, samples)
     with pytest.raises(ValueError, match="像素"):
         cache.check_import(path, data["root"] / "receipt.json", data["raw"])
+
+
+def test_g0_odd_grid_depends_on_grid_subsample(imported, tmp_path):
+    """grid32（默认 subsample=2）拒绝奇数格 G0 窗；grid16（subsample=1）不再以奇偶拒绝，交由后续帧合同核对。"""
+    data, _, original = imported
+    samples = copy.deepcopy(original)
+    samples["windows"][0]["source_grid"] += 1
+    path = tmp_path / "samples.json"
+    cache.write_json(path, samples)
+    with pytest.raises(ValueError, match="grid_subsample=2"):
+        cache.check_import(path, data["root"] / "receipt.json", data["raw"])
+    with pytest.raises(ValueError, match="帧合同不符"):
+        cache.check_import(path, data["root"] / "receipt.json", data["raw"], grid_subsample=1)

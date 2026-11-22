@@ -16,6 +16,7 @@ STAGE2_SHAPE = (1, 1024)
 STAGE2_SPLIT_READOUT = "stage2_pool4_split_v1"
 STAGE2_SPLIT_SHAPE = (4, 256)
 STAGE2_LAYOUT = "motion-stage2-1x1024-grid32-demopad17-v1"
+STAGE2_GRID16_LAYOUT = "motion-stage2-1x1024-grid16-demopad17-v1"   # 与 motion_store 同名常量同值
 RAW_LAYOUT = "motion-v10-8x256-grid16-demopad17-v1"
 LEGACY_LAYOUTS = ("motion-768-grid16-v1", "motion-768-grid16-demopad17-v1")
 
@@ -93,7 +94,8 @@ def motion_policy_spec(cfg: Mapping) -> MotionPolicySpec:
                 or shape != STAGE2_SHAPE or _integer(cfg, "num_tokens", 1) != 1
                 or _integer(cfg, "dim", 1024) != 1024 or budget <= 0):
             raise ValueError("stage2 motion 必须为 source_shape=[1,1024]、num_tokens=1、dim=1024、budget>0")
-        return MotionPolicySpec(STAGE2_SHAPE, STAGE2_READOUT, 1, 1024, budget, budget, (STAGE2_LAYOUT,))
+        return MotionPolicySpec(STAGE2_SHAPE, STAGE2_READOUT, 1, 1024, budget, budget,
+                                (STAGE2_LAYOUT, STAGE2_GRID16_LAYOUT))
     paired = "source_shape" in cfg or "readout" in cfg
     if paired:
         budget = _integer(cfg, "budget", 160)
