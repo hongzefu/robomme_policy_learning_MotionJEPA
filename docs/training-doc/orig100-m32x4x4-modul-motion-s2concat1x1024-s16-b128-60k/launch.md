@@ -62,4 +62,5 @@ AWS p4de 8×A100-80GB，本地 NVMe RAID `/dev/md0`。G2–G7 约 40 分钟；60
 | r2 | 13:08–13:48 | E-G3 FAIL：闸门脚本写死的 MJ 工作树已前进到 b7cb8a2，`rgb_gtxyz_reader.py` 与钉版 b5d23a5 不同 | 新建只读钉版工作树 `/scratch/hongze/worktrees/mj-pin-b5d23a5`，原命令只换 `--mj-root` |
 | r2→r3 | 13:50–15:52 | E 通过；G2 `EVEN_GRID_BITEXACT=PASS mode=bitexact compared=23253 mismatches=0`；G3 `VERIFY_MOTION=PASS scanned=45228`；G4 训练侧 `TRAIN_ES_BOUND=PASS max_windows=86 budget=192 headroom=106`；评估侧逐任务串行过慢 | 15:52 停 r2，r3 复用 5 任务、其余 11 任务 8 卡并行 |
 | r3 | 15:52–16:42 | `EVAL_ES_BOUND=PASS tasks=16 episodes=800 es_max=1135 budget=192 headroom=42`；G5 FAIL：`motion_client.validate_stage2_evidence` 缓存分支未传 grid_subsample | S6 修复（commitV11.91），本提交为新锚点 |
-| r4 | 本提交后 | 链脚本 `v1-store/jobs/o16s16/chain4.sh`：主检出 detached 到本锚点 → G5 → G6 → G7 → 60k → seed42 | — |
+| r4 | 16:50–17:06 | G5 `ONLINE_INPUT_IDENTITY=PASS windows=64`、`ONLINE_STAGE2=PASS windows=64 odd_grid=32 demo_tail=16 e2e_max_abs=0.0041`；G6 51 项中 50 项 PASS，CHECK_DATASET FAIL：encoder data_root（16views 本地已删）下 build_spec.json 不存在 | S7 修复（commitV11.93）：DATA_LINEAGE 改读 keep-meta 副本，三源逐文件比对不变；真实数据 `DATA_LINEAGE=PASS files=16 mismatches=0`；本提交（commitV11.94Beta）为新锚点 |
+| r5 | 本提交后 | 链脚本 `v1-store/jobs/o16s16/chain5.sh`：主检出 detached 到本锚点 → G6 → G7 → 60k → seed42（G5 产物不绑定 HEAD，不重跑） | — |
