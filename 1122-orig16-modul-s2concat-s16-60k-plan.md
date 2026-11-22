@@ -144,3 +144,16 @@ workflow `wf_b11709d8-7d3`（5 个维度各 1 个 sonnet 审查，每条发现 1
 - 官方 test 800 局的最坏 demo 长度还没实测，budget 192 是否够要等 G4。
 - 本机 `local_eval.py` 还没跑过 modulation + 在线 stage2 的组合，G5 和评估冒烟是第一次验证。
 - stride 16 的步速是按记忆长度更短推算的，还没实测。
+
+## 实施中调整（2026-11-21 美东追加，不改写上文）
+
+| 调整 | 旧 → 新 | 理由与审查 |
+|---|---|---|
+| S2 合入 | 两轮 PRE_MERGE_REVIEW FAIL 交用户 → 主会话合入 S2@173ad032，policy_config.py 传 grid_stride 转整合子任务 S5 | 第二轮唯一阻塞在 S2 写集外、非训练语义；按用户「除非有影响训练语义的内容 否则你自己决策了」自决 |
+| 新增整合子任务 S5 | 无 → S5：train.py stage2 快照判定改为 in STAGE2_LAYOUTS、policy_config 传 grid_stride、删过渡回退、新增闸门脚本 `scripts/training/o16s16_gates.sh` | train.py 布局判等不在任何原写集，S1/S2 审查均指出 |
+| G3 证据 | 沿用旧证据 → 在 `v1-store/validation/orig16-stage2-grid16` 重建 G0/G2/G3；G3 的 RGB 用 `plan_g3_subset.py` 从公开桶只读下载 32 窗子集（14 片、32.48 GB，`G3_SUBSET_PLAN=PASS windows=32 shards=14 bytes=32476096020`） | 旧证据绑定已不在盘的旧 latent metadata；RGB 源本地已删。`ADJUST_REVIEW=PASS scale=same findings=2` |
+| G0 抽样 | 只抽偶数格 → `check_stage2_validation_inputs.py --grid-subsample 1` 从全部格抽样（缺省 2 不变）；`validate_stage2.py` 增 `--grid-subsample` | 使 G5「奇数格 ≥16 窗」可达；同上审查 |
+| G2 判据 | 逐字节 → 先逐字节（`mode=bitexact`），不等时 max_abs ≤ 1e-4 判 `mode=tol` 并记录 mismatched_rows/max_abs/`note=cross_latent_copy`，非有限值即 FAIL | 新旧表跨 latent 副本（恢复版 vs 旧版）；旧表不参与新训练；同上审查（建议先严后宽） |
+| G2 判定行格式 | `STAGE2_EXPORT=PASS windows=45228` → 以导出脚本实际输出 `segments=… rows=…` 为准（rows=45228） | 文字与实际输出对齐 |
+| 起跑信号 | 等 `T1S_CHAIN_DONE` + `EXIT_CODE=0` → 等 t1s 会话写 `v1-store/jobs/t1s-1120/T1S_CLOSEOUT_DONE` | t1s 收尾仍要在主检出 v18 上提交 8 次归档与 handoff；跨会话约定 `req=f8ace2-11212205-1` |
+| 主检出 | v18 → 触发链在标记后 `git checkout --detach <Beta>` + 子模块 + `uv sync --frozen` | runner 按脚本位置推仓库根、用根 .venv；v19 与 v18 的 uv.lock/子模块不同 |
