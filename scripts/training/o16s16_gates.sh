@@ -167,11 +167,21 @@ for key in old_keys:
     if even.shape != old.shape:
         print(f"EVEN_GRID_BITEXACT=FAIL reason=rows key={key} old={old.shape[0]} new_even={even.shape[0]}")
         raise SystemExit(1)
+    # 非有限值会让容差比较失真：逐行比较前先查新旧两表，任一非有限即 FAIL（row 为该段内行号）。
+    for name, arr in (("old", old), ("new_even", even)):
+        finite = np.isfinite(arr).all(axis=1)
+        if not finite.all():
+            print(f"EVEN_GRID_BITEXACT=FAIL reason=nonfinite row={int(np.argmin(finite))} key={key} table={name}")
+            raise SystemExit(1)
     compared += old.shape[0]
     rows = (even.view(np.uint32) != old.view(np.uint32)).any(axis=1)
     if rows.any():
         mismatches += int(rows.sum())
-        max_abs = max(max_abs, float(np.max(np.abs(even[rows].astype(np.float64) - old[rows].astype(np.float64)))))
+        segment_max = float(np.max(np.abs(even[rows].astype(np.float64) - old[rows].astype(np.float64))))
+        if not np.isfinite(segment_max):
+            print(f"EVEN_GRID_BITEXACT=FAIL reason=nonfinite_diff key={key}")
+            raise SystemExit(1)
+        max_abs = float(np.max([max_abs, segment_max]))
 if mismatches == 0:
     print(f"EVEN_GRID_BITEXACT=PASS mode=bitexact segments={len(old_keys)} compared={compared} mismatches=0")
 elif np.isfinite(max_abs) and max_abs <= TOL:
