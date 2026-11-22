@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-22T03:07:00Z",
-    "America/New_York": "2026-11-21T22:07:00-0500"
+    "utc": "2026-11-22T22:30:00Z",
+    "America/New_York": "2026-11-22T17:30:00-0500"
   },
   "repo": {
     "branch": "v19-orig16-modul-s2concat-s16-60k",
-    "base_head": "ad13fb23"
+    "base_head": "fdce0f68"
   },
   "freeze": {
     "active": false,
@@ -1411,7 +1411,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-11-22T02:05:00Z",
-      "state_reason": "代码 S1–S5 已合入，Beta commitV11.90Beta ad13fb23；触发链等 t1s 收尾标记 T1S_CLOSEOUT_DONE（跨会话 req=f8ace2-11212205-1）+ G3 子集下载 + 8 卡空闲后自动 G2–G7→60k→seed42 评估",
+      "state_reason": "正式 60k 于 2026-11-22 美东 17:28 起跑（锚点 commitV11.94Beta fdce0f68）；E/G2–G6 与 G7 短测全部 PASS",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiV86WaA5EPyX39Urna",
         "host": "ip-10-242-11-177"
@@ -1432,15 +1432,15 @@
         },
         {
           "what": "G0–G6 开训前闸门",
-          "evidence": "",
-          "where": "",
-          "status": "pending"
+          "evidence": "EVEN_GRID_BITEXACT=PASS mode=bitexact compared=23253 mismatches=0; VERIFY_MOTION=PASS scanned=45228; TRAIN_ES_BOUND=PASS max_windows=86 budget=192; EVAL_ES_BOUND=PASS episodes=800 headroom=42; ONLINE_STAGE2=PASS odd_grid=32; LAUNCH_CONTRACT=PASS checks=51; DATA_LINEAGE=PASS files=16 mismatches=0",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16s16-chain.r3-g5-fail.log / o16s16-chain.log",
+          "status": "pass"
         },
         {
           "what": "G7 8 卡 20 步短测",
-          "evidence": "",
-          "where": "",
-          "status": "pending"
+          "evidence": "S16_RUN=PASS run=o16-smoke-s2cat-s16 steps=20; SMOKE20=PASS",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16s16-chain.log",
+          "status": "pass"
         },
         {
           "what": "正式 60k 训练 EXIT_CODE=0",
@@ -1469,14 +1469,14 @@
           "done_line": "O16S16_CHAIN=DONE"
         },
         {
+          "tmux": "o16s16-chain",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-m32x4x4-modul-motion-s2concat1x1024-s16-b128-60k.log",
+          "done_line": "EXIT_CODE=0"
+        },
+        {
           "tmux": "o16s16-inc",
           "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16s16-inc.log",
           "done_line": "INC_END"
-        },
-        {
-          "tmux": "o16s16-g3fetch",
-          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16s16-g3fetch.log",
-          "done_line": "EXIT_CODE=0"
         }
       ],
       "authorizations": [
@@ -1496,9 +1496,9 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "监听 o16s16-chain；训完评完回写 commitV11.90 与 result.md",
-          "command": "tail -F v1-store/logs/o16s16-chain.log",
-          "verdict_line": "O16S16_CHAIN=DONE；SINGLE_SEED=PASS seed=42"
+          "what": "监听训练；训完自动 seed42 评估；INC_END 后写 result.md 回写 commitV11.94 与 handoff",
+          "command": "tail -F /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16s16-chain.log",
+          "verdict_line": "TRAIN60K=PASS；SINGLE_SEED=PASS seed=42；INC_END"
         }
       ]
     }
