@@ -349,5 +349,20 @@ tmux new-session -d -s t1s-batch1 \
 <li>核实时 8 卡全空闲（0 MiB），没有 <code>t1s-</code> 开头的 tmux，<code>/scratch</code> 空闲 350 GB；主检出工作区干净，HEAD 为 bbfdf9e。</li>
 </ul>
 
+
+<h1>实施结果与实施中调整（2026-11-22 美东追加，不改上文原计划）</h1>
+<p><b>结果</b>：<code>TABLE1_3SEED=PASS rows=12 seeds=3 ckpt_rows=4 ckpts=3 runs_new=32</code>，32 次新评估全部 <code>EVAL692=PASS preseeded_errors=9 new_errors=0</code>。完整表格见 <code>docs/training-doc/t1s-3seed-1120/final.md</code> 与 <code>table1_3seed.json</code>。实际墙钟：2026-11-20 17:19 → 11-22 00:28 美东（约 31 h，含补跑约 8.5 h）。</p>
+<table>
+<tr><th>#</th><th>调整（旧 → 新）</th><th>原因与证据</th><th>处置性质</th></tr>
+<tr><td>A1</td><td>链脚本首次起跑 1 秒退出 → 修 <code>pair()</code> 同行 <code>local</code> 引用未赋值 <code>n</code></td><td><code>set -u</code> 下 <code>n: unbound variable</code>；日志 <code>t1s-batch1.try1.log</code>；修后空跑验证调用序列</td><td>工程修复，未跑出任何评估</td></tr>
+<tr><td>A2</td><td>mm-mod、mm-ctx 第一批 4 次 <code>EVAL692=FAIL reason=infra</code> → <code>venvs/wan</code> 同步到 v18 锁的 MotionJEPA 2a484ad 后以 <code>-r2</code> 补跑（t1s-fix1）</td><td>共用 <code>venvs/wan</code> 装的是 ee719fb（v16 线 b5bdccf 锁），v18 / 8181918 锁钉 2a484ad；v7 encoder strict 加载 state_dict 结构不符。全部结束后已还原 ee719fb</td><td>工程修复，不改评估语义</td></tr>
+<tr><td>A3</td><td>mm-mod seed 42 同卡配对 → 单跑 24 片 / 每卡 3 片（<code>-r3</code>，t1s-fix2）</td><td>配对时 8 片 SAPIEN 渲染 CUDA OOM（sidecar 含 VAE+v7 encoder，比 e2e 大）</td><td>只换并行方式</td></tr>
+<tr><td>A4</td><td>补跑链排在第二批之前（原计划排在第二批之后）</td><td>motion 行优先出结果；FrameSamp 不用 sidecar，与换 venv 无冲突</td><td>顺序调整</td></tr>
+<tr><td>A5</td><td>GL ctx 两份 ckpt：原计划请 GL 上传 → GL 会话主动上传（中途 HF 403 私有存储满，后改公开桶），本机 <code>CTX_SHA=PASS</code></td><td>req=aspen746-11201700-1 / 11201715-2</td><td>无需跳过任何行</td></tr>
+<tr><td>A6</td><td>E-B 回归多 1 条失败（<code>test_check_checkpoint_old_entries_and_digest_rule</code>）→ 认定为计划改动的预期结果，不改测试</td><td>该测试钉死旧登记条目逐字不变，与 fs512 steps 增量直接冲突</td><td>记录在 v42 合并提交</td></tr>
+<tr><td>A7</td><td>R1 盯盘子代理被宿主提前收回 → 主会话自持 Monitor（每 30 min 重挂）</td><td>子代理交回时链仍在跑</td><td>监听方式调整</td></tr>
+</table>
+<p>同卡配对实测：e2e 一对 3 h 29 m、wan1 3 h 28 m、wan9 2 h 10 m（逐次单跑约 3 h 40 m / — / 2 h 26 m），FrameSamp 每对约 1 h 05–1 h 15 m，配对不慢于单跑。</p>
+
 </body>
 </html>

@@ -1,7 +1,7 @@
 # t1s-fs2048-c45k-s7 评估档案（Table I 三 seed / 三 ckpt 补评）
 
 ## ①一句话结论与指标速览
-（评估完成后补写）
+`EVAL692=PASS episodes=692 success=300 rate=0.4335 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=0`（RUN_NAME `t1s-fs2048-c45k-s7`；逐局记录见 records/）
 
 ## ②版本与代码状态
 - 计划：策略仓 v18 分支 `1120-table1-3seed-aws-local-eval-plan.html`（开工版 1431a26，开工令见 docs/handoff/current.json 任务 t1s-3seed-1120）。

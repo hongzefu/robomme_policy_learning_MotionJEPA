@@ -1,0 +1,346 @@
+{
+  "schema": "t1s-3seed-1120 final",
+  "episodes": 692,
+  "sd": "sample stdev over 3 values",
+  "seed_rows": {
+    "mm-mod": {
+      "name": "MotionMEM 512+160 modulation",
+      "seed7": {
+        "success": 378,
+        "eval_stack": "GL"
+      },
+      "seed0": {
+        "run": "t1s-mm-mod-s0-r2",
+        "eval692": "EVAL692=PASS episodes=692 success=387 rate=0.5592 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1",
+        "success": 387,
+        "pass": true
+      },
+      "seed42": {
+        "run": "t1s-mm-mod-s42-r3",
+        "eval692": "EVAL692=PASS episodes=692 success=375 rate=0.5419 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1",
+        "success": 375,
+        "pass": true
+      },
+      "mean_pct": 54.91,
+      "sd_pct": 0.9
+    },
+    "e2e": {
+      "name": "E2E-Enc 512+160 modulation",
+      "seed7": {
+        "success": 337,
+        "eval_stack": "AWS"
+      },
+      "seed0": {
+        "run": "t1s-e2e-s0",
+        "eval692": "EVAL692=PASS episodes=692 success=344 rate=0.4971 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1",
+        "success": 344,
+        "pass": true
+      },
+      "seed42": {
+        "run": "t1s-e2e-s42",
+        "eval692": "EVAL692=PASS episodes=692 success=336 rate=0.4855 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1",
+        "success": 336,
+        "pass": true
+      },
+      "mean_pct": 48.99,
+      "sd_pct": 0.63
+    },
+    "wan1": {
+      "name": "Wan-1 512+160 modulation",
+      "seed7": {
+        "success": 298,
+        "eval_stack": "AWS"
+      },
+      "seed0": {
+        "run": "t1s-wan1-s0",
+        "eval692": "EVAL692=PASS episodes=692 success=281 rate=0.4061 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1",
+        "success": 281,
+        "pass": true
+      },
+      "seed42": {
+        "run": "t1s-wan1-s42",
+        "eval692": "EVAL692=PASS episodes=692 success=286 rate=0.4133 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1",
+        "success": 286,
+        "pass": true
+      },
+      "mean_pct": 41.67,
+      "sd_pct": 1.26
+    },
+    "mm-ctx": {
+      "name": "MotionMEM 512+160 context",
+      "seed7": {
+        "success": 254,
+        "eval_stack": "AWS"
+      },
+      "seed0": {
+        "run": "t1s-mm-ctx-s0-r2",
+        "eval692": "EVAL692=PASS episodes=692 success=245 rate=0.3540 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1",
+        "success": 245,
+        "pass": true
+      },
+      "seed42": {
+        "run": "t1s-mm-ctx-s42-r2",
+        "eval692": "EVAL692=PASS episodes=692 success=247 rate=0.3569 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1",
+        "success": 247,
+        "pass": true
+      },
+      "mean_pct": 35.93,
+      "sd_pct": 0.68
+    },
+    "wan9": {
+      "name": "Wan-9 512+720 modulation",
+      "seed7": {
+        "success": 262,
+        "eval_stack": "AWS"
+      },
+      "seed0": {
+        "run": "t1s-wan9-s0",
+        "eval692": "EVAL692=PASS episodes=692 success=258 rate=0.3728 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1",
+        "success": 258,
+        "pass": true
+      },
+      "seed42": {
+        "run": "t1s-wan9-s42",
+        "eval692": "EVAL692=PASS episodes=692 success=269 rate=0.3887 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=1",
+        "success": 269,
+        "pass": true
+      },
+      "mean_pct": 38.01,
+      "sd_pct": 0.8
+    },
+    "native": {
+      "name": "NativeMEM",
+      "seed7": {
+        "success": 290,
+        "eval_stack": "AWS"
+      },
+      "seed0": {
+        "run": "t1s-native-s0",
+        "eval692": "EVAL692=PASS episodes=692 success=291 rate=0.4205 preseeded_errors=9 new_errors=0 retried=0",
+        "success": 291,
+        "pass": true
+      },
+      "seed42": {
+        "run": "t1s-native-s42",
+        "eval692": "EVAL692=PASS episodes=692 success=278 rate=0.4017 preseeded_errors=9 new_errors=0 retried=0",
+        "success": 278,
+        "pass": true
+      },
+      "mean_pct": 41.38,
+      "sd_pct": 1.05
+    },
+    "fs512": {
+      "name": "FrameSamp 512 modulation",
+      "seed7": {
+        "success": 211,
+        "eval_stack": "GL"
+      },
+      "seed0": {
+        "run": "t1s-fs512-s0",
+        "eval692": "EVAL692=PASS episodes=692 success=231 rate=0.3338 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=0",
+        "success": 231,
+        "pass": true
+      },
+      "seed42": {
+        "run": "t1s-fs512-s42",
+        "eval692": "EVAL692=PASS episodes=692 success=223 rate=0.3223 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=0",
+        "success": 223,
+        "pass": true
+      },
+      "mean_pct": 32.03,
+      "sd_pct": 1.45
+    },
+    "fs1024": {
+      "name": "FrameSamp 1024 modulation",
+      "seed7": {
+        "success": 291,
+        "eval_stack": "GL"
+      },
+      "seed0": {
+        "run": "t1s-fs1024-s0",
+        "eval692": "EVAL692=PASS episodes=692 success=279 rate=0.4032 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=0",
+        "success": 279,
+        "pass": true
+      },
+      "seed42": {
+        "run": "t1s-fs1024-s42",
+        "eval692": "EVAL692=PASS episodes=692 success=279 rate=0.4032 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=0",
+        "success": 279,
+        "pass": true
+      },
+      "mean_pct": 40.9,
+      "sd_pct": 1.0
+    },
+    "fs2048": {
+      "name": "FrameSamp 2048 modulation",
+      "seed7": {
+        "success": 312,
+        "eval_stack": "GL"
+      },
+      "seed0": {
+        "run": "t1s-fs2048-s0",
+        "eval692": "EVAL692=PASS episodes=692 success=303 rate=0.4379 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=0",
+        "success": 303,
+        "pass": true
+      },
+      "seed42": {
+        "run": "t1s-fs2048-s42",
+        "eval692": "EVAL692=PASS episodes=692 success=316 rate=0.4566 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=0",
+        "success": 316,
+        "pass": true
+      },
+      "mean_pct": 44.85,
+      "sd_pct": 0.96
+    },
+    "fs4096": {
+      "name": "FrameSamp 4096 modulation",
+      "seed7": {
+        "success": 313,
+        "eval_stack": "GL"
+      },
+      "seed0": {
+        "run": "t1s-fs4096-s0",
+        "eval692": "EVAL692=PASS episodes=692 success=323 rate=0.4668 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=0",
+        "success": 323,
+        "pass": true
+      },
+      "seed42": {
+        "run": "t1s-fs4096-s42",
+        "eval692": "EVAL692=PASS episodes=692 success=301 rate=0.4350 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=0",
+        "success": 301,
+        "pass": true
+      },
+      "mean_pct": 45.13,
+      "sd_pct": 1.59
+    },
+    "fs512c": {
+      "name": "FrameSamp 512 context",
+      "seed7": {
+        "success": 158,
+        "eval_stack": "GL"
+      },
+      "seed0": {
+        "run": "t1s-fs512c-s0",
+        "eval692": "EVAL692=PASS episodes=692 success=158 rate=0.2283 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=0",
+        "success": 158,
+        "pass": true
+      },
+      "seed42": {
+        "run": "t1s-fs512c-s42",
+        "eval692": "EVAL692=PASS episodes=692 success=146 rate=0.2110 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=0",
+        "success": 146,
+        "pass": true
+      },
+      "mean_pct": 22.25,
+      "sd_pct": 1.0
+    },
+    "fs1024c": {
+      "name": "FrameSamp 1024 context",
+      "seed7": {
+        "success": 160,
+        "eval_stack": "GL"
+      },
+      "seed0": {
+        "run": "t1s-fs1024c-s0",
+        "eval692": "EVAL692=PASS episodes=692 success=148 rate=0.2139 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=0",
+        "success": 148,
+        "pass": true
+      },
+      "seed42": {
+        "run": "t1s-fs1024c-s42",
+        "eval692": "EVAL692=PASS episodes=692 success=152 rate=0.2197 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=0",
+        "success": 152,
+        "pass": true
+      },
+      "mean_pct": 22.16,
+      "sd_pct": 0.88
+    }
+  },
+  "ckpt_rows": {
+    "fs512": {
+      "name": "FrameSamp 512 modulation",
+      "c40k": {
+        "run": "t1s-fs512-c40k-s7",
+        "eval692": "EVAL692=PASS episodes=692 success=211 rate=0.3049 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=0",
+        "success": 211,
+        "pass": true
+      },
+      "c45k": {
+        "run": "t1s-fs512-c45k-s7",
+        "eval692": "EVAL692=PASS episodes=692 success=218 rate=0.3150 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=0",
+        "success": 218,
+        "pass": true
+      },
+      "c50k": {
+        "success": 211,
+        "eval_stack": "GL"
+      },
+      "mean_pct": 30.83,
+      "sd_pct": 0.58
+    },
+    "fs1024": {
+      "name": "FrameSamp 1024 modulation",
+      "c40k": {
+        "run": "t1s-fs1024-c40k-s7",
+        "eval692": "EVAL692=PASS episodes=692 success=278 rate=0.4017 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=0",
+        "success": 278,
+        "pass": true
+      },
+      "c45k": {
+        "run": "t1s-fs1024-c45k-s7",
+        "eval692": "EVAL692=PASS episodes=692 success=292 rate=0.4220 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=0",
+        "success": 292,
+        "pass": true
+      },
+      "c50k": {
+        "success": 291,
+        "eval_stack": "GL"
+      },
+      "mean_pct": 41.47,
+      "sd_pct": 1.13
+    },
+    "fs2048": {
+      "name": "FrameSamp 2048 modulation",
+      "c40k": {
+        "run": "t1s-fs2048-c40k-s7",
+        "eval692": "EVAL692=PASS episodes=692 success=320 rate=0.4624 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=0",
+        "success": 320,
+        "pass": true
+      },
+      "c45k": {
+        "run": "t1s-fs2048-c45k-s7",
+        "eval692": "EVAL692=PASS episodes=692 success=300 rate=0.4335 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=0",
+        "success": 300,
+        "pass": true
+      },
+      "c50k": {
+        "success": 312,
+        "eval_stack": "GL"
+      },
+      "mean_pct": 44.89,
+      "sd_pct": 1.45
+    },
+    "fs4096": {
+      "name": "FrameSamp 4096 modulation",
+      "c40k": {
+        "run": "t1s-fs4096-c40k-s7",
+        "eval692": "EVAL692=PASS episodes=692 success=322 rate=0.4653 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=0",
+        "success": 322,
+        "pass": true
+      },
+      "c45k": {
+        "run": "t1s-fs4096-c45k-s7",
+        "eval692": "EVAL692=PASS episodes=692 success=313 rate=0.4523 preseeded_errors=9 new_errors=0 retried=0 expect_motion_stats=0",
+        "success": 313,
+        "pass": true
+      },
+      "c50k": {
+        "success": 313,
+        "eval_stack": "GL"
+      },
+      "mean_pct": 45.66,
+      "sd_pct": 0.75
+    }
+  },
+  "verdict": "TABLE1_3SEED=PASS rows=12 seeds=3 ckpt_rows=4 ckpts=3 runs_new=32"
+}
