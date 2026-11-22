@@ -48,6 +48,19 @@ BUCKETS = {RUNS["context", SPLIT]: "HongzeFu/robomme-vla-orig100-ctx32x4x4-motio
            RUNS["modulation", SPLIT]: "HongzeFu/robomme-vla-orig100-m32x4x4-modul-motion-s2split-60k-v1",
            RUNS["context", CONCAT]: "HongzeFu/robomme-vla-orig100-ctx32x4x4-motion-s2concat1x1024-60k-v1",
            RUNS["modulation", CONCAT]: "HongzeFu/robomme-vla-orig100-m32x4x4-modul-motion-s2concat1x1024-60k-v1"}
+# 按 run 登记的 motion 窗口参数：history 文件名 → 新 run 身份与 motion 表口径。
+# 旧八组合 history 不在此表，沿用 Contract 默认（stride32、budget96、motion-stage2-1024、STAGE2_LAYOUT）。
+# motion_rows/train_max 为 None 表示运行时从 store meta 读取行数、由 manifest 复算 train_max 并只校验 ≤budget。
+# pair 是配对的已有 yaml，二者只允许 diff_keys 所列 motion 键不同。
+S16_HISTORY = "perceptual-framesamp-modul-32frame-4x4-motion-stage2-1x1024-s16-orig16.yaml"
+S16_RUN = "orig100-m32x4x4-modul-motion-s2concat1x1024-s16-b128-60k"
+GRID16_LAYOUT_NAME = "motion-stage2-1x1024-grid16-demopad17-v1"
+STRIDE_RUNS = {S16_HISTORY: dict(
+    run=S16_RUN, bucket="HongzeFu/robomme-vla-orig100-modul-s2concat-s16-60k-v1",
+    fusion="modul", readout="1x1024", store_dir="motion-stage2-1024-grid16", layout="grid16",
+    stride=16, budget=192, motion_rows=None, train_max=None,
+    pair="perceptual-framesamp-modul-32frame-4x4-motion-stage2-1x1024-orig16.yaml",
+    diff_keys=("stride", "budget", "store_path"))}
 FUSIONS = {"ctx": "context", "modul": "modulation"}
 READOUTS = {"4x256": SPLIT, "1x1024": CONCAT}
 ATTEMPT_KEYS = {"base_run", "run", "history", "train_head", "decision", "bucket"}
@@ -56,6 +69,30 @@ HISTORIES = tuple(f"perceptual-framesamp-{fusion}-{frames}-motion-stage2-{readou
         item["yaml"] for run, item in ENCODERS.items() if run != ENCODER_RUN)
 # ── GreatLakes 复现（1031 计划 K4/K6/K9/K11）：卡数可变口径，只对 fsdp 2/4 生效，默认 8 卡 B128 不变 ──
 GL_FSDP = (2, 4)
+
+
+def grid16_layout():
+    """grid16 布局名只读引用 motion_store 常量（S1 定义）；未合入时用约定字符串。"""
+    from mme_vla_suite.datastore import motion_store as ms
+    return getattr(ms, "STAGE2_GRID16_LAYOUT", GRID16_LAYOUT_NAME)
+
+
+def stride_contract(contract, name):
+    """登记表内 history 换成其 run 的 motion 口径；表外原样返回（旧 run 行为不变）。"""
+    item = STRIDE_RUNS.get(name)
+    if item is None:
+        return contract
+    return dataclasses.replace(contract, store_dir=item["store_dir"],
+        motion_layout=grid16_layout() if item["layout"] == "grid16" else item["layout"],
+        motion_stride=item["stride"], motion_budget=item["budget"],
+        motion_rows=item["motion_rows"], train_max=item["train_max"])
+
+
+def history_tags(name):
+    """history 文件名 → (融合标签, 读法标签)；登记表内的按表取值。"""
+    if name in STRIDE_RUNS:
+        return STRIDE_RUNS[name]["fusion"], STRIDE_RUNS[name]["readout"]
+    return name.split("-")[2], name.split("-")[-2]
 GL_HISTORY = "perceptual-framesamp-ctx-32frame-4x4-motion-stage2-4x256-orig16.yaml"
 # 三份测时 yaml（仅供 o16gl-tier- 测时）→ 帧路记忆总预算。
 TIER_HISTORIES = {f"perceptual-framesamp-ctx-{frames}frame-4x4-nomotion-tier-orig16.yaml": frames * 16
@@ -156,11 +193,15 @@ class Contract:
     episode_manifest_sha256: str = "93d7c5a0c1f34fd955de5f8c37370369e54457019f75e56aea8908cba894d999"
     input_manifest_sha256: str = "5d1bfed54377c22e68bc1883ebd35fdf77372129ac1565dd6a78601c1d9965f9"
     canonical_manifest_sha256: str = "337c4fcde163974039b5c0f2ad1f46ebaacd272719f72818503e23c1360447e2"
-    motion_rows: int | str = 23253
-    train_max: int | str = 44
+    motion_rows: int | str | None = 23253
+    train_max: int | str | None = 44
     encoder_sha256: str = ENCODER_SHA
     encoder_run: str = "stage2-full144-1025-a"
     store_dir: str = "motion-stage2-1024"
+    # None 表示 motion_store.STAGE2_LAYOUT（grid32）；stride/budget 默认即旧 stride32、96 窗口径。
+    motion_layout: str | None = None
+    motion_stride: int = 32
+    motion_budget: int = 96
     evidence_dir: str = "evidence"
     mj_source_manifest: str = "/scratch/hongze/dataset-original-robomme-16x100-wan21-v1/dataset/source_manifest.json"
     episodes: int = 1600
@@ -227,6 +268,16 @@ def check_attempt(path, *, history_name, train_head):
     return run
 
 
+def check_stride_pair(repo, name):
+    """登记表内新 yaml 与配对旧 yaml：顶层只差 motion，motion 只差登记的键（stride/budget/store_path）。"""
+    item = STRIDE_RUNS[name]
+    new, old = legacy.load_yaml(repo, name), legacy.load_yaml(repo, item["pair"])
+    top = {key for key in set(new) | set(old) if new.get(key) != old.get(key)}
+    motion = {key for key in set(new["motion"]) | set(old["motion"])
+              if new["motion"].get(key) != old["motion"].get(key)}
+    return top <= {"motion"} and set(new["motion"]) == set(old["motion"]) and motion == set(item["diff_keys"])
+
+
 def check_nosplit_config(repo, fusion):
     """同融合split/concat两份yaml只允许motion读法四项不同。"""
     split = legacy.load_yaml(repo, pair_name(fusion, "4x256"))
@@ -239,7 +290,7 @@ def check_nosplit_config(repo, fusion):
 
 
 def load_yaml(repo, name):
-    if name not in HISTORIES and name not in TIER_HISTORIES:
+    if name not in HISTORIES and name not in TIER_HISTORIES and name not in STRIDE_RUNS:
         raise ValueError(f"history不在八组合内: {name}")
     return legacy.load_yaml(repo, name)
 
@@ -253,12 +304,13 @@ def check_history(rec, history, contract=Contract()):
     rec("FUSION", dim is not None and history.get("memory_token_dim") == dim)
     motion = history.get("motion", {})
     spec = motion_policy_spec(motion)
+    budget = contract.motion_budget
     rec("MOTION_READOUT", (spec.readout, spec.num_tokens, spec.dim, spec.budget, spec.window_budget) in (
-        ("stage2_pool4_concat_v1", 1, 1024, 96, 96), ("stage2_pool4_split_v1", 4, 256, 384, 96)))
+        ("stage2_pool4_concat_v1", 1, 1024, budget, budget), ("stage2_pool4_split_v1", 4, 256, 4 * budget, budget)))
     expected = legacy.load_yaml(REPO, legacy.HISTORY_CONFIG)
     expected.update(token_per_image=tokens, integration_type=history.get("integration_type"), memory_token_dim=dim)
     expected["motion"].update(readout=spec.readout, num_tokens=spec.num_tokens, dim=spec.dim, budget=spec.budget,
-        store_path=contract.parent_rel + "/" + contract.store_dir, online_gpu=1,
+        stride=contract.motion_stride, store_path=contract.parent_rel + "/" + contract.store_dir, online_gpu=1,
         source_run=f"{contract.encoder_run}/checkpoint_epoch_105.pt#model", checkpoint_sha256=contract.encoder_sha256)
     rec("HISTORY_KEYS", history == expected, "除三机制与已固定来源以外不接受配置漂移")
     if not rec.failed:
@@ -365,7 +417,12 @@ def check_config(rec, cfg, base, *, store, contract, steps, history_name, histor
             and (kind != "formal" or "-attempt" not in cfg.exp_name or cfg.exp_name == attempt),
             f"exp_name={cfg.exp_name} kind={kind}")
     else:
-        allowed = RUNS.get((history["integration_type"], history["motion"]["readout"])) if attempt is None else attempt
+        if attempt is not None:
+            allowed = attempt
+        elif history_name in STRIDE_RUNS:
+            allowed = STRIDE_RUNS[history_name]["run"]
+        else:
+            allowed = RUNS.get((history["integration_type"], history["motion"]["readout"]))
         rec("CFG_RUN", (history["token_per_image"] == 16 and cfg.exp_name == allowed) if steps == 60000
             else cfg.exp_name.startswith("o16-smoke-"), f"exp_name={cfg.exp_name} allowed={allowed}")
     rec("CFG_NEW_RUN", not cfg.checkpoint_dir.exists() and not cfg.checkpoint_dir.is_symlink())
@@ -405,15 +462,25 @@ def check_dataset(rec, store, contract, history, env=None):
         and meta.get("manifest_scope") == "full" and meta.get("manifest_sha256") == manifest["sha256"])
     if "motion" not in history:
         return None  # 测时 yaml 无 motion：跳过 motion 表、证据与血缘（计划 S1 契约行）
-    bounds = legacy.manifest_bounds(manifest)
-    rec("WINDOW_BUDGET", bounds["rows"] == contract.motion_rows and bounds["train_max"] == contract.train_max
-        and type(contract.train_max) is int and contract.train_max <= 96)
+    bounds = legacy.manifest_bounds(manifest, stride=contract.motion_stride)
+    budget = contract.motion_budget
+    # 登记值为 None 的项运行时取实测：train_max 只核 ≤budget，行数在 MOTION_VERIFIED 与 store meta 比对。
+    rows_ok = contract.motion_rows is None or bounds["rows"] == contract.motion_rows
+    if contract.train_max is None:
+        train_ok = bounds["train_max"] <= budget
+    else:
+        train_ok = (bounds["train_max"] == contract.train_max and type(contract.train_max) is int
+                    and contract.train_max <= budget)
+    rec("WINDOW_BUDGET", rows_ok and train_ok,
+        f"rows={bounds['rows']} train_max={bounds['train_max']} stride={contract.motion_stride} budget={budget}")
     motion = ms.MotionMeta.load(parent / contract.store_dir)
     ms.run_fast_checks(motion, manifest_path=parent / "meta/episode_manifest.json")
     ms.run_full_checks(motion)
     ms.check_same_source(manifest["sha256"], motion, manifest)
-    rec("MOTION_VERIFIED", motion.status == "verified" and motion.raw["layout"] == ms.STAGE2_LAYOUT
-        and motion.num_rows == contract.motion_rows and motion.row_shape == (1, 1024)
+    layout = ms.STAGE2_LAYOUT if contract.motion_layout is None else contract.motion_layout
+    rows = bounds["rows"] if contract.motion_rows is None else contract.motion_rows
+    rec("MOTION_VERIFIED", motion.status == "verified" and motion.raw["layout"] == layout
+        and motion.num_rows == rows and motion.row_shape == (1, 1024)
         and motion.provenance["encoder"]["checkpoint_sha256"] == contract.encoder_sha256)
     if not ms.stage2_uses_cache(motion.provenance):
         raise ValueError("原版16×100必须使用published-cache-with-local-fill来源合同")
@@ -471,10 +538,12 @@ def core(args, argv, *, contract=Contract(), env=None, history=None):
     elif env.get("CUDA_VISIBLE_DEVICES") == contract.gpus:
         print("GPU_SCOPE=PASS allowed=0-7")
     names = legacy.flag_value(argv, "--model.history-config")
-    if len(names) != 1 or names[0] not in (HISTORIES + tuple(TIER_HISTORIES) if gl else HISTORIES):
+    known = HISTORIES + tuple(TIER_HISTORIES) if gl else HISTORIES + tuple(STRIDE_RUNS)
+    if len(names) != 1 or names[0] not in known:
         rec("HISTORY_NAME", False, str(names))
         return rec
     name = names[0]
+    contract = stride_contract(contract, name)
     if contract.encoder_run in ENCODERS and contract.encoder_run != ENCODER_RUN:
         runs = legacy.flag_value(argv, "--exp-name")
         rec("ENCODER_COMBO", len(runs) == 1 and gl_combo_ok(fsdp=fsdp, batch=batch,
@@ -493,12 +562,16 @@ def core(args, argv, *, contract=Contract(), env=None, history=None):
             rec("ENV_EVIDENCE_ROOT", bool(root) and Path(root).is_absolute() and Path(root).is_dir(),
                 f"{EVIDENCE_ENV}={root or '<未设置>'}")
     # 按当前history读法选ctx/modul配对；两份只允许融合方式与记忆宽度不同。测时yaml按正式split配对核。
-    fusion_tag, readout_tag = ("ctx", "4x256") if tier else (name.split("-")[2], name.split("-")[-2])
+    fusion_tag, readout_tag = ("ctx", "4x256") if tier else history_tags(name)
     pairs = [load_yaml(args.repo, pair_name(fusion, readout_tag)) for fusion in ("ctx", "modul")]
     rec("PAIRED_CONFIG", {key for key in pairs[0] if pairs[0].get(key) != pairs[1].get(key)}
         == {"integration_type", "memory_token_dim"} and set(pairs[0]) == set(pairs[1]), f"readout={readout_tag}")
     if rec("NOSPLIT_CONFIG", check_nosplit_config(args.repo, fusion_tag), f"fusion={fusion_tag}") and readout_tag == "1x1024":
         print(f"NOSPLIT_CONFIG=PASS fusion={fusion_tag} diff_keys=motion.readout,motion.num_tokens,motion.dim,motion.budget")
+    if name in STRIDE_RUNS:
+        diff = ",".join(f"motion.{key}" for key in STRIDE_RUNS[name]["diff_keys"])
+        if rec("STRIDE_PAIR_CONFIG", check_stride_pair(args.repo, name), f"pair={STRIDE_RUNS[name]['pair']}"):
+            print(f"STRIDE_PAIR_CONFIG=PASS diff_keys={diff}")
     attempt = None
     if env.get("ATTEMPT_MANIFEST"):
         attempt = rec.guard("ATTEMPT", check_attempt, env["ATTEMPT_MANIFEST"], history_name=name,

@@ -590,3 +590,185 @@ def test_concat_chain_rejects_non_formal(tmp_path, bad):
     result = subprocess.run(["bash", str(root / "scripts/training/run_orig16_concat_ctx_then_modul_60k.sh")],
                             env=env, capture_output=True, text=True)
     assert result.returncode == 2 and not (root / "calls").exists()
+
+
+# ── stride16（grid16、budget192）modulation concat 新 run：按 run 登记的 motion 口径 ──
+S16 = launch.S16_HISTORY
+S16_ITEM = launch.STRIDE_RUNS[S16]
+
+
+def test_old_contract_defaults_unchanged():
+    c = launch.Contract()
+    assert (c.motion_rows, c.train_max, c.store_dir, c.motion_layout, c.motion_stride, c.motion_budget) == (
+        23253, 44, "motion-stage2-1024", None, 32, 96)
+    for name in launch.HISTORIES:
+        assert launch.stride_contract(c, name) is c
+
+
+def test_s16_registry_identity():
+    assert S16_ITEM["run"] == "orig100-m32x4x4-modul-motion-s2concat1x1024-s16-b128-60k"
+    assert S16_ITEM["bucket"] == "HongzeFu/robomme-vla-orig100-modul-s2concat-s16-60k-v1"
+    assert S16_ITEM["run"] not in launch.RUNS.values() and S16_ITEM["run"] not in launch.BUCKETS
+    c = launch.stride_contract(launch.Contract(), S16)
+    assert (c.store_dir, c.motion_layout, c.motion_stride, c.motion_budget, c.motion_rows, c.train_max) == (
+        "motion-stage2-1024-grid16", launch.grid16_layout(), 16, 192, None, None)
+    assert launch.grid16_layout() == "motion-stage2-1x1024-grid16-demopad17-v1"
+    assert launch.history_tags(S16) == ("modul", "1x1024")
+    assert launch.PLACEHOLDER not in str(dataclasses.asdict(c))
+
+
+def test_s16_yaml_differs_only_in_three_keys(tmp_path):
+    assert launch.check_stride_pair(REPO, S16)
+    new = launch.load_yaml(REPO, S16)
+    old = launch.load_yaml(REPO, S16_ITEM["pair"])
+    assert {k for k in set(new) | set(old) if new.get(k) != old.get(k)} == {"motion"}
+    diff = {k for k in set(new["motion"]) | set(old["motion"]) if new["motion"].get(k) != old["motion"].get(k)}
+    assert diff == {"stride", "budget", "store_path"}
+    assert (new["motion"]["stride"], new["motion"]["budget"], new["motion"]["store_path"]) == (
+        16, 192, "v1-store/datasets/16task-orig100-1600ep-9e109419/motion-stage2-1024-grid16")
+    # 多改一项（例如 window_frames）即判失败。
+    yaml_dir = tmp_path / launch.YAML_DIR
+    yaml_dir.mkdir(parents=True)
+    shutil.copyfile(REPO / launch.YAML_DIR / S16_ITEM["pair"], yaml_dir / S16_ITEM["pair"])
+    text = (REPO / launch.YAML_DIR / S16).read_text().replace("window_frames: 33", "window_frames: 17")
+    (yaml_dir / S16).write_text(text)
+    assert not launch.check_stride_pair(tmp_path, S16)
+
+
+def test_manifest_bounds_stride_parameter():
+    episodes = [dict(global_episode_idx=0, num_timesteps=200, exec_start_idx=100),
+                dict(global_episode_idx=1, num_timesteps=60, exec_start_idx=20)]
+    old = launch.legacy.manifest_bounds({"episodes": episodes})
+    assert old == launch.legacy.manifest_bounds({"episodes": episodes}, stride=32)
+    assert (old["counts"], old["rows"], old["train_max"]) == ({0: 6, 1: 2}, 8, 6)
+    new = launch.legacy.manifest_bounds({"episodes": episodes}, stride=16)
+    assert (new["counts"], new["rows"], new["train_max"]) == ({0: 11, 1: 2}, 13, 11)
+    # 评估侧每局1300步：(1300-32)//16+1=80 个执行窗，加最长 demo 段 6 窗。
+    assert new["eval_max"] == 6 + 80
+
+
+def s16_formal(fx, *, run=launch.S16_RUN, mutate=None, seen=None):
+    """新 run 正式60k合同；数据集检查替换为记录合同的桩（grid16 夹具库依赖 S1 打包能力，合入后实跑）。"""
+    args, argv, env, h = arguments(fx, S16, steps=60000)
+    c = fx.contract
+    h["motion"].update(store_path=c.parent_rel + "/" + S16_ITEM["store_dir"])
+    argv[argv.index("--exp-name") + 1] = run
+    if mutate:
+        mutate(h)
+    args.train_head = "a" * 40
+    from mme_vla_suite.training import config
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(config, "OPENPI_DATA_HOME", env["OPENPI_DATA_HOME"])
+        patch.setattr(launch, "check_dataset", lambda rec, store, contract, history, env=None: seen.append(contract))
+        return launch.core(args, argv, contract=c, env=env, history=h)
+
+
+def test_s16_formal_contract_positive(fx, capsys):
+    seen = []
+    rec = s16_formal(fx, seen=seen)
+    assert not rec.failed, rec.failed
+    (c,) = seen
+    assert (c.store_dir, c.motion_stride, c.motion_budget, c.motion_rows, c.train_max) == (
+        "motion-stage2-1024-grid16", 16, 192, None, None)
+    out = capsys.readouterr().out
+    assert "STRIDE_PAIR_CONFIG=PASS diff_keys=motion.stride,motion.budget,motion.store_path" in out
+    assert "MOTION_LAYOUT=PASS readout=concat tokens_per_window=1 budget=192 total_tokens=704" in out
+    assert "FUSION=PASS integration=modulation memory_token_dim=1024" in out
+
+
+@pytest.mark.parametrize("fault", ["old_run", "budget96", "stride32", "store_old"])
+def test_s16_formal_contract_negatives(fx, fault):
+    mutate = {"budget96": lambda h: h["motion"].update(budget=96),
+              "stride32": lambda h: h["motion"].update(stride=32),
+              "store_old": lambda h: h["motion"].update(store_path=fx.contract.parent_rel + "/motion-stage2-1024")}.get(fault)
+    run = launch.RUNS["modulation", launch.CONCAT] if fault == "old_run" else launch.S16_RUN
+    rec = s16_formal(fx, run=run, mutate=mutate, seen=[])
+    if fault == "old_run":
+        assert rec.failed == ["CFG_RUN"]
+    else:
+        assert "HISTORY_KEYS" in rec.failed or "MOTION_READOUT" in rec.failed
+
+
+def test_old_concat_yaml_with_s16_run_fails(fx):
+    rec = formal_contract(fx, CONCAT_MOD, run=launch.S16_RUN)
+    assert rec.failed == ["CFG_RUN"]
+
+
+@pytest.mark.parametrize("budget,ok", [(192, True), (1, False)])
+def test_s16_window_budget_reads_runtime_bounds(fx, budget, ok):
+    """train_max/motion_rows 为 None：按 stride16 由 manifest 复算，只核 ≤budget；行数随后与 store meta 比对。"""
+    contract = dataclasses.replace(launch.stride_contract(fx.contract, S16), motion_budget=budget)
+    history = launch.load_yaml(REPO, S16)
+    rec = launch.Recorder()
+    with pytest.raises(Exception):
+        # 夹具无 grid16 motion 表：WINDOW_BUDGET 之后加载表即抛错，本用例只核预算判定。
+        launch.check_dataset(rec, fx.root, contract, history, {})
+    rows = {name: passed for name, passed, _ in rec.rows}
+    assert rows["WINDOW_BUDGET"] is ok
+
+
+def s16_tree(tmp_path):
+    root = shell_tree(tmp_path)
+    shutil.copyfile(REPO / "scripts/training/run_orig16_modul_s16_60k.sh",
+                    root / "scripts/training/run_orig16_modul_s16_60k.sh")
+    return root
+
+
+def test_s16_runner_dry_run_uses_new_yaml_and_contract(tmp_path):
+    root = s16_tree(tmp_path)
+    py = root / ".venv/bin/python"; py.parent.mkdir(parents=True)
+    py.write_text(f'''#!/usr/bin/env bash
+if [[ "$*" == *--print-library* ]]; then echo fixture; exit 0; fi
+[[ "$1" == scripts/training/check_orig16_stage2_launch.py ]] || exit 91
+[[ "$*" == *"--model.history-config {S16}"* && "$*" == *"--exp-name o16-smoke-s16"* ]] || exit 92
+echo CONTRACT_INVOKED=1
+''')
+    py.chmod(0o755)
+    before = {str(p.relative_to(root)) for p in root.rglob("*")}
+    env = dict(os.environ, CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7", DRY_RUN="1", MAX_STEPS="20",
+               RUN_NAME="o16-smoke-s16", TRAIN_HEAD="a" * 40, FINAL_ROOT=str(root / "v1-store/validation"))
+    result = subprocess.run(["bash", str(root / "scripts/training/run_orig16_modul_s16_60k.sh")], env=env,
+                            capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "CONTRACT_INVOKED=1" in result.stdout and S16 in result.stdout
+    assert {str(p.relative_to(root)) for p in root.rglob("*")} == before
+
+
+@pytest.mark.parametrize("fault", [None, "lineage", "exit", "checkpoint", "nan", "final"])
+def test_s16_runner_formal_checks(tmp_path, fault):
+    root = s16_tree(tmp_path)
+    py = root / ".venv/bin/python"; py.parent.mkdir(parents=True); py.symlink_to(sys.executable)
+    run = launch.S16_RUN
+    final_root = root / "v1-store/validation/o16s16"
+    record = final_fixture(run, steps=60000)
+    if fault == "final": record["ema_leaves"]["weight"]["finite"] = False
+    dump(final_root / run / "final-record/final.json", record)
+    (root / "scripts/training/run_orig16_stage2_60k.sh").write_text(f'''#!/usr/bin/env bash
+ROOT=$(cd "$(dirname "$0")/../.." && pwd)
+echo "$RUN_NAME $HISTORY $FINAL_RECORD_DIR" >> "$ROOT/calls"
+[[ {fault!s} != exit ]] || exit 9
+mkdir -p "$ROOT/v1-store/logs"
+log="$ROOT/v1-store/logs/$RUN_NAME.log"
+printf 'RUN=%s\\nSTEPS=60000\\n' "$RUN_NAME" > "$log"
+[[ {fault!s} == lineage ]] || printf 'DATA_LINEAGE=PASS route=evidence encoder_ckpt=27daa832 evidence_files=5 mismatches=0\\n' >> "$log"
+printf 'Step 59999: loss=0.25, grad_norm=0.5\\n' >> "$log"
+[[ {fault!s} != nan ]] || printf 'Step 59999: loss=nan\\n' >> "$log"
+printf 'EXIT_CODE=0\\n' >> "$log"
+[[ {fault!s} == checkpoint ]] || mkdir -p "$ROOT/v1-store/train-runs/{launch.CONFIG_NAME}/$RUN_NAME/59999"
+exit 0
+''')
+    env = dict(os.environ, TRAIN_HEAD="a" * 40, FINAL_ROOT=str(final_root))
+    for key in ("MAX_STEPS", "DRY_RUN", "RUN_NAME", "ATTEMPT_MANIFEST"):
+        env.pop(key, None)
+    result = subprocess.run(["bash", str(root / "scripts/training/run_orig16_modul_s16_60k.sh")], env=env,
+                            capture_output=True, text=True)
+    calls = (root / "calls").read_text().split()
+    assert calls == [run, S16, str(final_root / run / "final-record")]
+    stage = {"lineage": "data_lineage", "exit": "train_exit", "checkpoint": "missing_59999",
+             "nan": "train_numerics", "final": "final_record"}.get(fault)
+    if stage is None:
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert f"S16_RUN=PASS run={run} steps=60000 step=59999 history={S16}" in result.stdout
+    else:
+        assert result.returncode == (9 if fault == "exit" else 3), result.stdout + result.stderr
+        assert f"S16_RUN=FAIL run={run} stage={stage} " in result.stdout
