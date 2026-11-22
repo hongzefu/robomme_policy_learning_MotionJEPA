@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-30T19:34:58+00:00",
-    "america_new_york": "2026-10-30T15:34:58-04:00"
+    "utc": "2026-11-22T02:05:00Z",
+    "America/New_York": "2026-11-21T21:05:00-0500"
   },
   "repo": {
-    "branch": "v4-256concat1",
-    "base_head": "6bb7d4dfe320e595daef023688dfb85f4c1b5eaf"
+    "branch": "v19-orig16-modul-s2concat-s16-60k",
+    "base_head": "8a632f85"
   },
   "freeze": {
     "active": false,
@@ -1401,6 +1401,82 @@
           "what": "串行入口接续",
           "command": "bash scripts/training/run_orig16_concat_ctx_then_modul_60k.sh",
           "verdict_line": "EXIT_CODE=0"
+        }
+      ]
+    },
+    "o16-modul-s2cat-s16-60k": {
+      "plan": {
+        "file": "1122-orig16-modul-s2concat-s16-60k-plan.md",
+        "sha": "8a632f85"
+      },
+      "state": "running",
+      "state_changed_at": "2026-11-22T02:05:00Z",
+      "state_reason": "开工令已到；先跑 workflow 对抗验证，再写代码与 G0–G6，t1s-3seed-1120 结束后自动起跑 60k 与 seed42 评估",
+      "owner": {
+        "session": "https://claude.ai/code/session_01WvPQiV86WaA5EPyX39Urna",
+        "host": "ip-10-242-11-177"
+      },
+      "depends_on": [
+        {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA",
+          "branch": "v18-4task-modul-e2eenc-s16-50k",
+          "task": "t1s-3seed-1120"
+        }
+      ],
+      "pre_handoff": [
+        {
+          "what": "G0–G6 开训前闸门",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        },
+        {
+          "what": "G7 8 卡 20 步短测",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        },
+        {
+          "what": "正式 60k 训练 EXIT_CODE=0",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        },
+        {
+          "what": "seed42 官方 800 局 COMPUTE_DONE completed=800 errors=0",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        },
+        {
+          "what": "59999 上传 HF_VERIFY=PASS",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-11-21",
+          "quote": "先进行一次workflow对抗验证 除非有影响训练语义的内容 否则你自己决策了 同意开工 可以push可以登记状态机",
+          "scope": "1122 方案全部步骤：对抗验证→代码与 G0–G6→t1s 结束后自动 60k 训练与 seed42 评估；非训练语义问题自行决策"
+        },
+        {
+          "kind": "cleanup",
+          "date": "2026-11-21",
+          "quote": "同意 开始删除",
+          "scope": "删除本地 /scratch/hongze/dataset-4task-rgb-state-stride2-16views-v1（已执行）"
+        }
+      ],
+      "pending_decisions": [],
+      "next_steps": [
+        {
+          "what": "workflow 对抗验证结论处置并修订方案",
+          "command": "Workflow wf_b11709d8-7d3",
+          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS"
         }
       ]
     }
