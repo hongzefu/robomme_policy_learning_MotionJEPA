@@ -1,0 +1,16 @@
+O16S16_CHAIN_START train_head=ad13fb236bf1974e2a885360c56864a2c6bee582 2026-11-22T18:08:06Z
+O16S16_WAIT_DONE mark=T1S_CLOSEOUT_DONE handoff=11d84600 results=161d29d et=2026-11-22 00:29  2026-11-22T18:08:06Z
+O16S16_CHECKOUT=PASS head=ad13fb236bf1974e2a885360c56864a2c6bee582
+O16S16_GATES_START root=/scratch/hongze/robomme_policy_learning_MotionJEPA head=ad13fb236bf1974e2a885360c56864a2c6bee582 gates="E G2 G3 G4 G5 G6" dry_run=0 gate_gpu=0 online_gpu=1
+O16S16_INPUTS=PASS
+RAW_WINDOWS_READY=PASS windows=64 tasks=16 demo_tail=16 sha_mismatches=0
+STEP_EXIT_CODE=0 step=e-g0
+G2_INPUT_IDENTITY=PASS windows=64 mismatches=0
+STEP_EXIT_CODE=0 step=e-g2
+    raise ValueError(f"MJ 验证源码与 S1 提交不同：{path}")
+ValueError: MJ 验证源码与 S1 提交不同：/scratch/hongze/worktrees/vla-s2-memexport-20261026/scripts/dataset-build/rgb_gtxyz_reader.py
+STEP_EXIT_CODE=1 step=e-g3
+O16S16_EVIDENCE=FAIL reason=exit_code step=e-g3 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16s16-gates/e-g3.log
+O16S16_GATES=FAIL at=O16S16_EVIDENCE
+O16S16_CHAIN=FAIL at=gates 2026-11-22T18:48:45Z
+EXIT_CODE=1

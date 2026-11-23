@@ -158,3 +158,9 @@ workflow `wf_b11709d8-7d3`（5 个维度各 1 个 sonnet 审查，每条发现 1
 | 起跑信号 | 等 `T1S_CHAIN_DONE` + `EXIT_CODE=0` → 等 t1s 会话写 `v1-store/jobs/t1s-1120/T1S_CLOSEOUT_DONE` | t1s 收尾仍要在主检出 v18 上提交 8 次归档与 handoff；跨会话约定 `req=f8ace2-11212205-1` |
 | 主检出 | v18 → 触发链在标记后 `git checkout --detach <Beta>` + 子模块 + `uv sync --frozen` | runner 按脚本位置推仓库根、用根 .venv；v19 与 v18 的 uv.lock/子模块不同 |
 | 评估 seed | 只评 seed 42 → 三 seed（42/7/0），其余不变 | 用户 11-22 美东 22:2x 原话「你现在结束后会 evaluate 几个 seed，改为 evaluate 三个 seed 和其他的都一样」；链末步仍评 42，tmux `o16s16-eval3`（`v1-store/jobs/o16s16/eval3.sh`）等 `O16S16_CHAIN=DONE` 后用同一入口同一 profile 补 7、0，再 `multi_seed_summary((42,7,0))`；评估多约 2 h |
+
+## 实施结果（2026-11-23 美东追加）
+
+- 训练：60000 步（锚点 commitV11.94Beta fdce0f68），11-22 17:28 → 11-23 09:43，0.971 s/步，`S16_RUN=PASS steps=60000`；ckpt `HF_VERIFY=PASS objects=283 bytes=143020572846 mismatches=0`。
+- 评估（用户 11-22 改为三 seed）：官方 800 局 seed 42/7/0 = 366/362/347 局（45.75/45.25/43.38%），**三 seed 44.79 ± 1.25**；参考 split 43.42 ± 0.52（GL A40，跨平台）。
+- 详见 `docs/training-doc/orig100-m32x4x4-modul-motion-s2concat1x1024-s16-b128-60k/result.md`（含逐任务表、r1–r5 计划外事件与闸门判定行）。

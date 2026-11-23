@@ -19,7 +19,7 @@
 |---|---|---|
 | [context](orig100-ctx32x4x4-motion-s2split4x256-b128-60k/result.md) | 32帧4×4+每窗4个motion token，8卡/B128/60k，首条 | 完成：60000步/退出0，12份上传及全量读回、G12均PASS，40小时33分58秒 |
 | [modulation](orig100-m32x4x4-modul-motion-s2split4x256-b128-60k/result.md) | 与context仅融合方式/宽度不同，其余相同 | 完成：60000步/退出0，12份上传及全量读回、G12均PASS，16小时18分51秒 |
-| [modulation concat stride16](orig100-m32x4x4-modul-motion-s2concat1x1024-s16-b128-60k/launch.md) | modulation + motion 每窗1×1024、步长16、budget192，8卡/B128/60k；1122 方案 | 起跑排队：等 t1s 收尾标记后自动 G2–G7 → 60k → seed42 评估 |
+| [modulation concat stride16](orig100-m32x4x4-modul-motion-s2concat1x1024-s16-b128-60k/result.md) | modulation + motion 每窗1×1024、步长16、budget192，8卡/B128/60k；1122 方案 | 完成：60000步/退出0，12份公开桶读回PASS；官方800局三seed **44.79±1.25**（本机A100） |
 
 ### 官方16×100 concat（不 split）两条串行60k（2026-10-30美东开工）
 

@@ -1,0 +1,24 @@
+O16S16_CHAIN_START r=3 train_head=ad13fb236bf1974e2a885360c56864a2c6bee582 2026-11-22T20:52:51Z
+O16S16_CHECKOUT=PASS head=ad13fb236bf1974e2a885360c56864a2c6bee582
+G4_EVAL_PARALLEL todo=11 reuse=5 tasks=PatternLock PickHighlight PickXtimes RouteStick StopCube SwingXtimes VideoPlaceButton VideoPlaceOrder VideoRepick VideoUnmask VideoUnmaskSwap
+STEP_EXIT_CODE=0 step=g4-eval-PickHighlight.r3 gpu=1
+STEP_EXIT_CODE=0 step=g4-eval-PickXtimes.r3 gpu=2
+STEP_EXIT_CODE=0 step=g4-eval-StopCube.r3 gpu=4
+STEP_EXIT_CODE=0 step=g4-eval-SwingXtimes.r3 gpu=5
+STEP_EXIT_CODE=0 step=g4-eval-PatternLock.r3 gpu=0
+STEP_EXIT_CODE=0 step=g4-eval-VideoUnmask.r3 gpu=1
+STEP_EXIT_CODE=0 step=g4-eval-VideoUnmaskSwap.r3 gpu=2
+STEP_EXIT_CODE=0 step=g4-eval-RouteStick.r3 gpu=3
+STEP_EXIT_CODE=0 step=g4-eval-VideoRepick.r3 gpu=0
+STEP_EXIT_CODE=0 step=g4-eval-VideoPlaceButton.r3 gpu=6
+STEP_EXIT_CODE=0 step=g4-eval-VideoPlaceOrder.r3 gpu=7
+EVAL_ES_BOUND=PASS tasks=16 episodes=800 es_max=1135 budget=192 headroom=42
+O16S16_GATES_START root=/scratch/hongze/robomme_policy_learning_MotionJEPA head=ad13fb236bf1974e2a885360c56864a2c6bee582 gates="G5 G6" dry_run=0 gate_gpu=0 online_gpu=1
+O16S16_INPUTS=PASS
+    raise ValueError(f"缓存 G0 窗口重复、缺映射或不在 grid_subsample={grid_subsample} 的格上")
+ValueError: 缓存 G0 窗口重复、缺映射或不在 grid_subsample=2 的格上
+STEP_EXIT_CODE=1 step=g5-online
+ONLINE_STAGE2=FAIL reason=exit_code step=g5-online log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16s16-gates/g5-online.log
+O16S16_GATES=FAIL at=ONLINE_STAGE2
+O16S16_CHAIN=FAIL at=gates 2026-11-22T21:42:23Z
+EXIT_CODE=1
