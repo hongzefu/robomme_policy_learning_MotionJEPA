@@ -64,3 +64,7 @@ AWS p4de 8×A100-80GB，本地 NVMe RAID `/dev/md0`。G2–G7 约 40 分钟；60
 | r3 | 15:52–16:42 | `EVAL_ES_BOUND=PASS tasks=16 episodes=800 es_max=1135 budget=192 headroom=42`；G5 FAIL：`motion_client.validate_stage2_evidence` 缓存分支未传 grid_subsample | S6 修复（commitV11.91），本提交为新锚点 |
 | r4 | 16:50–17:06 | G5 `ONLINE_INPUT_IDENTITY=PASS windows=64`、`ONLINE_STAGE2=PASS windows=64 odd_grid=32 demo_tail=16 e2e_max_abs=0.0041`；G6 51 项中 50 项 PASS，CHECK_DATASET FAIL：encoder data_root（16views 本地已删）下 build_spec.json 不存在 | S7 修复（commitV11.93）：DATA_LINEAGE 改读 keep-meta 副本，三源逐文件比对不变；真实数据 `DATA_LINEAGE=PASS files=16 mismatches=0`；本提交（commitV11.94Beta）为新锚点 |
 | r5 | 本提交后 | 链脚本 `v1-store/jobs/o16s16/chain5.sh`：主检出 detached 到本锚点 → G6 → G7 → 60k → seed42（G5 产物不绑定 HEAD，不重跑） | — |
+
+## 评估范围变更（2026-11-22 美东 22:2x）
+
+用户原话：「你现在结束后会 evaluate 几个 seed，改为 evaluate 三个 seed 和其他的都一样」。链末步仍评 seed 42；tmux `o16s16-eval3`（`v1-store/jobs/o16s16/eval3.sh`，日志 `v1-store/logs/o16s16-eval3.log`）只读等待 `O16S16_CHAIN=DONE` 后，用 `local_eval.py --profile modulcat16 --seeds 7,0` 补齐，再 `multi_seed_summary((42,7,0))` 写 `three_seed_summary.{json,txt}`。其余口径（ckpt 59999、官方 test 800 局、1300 步、本机 8 卡×4 worker）不变。

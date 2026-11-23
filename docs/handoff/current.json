@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-22T22:30:00Z",
-    "America/New_York": "2026-11-22T17:30:00-0500"
+    "utc": "2026-11-23T03:30:00Z",
+    "America/New_York": "2026-11-22T22:30:00-0500"
   },
   "repo": {
     "branch": "v19-orig16-modul-s2concat-s16-60k",
@@ -1449,7 +1449,7 @@
           "status": "pending"
         },
         {
-          "what": "seed42 官方 800 局 COMPUTE_DONE completed=800 errors=0",
+          "what": "三 seed（42/7/0）官方 800 局 COMPUTE_DONE completed=800 errors=0 ×3 + three_seed_summary",
           "evidence": "",
           "where": "",
           "status": "pending"
@@ -1477,6 +1477,11 @@
           "tmux": "o16s16-inc",
           "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16s16-inc.log",
           "done_line": "INC_END"
+        },
+        {
+          "tmux": "o16s16-eval3",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16s16-eval3.log",
+          "done_line": "EVAL3_DONE"
         }
       ],
       "authorizations": [
@@ -1491,14 +1496,20 @@
           "date": "2026-11-21",
           "quote": "同意 开始删除",
           "scope": "删除本地 /scratch/hongze/dataset-4task-rgb-state-stride2-16views-v1（已执行）"
+        },
+        {
+          "kind": "scope_change",
+          "date": "2026-11-22",
+          "quote": "你现在结束后会 evaluate 几个 seed，改为 evaluate 三个 seed 和其他的都一样",
+          "scope": "评估由只评 seed42 改为 42/7/0 三 seed，其余口径不变"
         }
       ],
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "监听训练；训完自动 seed42 评估；INC_END 后写 result.md 回写 commitV11.94 与 handoff",
-          "command": "tail -F /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16s16-chain.log",
-          "verdict_line": "TRAIN60K=PASS；SINGLE_SEED=PASS seed=42；INC_END"
+          "what": "训完链评 seed42；eval3 补 7/0 并汇总；EVAL3_DONE+INC_END 后写 result.md、回写 commitV11.94",
+          "command": "tail -F /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16s16-eval3.log",
+          "verdict_line": "EVAL3_DONE；INC_END"
         }
       ]
     }

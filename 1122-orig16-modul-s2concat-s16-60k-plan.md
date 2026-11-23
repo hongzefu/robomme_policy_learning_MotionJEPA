@@ -157,3 +157,4 @@ workflow `wf_b11709d8-7d3`（5 个维度各 1 个 sonnet 审查，每条发现 1
 | G2 判定行格式 | `STAGE2_EXPORT=PASS windows=45228` → 以导出脚本实际输出 `segments=… rows=…` 为准（rows=45228） | 文字与实际输出对齐 |
 | 起跑信号 | 等 `T1S_CHAIN_DONE` + `EXIT_CODE=0` → 等 t1s 会话写 `v1-store/jobs/t1s-1120/T1S_CLOSEOUT_DONE` | t1s 收尾仍要在主检出 v18 上提交 8 次归档与 handoff；跨会话约定 `req=f8ace2-11212205-1` |
 | 主检出 | v18 → 触发链在标记后 `git checkout --detach <Beta>` + 子模块 + `uv sync --frozen` | runner 按脚本位置推仓库根、用根 .venv；v19 与 v18 的 uv.lock/子模块不同 |
+| 评估 seed | 只评 seed 42 → 三 seed（42/7/0），其余不变 | 用户 11-22 美东 22:2x 原话「你现在结束后会 evaluate 几个 seed，改为 evaluate 三个 seed 和其他的都一样」；链末步仍评 42，tmux `o16s16-eval3`（`v1-store/jobs/o16s16/eval3.sh`）等 `O16S16_CHAIN=DONE` 后用同一入口同一 profile 补 7、0，再 `multi_seed_summary((42,7,0))`；评估多约 2 h |
