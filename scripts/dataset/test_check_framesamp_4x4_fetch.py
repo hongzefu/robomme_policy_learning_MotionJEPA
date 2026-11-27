@@ -220,3 +220,49 @@ def test_meta_status(world, capsys):
     rc, out = _run(capsys, world["argv"] + ["--only", "meta"])
     assert rc != 0
     assert "FS4X4_META=FAIL" in out and "status=packed" in out
+
+
+def test_subset_checks_partial(world, capsys):
+    rc, out = _run(capsys, world["argv"] + ["--only", "probe,meta"])
+    assert rc != 0
+    assert "FS4X4_PROBE=PASS" in out and "FS4X4_META=PASS" in out
+    assert out.strip().splitlines()[-1] == "FS4X4_CHECK=PARTIAL ran=probe,meta"
+    assert "FS4X4_CHECK=PASS" not in out
+
+
+def test_xgrid_inf_row(world, capsys):
+    # 4×4 第 5 行首元素写 bf16 +inf（0x7f80）：余弦非有限，必须计入 bad
+    part = world["s4"] / "image_emb_4x4/part_000.bf16.bin"
+    b = bytearray(part.read_bytes())
+    off = 5 * fs.IMAGE_ROW_BYTES
+    b[off:off + 2] = (0x7F80).to_bytes(2, "little")
+    part.write_bytes(bytes(b))
+    rc, out = _run(capsys, world["argv"] + ["--only", "xgrid"])
+    assert rc != 0
+    assert "FS4X4_XGRID=FAIL" in out and "bad_rows=1" in out and "nonfinite_rows=1" in out
+    assert "min_cos=-inf" in out
+    assert "(5," in out
+
+
+def test_parts_duplicate_not_full(world, capsys):
+    rc, out = _run(capsys, world["argv"] + ["--only", "rowdigest", "--parts", "0,0"])
+    assert rc != 0
+    assert "FS4X4_ROWDIGEST=FAIL" in out and "partial=1" in out
+
+
+def test_parts_flag_never_pass_summary(world, capsys):
+    rc, out = _run(capsys, world["argv"] + ["--parts", "0,1"])
+    assert rc != 0
+    assert f"FS4X4_ROWDIGEST=PASS rows={world['n']} mismatches=0" in out
+    assert out.strip().splitlines()[-1].startswith("FS4X4_CHECK=PARTIAL ran=fetch,rowdigest,xgrid,probe,meta")
+
+
+def test_fetch_rejects_symlink(world, capsys):
+    s4 = world["s4"]
+    real = s4.parent / "state_real.bin"
+    (s4 / "state_emb.f32.bin").rename(real)
+    (s4 / "state_emb.f32.bin").symlink_to(real)
+    rc, out = _run(capsys, world["argv"] + ["--only", "fetch"])
+    assert rc != 0
+    assert "拒绝符号链接 state_emb.f32.bin" in out
+    assert "FS4X4_FETCH=FAIL" in out and "mismatches=1" in out

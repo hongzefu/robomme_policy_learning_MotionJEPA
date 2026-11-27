@@ -73,6 +73,8 @@ def _default_procs() -> int:
 def _sha_worker(item: tuple[str, str]) -> tuple[str, int, str]:
     rel, path = item
     p = pathlib.Path(path)
+    if p.is_symlink():
+        return rel, -2, ""
     if not p.is_file():
         return rel, -1, ""
     h = hashlib.sha256()
@@ -93,12 +95,23 @@ def check_fetch(args) -> tuple[bool, str]:
     if len(entries) != args.expect_files:
         _log(f"[fetch] 清单 {prefix}* 项数 {len(entries)} != 期望 {args.expect_files}")
         mismatches += 1
+    for rel in want:
+        q = store
+        for comp in pathlib.PurePosixPath(rel).parts[:-1]:
+            q = q / comp
+            if q.is_symlink():
+                _log(f"[fetch] 拒绝符号链接目录 {q.relative_to(store)}（{rel}）")
+                mismatches += 1
+                break
     items = sorted(((rel, str(store / rel)) for rel in want),
                    key=lambda x: -int(want[x[0]]["bytes"]))
     with _MP.Pool(min(args.procs, max(1, len(items)))) as pool:
         for rel, size, sha in pool.imap_unordered(_sha_worker, items):
             e = want[rel]
-            if size < 0:
+            if size == -2:
+                _log(f"[fetch] 拒绝符号链接 {rel}")
+                mismatches += 1
+            elif size < 0:
                 _log(f"[fetch] 缺失 {rel}")
                 mismatches += 1
             elif size != int(e["bytes"]) or sha != e["sha256"]:
@@ -109,6 +122,10 @@ def check_fetch(args) -> tuple[bool, str]:
                 _log(f"[fetch] ok {rel} ({size} B)")
     # 清单外的多余文件（以 . 开头的目录/文件视为工具元数据，只提示不计）
     for p in sorted(store.rglob("*")):
+        if p.is_symlink() and p.relative_to(store).as_posix() not in want:
+            _log(f"[fetch] 清单外符号链接 {p.relative_to(store).as_posix()}")
+            mismatches += 1
+            continue
         if not p.is_file():
             continue
         rel = p.relative_to(store).as_posix()
@@ -186,7 +203,7 @@ def _scan_part_worker(pi: int) -> dict:
     img_mm = np.memmap(meta.root / part.path, dtype=np.uint16, mode="r",
                        shape=(part.num_rows, spec.tokens_per_frame * 2048))
     res = {"index": pi, "rows": part.num_rows, "dig_bad": 0, "dig_bad_rows": [],
-           "x_bad": 0, "x_min": 1.0, "x_worst": []}
+           "x_bad": 0, "x_min": 1.0, "x_nonfinite": 0, "x_worst": []}
     do_dig, do_x = _W["do_dig"], _W["do_x"]
     if do_dig:
         t_of = _W["t_of"]
@@ -229,9 +246,12 @@ def _scan_part_worker(pi: int) -> dict:
             den = na * nb
             both_zero = (na == 0) & (nb == 0)
             cos = np.where(den > 0, dot / np.where(den > 0, den, 1), np.where(both_zero, 1.0, 0.0))
+            fin = np.isfinite(cos).all(axis=1)
             row_min = cos.min(axis=1)
-            bad = row_min < thr
+            res["x_nonfinite"] += int((~fin).sum())
+            bad = ~(row_min >= thr) | ~fin          # NaN/inf 一律计入 bad
             res["x_bad"] += int(bad.sum())
+            row_min = np.where(fin, row_min, -np.inf)   # 非有限行在排序与最小值里排最差
             res["x_min"] = min(res["x_min"], float(row_min.min()))
             k = min(10, n)
             idx = np.argpartition(row_min, k - 1)[:k]
@@ -267,7 +287,8 @@ def scan_parts(args, meta: fs.StoreMeta, manifest: dict, do_dig: bool, do_x: boo
     parts = list(range(len(meta.parts)))
     if args.parts:
         parts = [int(x) for x in args.parts.split(",")]
-    tot = {"rows": 0, "dig_bad": 0, "dig_bad_rows": [], "x_bad": 0, "x_min": 1.0, "x_worst": []}
+    tot = {"rows": 0, "dig_bad": 0, "dig_bad_rows": [], "x_bad": 0, "x_min": 1.0,
+           "x_nonfinite": 0, "x_worst": []}
     order = sorted(parts, key=lambda i: -meta.parts[i].num_rows)
     with _MP.Pool(min(args.procs, len(order))) as pool:
         for k, r in enumerate(pool.imap_unordered(_scan_part_worker, order), 1):
@@ -282,9 +303,11 @@ def scan_parts(args, meta: fs.StoreMeta, manifest: dict, do_dig: bool, do_x: boo
             tot["dig_bad_rows"] += r["dig_bad_rows"]
             tot["x_bad"] += r["x_bad"]
             tot["x_min"] = min(tot["x_min"], r["x_min"])
+            tot["x_nonfinite"] += r["x_nonfinite"]
             tot["x_worst"] += r["x_worst"]
     tot["x_worst"] = sorted(tot["x_worst"], key=lambda x: x[1])[:10]
-    tot["full"] = len(parts) == len(meta.parts)
+    tot["full"] = (len(parts) == len(set(parts)) and set(parts) == set(range(len(meta.parts)))
+                   and tot["rows"] == meta.num_rows)
     return tot
 
 
@@ -446,12 +469,14 @@ def main(argv=None) -> int:
                     lines["rowdigest"] = (f"FS4X4_ROWDIGEST={'PASS' if ok else 'FAIL'} rows={tot['rows']} "
                                           f"mismatches={tot['dig_bad']}{partial}")
                 if do_x:
-                    ok = tot["x_bad"] == 0 and tot["full"]
+                    ok = tot["x_bad"] == 0 and tot["x_nonfinite"] == 0 and tot["full"] \
+                        and bool(np.isfinite(tot["x_min"])) and tot["x_min"] >= args.xgrid_threshold
                     _log("[xgrid] 最差 10 行 (row, min_token_cos): "
                          + ", ".join(f"({r},{c_:.7f})" for r, c_ in tot["x_worst"]))
                     results["xgrid"] = ok
                     lines["xgrid"] = (f"FS4X4_XGRID={'PASS' if ok else 'FAIL'} rows={tot['rows']} "
-                                      f"min_cos={tot['x_min']:.7f} bad_rows={tot['x_bad']}{partial}")
+                                      f"min_cos={tot['x_min']:.7f} bad_rows={tot['x_bad']} "
+                                      f"nonfinite_rows={tot['x_nonfinite']}{partial}")
             except Exception as e:   # noqa: BLE001
                 for cc in ("rowdigest", "xgrid"):
                     if cc in need_meta:
@@ -471,9 +496,18 @@ def main(argv=None) -> int:
         if c in lines:
             _log(lines[c])
     failed = [c for c in CHECKS if c in results and not results[c]]
+    ran = [c for c in CHECKS if c in results]
     _log(f"[check] 用时 {time.time() - t0:.1f}s")
-    _log(f"FS4X4_CHECK={'PASS' if not failed else 'FAIL'} failed={','.join(failed) or 'none'}")
-    return 0 if not failed else 1
+    if failed:
+        _log(f"FS4X4_CHECK=FAIL failed={','.join(failed)}")
+        return 1
+    if set(results) != set(CHECKS) or args.parts:
+        # 只跑了部分检查或部分 part：不得给出 PASS 汇总
+        _log(f"FS4X4_CHECK=PARTIAL ran={','.join(ran) or 'none'}"
+             f"{' parts=' + args.parts if args.parts else ''}")
+        return 2
+    _log("FS4X4_CHECK=PASS failed=none")
+    return 0
 
 
 if __name__ == "__main__":
