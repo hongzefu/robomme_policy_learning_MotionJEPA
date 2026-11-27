@@ -49,12 +49,23 @@ WANRAW9_RESOLVED_SHA256 = '819a001c58b00d4a4110835b913ac1fb58238fb71d272eaa33a42
 # 以 `check_checkpoint.py --resolved-sha256 perceptual-framesamp-ctx-8frame-8x8-motion-v7ep72.yaml` 复算回填（计划 §6 第 4 步）。
 CTXMOTION160_RESOLVED_SHA256 = '21791b2964c868119784d086f5ce2334405596d8fa20586e217c4703f018d0e3'
 
+# 1127 计划（1127-4task-modul-fs4x4-512-1024-60k-plan.md 第四节第 6 条）：每帧 4×4（token_per_image 16）modulation、motion 关闭。
+# 两份 YAML 与训练分支逐字节相同（S1 / S3 各写一份，主会话核对）；resolved_sha256 由 S3 在评估分支
+# 以 `check_checkpoint.py --resolved-sha256 <yaml>` 复算（同一算法对 modul-8frame-8x8 / 16frame-8x8 复算得已登记的
+# 804b2538… / 9d7a18fe…，算法与训练 init_history_config 一致）。正式 run 与冒烟 run 共用同一 YAML，故同值。
+FS4X4A_YAML = 'src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-32frame-4x4.yaml'
+FS4X4A_RESOLVED_SHA256 = '823c3948e75a9335ace3f250d0255e6a8618e8ecf0bb77c65af65077349d199a'
+FS4X4B_YAML = 'src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-64frame-4x4.yaml'
+FS4X4B_RESOLVED_SHA256 = '0e47ee6566a53011d96d4577217653a93370101b3222adbf0bdc7584dbefcdb4'
+
 
 def assert_integration(cfg, run):
-    """按 run 登记的 integration（缺省 'modulation'，旧条目行为不变）核对快照的 token_per_image 与融合方式。"""
+    """按 run 登记的 integration（缺省 'modulation'）与 token_per_image（缺省 64，1127 计划新增）核对快照；
+    旧条目两字段都不写，行为与改动前一致。"""
     expected = run.get('integration', 'modulation')
-    assert cfg.token_per_image == 64 and cfg.integration_type == expected, \
-        (cfg.token_per_image, cfg.integration_type, expected)
+    expected_tpi = run.get('token_per_image', 64)
+    assert cfg.token_per_image == expected_tpi and cfg.integration_type == expected, \
+        (cfg.token_per_image, expected_tpi, cfg.integration_type, expected)
 
 
 def resolved_sha256_of_yaml(yaml_path) -> str:
@@ -249,18 +260,41 @@ RUNS = {
         resolved_sha256='70208fa373a470b5e0a19385d4a1db0984d3ed3bc70b8a635fe4f4cedf31e016',
         norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
     ),
+    # ── 1127 计划（1127-4task-modul-fs4x4-512-1024-60k-plan.md 第四节第 6 条）：4task-v2-1600ep 库、每帧 4×4
+    # （token_per_image 16）、modulation、motion 关闭，训练配置 mme_vla_suite_b128_80k，norm_stats 与 8×8 各条目同一份。
+    # 不写 motion_* 字段（motion 关闭）；不写 integration（缺省 modulation）。正式 run 只评 @50000；
+    # 冒烟 run（runner --smoke20，num_train_steps=20，最后一份 ckpt 为 19）供 G5 走一次 --g6b 评估加载冒烟。
+    # A 正式：budget 512 = 32 帧 × 16
+    'v2-1600ep-m32x4x4-modul-b128-50k': dict(
+        steps=('50000',), motion=False, config='mme_vla_suite_b128_80k', budget=512, token_per_image=16,
+        resolved_sha256=FS4X4A_RESOLVED_SHA256,
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+    ),
+    # B 正式：budget 1024 = 64 帧 × 16
+    'v2-1600ep-m64x4x4-modul-b128-50k': dict(
+        steps=('50000',), motion=False, config='mme_vla_suite_b128_80k', budget=1024, token_per_image=16,
+        resolved_sha256=FS4X4B_RESOLVED_SHA256,
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+    ),
+    # A 冒烟 fs4a-smoke20/19
+    'fs4a-smoke20': dict(
+        steps=('19',), motion=False, config='mme_vla_suite_b128_80k', budget=512, token_per_image=16,
+        resolved_sha256=FS4X4A_RESOLVED_SHA256,
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+    ),
+    # B 冒烟 fs4b-smoke20/19
+    'fs4b-smoke20': dict(
+        steps=('19',), motion=False, config='mme_vla_suite_b128_80k', budget=1024, token_per_image=16,
+        resolved_sha256=FS4X4B_RESOLVED_SHA256,
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+    ),
 }
 
 
-def main(argv):
-    if len(argv) == 3 and argv[1] == '--resolved-sha256':
-        print(f'RESOLVED_SHA256={resolved_sha256_of_yaml(argv[2])} yaml={argv[2]}', flush=True)
-        return
-    checkpoint = Path(argv[1]).resolve()
-    run = RUNS.get(checkpoint.parent.name)
-    assert run is not None, f'未登记的 run 根目录 {checkpoint.parent.name}，已登记: {sorted(RUNS)}'
+def check_registration(checkpoint, run, cfg, motion_enabled):
+    """登记表核对（不建模型）：step、motion 开关、budget、融合方式与 token_per_image、frame_sampling、两个 sha256、motion 断言。
+    逻辑与改动前 main() 中的同段逐条相同，只抽成函数便于用 mock 快照单测。"""
     assert checkpoint.name in run['steps'], (checkpoint, run['steps'])
-    cfg, motion_enabled = _load_resolved_snapshot(checkpoint.parent)
     assert motion_enabled == run['motion'], (motion_enabled, run['motion'])
     # budget 逐 run 钉死：它是模型语义参数（决定 static_image_emb 的序列长度与取帧数 budget//token_per_image），
     # 参数树形状对它失明，配错了不会被 PARAM_TREE_EXACT 拦住
@@ -273,6 +307,18 @@ def main(argv):
     if run['motion']:
         prov = json.loads((checkpoint.parent / 'motion_provenance.json').read_text(encoding='utf-8'))
         assert_motion(cfg, run, prov)
+
+
+def main(argv):
+    if len(argv) == 3 and argv[1] == '--resolved-sha256':
+        print(f'RESOLVED_SHA256={resolved_sha256_of_yaml(argv[2])} yaml={argv[2]}', flush=True)
+        return
+    checkpoint = Path(argv[1]).resolve()
+    run = RUNS.get(checkpoint.parent.name)
+    assert run is not None, f'未登记的 run 根目录 {checkpoint.parent.name}，已登记: {sorted(RUNS)}'
+    assert checkpoint.name in run['steps'], (checkpoint, run['steps'])
+    cfg, motion_enabled = _load_resolved_snapshot(checkpoint.parent)
+    check_registration(checkpoint, run, cfg, motion_enabled)
     model_config = dataclasses.replace(get_config(run['config']).model, history_config=cfg, use_history=True)
     model = nnx.eval_shape(model_config.create, jax.random.key(0))
     expected = flatten_dict(nnx.state(model, nnx.Param).to_pure_dict())
