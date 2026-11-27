@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-27T19:05:00Z",
-    "America/New_York": "2026-11-27T14:05:00-0500"
+    "utc": "2026-11-27T19:40:00Z",
+    "America/New_York": "2026-11-27T14:40:00-0500"
   },
   "repo": {
     "branch": "v20-4task-modul-fs4x4-512-1024-60k",
-    "base_head": "49d01f8c"
+    "base_head": "6184ff03"
   },
   "freeze": {
     "active": false,
@@ -462,7 +462,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-11-27T19:05:00Z",
-      "state_reason": "用户开工令；开始 S1–S4 代码与 4×4 表拉回",
+      "state_reason": "Beta 6184ff03 起跑：G0–G3 PASS，触发链 fs4-chain 执行 G4/G5/训练 A/训练 B/3 对评估/汇总；增量上传 fs4-incA/incB",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiR7GnmQVaAs4wiHXLR",
         "host": "ip-10-242-11-177"
@@ -471,9 +471,9 @@
       "pre_handoff": [
         {
           "what": "G0–G5 闸门",
-          "evidence": "FS4X4_FETCH/ROWDIGEST/XGRID/PROBE/META、LAUNCH_CONTRACT、SMOKE20、EVAL_LOAD_SMOKE 全 PASS",
+          "evidence": "G1/G2 FS4X4_CHECK=PASS failed=none（fs4x4-check-7ad7d742.log）；G3 LAUNCH_CONTRACT=PASS budget=512/1024；G4/G5 待链内完成",
           "where": "v1-store/logs/fs4x4-*",
-          "status": "pending"
+          "status": "partial"
         },
         {
           "what": "训练 A、B 各 50k",
@@ -495,7 +495,23 @@
         }
       ],
       "long_tail": [],
-      "running_handles": [],
+      "running_handles": [
+        {
+          "tmux": "fs4-chain",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/fs4x4-chain.log",
+          "done_line": "FS4X4_CHAIN=DONE"
+        },
+        {
+          "tmux": "fs4-incA",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/fs4x4-incA.log",
+          "done_line": "INC_END"
+        },
+        {
+          "tmux": "fs4-incB",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/fs4x4-incB.log",
+          "done_line": "INC_END"
+        }
+      ],
       "authorizations": [
         {
           "kind": "go",
@@ -507,9 +523,9 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "S1–S4 合入、G0–G3",
-          "command": "见计划第二部分 runbook",
-          "verdict_line": "LAUNCH_CONTRACT=PASS"
+          "what": "盯链至 FS4X4_CHAIN=DONE；每个训练结束写 result.md；全部评估后写 docs/training-doc/fs4x4-3seed-1127/final.md",
+          "command": "tail -F /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/fs4x4-chain.log；巡检 bash v1-store/jobs/fs4x4-1127/health.sh",
+          "verdict_line": "FS4X4_3SEED=PASS rows=2 seeds=3"
         }
       ]
     }
