@@ -28,12 +28,14 @@ def test_context_snapshot_passes_context_entry(name):
 
 
 def test_modulation_snapshot_passes_existing_entries():
-    # 已有条目都不写 integration，缺省按 modulation，行为与改动前一致
+    # 已有条目都不写 integration，缺省按 modulation，行为与改动前一致；
+    # 1127 计划的 4×4 条目登记 token_per_image 16（见 test_check_checkpoint_fs4x4.py），其余条目缺省 64
     for name, run in cc.RUNS.items():
         if name in CTX_RUNS + CTX_NOMOTION_RUNS:
             continue
         assert 'integration' not in run
-        cc.assert_integration(MODUL_CFG, run)
+        cc.assert_integration(SimpleNamespace(token_per_image=run.get('token_per_image', 64),
+                                              integration_type='modulation'), run)
 
 
 def test_context_snapshot_fails_modulation_entry():
