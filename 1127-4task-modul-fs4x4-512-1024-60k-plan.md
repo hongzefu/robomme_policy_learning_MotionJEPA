@@ -236,3 +236,13 @@ workflow `wf_09b13830-86b` 审查 `decd3e26`：6 个维度各派 1 个 sonnet �
 - v42 评估栈的评估 server 用的是评估 worktree 里的模型代码；训练用的是 v18 基线代码。两边的 framesample 读帧与 modulation 实现是否逐位一致，靠 G5 加载冒烟和 `check_checkpoint` 的快照核对兜底（Table I 的 8×8 行也是这种组合）。
 - 4 卡并行方案下 1024 档的显存没有实测（只影响备选方案）。
 - Table I 的 seed 7 来自 GL、前缀库与本机有 40 局 BinFill 前缀不同（t1s-3seed-1120 已记录，用户确认不处理）；本方案三 seed 都用本机前缀库。
+
+## 实施中调整（2026-11-27 美东追加，不改写上文）
+
+| 调整 | 旧 → 新 | 理由与审查 |
+|---|---|---|
+| 子代理与合入 | S1 e5dfb506、S2 7ad7d742（含一轮审查修复）、S4 aee5b340 → 训练分支 7f62f1aa；S3 bb1060a9+533c8d87 → 评估分支 `v20-evalstack-fs4x4@65b04c70` | 各 `PRE_MERGE_REVIEW=PASS`；S2 首轮 FAIL（汇总不要求五项齐全）修后复审 PASS；训练分支 `POST_MERGE_REVIEW=PASS base=30be500a tip=7f62f1aa findings=3 blocking=0` |
+| 评估 worktree | 计划写 `fs4x4-ev-<sha>` → 实际 `/scratch/hongze/worktrees/fs4x4-ev`（分支 v20-evalstack-fs4x4，子模块已检出，`v1-store` 软链指向主检出） | 路径命名，无语义影响 |
+| 链脚本三处 | 汇总裸 `uv run` → `uv run --no-project`；preflight 增加评估 worktree `v1-store` 软链核对；等 GPU 阈值每卡 <2000 MiB → 8 卡全 0（与 runner 一致） | 合并后审查 F1–F3；主会话修改，另派 sonnet 快审 |
+| G1/G2 | 计划在 S2 合入后跑 → 先用 S2 worktree 脚本只读跑全量，修复后用 7ad7d742 再跑一次 | 只读、全绝对路径；两次均 `FS4X4_CHECK=PASS failed=none`，以 `v1-store/logs/fs4x4-check-7ad7d742.log` 为准 |
+| 4×4 表拉回 | 估计 15–40 分钟 → 实际 46 秒（19:20:30Z→19:21:16Z），37 文件 78,349,606,034 字节，sha 与上传清单全对 | 首次起 tmux 时脚本未写入致 127 退出（日志 `fs4x4-fetch.try0.log`），无数据写入，重起成功 |

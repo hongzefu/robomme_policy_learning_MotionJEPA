@@ -12,7 +12,7 @@
 #   train_1024    ⑥ 正式训练 B v2-1600ep-m64x4x4-modul-b128-50k
 #   eval_pairs    ⑦ 两个正式 run 的 EXIT_CODE=0 与 50000 都在后，fs4x4_eval_pairs.sh（3 对 6 次）→ FS4X4_EVAL_PAIRS=PASS done=6
 #   summary       ⑧ fs4x4_3seed_summary.py → FS4X4_3SEED=PASS rows=2 seeds=3
-#   ② 等 8 卡显存都 < 2000 MiB：在每个 GPU 步骤（g4_*、g5、train_*、eval_pairs）开始前做；每 60 s 查一次，
+#   ② 等 8 卡显存都为 0 MiB：在每个 GPU 步骤（g4_*、g5、train_*、eval_pairs）开始前做；每 60 s 查一次，
 #     30 次（30 分钟）仍不空闲打印 FS4X4_CHAIN=FAIL step=gpu_wait 退出（有限循环，非 agent 轮询）。
 # 每步打印 FS4X4_STEP=<名> START <UTC> 与 FS4X4_STEP=<名> PASS|FAIL rc=<n>；全部完成打印 FS4X4_CHAIN=DONE。
 # 每步 PASS 后写状态标记 $JOBS/chain-state/<名>.pass；每步输出另 tee 一份到 $JOBS/chain-state/<名>.<UTC>.out。
@@ -59,7 +59,7 @@ STATE="$JOBS/chain-state"
 SUMMARY_JSON="$JOBS/fs4x4_3seed.json"
 EVAL_PAIRS="scripts/evaluation/fs4x4_eval_pairs.sh"
 SUMMARY_PY="scripts/evaluation/fs4x4_3seed_summary.py"
-GPU_LIMIT_MIB=2000
+GPU_LIMIT_MIB=1   # 与 runner 一致：8 卡显存总和须为 0（合并后审查 F3）
 GPU_POLL_S=60
 GPU_POLL_N=30
 FORMAL_512=v2-1600ep-m32x4x4-modul-b128-50k
@@ -205,13 +205,15 @@ clean=yes; [ -z "$dirty" ] || clean=no
 wt_ok=yes
 for f in "$EVAL_PAIRS" "$SUMMARY_PY"; do [ -f "$EVAL_WT/$f" ] || wt_ok=no; done
 [ -d "$EVAL_WT" ] || wt_ok=no
+# 评估 worktree 的 v1-store 必须是指向主检出 v1-store 的软链（合并后审查 F2）
+[ "$(readlink -f "$EVAL_WT/v1-store" 2>/dev/null)" = "$(readlink -f "$MAIN/v1-store")" ] || wt_ok=no
 if [ "$DRY" = 1 ]; then
   echo "FS4X4_PREFLIGHT_DRY head=$head head_match=$([ "$head" = "$BETA" ] && echo yes || echo no) clean=$clean eval_wt_ok=$wt_ok（dry-run 只报告不拦）"
   echo "FS4X4_STEP=preflight PASS rc=0 dry"
 else
   [ "$head" = "$BETA" ] || { echo "  主检出 HEAD=$head != BETA=$BETA"; echo "FS4X4_STEP=preflight FAIL rc=1"; chain_fail preflight head_mismatch; }
   [ "$clean" = yes ] || { echo "  主检出工作区不干净:"; printf '%s\n' "$dirty"; echo "FS4X4_STEP=preflight FAIL rc=1"; chain_fail preflight dirty; }
-  [ "$wt_ok" = yes ] || { echo "  EVAL_WT=$EVAL_WT 不存在或缺 $EVAL_PAIRS / $SUMMARY_PY"; echo "FS4X4_STEP=preflight FAIL rc=1"; chain_fail preflight eval_wt; }
+  [ "$wt_ok" = yes ] || { echo "  EVAL_WT=$EVAL_WT 不存在、缺 $EVAL_PAIRS / $SUMMARY_PY，或 v1-store 不是指向主检出的软链"; echo "FS4X4_STEP=preflight FAIL rc=1"; chain_fail preflight eval_wt; }
   echo "FS4X4_STEP=preflight PASS rc=0"
 fi
 
@@ -247,7 +249,7 @@ for i in "${!STEPS[@]}"; do
       fi
       do_judged eval_pairs "$EVAL_CD bash $EVAL_PAIRS" '^FS4X4_EVAL_PAIRS=PASS done=6' gpu ;;
     summary)
-      do_judged summary "$EVAL_CD uv run python $SUMMARY_PY --out $(q "$SUMMARY_JSON")" '^FS4X4_3SEED=PASS rows=2 seeds=3' cpu
+      do_judged summary "$EVAL_CD uv run --no-project python $SUMMARY_PY --out $(q "$SUMMARY_JSON")" '^FS4X4_3SEED=PASS rows=2 seeds=3' cpu
       if [ "$DRY" = 0 ] && [ ! -f "$SUMMARY_JSON" ]; then chain_fail summary "缺 $SUMMARY_JSON"; fi ;;
   esac
 done
