@@ -54,7 +54,8 @@ check_v1store(){
 }
 
 eval_first_line(){ local f=$EVROOT/$1/EVAL692.txt; [[ -f $f ]] && head -1 "$f" || echo missing; }
-is_pass(){ [[ "$(eval_first_line "$1")" == EVAL692=PASS* ]]; }
+# 幂等判据：首行 EVAL692=PASS 且含 episodes=692
+is_pass(){ local l; l="$(eval_first_line "$1")"; [[ "$l" == EVAL692=PASS* && " $l " == *" episodes=692 "* ]]; }
 
 # run <a|b> <seed> <shard_base> <slot 目录>
 run(){
@@ -106,7 +107,10 @@ case "${1:-}" in
     [[ "$RB" == "$BUDGET" ]] || { echo "FS4X4_G5=FAIL reason=budget_mismatch run_budget=$RB arg=$BUDGET"; exit 2; }
     [[ -d $CK/params ]] || { echo "FS4X4_G5=FAIL reason=ckpt_missing ckpt=$CK"; exit 2; }
     check_v1store || { echo "FS4X4_G5=FAIL reason=v1store_link"; exit 2; }
-    NM="fs4x4-g6b-$BUDGET"
+    # 每次新目录：fs4x4-g6b-<budget>-<ckpt 父目录名>-r<n>，n 递增、不复用已存在目录，只读本次结果
+    G6B_BASE="fs4x4-g6b-$BUDGET-$(basename "$(dirname "$CK")")"; n=1
+    while [[ -e $EVROOT/$G6B_BASE-r$n || -e $LOGS/$G6B_BASE-r$n.log ]]; do n=$((n + 1)); done
+    NM="$G6B_BASE-r$n"
     ENVV=(PYTHONPATH="$(pp "$W")" EXPECT_MOTION_STATS=0 MMEVLA_MOTION_OVERFLOW= POLICY=$POLICY POLICY_CONFIG=$POLICY_CONFIG)
     echo "FS4X4_G5_START run=$NM ckpt=$CK budget=$BUDGET policy=$POLICY $(date -u +%FT%TZ)"
     CKLOG=$LOGS/$NM-check_checkpoint.log
