@@ -1,0 +1,24 @@
+# 32 帧 × 4×4（token_per_image 16 × 32 帧 = 512 位）+ modulation 接入，无 motion 节（关闭态）。
+# 与 perceptual-framesamp-modul.yaml 内容相同，只加本注释；对应库布局 framesamp-4x4-v1（1127 计划 A 组）。
+budget: 512
+num_views: 1
+token_per_image: 16
+streaming_obs_horizon: 16
+pool_type: mean
+use_pos_emb: true
+use_state_emb: false
+memory_feature:
+  img:
+    net: identity
+    input_dim: 2048
+  pos:
+    input_dim: 768
+    hidden_dim: 768
+  state:
+    input_dim: 8
+    hidden_dim: 512
+integration_type: modulation
+memory_token_dim: 1024
+representation_type: perceptual
+perceptual_memory:
+  type: frame_sampling

@@ -93,9 +93,9 @@ class FrameSampDataset(Dataset):
         _req((str(hc.integration_type), int(hc.memory_token_dim)) in {("context", 2048), ("modulation", 1024)},
              f"(integration_type, memory_token_dim)=({hc.integration_type!r}, {hc.memory_token_dim}) "
              f"不在支持的 (context,2048)/(modulation,1024) 档位中")
-        _req((int(hc.budget), int(hc.token_per_image), int(hc.num_views)) in {(512, 16, 1), (512, 64, 1)},
+        _req((int(hc.budget), int(hc.token_per_image), int(hc.num_views)) in {(512, 16, 1), (512, 64, 1), (1024, 16, 1)},
              f"(budget,token_per_image,num_views)=({hc.budget},{hc.token_per_image},"
-             f"{hc.num_views}) 不在支持的 (512,16,1)/(512,64,1) 档位中")
+             f"{hc.num_views}) 不在支持的 (512,16,1)/(512,64,1)/(1024,16,1) 档位中")
         _req(int(hc.memory_feature.img.input_dim) == 2048,
              f"memory_feature.img.input_dim={hc.memory_feature.img.input_dim} != 2048")
         _req(int(hc.memory_feature.pos.input_dim) == 768,
