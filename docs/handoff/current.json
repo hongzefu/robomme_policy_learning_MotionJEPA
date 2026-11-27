@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-22T05:50:00Z",
-    "America/New_York": "2026-11-22T00:50:00-0500"
+    "utc": "2026-11-27T19:05:00Z",
+    "America/New_York": "2026-11-27T14:05:00-0500"
   },
   "repo": {
-    "branch": "v18-4task-modul-e2eenc-s16-50k",
-    "base_head": "161d29d"
+    "branch": "v20-4task-modul-fs4x4-512-1024-60k",
+    "base_head": "49d01f8c"
   },
   "freeze": {
     "active": false,
@@ -452,6 +452,64 @@
           "what": "稿件会话把 Table I 改为均值±标准差（稿件版 S5，另行确认措辞）",
           "command": "读 docs/training-doc/t1s-3seed-1120/final.md 与 table1_3seed.json",
           "verdict_line": "—"
+        }
+      ]
+    },
+    "4t-fs4x4-50k": {
+      "plan": {
+        "file": "1127-4task-modul-fs4x4-512-1024-60k-plan.md",
+        "sha": "49d01f8c"
+      },
+      "state": "running",
+      "state_changed_at": "2026-11-27T19:05:00Z",
+      "state_reason": "用户开工令；开始 S1–S4 代码与 4×4 表拉回",
+      "owner": {
+        "session": "https://claude.ai/code/session_01WvPQiR7GnmQVaAs4wiHXLR",
+        "host": "ip-10-242-11-177"
+      },
+      "depends_on": [],
+      "pre_handoff": [
+        {
+          "what": "G0–G5 闸门",
+          "evidence": "FS4X4_FETCH/ROWDIGEST/XGRID/PROBE/META、LAUNCH_CONTRACT、SMOKE20、EVAL_LOAD_SMOKE 全 PASS",
+          "where": "v1-store/logs/fs4x4-*",
+          "status": "pending"
+        },
+        {
+          "what": "训练 A、B 各 50k",
+          "evidence": "两份日志 EXIT_CODE=0，50000 存在",
+          "where": "v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m{32,64}x4x4-modul-b128-50k",
+          "status": "pending"
+        },
+        {
+          "what": "3 对 6 次 692 局评估与三 seed 汇总",
+          "evidence": "6×EVAL692=PASS；FS4X4_3SEED=PASS rows=2 seeds=3",
+          "where": "docs/training-doc/fs4x4-3seed-1127",
+          "status": "pending"
+        },
+        {
+          "what": "ckpt 上传读回",
+          "evidence": "HF_VERIFY=PASS",
+          "where": "HongzeFu/robomme-vla-4task-modul-m{32,64}x4x4-50k-v1",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-11-27",
+          "quote": "同意开工",
+          "scope": "1127-4task-modul-fs4x4-512-1024-60k-plan.md@49d01f8c 全部步骤（第四节代码、G0–G5、两次 50k 训练、3 对评估、上传）"
+        }
+      ],
+      "pending_decisions": [],
+      "next_steps": [
+        {
+          "what": "S1–S4 合入、G0–G3",
+          "command": "见计划第二部分 runbook",
+          "verdict_line": "LAUNCH_CONTRACT=PASS"
         }
       ]
     }
